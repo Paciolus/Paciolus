@@ -65,6 +65,8 @@ export interface SODAnalysisResponse {
   users_evaluated: number
   users_with_conflicts: number
   high_risk_users: number
+  /** Permissions in the uploaded matrix that no rule references (Sprint 827). */
+  unmatched_permissions?: string[]
 }
 
 export interface SODRule {

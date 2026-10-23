@@ -70,7 +70,7 @@ Status column: **Fixed (824)** = remediated in Sprint 824; otherwise the sprint 
 | A6 | P1/P2 | Contra-negative accumulated depreciation (`(5,000.00)`) flags 100% of rows in FA-03 and FA-T11; FA-01/04 use `abs()`. | FA-T11 fixed (827); FA-03 still flags contra balances by design — needs a call |
 | A8 | P2 | `Useful Life (Months)` auto-detected as years. | 827 |
 | D1 | P1 | SoD long-format input drops conflicts: a role on two rows is overwritten (`sod_engine.py:281`); a user on two rows is two users. | Fixed (827) |
-| D2 | P2 | One HIGH SoD conflict scores tier "moderate"; unrecognised permission spellings give a clean result with no warning; degenerate custom rules flag everyone. | 827 |
+| D2 | P2 | One HIGH SoD conflict scores tier "moderate"; unrecognised permission spellings give a clean result with no warning; degenerate custom rules flag everyone. | Unmatched-permission warning fixed (827); single-HIGH tiering and degenerate custom rules need a policy call |
 | I1 | P1 | Intercompany revenue/expense elimination JE is **reversed** (Dr expense / Cr revenue); booking it doubles both sides, and the worksheet disagrees with the JEs. `intercompany_elimination_engine.py:604`. | Fixed (827) |
 | I2 | P1 | Multiple IC accounts between the same two entities are cartesian-matched: 2 × $500 balances → 4 pairs, $2,000 eliminated, consolidation "complete". | Fixed (827) |
 | I3 | P1 | An explicit counterparty is ignored unless the account name contains an IC keyword → nothing eliminated, "complete". | Fixed (827) |

@@ -85,6 +85,7 @@ class SodAnalysisResponse(BaseModel):
     users_evaluated: int
     users_with_conflicts: int
     high_risk_users: int
+    unmatched_permissions: list[str] = []
 
 
 # =============================================================================

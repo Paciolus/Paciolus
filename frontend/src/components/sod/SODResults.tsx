@@ -27,6 +27,7 @@ interface SODResultsProps {
 
 export function SODResults({ result }: SODResultsProps) {
   const { conflicts, user_summaries, rules_evaluated, users_evaluated, users_with_conflicts, high_risk_users } = result
+  const unmatched = result.unmatched_permissions ?? []
 
   return (
     <div className="space-y-6">
@@ -39,6 +40,20 @@ export function SODResults({ result }: SODResultsProps) {
       </div>
 
       {/* User risk summary */}
+      {unmatched.length > 0 && (
+        <section className="theme-card p-6 border-l-4 border-clay-500" role="status">
+          <h3 className="font-serif text-lg text-content-primary mb-2">
+            {unmatched.length} permission{unmatched.length === 1 ? '' : 's'} not recognised by any rule
+          </h3>
+          <p className="font-sans text-sm text-content-secondary mb-3">
+            These were not tested for conflicts. If they are spelled differently from the rule set
+            (for example <span className="font-mono">AP-INVOICE-CREATE</span> rather than{' '}
+            <span className="font-mono">ap_invoice_create</span>), the result above may be incomplete.
+          </p>
+          <p className="font-mono text-xs text-content-tertiary break-words">{unmatched.join(', ')}</p>
+        </section>
+      )}
+
       <section className="theme-card p-6">
         <h3 className="font-serif text-lg text-content-primary mb-4">Per-User Risk Summary</h3>
         {user_summaries.length === 0 ? (

@@ -305,3 +305,12 @@ def test_generic_phrase_naming_a_consolidated_entity_is_still_intercompany():
         [EntityAccount("Due to Parent", credit=Decimal("700"))],
     )
     assert result["summary"]["elimination_je_count"] == 1
+
+
+def test_permissions_no_rule_recognises_are_reported():
+    """D2: unrecognised spellings produced a clean result with no warning."""
+    result = _sod(
+        [("u1", "Pat", ["AP_SUPER"])],
+        [("AP_SUPER", ["AP-INVOICE-CREATE", "ap.payment.release", "ap_invoice_create"])],
+    )
+    assert result["unmatched_permissions"] == ["ap-invoice-create", "ap.payment.release"]

@@ -432,7 +432,11 @@ every IC revenue/expense pair.
 - [x] **I4** — IC phrases match whole words; generic phrases ("due to", "receivable from") count
       only when they name an entity in the consolidation; counterparty parsing no longer reads
       "Dublin Ltd" as "Ltd", and resolves dash forms ("IC AR - Beta").
-- [ ] Open: A4, A5, A8 (FA conventions/units), D2 (SoD tiering and unmatched permissions),
+- [x] **D2 (part)** — SoD results now list matrix permissions that no rule recognises (engine,
+      API field `unmatched_permissions`, and a notice in the results view). **Policy call open:**
+      a user with a single HIGH conflict scores 3 and tiers "moderate"; whether one HIGH conflict
+      should make a user high-risk is a scoring decision, not a bug fix.
+- [ ] Open: A4, A5, A8 (FA conventions/units), D2 (tiering; degenerate custom rules),
       C2–C6 (cash flow scenario deferral, footing, edge cases), I4's investment/payable pairing,
       P-3 (non-USD / EU number formats — needs a locale decision).
 

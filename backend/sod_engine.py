@@ -25,7 +25,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
@@ -253,9 +253,14 @@ class SodResult:
     users_evaluated: int
     users_with_conflicts: int
     high_risk_users: int
+    # Sprint 827 (D2): permissions in the matrix that no rule mentions. A
+    # matrix written "AP-INVOICE-CREATE" or "ap.invoice.create" matched nothing
+    # and produced a clean result indistinguishable from a genuinely clean one.
+    unmatched_permissions: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
+            "unmatched_permissions": list(self.unmatched_permissions),
             "conflicts": [c.to_dict() for c in self.conflicts],
             "user_summaries": [u.to_dict() for u in self.user_summaries],
             "rules_evaluated": self.rules_evaluated,
@@ -407,6 +412,9 @@ def analyze_segregation_of_duties(
 
     summaries.sort(key=lambda s: (s.risk_score, s.conflict_count), reverse=True)
 
+    rule_permissions = {p for rule in rules for p in (*rule.permissions_required, *rule.permissions_alternate)}
+    matrix_permissions = {p for perms in role_map.values() for p in perms}
+
     return SodResult(
         conflicts=conflicts,
         user_summaries=summaries,
@@ -414,6 +422,7 @@ def analyze_segregation_of_duties(
         users_evaluated=users_evaluated,
         users_with_conflicts=users_with_conflicts,
         high_risk_users=high_risk_users,
+        unmatched_permissions=sorted(matrix_permissions - rule_permissions),
     )
 
 
