@@ -149,4 +149,7 @@ def get_revenue_history(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD.")
 
-    return compute_revenue_history(db, granularity=granularity, start_date=parsed_start, end_date=parsed_end)
+    try:
+        return compute_revenue_history(db, granularity=granularity, start_date=parsed_start, end_date=parsed_end)
+    except ValueError as exc:  # Sprint 821: bounded range
+        raise HTTPException(status_code=400, detail=str(exc))
