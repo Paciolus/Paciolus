@@ -1688,15 +1688,19 @@ def test_after_hours_postings(
     # every timestamp in the file is exactly midnight there is no time data —
     # flagging them all as 00:00 postings flagged 100% of an .xlsx GL. A real
     # midnight posting among genuine timestamps is still tested.
+    # Decided per column, so a date-only posting column does not hide genuine
+    # timestamps in entry_date (PR #218 review).
+    def _column_has_time(attr: str) -> bool:
+        return any((t := _extract_time(getattr(e, attr))) is not None and t != (0, 0, 0) for e in entries)
+
+    columns = [a for a in ("posting_date", "entry_date") if _column_has_time(a)]
     times: list[tuple[JournalEntry, tuple[int, int, int]]] = []
     for e in entries:
-        t = _extract_time(e.posting_date)
-        if t is None:
-            t = _extract_time(e.entry_date)
-        if t is not None:
-            times.append((e, t))
-    if times and all(t == (0, 0, 0) for _, t in times):
-        times = []
+        for attr in columns:
+            t = _extract_time(getattr(e, attr))
+            if t is not None:
+                times.append((e, t))
+                break
 
     for e, t in times:
         hour = t[0]

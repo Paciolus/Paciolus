@@ -843,3 +843,46 @@ def test_classifier_reads_common_account_names(name, expected):
     from account_classifier import create_classifier
 
     assert create_classifier(None).classify(name, 0).category.value == expected
+
+
+def test_after_hours_reads_entry_timestamps_behind_a_date_only_posting_column():
+    from services.audit.je_testing.analysis import JETestingConfig, JournalEntry, test_after_hours_postings
+
+    entries = [
+        JournalEntry(
+            row_number=1,
+            entry_id="JE-1",
+            posting_date="2025-03-05 00:00:00",
+            entry_date="2025-03-05 10:15:00",
+            account="Cash",
+            debit=100,
+        ),
+        JournalEntry(
+            row_number=2,
+            entry_id="JE-2",
+            posting_date="2025-03-05 00:00:00",
+            entry_date="2025-03-05 23:15:00",
+            account="Cash",
+            debit=100,
+        ),
+    ]
+    result = test_after_hours_postings(entries, JETestingConfig())
+    assert [f.entry.row_number for f in result.flagged_entries] == [2]
+
+
+def test_invoice_aged_entries_are_not_called_past_due():
+    from services.audit.ar_aging.analysis import (
+        ARAgingConfig,
+        SLColumnDetection,
+        parse_sl_entries,
+        test_past_due_concentration,
+    )
+
+    detection = SLColumnDetection(
+        customer_name_column="Customer", amount_column="Amount", invoice_date_column="Invoice Date"
+    )
+    entries = parse_sl_entries(
+        [{"Customer": "A", "Amount": 10000, "Invoice Date": "2026-01-01"}], detection, "2026-03-01"
+    )
+    assert entries[0].aging_days == 59 and entries[0].aged_from_invoice_date
+    assert test_past_due_concentration(entries, ARAgingConfig()).entries_flagged == 0

@@ -333,6 +333,9 @@ class ARSubledgerEntry:
     aging_bucket: Optional[str] = None
     credit_limit: Optional[Decimal] = None
     row_number: int = 0
+    # Sprint 829: True when aging_days is age since invoice (no due date), which
+    # is not days past due — past-due tests must not read it as delinquency.
+    aged_from_invoice_date: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
@@ -996,10 +999,12 @@ def parse_sl_entries(
         # Sprint 829: a sub-ledger with only an invoice date was never aged —
         # every invoice sat in Current with no warning. Age it from the invoice
         # date instead, and say so (age since invoice is not days past due).
+        invoice_aged = False
         if aging_days is None and not due_date and not aging_bucket and invoice_date:
             aging_days = _compute_aging_days(invoice_date, reference_date_str)
             if aging_days is not None:
                 aged_from_invoice_date += 1
+                invoice_aged = True
         if aging_days is None and aging_bucket:
             aging_days = _parse_aging_bucket_to_days(aging_bucket)
 
@@ -1023,6 +1028,7 @@ def parse_sl_entries(
                 aging_bucket=aging_bucket,
                 credit_limit=credit_limit,
                 row_number=i + 1,
+                aged_from_invoice_date=invoice_aged,
             )
         )
 
@@ -1449,7 +1455,13 @@ def test_past_due_concentration(
             description="Concentration of AR balance in past-due categories",
         )
 
-    past_due = [e for e in sl_entries if e.aging_days is not None and e.aging_days > config.past_due_days]
+    # Age since invoice is not delinquency: an invoice on net-90 terms aged 59
+    # days from its invoice date is not past due (PR #218 review).
+    past_due = [
+        e
+        for e in sl_entries
+        if e.aging_days is not None and e.aging_days > config.past_due_days and not e.aged_from_invoice_date
+    ]
     past_due_total = sum(e.amount for e in past_due)
     past_due_pct = past_due_total / total_ar
 
