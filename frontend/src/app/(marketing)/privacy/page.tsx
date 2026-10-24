@@ -1,18 +1,12 @@
-'use client'
-
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { Reveal } from '@/components/ui/Reveal'
 
 export default function PrivacyPolicy() {
   return (
     <div className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* Hero Section */}
-      <motion.section
-        className="relative pt-32 pb-16 px-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
-      >
+      <section className="relative pt-32 pb-16 px-6">
+        <Reveal>
         <div className="max-w-4xl mx-auto">
           <h1 className="font-serif text-5xl text-oatmeal-100 mb-4">
             Privacy Policy
@@ -38,7 +32,8 @@ export default function PrivacyPolicy() {
             ))}
           </div>
         </div>
-      </motion.section>
+        </Reveal>
+      </section>
 
       {/* Main Content */}
       <section className="relative pb-24 px-6">
