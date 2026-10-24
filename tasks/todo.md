@@ -391,6 +391,31 @@ percentage-of-equity materiality are unchanged (not ratios).
 
 ---
 
+### Sprint 833: SoD single-HIGH tiering; bank-rec split search bounded
+**Status:** COMPLETE 2026-10-24 — CEO decision 7 and code-health decision 2.
+
+- [x] **SoD:** any HIGH-severity conflict tiers the user high (score unchanged); the user result
+      carries `risk_tier_reason`, users sort by tier first, the CSV gains a "Tier Basis" column and
+      the results view explains the floor as a Paciolus convention (COSO 2013 framing, not a COSO
+      requirement).
+- [x] **Bank rec (Sprint 815 item 2):** Sprint 829 had already made tolerance 0 mean same-day. What
+      remained slow was many same-day or undated candidates. Lossless trim first (a single item
+      larger than the bank amount cannot be part of a split), then a cap of 20 nearest-dated
+      candidates (`split_match_max_candidates`, Paciolus convention). The worst case (200 × 200 on
+      one day) went from effectively never finishing to ~1.3s. Nothing is cleared by the cap: a
+      capped item stays an open exception flagged `split_search_limited`, and the result, memo and
+      page disclose the bound. The date window was deliberately **not** widened — a wider default
+      would clear more exceptions.
+- [x] **Bug fixed:** the response schema did not allow `match_type: "split"`, so any reconciliation
+      with a split match returned a 500. Schema and frontend now handle splits.
+
+**Not fixed (filed here):** the bank-rec CSV export omits split matches; `BankRecResponse` does not
+declare `suggested_journal_entries`, so FastAPI drops them.
+
+**Commit SHA:** recorded on merge.
+
+---
+
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
 **Status:** PARTIAL — marketing and user-guide copy corrected 2026-10-24; the Terms of Service §5.3 and the Privacy Policy wait for counsel (proposed text below).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.
@@ -603,7 +628,8 @@ every IC revenue/expense pair.
 - [x] **D2 (part)** — SoD results now list matrix permissions that no rule recognises (engine,
       API field `unmatched_permissions`, and a notice in the results view). **Policy call open:**
       a user with a single HIGH conflict scores 3 and tiers "moderate"; whether one HIGH conflict
-      should make a user high-risk is a scoring decision, not a bug fix.
+      should make a user high-risk is a scoring decision, not a bug fix. *(Decided 2026-10-24 and done
+      in Sprint 833: one HIGH conflict tiers the user high.)*
 - [ ] Open: A4, A5, A8 (FA conventions/units), D2 (tiering; degenerate custom rules),
       C2–C6 (cash flow scenario deferral, footing, edge cases), I4's investment/payable pairing,
       P-3 (non-USD / EU number formats — needs a locale decision).
@@ -780,7 +806,8 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 2. [ ] **Bank-rec split match** (`bank_reconciliation.py:668-690`) brute-forces 2–4-row combos;
    the date filter (`:735`) is skipped at the default tolerance 0, which the route never
    changes. 2.05s per bank-only txn at 80 unmatched rows; 64.7M combos at 200.
-   **Blocked on CEO decision 2** (cap the pool / date window when tolerance is 0 / meet-in-the-middle).
+   *(Done 2026-10-24 in Sprint 833: lossless trim + a 20-candidate cap, disclosed; nothing is
+   cleared by the cap.)*
 3. [x] Fuzzy name loops (`ap_testing/analysis.py:1463`, `payroll_testing/analysis.py:1877`,
    `three_way_match_engine.py:1314-1350`): early-exit on `2*min/(la+lb)` and
    `real_quick_ratio()`/`quick_ratio()` upper bounds. **88.1s → 14.2s** on 2,000 vendors,

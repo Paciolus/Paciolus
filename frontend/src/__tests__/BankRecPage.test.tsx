@@ -30,6 +30,7 @@ jest.mock('@/components/bankRec', () => ({
   MatchSummaryCards: () => <div data-testid="match-summary">Summary</div>,
   BankRecMatchTable: () => <div data-testid="match-table">Matches</div>,
   ReconciliationBridge: () => <div data-testid="rec-bridge">Bridge</div>,
+  SplitSearchNotice: ({ disclosure }: any) => <div data-testid="split-search-notice">{disclosure.note}</div>,
 }))
 
 jest.mock('@/components/shared', () => ({
@@ -107,6 +108,20 @@ describe('BankRecPage', () => {
     expect(screen.getByTestId('match-summary')).toBeInTheDocument()
     expect(screen.getByTestId('match-table')).toBeInTheDocument()
     expect(screen.getByTestId('rec-bridge')).toBeInTheDocument()
+  })
+
+  it('shows the split-search disclosure when the API returns one (Sprint 833)', () => {
+    mockUseBankRec.mockReturnValue({
+      status: 'success', error: null, reconcile: mockRunReconciliation, reset: mockReset,
+      result: {
+        summary: { matched_count: 0, matched_amount: 0, bank_only_count: 1, bank_only_amount: 10, ledger_only_count: 0, ledger_only_amount: 0, reconciling_difference: 10, total_bank: 10, total_ledger: 0, matches: [] },
+        bank_column_detection: { requires_mapping: false, detection_notes: [] },
+        ledger_column_detection: { requires_mapping: false, detection_notes: [] },
+        split_search: { date_window_days: 0, max_candidates: 20, max_set_size: 4, limited_count: 1, note: '1 bank item was not searched exhaustively' },
+      },
+    })
+    render(<BankRecPage />)
+    expect(screen.getByTestId('split-search-notice')).toHaveTextContent('1 bank item was not searched exhaustively')
   })
 
   it('shows export button on success', () => {

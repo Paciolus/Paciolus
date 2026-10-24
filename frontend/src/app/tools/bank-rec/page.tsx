@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge } from '@/components/bankRec'
+import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice } from '@/components/bankRec'
 import { FileDropZone, GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
@@ -121,6 +121,7 @@ export default function BankRecPage() {
             summary: result.summary,
             bank_column_detection: result.bank_column_detection,
             ledger_column_detection: result.ledger_column_detection,
+            split_search: result.split_search ?? null,
             filename: bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
           },
         },
@@ -290,6 +291,7 @@ export default function BankRecPage() {
                 {/* Match Table */}
                 <div>
                   <h2 className="type-tool-section mb-4">Reconciliation Items</h2>
+                  {result.split_search && <SplitSearchNotice disclosure={result.split_search} />}
                   <BankRecMatchTable matches={result.summary.matches} />
                 </div>
 

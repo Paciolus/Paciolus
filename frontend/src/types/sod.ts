@@ -56,6 +56,12 @@ export interface SODUserSummary {
   low_severity_count: number
   risk_score: number
   risk_tier: SODRiskTier
+  /**
+   * Why the tier differs from the score band (Sprint 833) — e.g. a single
+   * HIGH-severity conflict tiers the user high regardless of score. Null when
+   * the tier is simply the score band.
+   */
+  risk_tier_reason?: string | null
 }
 
 export interface SODAnalysisResponse {

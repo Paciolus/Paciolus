@@ -5,3 +5,4 @@
 export { MatchSummaryCards } from './MatchSummaryCards'
 export { BankRecMatchTable } from './BankRecMatchTable'
 export { ReconciliationBridge } from './ReconciliationBridge'
+export { SplitSearchNotice } from './SplitSearchNotice'
