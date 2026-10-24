@@ -5,10 +5,36 @@ Generates US federal holiday dates for any year. Used by JE testing engine
 (JT-19: Holiday Posting Detection) to flag entries posted on public holidays
 as an ISA 240 journal entry fraud risk indicator.
 
+Source: the list of US federal holidays is set by statute, 5 U.S.C. §6103,
+including its Saturday/Sunday observance rule. Paciolus applies that list; it
+does not decide which days a particular client was closed.
+
+Sprint 831 (CEO decision 3, 2026-10-24): Columbus Day and Veterans Day are on
+the statutory list, but most private businesses stay open on them. Postings on
+those days are still flagged — at LOW severity — rather than dropped, so a
+client that does close (banks, government contractors) is still covered. The
+auditor can exclude a holiday the client works, or add a client-specific
+closure day, per run. Treating those two days as LOW is a Paciolus convention.
+
 Pure computation — no external API calls, no persistent storage.
 """
 
 from datetime import date, timedelta
+
+# Statutory holidays on which most private businesses are open (Paciolus
+# convention — see module docstring). Postings on these are flagged LOW.
+COMMONLY_WORKED_HOLIDAYS: frozenset[str] = frozenset({"Columbus Day", "Veterans Day"})
+
+
+def holiday_base_name(name: str) -> str:
+    """Strip the " (Observed)" suffix so a holiday matches on its own name."""
+    return name.removesuffix(" (Observed)")
+
+
+def us_federal_holiday_names() -> list[str]:
+    """The 11 statutory holiday names, in calendar order (for request validation and UI)."""
+    by_date = sorted(get_us_federal_holidays(2025).items())
+    return list(dict.fromkeys(holiday_base_name(n) for _, n in by_date))
 
 
 def _nth_weekday(year: int, month: int, weekday: int, n: int) -> date:

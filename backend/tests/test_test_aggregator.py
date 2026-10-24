@@ -10,6 +10,9 @@ from dataclasses import dataclass, field
 import pytest
 
 from shared.test_aggregator import (
+    FLOOR_ELEVATED,
+    FLOOR_HIGH,
+    FLOOR_MODERATE,
     calculate_composite_score,
 )
 from shared.testing_enums import RiskTier, Severity, score_to_risk_tier
@@ -128,7 +131,7 @@ class TestCalculateCompositeScore:
             _make_test_result("High Test", Severity.HIGH, [1, 2, 3], total=100),
             _make_test_result("Low Test", Severity.LOW, [4, 5], total=100),
         ]
-        result = calculate_composite_score(results, 100)
+        result = calculate_composite_score(results, 100, severity_floors=False)
 
         # weighted_sum = (3/100)*3.0 + (2/100)*1.0 = 0.09 + 0.02 = 0.11
         # max_possible = 3.0 + 1.0 = 4.0
@@ -149,7 +152,7 @@ class TestCalculateCompositeScore:
             _make_test_result("Test B", Severity.MEDIUM, [1], total=10),
             _make_test_result("Test C", Severity.LOW, [1], total=10),
         ]
-        result = calculate_composite_score(results, 10)
+        result = calculate_composite_score(results, 10, severity_floors=False)
 
         # weighted_sum = (1/10)*3.0 + (1/10)*2.0 + (1/10)*1.0 = 0.3+0.2+0.1 = 0.6
         # max_possible = 3.0 + 2.0 + 1.0 = 6.0
@@ -168,9 +171,9 @@ class TestCalculateCompositeScore:
             _make_test_result("Test B", Severity.LOW, [1], total=10),
         ]
         # Default threshold=3: row 1 at 2 tests, no multiplier
-        result_default = calculate_composite_score(results, 10, multi_flag_threshold=3)
+        result_default = calculate_composite_score(results, 10, multi_flag_threshold=3, severity_floors=False)
         # Custom threshold=2: row 1 at 2 tests, triggers multiplier
-        result_custom = calculate_composite_score(results, 10, multi_flag_threshold=2)
+        result_custom = calculate_composite_score(results, 10, multi_flag_threshold=2, severity_floors=False)
 
         assert result_custom.score > result_default.score
 
@@ -180,7 +183,7 @@ class TestCalculateCompositeScore:
             _make_test_result("Test A", Severity.HIGH, [1, 2], total=100),
             _make_test_result("Test B", Severity.LOW, [3], total=100),
         ]
-        result = calculate_composite_score(results, 100, normalization="total_entries")
+        result = calculate_composite_score(results, 100, normalization="total_entries", severity_floors=False)
 
         # weighted_sum = 2*3.0 + 1*1.0 = 7.0
         # base_score = 7.0 / 100 * 100 = 7.0
@@ -320,3 +323,65 @@ class TestCalculateCompositeScore:
         # Unique rows: {1, 2, 3} = 3
         assert result.total_flagged == 3
         assert result.flag_rate == pytest.approx(0.03, abs=0.001)
+
+
+# =============================================================================
+# SPRINT 831 — SEVERITY FLOORS
+# =============================================================================
+
+
+class TestSeverityFloors:
+    """The base average may never rate a population below what its HIGH flags support.
+
+    The four arithmetic tests above pass ``severity_floors=False`` because they
+    pin the base formula only.
+    """
+
+    def test_one_high_row_in_a_large_population_is_moderate(self):
+        # 1 HIGH row in 10,000: base score ~0.01, which used to read LOW.
+        results = [_make_test_result("Unbalanced", Severity.HIGH, [1], total=10_000)]
+        result = calculate_composite_score(results, 10_000)
+        assert result.score == FLOOR_MODERATE
+        assert result.risk_tier == RiskTier.MODERATE
+        assert result.score_basis and "HIGH-severity" in result.score_basis[0]
+
+    def test_high_rows_at_one_percent_are_elevated(self):
+        results = [_make_test_result("Reciprocal", Severity.HIGH, list(range(100)), total=10_000)]
+        result = calculate_composite_score(results, 10_000)
+        assert result.score == FLOOR_ELEVATED
+        assert result.risk_tier == RiskTier.ELEVATED
+
+    def test_482_high_rows_rate_high(self):
+        # The Sprint 829 case: 482 HIGH flags in a 5,000-entry GL rated LOW.
+        results = [_make_test_result("Round", Severity.HIGH, list(range(482)), total=5_000)]
+        base = calculate_composite_score(results, 5_000, severity_floors=False)
+        result = calculate_composite_score(results, 5_000)
+        assert base.risk_tier == RiskTier.LOW
+        assert result.score == FLOOR_HIGH
+        assert result.risk_tier == RiskTier.HIGH
+
+    def test_medium_and_low_flags_do_not_trigger_a_floor(self):
+        results = [
+            _make_test_result("Weekend", Severity.MEDIUM, list(range(50)), total=10_000),
+            _make_test_result("Holiday", Severity.LOW, list(range(50, 100)), total=10_000),
+        ]
+        result = calculate_composite_score(results, 10_000)
+        assert result.score_basis == []
+        assert result.risk_tier == RiskTier.LOW
+
+    def test_floor_never_lowers_a_higher_base_score(self):
+        results = [_make_test_result("All", Severity.HIGH, list(range(10)), total=10)]
+        result = calculate_composite_score(results, 10)
+        assert result.score == 100.0
+        assert result.score_basis == []
+
+    def test_floor_applies_to_string_severities(self):
+        # Payroll passes plain strings through severity_accessor.
+        results = [_make_test_result("Ghost", Severity.HIGH, [1], total=1_000)]
+        result = calculate_composite_score(
+            results,
+            1_000,
+            normalization="total_entries",
+            severity_accessor=lambda fe: fe.severity.value,
+        )
+        assert result.score == pytest.approx(FLOOR_MODERATE)

@@ -839,6 +839,14 @@
             "title": "Score",
             "type": "number"
           },
+          "score_basis": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Score Basis",
+            "type": "array"
+          },
           "tests_run": {
             "title": "Tests Run",
             "type": "integer"
@@ -5795,6 +5803,17 @@
             "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
+          },
+          "holiday_calendar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Holiday Calendar"
           }
         },
         "required": [
@@ -8480,6 +8499,14 @@
           "score": {
             "title": "Score",
             "type": "number"
+          },
+          "score_basis": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Score Basis",
+            "type": "array"
           },
           "tests_run": {
             "title": "Tests Run",
@@ -17291,6 +17318,14 @@
           "score": {
             "title": "Score",
             "type": "number"
+          },
+          "score_basis": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Score Basis",
+            "type": "array"
           },
           "tests_run": {
             "title": "Tests Run",

@@ -372,18 +372,33 @@ class TestJETestDescriptions:
             "unusual_amounts",
             "benford_law",
             "weekend_postings",
-            "month_end_clustering",
-            "holiday_postings",
         ]
         for key in expected_keys:
             assert key in TEST_DESCRIPTIONS, f"Missing description for {key}"
+
+    def test_run_dependent_descriptions_come_from_the_result(self):
+        """Sprint 831: the memo prints the auditor's holiday calendar, not a fixed text."""
+        import io
+
+        from pypdf import PdfReader
+
+        result = _make_je_result()
+        for tr in result["test_results"]:
+            if tr["test_key"] == "holiday_postings":
+                tr["description"] = "Holiday calendar note: Excluded by the auditor: Christmas Day."
+        pdf = generate_je_testing_memo(result)
+        text = " ".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(pdf)).pages)
+        assert "Excluded by the auditor: Christmas Day" in " ".join(text.split())
+        assert "month_end_clustering" not in TEST_DESCRIPTIONS
+        assert "holiday_postings" not in TEST_DESCRIPTIONS
 
     def test_descriptions_are_nonempty(self):
         for key, desc in TEST_DESCRIPTIONS.items():
             assert len(desc) > 20, f"Description too short for {key}"
 
     def test_total_description_count(self):
-        assert len(TEST_DESCRIPTIONS) == 9
+        # Sprint 831: month-end and holiday descriptions come from the run result.
+        assert len(TEST_DESCRIPTIONS) == 7
 
 
 # =============================================================================

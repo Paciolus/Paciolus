@@ -149,6 +149,25 @@ def _run_agent(name: str, script: str, log: RunLog, dry_run: bool = False) -> bo
         return False
 
 
+# Sprint 822 (CEO decision 5, 2026-10-24): nightly reports are no longer
+# committed. They stay on this machine for 90 days and are pruned here; the
+# baseline the agents compare against is kept.
+REPORT_RETENTION_DAYS = 90
+_KEEP_FOREVER = {".baseline.json"}
+
+
+def _prune_old_reports(log: RunLog) -> None:
+    """Delete nightly report files older than REPORT_RETENTION_DAYS."""
+    cutoff = time.time() - REPORT_RETENTION_DAYS * 86400
+    removed = 0
+    for path in REPORTS_DIR.iterdir():
+        if path.is_file() and path.name not in _KEEP_FOREVER and path.stat().st_mtime < cutoff:
+            path.unlink()
+            removed += 1
+    if removed:
+        log.log(f"Pruned {removed} report file(s) older than {REPORT_RETENTION_DAYS} days")
+
+
 def main() -> None:
     """Run the full overnight agent sequence."""
     dry_run = "--dry-run" in sys.argv
@@ -182,6 +201,8 @@ def main() -> None:
         f"=== Run complete: {success_count}/{total_agents} agents succeeded "
         f"in {total_elapsed}s ==="
     )
+    if not dry_run:
+        _prune_old_reports(log)
     log.save()
 
     sys.exit(0)

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel } from '@/components/jeTesting'
+import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel, HolidayCalendarPanel } from '@/components/jeTesting'
 import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
 import { ChartSkeleton } from '@/components/shared/skeletons'
@@ -11,6 +11,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import type { HolidayCalendar } from '@/types/jeTesting'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 // Sprint 772a: BenfordChart pulls recharts (~90 kB gzipped). Defer until
@@ -29,7 +30,8 @@ const BenfordChart = dynamic(
  */
 export default function JournalEntryTestingPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
-  const { status, result, error, runTests, reset } = useJETesting()
+  const [holidayCalendar, setHolidayCalendar] = useState<HolidayCalendar>({ exclude: [], closed_dates: [] })
+  const { status, result, error, runTests, reset } = useJETesting(holidayCalendar)
   useCanvasAccentSync(status)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
@@ -148,6 +150,7 @@ export default function JournalEntryTestingPage() {
                   </p>
                 </div>
 
+                <HolidayCalendarPanel calendar={holidayCalendar} onChange={setHolidayCalendar} />
                 <ZeroStorageNotice className="mt-4" />
               </div>
             )}

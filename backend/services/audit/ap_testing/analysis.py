@@ -40,7 +40,8 @@ from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 # =============================================================================
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
-from shared.testing_enums import (  # noqa: E402
+from shared.testing_enums import (
+    SEVERITY_WEIGHTS,  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
@@ -520,6 +521,7 @@ class APCompositeScore:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
         return {
@@ -531,6 +533,7 @@ class APCompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
 
 
@@ -941,9 +944,12 @@ def test_round_dollar_amounts(
                 break  # Only flag the largest pattern match
 
     # Sprint 829: count every round amount, then keep the largest for display.
+    # Sprint 831 (PR #225 review): most severe first, then largest, so a large
+    # LOW match can never push a HIGH one out of the kept list (the severity
+    # floors read only the kept flags).
     # The loop used to stop at the cap in file order, so a $500K round entry
     # after fifty $10K ones was never seen and the count stopped at 50.
-    flagged.sort(key=lambda f: abs(f.entry.amount), reverse=True)
+    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
     total_flagged = len(flagged)
     flagged = flagged[: config.round_amount_max_flags]
 
@@ -1888,6 +1894,7 @@ def calculate_ap_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=result.top_findings,
+        score_basis=result.score_basis,
     )
 
 

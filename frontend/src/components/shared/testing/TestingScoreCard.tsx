@@ -30,6 +30,8 @@ export interface TestingScoreCardProps {
   flag_rate: number
   flags_by_severity: { high: number; medium: number; low: number }
   top_findings: string[]
+  /** Sprint 831: reasons a severity floor raised the score */
+  score_basis?: string[]
   entity_label: string
   title?: string
   extra_content?: ReactNode
@@ -50,6 +52,7 @@ export function TestingScoreCard({
   flag_rate,
   flags_by_severity,
   top_findings,
+  score_basis = [],
   entity_label,
   title = 'Composite Diagnostic Score',
   extra_content,
@@ -152,6 +155,22 @@ export function TestingScoreCard({
 
       {/* Extra content slot (before findings) */}
       {extra_content}
+
+      {/* Sprint 831: why the score is what it is */}
+      {score_basis.length > 0 && (
+        <div className="mt-6 pt-6 border-t border-theme-divider">
+          <h4 className="font-sans text-xs text-content-secondary uppercase tracking-wider mb-3">Why this score</h4>
+          <ul className="space-y-1.5">
+            {score_basis.map((reason, i) => (
+              <li key={i} className="font-sans text-sm text-content-primary">{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="mt-4 font-sans text-xs text-content-tertiary">
+        The composite score and its tiers are a Paciolus triage convention, not a measure prescribed by any auditing
+        standard. Use them alongside your own risk assessment.
+      </p>
 
       {/* Top findings */}
       {top_findings.length > 0 && (

@@ -10,6 +10,7 @@ domain-specific content (title, test descriptions, conclusion text).
 """
 
 from typing import Any, Optional
+from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -110,8 +111,10 @@ RISK_TIER_DISPLAY = {
 # automated flag density. The qualifier is composed into the scale legend so that every
 # surface rendering a tier also renders its basis, including surfaces added later.
 RISK_TIER_BASIS_NOTE = (
-    "Basis: automated flag density \u2014 auditor judgment required per ISA 315. "
-    "The diagnostic tier is an indicator, not a risk assessment or a conclusion on internal control."
+    "Basis: automated flag density, raised where HIGH-severity flags warrant it \u2014 "
+    "auditor judgment required per ISA 315. The score, its tiers and those floors are Paciolus conventions, "
+    "not measures prescribed by any standard. The diagnostic tier is an indicator, not a risk assessment "
+    "or a conclusion on internal control."
 )
 
 _RISK_SCORE_SCALE = (
@@ -413,6 +416,9 @@ def build_results_summary_section(
             styles["MemoBodySmall"],
         )
     )
+    # Sprint 831: every floor that raised the score, so the page explains its own number.
+    for reason in composite.get("score_basis") or []:
+        story.append(Paragraph(f"<i>{xml_escape(str(reason))}</i>", styles["MemoBodySmall"]))
     story.append(Spacer(1, 2))
     story.append(
         Paragraph(

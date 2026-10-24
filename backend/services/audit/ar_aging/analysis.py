@@ -548,6 +548,7 @@ class ARCompositeScore:
     total_flagged: int
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
     has_subledger: bool = False
 
     def to_dict(self) -> dict:
@@ -559,6 +560,7 @@ class ARCompositeScore:
             "total_flagged": self.total_flagged,
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
             "has_subledger": self.has_subledger,
         }
 
@@ -2113,6 +2115,7 @@ def calculate_ar_composite_score(
         flags_by_severity=result.flags_by_severity,
         top_findings=top_findings,
         has_subledger=has_subledger,
+        score_basis=result.score_basis,
     )
 
 

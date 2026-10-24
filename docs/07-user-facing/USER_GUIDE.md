@@ -1030,7 +1030,6 @@ Paciolus offers three purchasable plans plus a Free tier for evaluation.
 | **Export sharing** | — | — | Yes | Yes |
 | **Admin dashboard** | — | — | Yes | Yes |
 | **Custom PDF branding** | — | — | — | Yes |
-| **Bulk upload** | — | — | — | Yes |
 | **Priority support** | — | — | Yes | Yes |
 
 ### 21.2 Tool Access by Plan
@@ -1090,23 +1089,26 @@ Your uploaded financial data is never stored.
 
 Raw uploaded financial data is never persisted to disk or retained between sessions. Paciolus retains only aggregate, non-attributable usage metadata in accordance with our retention policy. No line-level financial data is ever written to storage.
 
-Paciolus operates under a Zero-Storage security model:
+Paciolus operates under a Zero-Storage security model for the data you upload:
 
 - **Your uploaded files are never stored.** Files are processed entirely in-memory and discarded immediately after analysis
-- **No line-level data is persisted.** Individual account names, balances, and transaction details are never written to disk or database
-- **Only aggregate metadata is retained.** Category totals, financial ratios, row counts, and diagnostic metadata are stored for your activity history and workspace continuity
-- **Server breach exposure is minimal.** Even in the event of a server compromise, no client financial data exists to be stolen
+- **No line-level data from your uploads is persisted.** Trial balance rows, journal entries, invoices, payments and payroll records are never written to disk or database
+- **Aggregate results are retained.** Category totals, financial ratios, row counts, total debits and credits, and the names of accounts a tool flagged (without amounts) are stored for your activity history and workspace continuity
+- **What you type into an engagement is retained.** Materiality, follow-up notes, intercompany account mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount) are workpaper content you enter, and they are stored so the engagement persists
+- **Shared report links are temporary.** When you share a report by link, the generated file is held encrypted for up to 48 hours and then deleted
 
 ### 22.2 What Is Stored vs. What Is Not
 
-| Stored (Aggregate Metadata) | Never Stored (Financial Data) |
-|-----------------------------|-------------------------------|
+| Stored | Never Stored |
+|--------|--------------|
 | Your user credentials (hashed) | Raw uploaded files |
-| Client names and industry settings | Individual account balances |
-| Diagnostic summary (ratio values, row counts) | Line-level transaction details |
-| Engagement metadata and status | Ledger entries or journal lines |
-| Billing and subscription records | Bank statement line items |
-| Activity log (filename prefix, timestamp) | Vendor names or employee names |
+| Client names and industry settings | Line-level trial balance rows from uploads |
+| Aggregate results (ratio values, category totals, row counts) | Ledger entries or journal lines from uploads |
+| Names of accounts a tool flagged (no amounts) | Bank statement line items |
+| Engagement content you enter: materiality, follow-up notes, analytical expectations, uncorrected misstatements | Invoice, payment and payroll records from uploads |
+| Shared report files, for up to 48 hours | Flagged-entry details from uploads |
+| Billing and subscription records | |
+| Activity log (filename prefix, timestamp) | |
 
 ### 22.3 Implications for You
 
@@ -1114,7 +1116,7 @@ Paciolus operates under a Zero-Storage security model:
 
 - **Always export detailed results before closing.** Line-level analysis detail (flagged entries, individual transactions) exists only during your session. Download PDF/Excel/CSV reports before navigating away. Aggregate summaries and workspace metadata persist across sessions.
 - **No raw data retrieval.** Paciolus cannot recover your uploaded financial files or line-level detail from a prior session. Your activity history shows aggregate metadata only (dates, row counts, ratios)
-- **Simplified compliance.** Because Paciolus never stores client financial data, the platform has a minimal data footprint under GDPR, CCPA, and SOC 2 frameworks
+- **A smaller data footprint.** Because Paciolus never stores your uploaded files or their line-level data, what it holds is limited to the aggregates and engagement content listed above
 
 For the complete technical specification, see the [Zero-Storage Architecture](https://paciolus.com/trust) document on our Trust page.
 

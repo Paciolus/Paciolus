@@ -53,7 +53,7 @@ export const uploadOptions: { value: Uploads; label: string }[] = [
 export const featureOptions: { value: Features; label: string }[] = [
   { value: 'basic', label: 'Core tools & exports' },
   { value: 'collab', label: '+ Team & sharing' },
-  { value: 'enterprise', label: '+ Branding & bulk' },
+  { value: 'enterprise', label: '+ Custom branding' },
 ]
 
 export const teamOptions: { value: TeamSize; label: string }[] = [
@@ -212,7 +212,6 @@ export const tiers: Tier[] = [
       { text: 'Everything in Professional' },
       { text: 'Unlimited uploads & clients' },
       { text: '20 seats included (up to 100)' },
-      { text: 'Bulk upload (up to 5 files)' },
       { text: 'Custom PDF branding' },
       { text: 'Dedicated account manager' },
       { text: 'Custom SLA & priority support' },
@@ -248,7 +247,6 @@ export const comparisonRows: ComparisonRow[] = [
   { feature: 'Export Sharing', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Admin Dashboard', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Bulk Upload', free: false, solo: false, professional: false, enterprise: true },
   { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
   { feature: 'Priority Support', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Dedicated Account Manager', free: false, solo: false, professional: false, enterprise: true },
@@ -296,7 +294,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'What does Enterprise include beyond Professional?',
-    answer: `Enterprise ($${tiers[2]!.monthlyPrice.toLocaleString()}/mo) adds unlimited uploads, ${SEAT_CONFIGS[1]!.baseSeats} seats included (expandable to ${SEAT_CONFIGS[1]!.maxSeats} at $${SEAT_CONFIGS[1]!.seatMonthly}/seat), bulk upload (up to 5 files at once), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.`,
+    answer: `Enterprise ($${tiers[2]!.monthlyPrice.toLocaleString()}/mo) adds unlimited uploads, ${SEAT_CONFIGS[1]!.baseSeats} seats included (expandable to ${SEAT_CONFIGS[1]!.maxSeats} at $${SEAT_CONFIGS[1]!.seatMonthly}/seat), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.`,
   },
   {
     question: 'What can Free users access?',

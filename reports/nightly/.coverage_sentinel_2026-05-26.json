@@ -1,6 +1,0 @@
-{
-  "agent": "coverage_sentinel",
-  "status": "red",
-  "error": "pytest --cov timed out after 1500s",
-  "summary": "Coverage run failed \u2014 see reports/nightly/.run_log for details."
-}

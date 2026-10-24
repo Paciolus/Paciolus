@@ -236,19 +236,27 @@ const downloadableArtifacts: DownloadableArtifact[] = [
   { label: 'Request DPA', description: 'Data Processing Agreement available for Organization accounts.', href: '/contact?inquiry_type=organization', icon: 'file-download', type: 'Organization' },
 ]
 
+// Sprint 834 (CEO decision 8, 2026-10-24): these lists must say exactly what
+// the database holds. The earlier copy promised Paciolus never stored account
+// balances or anomaly details tied to accounts or amounts, while
+// uncorrected_misstatements, analytical_expectations, diagnostic_summaries and
+// tool_runs.flagged_accounts do persist such figures and names. Keep this in
+// step with the models; counsel reviews the wording (tasks/ceo-actions.md).
 const weStore = [
   'User account information (name, email)',
   'Client metadata (names, industries, fiscal year-ends)',
-  'Aggregate diagnostic metadata (category totals, ratios, row counts)',
-  'Engagement records (narratives only, no line-level financial data)',
+  'Aggregate totals from each analysis (category totals, ratios, row counts, total debits and credits)',
+  'Names of accounts a tool flagged (no amounts or entry details)',
+  'What you enter in an engagement: materiality, follow-up notes, intercompany account mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount)',
+  'Report files you choose to share by link, held encrypted for up to 48 hours and then deleted',
   'Anonymized usage statistics',
 ]
 
 const weNeverStore = [
-  'Raw uploaded CSV/Excel files',
-  'Line-level trial balance rows or individual account balances',
-  'Individual journal entries, invoices, or payment records',
-  'Anomaly details tied to specific accounts or amounts',
+  'Uploaded files (CSV, Excel, PDF or any other format)',
+  'Line-level trial balance rows from your uploads',
+  'Individual journal entries, invoices, payments or payroll records',
+  'Flagged-entry details from your uploads (only flagged account names are kept, without amounts)',
 ]
 
 /* ─── Accent Utilities ───────────────────────────────────── */

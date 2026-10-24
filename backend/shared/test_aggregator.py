@@ -11,6 +11,22 @@ Supports two normalization modes:
   Used by Payroll
 
 NOT used by: Three-Way Match (no composite score function)
+
+Sprint 831 — severity floors. The flag-rate average let a population full of
+HIGH-severity flags rate LOW, because a handful of HIGH rows is a tiny rate once
+averaged across every test. The CEO approved the conservative position (decision
+2, 2026-10-24): the score may never read lower than the most serious flags
+support. After the base score, these floors apply:
+
+- any row carrying a HIGH-severity flag            → at least 11 (Moderate)
+- HIGH rows ≥ 1% of the population (and ≥ 2 rows)  → at least 26 (Elevated)
+- HIGH rows ≥ 5% of the population (and ≥ 5 rows)  → at least 51 (High)
+
+The composite score, its weights, the tier bands and these floors are Paciolus
+conventions. No auditing standard prescribes a numeric risk score; the score is
+a triage aid for the auditor's own risk assessment (ISA 315 / PCAOB AS 2110),
+not a substitute for it. Every floor that raises a score is reported in
+``score_basis`` so the reader can see why the score is what it is.
 """
 
 from collections.abc import Callable
@@ -40,6 +56,9 @@ class CompositeScoreResult:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    # Sprint 831: plain-language reasons a floor raised the score (empty when
+    # the base score stood on its own).
+    score_basis: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -51,7 +70,53 @@ class CompositeScoreResult:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
+
+
+# Sprint 831 severity floors (Paciolus convention — see module docstring).
+FLOOR_MODERATE = 11.0
+FLOOR_ELEVATED = 26.0
+FLOOR_HIGH = 51.0
+_ELEVATED_HIGH_SHARE = 0.01
+_ELEVATED_MIN_ROWS = 2
+_HIGH_HIGH_SHARE = 0.05
+_HIGH_MIN_ROWS = 5
+
+
+def apply_score_floor(score: float, floor: float, reason: str, basis: list[str]) -> float:
+    """Raise ``score`` to ``floor`` when it is lower, recording why in ``basis``."""
+    if score < floor:
+        basis.append(reason)
+        return floor
+    return score
+
+
+def severity_floor(high_rows: int, total_entries: int, entity_label: str, score: float, basis: list[str]) -> float:
+    """Apply the HIGH-severity floors to ``score``; reasons go to ``basis``."""
+    if high_rows <= 0 or total_entries <= 0:
+        return score
+    share = high_rows / total_entries
+    if high_rows >= _HIGH_MIN_ROWS and share >= _HIGH_HIGH_SHARE:
+        return apply_score_floor(
+            score,
+            FLOOR_HIGH,
+            f"Raised to High: {high_rows} {entity_label} ({share:.1%}) carry a HIGH-severity flag (5% or more).",
+            basis,
+        )
+    if high_rows >= _ELEVATED_MIN_ROWS and share >= _ELEVATED_HIGH_SHARE:
+        return apply_score_floor(
+            score,
+            FLOOR_ELEVATED,
+            f"Raised to Elevated: {high_rows} {entity_label} ({share:.1%}) carry a HIGH-severity flag (1% or more).",
+            basis,
+        )
+    return apply_score_floor(
+        score,
+        FLOOR_MODERATE,
+        f"Raised to Moderate: {high_rows} {entity_label} carry a HIGH-severity flag.",
+        basis,
+    )
 
 
 def calculate_composite_score(
@@ -65,6 +130,7 @@ def calculate_composite_score(
     normalization: str = "max_possible",
     top_n: int = 5,
     entity_label: str = "entries",
+    severity_floors: bool = True,
 ) -> CompositeScoreResult:
     """Calculate composite diagnostic score from test results.
 
@@ -86,6 +152,8 @@ def calculate_composite_score(
         normalization: "max_possible" or "total_entries"
         top_n: Max number of top findings to include
         entity_label: Label for entries in top_findings (e.g., "entries", "payments")
+        severity_floors: Apply the Sprint 831 HIGH-severity floors (default on;
+            off only to inspect the base arithmetic)
 
     Returns:
         CompositeScoreResult with score, risk tier, flags, and findings
@@ -110,6 +178,7 @@ def calculate_composite_score(
     # Collect flagged entry info
     entry_test_counts: dict[int, int] = {}
     all_flagged_rows: set[int] = set()
+    high_rows: set[int] = set()
     flags_by_severity: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
 
     for tr in test_results:
@@ -119,6 +188,8 @@ def calculate_composite_score(
             all_flagged_rows.add(row)
             sev_str = severity_accessor(fe)
             flags_by_severity[sev_str] = flags_by_severity.get(sev_str, 0) + 1
+            if sev_str == "high":
+                high_rows.add(row)
 
     # Base score calculation
     if normalization == "max_possible":
@@ -146,6 +217,9 @@ def calculate_composite_score(
     multiplier = 1.0 + (multi_flag_ratio * 0.25)
 
     score = min(base_score * multiplier, 100.0)
+    score_basis: list[str] = []
+    if severity_floors:
+        score = severity_floor(len(high_rows), total_entries, entity_label, score, score_basis)
 
     # Top findings (sorted by flag_rate, descending)
     top_findings: list[str] = []
@@ -165,4 +239,5 @@ def calculate_composite_score(
         flag_rate=flag_rate,
         flags_by_severity=flags_by_severity,
         top_findings=top_findings[:top_n],
+        score_basis=score_basis,
     )

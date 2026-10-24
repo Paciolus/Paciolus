@@ -34,7 +34,13 @@ Three gates left between here and announcement. The code is launch-ready; the ga
 
 ---
 
-## 🧭 Methodology calls waiting on you (added 2026-10-23, Sprint 829)
+## 🧭 Methodology calls — DECIDED 2026-10-24
+
+You approved every recommendation in the decision doc (https://claude.ai/artifact/9zuEgMNHBTstNTJSxHcGeQ), with the instruction to be as conservative as possible and to document every source. Implementation: Sprint 831 (calls 2–4 below), Sprint 832 (call 1), Sprint 825 (sampling), Sprint 826 (W-2), Sprint 833 (SoD, bank-rec), Sprint 790 (upload counter), Sprint 834 (storage wording), Sprint 835 (sources page). The original text of the four calls is kept below for the record.
+
+**Still yours:** counsel review of the storage wording in the Terms of Service §5.3 and the Privacy Policy, which I did not edit because they are legal documents (see Sprint 834 in `tasks/todo.md` for the proposed text).
+
+### Original calls (2026-10-23, Sprint 829)
 
 Discovery round 2 found these. They are judgement calls about what a tool *should* conclude, so they are not bugs I can just fix. Each one has a recommendation. Reply with yes, no, or something else.
 
