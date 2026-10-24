@@ -295,6 +295,15 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         title="Confidence factor / expansion factor table",
         usage=("sampling engine — `shared/aicpa_tables.py`", "sampling memo"),
     ),
+    # Sprint 825 (S3/S6): cited without a table number for the evaluation rules —
+    # basic precision with zero misstatements, and separate overstatement /
+    # understatement upper limits that are not netted.
+    Standard(
+        body="AICPA",
+        code="AICPA Audit Sampling Guide",
+        title="Audit Guide: Audit Sampling — MUS evaluation (basic precision; separate over/understatement limits)",
+        usage=("sampling engine evaluation", "sampling memo methodology and UEL derivation"),
+    ),
     # Sprint 813 (item 7): memo PDF citations. AU-C 320 and 330 surfaced only once
     # the scanner learned the "AU-C § 330" spelling the memos use.
     Standard(

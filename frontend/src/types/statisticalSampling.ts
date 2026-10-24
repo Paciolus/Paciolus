@@ -122,6 +122,11 @@ export interface SamplingEvaluationResult {
   sample_value: number
   errors_found: number
   total_misstatement: number
+  // Sprint 825 (S6): projected_misstatement, incremental_allowance,
+  // upper_error_limit and taintings_ranked are the OVERSTATEMENT side.
+  // Overstatements and understatements are bounded separately and never
+  // netted (AICPA Audit Sampling Guide); `conclusion` fails if either side's
+  // upper limit exceeds tolerable misstatement.
   projected_misstatement: number
   basic_precision: number
   incremental_allowance: number
@@ -130,4 +135,13 @@ export interface SamplingEvaluationResult {
   conclusion_detail: string
   errors: SamplingError[]
   taintings_ranked: number[]
+  overstatement_errors_found?: number
+  understatement_errors_found?: number
+  total_overstatement?: number
+  total_understatement?: number
+  understatement_projected_misstatement?: number
+  understatement_basic_precision?: number
+  understatement_incremental_allowance?: number
+  understatement_upper_error_limit?: number
+  understatement_taintings_ranked?: number[]
 }

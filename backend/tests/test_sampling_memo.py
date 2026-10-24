@@ -969,3 +969,64 @@ class TestPreviewExclusionForEvaluation:
         # Both should be substantial
         assert len(design_pdf) > 30_000
         assert len(eval_pdf) > 30_000
+
+
+# ═══════════════════════════════════════════════════════════════
+# Sprint 825 (S3 / S6): two-sided evaluation in the memo
+# ═══════════════════════════════════════════════════════════════
+
+
+def _pdf_text(pdf_bytes: bytes) -> str:
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    # Collapse whitespace: pypdf breaks lines wherever the PDF wraps them.
+    return " ".join(" ".join((page.extract_text() or "") for page in reader.pages).split())
+
+
+def _engine_payload(rows, method, tm, population_value, sample_size, interval=None) -> dict:
+    """Evaluate through the real route serialiser, so the memo sees what the API returns."""
+    from routes.sampling import _run_evaluation
+
+    csv = "\n".join(["item_id,recorded_amount,audited_amount"] + [f"R{i},{r},{a}" for i, (r, a) in enumerate(rows)])
+    return _run_evaluation(csv.encode(), "s.csv", method, 0.95, tm, 0, population_value, sample_size, interval, None)
+
+
+class TestSprint825TwoSidedMemo:
+    def test_understatement_driven_fail_is_explained_in_the_intro(self):
+        """MUS: a 200% understatement drives the understatement UEL to $65,000
+        (> TM $50,000) while the overstatement UEL is $30,000. The intro must
+        say which side exceeds — not claim the $30,000 UEL exceeds TM."""
+        payload = _engine_payload([(1_000, 3_000)] + [(500, 500)] * 19, "mus", 50_000, 600_000, 20, 10_000)
+        assert payload["conclusion"] == "fail"
+        _, intro = _build_evaluation_next_steps(payload, None)
+        assert "overstatement upper error limit of $30,000.00 does not exceed" in intro
+        assert "understatement upper error limit of $65,000.00 exceeds" in intro
+        assert "ISA 530.17" in intro
+
+    def test_mus_memo_prints_both_bounds_and_the_no_netting_rule(self):
+        payload = _engine_payload([(1_000, 3_000)] + [(500, 500)] * 19, "mus", 50_000, 600_000, 20, 10_000)
+        text = _pdf_text(
+            generate_sampling_evaluation_memo(payload, {"sampling_interval": 10_000, "confidence_factor": 3.0}, "s.csv")
+        )
+        assert "Upper Error Limit (UEL) — Understatements" in text
+        assert "$65,000.00" in text
+        assert "not netted" in text
+        assert "AICPA Audit Sampling Guide" in text
+
+    def test_random_memo_shows_basic_precision_for_a_clean_sample(self):
+        """S3: 1,000,000 x 3.0000 / 20 = $150,000 is shown with its source and
+        the Paciolus-convention disclosure."""
+        payload = _engine_payload([(1_000, 1_000)] * 20, "random", 50_000, 1_000_000, 20)
+        text = _pdf_text(generate_sampling_evaluation_memo(payload, {"confidence_factor": 3.0}, "s.csv"))
+        assert "UEL Derivation (Ratio Estimation)" in text
+        assert "$1,000,000.00 × 3.0000 ÷ 20 = $150,000.00" in text
+        assert "Paciolus convention" in text
+        assert "FAIL" in text
+
+    def test_legacy_payload_without_understatement_fields_still_renders(self, evaluation_result, design_result):
+        """An older client sends no understatement fields: single-bound layout, no $0 bound printed."""
+        text = _pdf_text(generate_sampling_evaluation_memo(evaluation_result, design_result, "s.csv"))
+        assert "Understatements" not in text
