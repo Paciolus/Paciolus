@@ -986,6 +986,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    `multi_period.py:281`, `depreciation.py:243`, `lease_accounting.py:216`, …) → use
    `shared/export_helpers`. Decide `Cache-Control: no-store` for all financial exports (only
    `export_sharing.py:222` sets it). In-memory PDFs: plain `Response`, not 8 KB chunking.
+   *(No-store decided and done 2026-10-24: `SecurityHeadersMiddleware` adds `Cache-Control:
+   no-store` to every `Content-Disposition: attachment` response unless the route set its own
+   policy — one place, all ~20 endpoints. The helper consolidation itself is still open.)*
 8. [ ] `export/pipeline.py:47-262` — 11 near-identical functions → one `_run_export(...)` (~120 lines).
 9. [x] **Env reads through `config.py` only.** *(Done 2026-10-23 for the secret-bearing reads —
    see below.)* Latent bug: `email_service.py:48-50` reads
