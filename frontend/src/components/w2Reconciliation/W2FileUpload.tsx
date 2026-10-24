@@ -17,6 +17,7 @@ import {
   parseW2DraftsCsv,
   readFileAsText,
 } from '@/components/w2Reconciliation/parseCsv'
+import { unsupportedTaxYearMessage } from '@/components/w2Reconciliation/taxYearSupport'
 import type {
   Form941QuarterRequest,
   W2DraftRequest,
@@ -28,6 +29,13 @@ interface W2FileUploadProps {
   onAnalyze: (payload: W2ReconciliationRequest) => void
   onExport: (payload: W2ReconciliationRequest) => void
   loading: boolean
+  /**
+   * Sprint 839: tax years with built-in statutory limits, from the backend.
+   * null while loading or if the list could not be read (the backend still
+   * refuses an unsupported year, with a clear message).
+   */
+  supportedYears?: number[] | null
+  supportedNote?: string
 }
 
 interface ParsedState {
@@ -36,7 +44,7 @@ interface ParsedState {
   form_941_quarters: Form941QuarterRequest[]
 }
 
-export function W2FileUpload({ onAnalyze, onExport, loading }: W2FileUploadProps) {
+export function W2FileUpload({ onAnalyze, onExport, loading, supportedYears = null, supportedNote }: W2FileUploadProps) {
   const [payrollFile, setPayrollFile] = useState<File | null>(null)
   const [draftsFile, setDraftsFile] = useState<File | null>(null)
   const [form941File, setForm941File] = useState<File | null>(null)
@@ -94,7 +102,10 @@ export function W2FileUpload({ onAnalyze, onExport, loading }: W2FileUploadProps
     }
   }, [parsed, taxYear, tolerance])
 
-  const canRun = payload !== null && !loading
+  const enteredYear = Number.parseInt(taxYear, 10)
+  const yearUnsupported =
+    supportedYears !== null && /^\d{4}$/.test(taxYear.trim()) && !supportedYears.includes(enteredYear)
+  const canRun = payload !== null && !loading && !yearUnsupported
 
   return (
     <div className="theme-card p-6">
@@ -103,6 +114,22 @@ export function W2FileUpload({ onAnalyze, onExport, loading }: W2FileUploadProps
         Payroll YTD is required; W-2 draft and Form 941 quarterly CSVs are optional but enable
         richer discrepancy checks. Files are parsed client-side and discarded after analysis.
       </p>
+
+      {supportedYears !== null && (
+        <div className="mb-5 p-3 rounded-lg border border-theme bg-oatmeal-100 text-sm font-sans text-content-primary" data-testid="w2-supported-years">
+          <p>
+            {supportedYears.length === 0 ? (
+              'No tax year can be reconciled in the app yet.'
+            ) : (
+              <>
+                Tax year{supportedYears.length === 1 ? '' : 's'} supported in the app:{' '}
+                <span className="font-mono font-medium">{supportedYears.join(', ')}</span>
+              </>
+            )}
+          </p>
+          {supportedNote && <p className="text-xs text-content-tertiary mt-1">{supportedNote}</p>}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
@@ -158,6 +185,12 @@ export function W2FileUpload({ onAnalyze, onExport, loading }: W2FileUploadProps
           </p>
         </div>
       </div>
+
+      {yearUnsupported && (
+        <div role="alert" className="mb-4 p-3 rounded-lg border border-clay-200 bg-clay-50 text-clay-700 text-sm font-sans" data-testid="w2-unsupported-year">
+          {unsupportedTaxYearMessage(enteredYear, supportedYears ?? [])}
+        </div>
+      )}
 
       {parseError && (
         <div className="mb-4 p-3 rounded-lg border border-clay-200 bg-clay-50 text-clay-700 text-sm font-sans">

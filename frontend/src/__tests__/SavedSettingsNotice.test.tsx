@@ -27,7 +27,7 @@ describe('SavedSettingsNotice', () => {
         applied={{ round_amount_threshold: 50000, single_user_volume_pct: 0.15, weekend_posting_enabled: false }}
       />,
     )
-    expect(screen.getByText('3 thresholds differed from Paciolus defaults on this run')).toBeInTheDocument()
+    expect(screen.getByText('Your saved settings changed 3 thresholds from Paciolus defaults')).toBeInTheDocument()
     expect(screen.getByText('$50,000')).toBeInTheDocument()
     expect(screen.getByText('$10,000')).toBeInTheDocument()
     expect(screen.getByText('15%')).toBeInTheDocument()
@@ -37,7 +37,7 @@ describe('SavedSettingsNotice', () => {
 
   it('uses the singular for one change', () => {
     render(<SavedSettingsNotice tool="three_way_match" applied={{ date_window_days: 60 }} />)
-    expect(screen.getByText('1 threshold differed from Paciolus defaults on this run')).toBeInTheDocument()
+    expect(screen.getByText('Your saved settings changed 1 threshold from Paciolus defaults')).toBeInTheDocument()
     expect(screen.getByText('60 d')).toBeInTheDocument()
   })
 
@@ -68,5 +68,28 @@ describe('normalizePayrollTestingConfig', () => {
     const merged = { ...DEFAULT_PAYROLL_TESTING_CONFIG, ...normalizePayrollTestingConfig({ duplicate_tax_enabled: false }) }
     expect(merged.enable_tax_id_duplicates).toBe(false)
     expect('duplicate_tax_enabled' in merged).toBe(false)
+  })
+
+  // Sprint 839
+  it('lists values set for this run only, separately from saved settings', () => {
+    render(
+      <SavedSettingsNotice
+        tool="three_way_match"
+        applied={{ amount_tolerance: 5 }}
+        runOverrides={{ fuzzy_composite_threshold: 0.8, enable_fuzzy_matching: false }}
+        ignored={[{ key: 'date_window_days', reason: 'Replaced by the value supplied for this run.' }]}
+      />,
+    )
+    const run = screen.getByTestId('run-overrides-notice')
+    expect(run).toHaveTextContent('2 thresholds were set for this run only')
+    expect(run).toHaveTextContent('Fuzzy Match Minimum Score: 80% (default 70%)')
+    expect(run).toHaveTextContent('Fuzzy Fallback Matching: Off (default On)')
+    expect(screen.getByText('Your saved settings changed 1 threshold from Paciolus defaults')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Replaced by the value supplied for this run.')
+  })
+
+  it('renders the run block alone when only run values were set', () => {
+    render(<SavedSettingsNotice tool="three_way_match" applied={{}} ignored={[]} runOverrides={{ date_window_days: 45 }} />)
+    expect(screen.getByTestId('run-overrides-notice')).toHaveTextContent('1 threshold was set for this run only')
   })
 })

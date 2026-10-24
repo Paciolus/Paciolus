@@ -4,7 +4,7 @@
 import BankRecPage from '@/app/tools/bank-rec/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
-import { render, screen } from '@/test-utils'
+import { fireEvent, render, screen } from '@/test-utils'
 
 const mockRunReconciliation = jest.fn()
 const mockReset = jest.fn()
@@ -138,5 +138,48 @@ describe('BankRecPage', () => {
     render(<BankRecPage />)
     expect(screen.getByText('Exact Matching')).toBeInTheDocument()
     expect(screen.getByText('CSV Export')).toBeInTheDocument()
+  })
+
+  // Sprint 839: per-run materiality
+  describe('run settings', () => {
+    const openPanel = () => fireEvent.click(screen.getByRole('button', { name: /Run settings/ }))
+
+    it('passes no thresholds until the user enters one', () => {
+      render(<BankRecPage />)
+      expect(mockUseBankRec).toHaveBeenLastCalledWith({ materiality: undefined, performanceMateriality: undefined })
+    })
+
+    it('passes entered materiality and performance materiality to the hook', () => {
+      render(<BankRecPage />)
+      openPanel()
+      fireEvent.change(screen.getByLabelText('Materiality'), { target: { value: '80,000' } })
+      fireEvent.change(screen.getByLabelText('Performance materiality'), { target: { value: '60000' } })
+      expect(mockUseBankRec).toHaveBeenLastCalledWith({ materiality: 80000, performanceMateriality: 60000 })
+      expect(screen.getByRole('button', { name: /Run settings/ })).toHaveTextContent('2 set for this run')
+    })
+
+    it('shows an error and blocks the run for an unusable value', () => {
+      render(<BankRecPage />)
+      openPanel()
+      fireEvent.change(screen.getByLabelText('Materiality'), { target: { value: '-10' } })
+      expect(screen.getByText('Materiality must be 0 or more.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reconcile' })).toBeDisabled()
+    })
+
+    it('states which thresholds the run used and where each came from', () => {
+      mockUseBankRec.mockReturnValue({
+        status: 'success', error: null, reconcile: mockRunReconciliation, reset: mockReset,
+        result: { summary: { matched_count: 0, matched_amount: 0, bank_only_count: 0, bank_only_amount: 0, ledger_only_count: 0, ledger_only_amount: 0, reconciling_difference: 0, total_bank: 0, total_ledger: 0, matches: [] }, bank_column_detection: { requires_mapping: false, detection_notes: [] }, ledger_column_detection: { requires_mapping: false, detection_notes: [] },
+          active_thresholds: {
+            materiality: '80000.0', performance_materiality: '50000.00', amount_tolerance: '0.01', date_tolerance_days: 0,
+            materiality_source: 'caller', threshold_sources: { materiality: 'caller', performance_materiality: 'default' },
+          },
+        },
+      })
+      render(<BankRecPage />)
+      const applied = screen.getByTestId('bank-rec-thresholds-applied')
+      expect(applied).toHaveTextContent('Materiality: $80,000.00 (entered for this run)')
+      expect(applied).toHaveTextContent('Performance materiality: $50,000.00 (Paciolus default)')
+    })
   })
 })

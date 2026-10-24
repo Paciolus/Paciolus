@@ -4,6 +4,7 @@ Paciolus API — Three-Way Match Routes
 
 import asyncio
 import dataclasses
+import json
 import logging
 from typing import Any, Optional
 
@@ -17,12 +18,10 @@ from database import get_db
 from models import User
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
-from shared.helpers import parse_json_mapping
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.saved_testing_config import (
     TWM_CONFIG_BOUNDS,
     TWM_SPEC,
-    effective_non_defaults,
     load_saved_testing_config,
     supersede_with_run_overrides,
 )
@@ -34,7 +33,12 @@ from shared.upload_pipeline import (
     validate_file_size,
 )
 from three_way_match_engine import (
+    ColumnMappingError,
+    InvoiceColumnDetectionResult,
+    POColumnDetectionResult,
+    ReceiptColumnDetectionResult,
     ThreeWayMatchConfig,
+    apply_column_mapping,
     assess_three_way_data_quality,
     detect_invoice_columns,
     detect_po_columns,
@@ -43,6 +47,7 @@ from three_way_match_engine import (
     parse_purchase_orders,
     parse_receipts,
     run_three_way_match,
+    validate_column_mapping_keys,
 )
 
 router = APIRouter(tags=["three_way_match"])
@@ -103,6 +108,34 @@ def _build_twm_config(
     return dataclasses.replace(base if base is not None else ThreeWayMatchConfig(), **supplied)
 
 
+def _parse_column_mapping(raw: Optional[str], detection_cls: type, label: str) -> Optional[dict[str, str]]:
+    """Parse and check one manual column mapping (Sprint 839).
+
+    Before Sprint 839 the three mappings were parsed and then ignored. They are
+    now applied to column detection; anything malformed is refused with a 400
+    rather than accepted and dropped.
+    """
+    if raw is None or not raw.strip():
+        return None
+    try:
+        mapping = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail=f"{label} column mapping is not valid JSON.")
+    if not isinstance(mapping, dict):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{label} column mapping must be an object of field name to column name.",
+        )
+    if not mapping:
+        return None
+    try:
+        validate_column_mapping_keys(mapping, detection_cls, label)
+    except ColumnMappingError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    log_secure_operation(f"twm_{label.lower()}_mapping", f"Received mapping: {sorted(mapping.keys())}")
+    return {str(k): str(v) for k, v in mapping.items()}
+
+
 @router.post("/audit/three-way-match", response_model=ThreeWayMatchResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_three_way_match(
@@ -135,11 +168,12 @@ async def audit_three_way_match(
     # Sprint 678: count three-way-match uploads toward the monthly quota.
     check_upload_limit(current_user, db)
 
-    # parse_json_mapping has a log_secure_operation side effect; returns ignored
-    # until column-override wiring is implemented for three-way-match.
-    _ = parse_json_mapping(po_column_mapping, "twm_po")
-    _ = parse_json_mapping(invoice_column_mapping, "twm_invoice")
-    _ = parse_json_mapping(receipt_column_mapping, "twm_receipt")
+    # Sprint 839: manual column mappings are applied to detection (they were
+    # parsed and then ignored before). Field names are checked here, before
+    # any file I/O; mapped column names are checked against each file.
+    po_mapping = _parse_column_mapping(po_column_mapping, POColumnDetectionResult, "PO")
+    inv_mapping = _parse_column_mapping(invoice_column_mapping, InvoiceColumnDetectionResult, "Invoice")
+    rec_mapping = _parse_column_mapping(receipt_column_mapping, ReceiptColumnDetectionResult, "Receipt")
 
     # Sprint 836: start from the user's saved settings; a value supplied for
     # this run replaces the saved one (and the result says so).
@@ -153,7 +187,8 @@ async def audit_three_way_match(
         "enable_fuzzy_matching": enable_fuzzy_matching,
         "fuzzy_composite_threshold": fuzzy_composite_threshold,
     }
-    supersede_with_run_overrides(saved, {k for k, v in run_overrides.items() if v is not None})
+    supplied_run_overrides = {k for k, v in run_overrides.items() if v is not None}
+    supersede_with_run_overrides(saved, supplied_run_overrides)
 
     # Build the config before file I/O so bounds-check errors short-circuit
     # without having to read / parse the uploads.
@@ -188,9 +223,13 @@ async def audit_three_way_match(
                 inv_columns, inv_rows = parse_uploaded_file(inv_bytes, inv_filename)
                 rec_columns, rec_rows = parse_uploaded_file(rec_bytes, rec_filename)
 
-                po_detection = detect_po_columns(po_columns)
-                inv_detection = detect_invoice_columns(inv_columns)
-                rec_detection = detect_receipt_columns(rec_columns)
+                try:
+                    po_detection = apply_column_mapping(detect_po_columns(po_columns), po_mapping, "PO")
+                    inv_detection = apply_column_mapping(detect_invoice_columns(inv_columns), inv_mapping, "Invoice")
+                    rec_detection = apply_column_mapping(detect_receipt_columns(rec_columns), rec_mapping, "Receipt")
+                except ColumnMappingError as e:
+                    # The message names only the user's own column headers.
+                    raise HTTPException(status_code=400, detail=str(e))
 
                 pos = parse_purchase_orders(po_rows, po_detection)
                 invoices = parse_invoices(inv_rows, inv_detection)
@@ -215,9 +254,13 @@ async def audit_three_way_match(
 
             response: dict[str, Any] = result.to_dict()
             response.update(saved.result_fields())
-            # PR #229 review: report the thresholds the run actually used,
-            # per-run values included, not only the saved overrides.
-            response["settings_applied"] = effective_non_defaults(config, TWM_SPEC)
+            # Sprint 839: disclose every value supplied for this run, as
+            # applied (the saved value it replaced is in settings_ignored).
+            # settings_applied stays the saved settings that took effect, so
+            # each value's source is explicit (refines the PR #229 fix).
+            response["settings_run_overrides"] = {
+                name: getattr(config, name) for name in sorted(supplied_run_overrides)
+            }
             return response
 
         except HTTPException:

@@ -453,6 +453,8 @@ export interface ThreeWayMatchConfig {
   fuzzy_vendor_threshold: number;
   price_variance_threshold: number;
   enable_fuzzy_matching: boolean;
+  /** Sprint 839: minimum composite score for a fuzzy match (engine field; settable per run). */
+  fuzzy_composite_threshold: number;
 }
 
 export const THREE_WAY_MATCH_PRESETS: Record<Exclude<ThreeWayMatchPreset, 'custom'>, Partial<ThreeWayMatchConfig>> = {
@@ -479,6 +481,17 @@ export const THREE_WAY_MATCH_PRESETS: Record<Exclude<ThreeWayMatchPreset, 'custo
   },
 };
 
+/** Sprint 839: the per-run override form fields the three-way-match route accepts, in a stable order. */
+export const TWM_RUN_OVERRIDE_KEYS = [
+  'amount_tolerance',
+  'quantity_tolerance',
+  'date_window_days',
+  'fuzzy_vendor_threshold',
+  'price_variance_threshold',
+  'enable_fuzzy_matching',
+  'fuzzy_composite_threshold',
+] as const satisfies readonly (keyof ThreeWayMatchConfig)[]
+
 export const DEFAULT_THREE_WAY_MATCH_CONFIG: ThreeWayMatchConfig = {
   amount_tolerance: 0.01,
   quantity_tolerance: 0.0,
@@ -486,6 +499,7 @@ export const DEFAULT_THREE_WAY_MATCH_CONFIG: ThreeWayMatchConfig = {
   fuzzy_vendor_threshold: 0.85,
   price_variance_threshold: 0.05,
   enable_fuzzy_matching: true,
+  fuzzy_composite_threshold: 0.70,
 };
 
 export const TWM_PRESET_LABELS: Record<ThreeWayMatchPreset, string> = {

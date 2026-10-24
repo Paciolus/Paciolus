@@ -182,6 +182,8 @@ class ThreeWayMatchExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     variances: list = []
     data_quality: dict = {}
     config: dict = {}
+    # Sprint 839: tolerances supplied for this run only; the memo states them.
+    settings_run_overrides: Optional[dict[str, bool | int | float]] = Field(default=None, max_length=20)
     filename: str = "three_way_match"
 
 

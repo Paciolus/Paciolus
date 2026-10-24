@@ -291,22 +291,6 @@ def apply_saved_config(base: T, saved: Optional[dict[str, Any]], spec: SavedConf
     return SavedConfigOutcome(config=config, overrides=overrides, applied=applied, ignored=ignored)
 
 
-def effective_non_defaults(config: Any, spec: SavedConfigSpec) -> dict[str, Any]:
-    """Every field of ``config`` that differs from the engine default, whatever set it.
-
-    PR #229 review: for tools that also take per-run values (Three-Way Match),
-    ``settings_applied`` must describe the configuration the run actually used,
-    not only the saved overrides; otherwise a per-run tolerance went unreported
-    and the memo called every threshold a default.
-    """
-    default = spec.config_cls()
-    return {
-        f.name: getattr(config, f.name)
-        for f in dataclasses.fields(config)
-        if f.name not in spec.per_run_only and getattr(config, f.name) != getattr(default, f.name)
-    }
-
-
 def _preview(value: Any) -> str:
     try:
         text = json.dumps(value)

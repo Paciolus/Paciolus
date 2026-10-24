@@ -336,9 +336,10 @@ class TestRoutesHonourSavedSettings:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["config"]["date_window_days"] == 10
-        # PR #229 review: settings_applied reports the thresholds the run used,
-        # per-run values included.
-        assert body["settings_applied"] == {"date_window_days": 10}
+        # Sprint 839 (refining the PR #229 fix): per-run values are disclosed
+        # separately from saved settings, so each value's source is explicit.
+        assert body["settings_applied"] == {}
+        assert body["settings_run_overrides"] == {"date_window_days": 10}
         assert body["settings_ignored"] == [
             {"key": "date_window_days", "reason": "Replaced by the value supplied for this run."}
         ]
@@ -348,7 +349,7 @@ class TestRoutesHonourSavedSettings:
         """PR #229 review: a per-run tolerance with no saved settings went unreported."""
         response = await _post("/audit/three-way-match", _twm_files(), data={"date_window_days": "10"})
         assert response.status_code == 200, response.text
-        assert response.json()["settings_applied"] == {"date_window_days": 10}
+        assert response.json()["settings_run_overrides"] == {"date_window_days": 10}
 
     @pytest.mark.asyncio
     async def test_je_zero_single_user_threshold_is_ignored_not_fatal(self, override_auth_verified, db_session):

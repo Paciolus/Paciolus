@@ -5,7 +5,7 @@
  */
 
 import type { Severity } from './shared'
-import type { SavedSettingsDisclosure } from './testingShared'
+import type { SavedSettingsDisclosure, SavedSettingValue } from './testingShared'
 
 // =============================================================================
 // ENUMS & CONSTANTS
@@ -192,4 +192,9 @@ export interface ThreeWayMatchResult extends SavedSettingsDisclosure {
     receipt: ColumnDetectionData
   }
   config: Record<string, unknown>
+  /**
+   * Sprint 839: tolerances supplied for this run only, as applied. They win
+   * over saved settings; the saved value each replaced is in settings_ignored.
+   */
+  settings_run_overrides?: Record<string, SavedSettingValue>
 }

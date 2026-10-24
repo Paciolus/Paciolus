@@ -4,6 +4,7 @@ Paciolus API — Bank Reconciliation Routes
 
 import asyncio
 import logging
+import math
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,18 @@ async def audit_bank_reconciliation(
     # Sprint 678: count bank rec uploads toward the monthly quota.
     check_upload_limit(current_user, db)
 
+    # Sprint 839: the app now sends these. Refuse unusable values with a clear
+    # message instead of letting BankRecConfig's ValueError reach the generic
+    # sanitised 400 inside the analysis block.
+    for label, value in (("Materiality", materiality), ("Performance materiality", performance_materiality)):
+        if value is not None and (not math.isfinite(value) or value < 0):
+            raise HTTPException(status_code=400, detail=f"{label} must be a dollar amount of zero or more.")
+    if materiality is not None and performance_materiality is not None and performance_materiality > materiality:
+        raise HTTPException(
+            status_code=400,
+            detail="Performance materiality cannot exceed materiality.",
+        )
+
     bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
     ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")
 
@@ -108,6 +121,14 @@ async def audit_bank_reconciliation(
                 )
 
             result = await asyncio.to_thread(_analyze)
+            # Sprint 839: ``materiality_source`` is "caller" when either value
+            # was supplied; say per threshold which one this run supplied, so a
+            # run that set only one does not present the other as entered.
+            if result.active_thresholds is not None:
+                result.active_thresholds["threshold_sources"] = {
+                    "materiality": "caller" if materiality is not None else "default",
+                    "performance_materiality": "caller" if performance_materiality is not None else "default",
+                }
 
             maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True, consumes_upload=True)
 
