@@ -28,7 +28,7 @@ All of the following CI jobs must pass before a PR can be merged to `main`:
 
 | Job | Purpose |
 |-----|---------|
-| `pip-audit-advisory` | Full Python vulnerability report |
+| `pip-audit-blocking` (advisory step) | Full Python vulnerability report — a non-failing step inside the blocking job since Sprint 822 |
 | `npm-audit-advisory` | Full Node vulnerability report |
 | `merge-revert-guard` | Detects silent reverts (PR-only) |
 | `e2e-smoke` | Playwright smoke tests (requires secrets) |

@@ -29,7 +29,7 @@ All PRs must pass the following CI checks before merging. The authoritative sour
 | `pip-audit-blocking` | No HIGH/CRITICAL Python CVEs |
 | `npm-audit-blocking` | No HIGH/CRITICAL Node CVEs |
 
-**Advisory (non-blocking):** `pip-audit-advisory`, `npm-audit-advisory`, `merge-revert-guard`, `backend-tests-slow` (main-only).
+**Advisory (non-blocking):** the all-severity step inside `pip-audit-blocking`, `npm-audit-advisory`, `merge-revert-guard`, `backend-tests-slow` (main-only).
 
 **E2E smoke tests:** Run on push to main and PRs targeting main. Requires `SMOKE_USER` and `SMOKE_PASS` repository secrets. When secrets are unavailable (external PRs), the job skips gracefully with a notice.
 

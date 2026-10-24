@@ -43,7 +43,8 @@
 #                           across docs and the public OpenAPI description.
 #   report-standards      — SHOULD BE REQUIRED. Report standards validator.
 #   backend-tests-slow    — Long-running suite; advisory by design.
-#   pip-audit-advisory    — Informational counterpart to the blocking gate.
+#   (pip all-severity report — an advisory *step* inside the blocking pip
+#    job since Sprint 822, so requirements.txt is installed once, not twice.)
 #   npm-audit-advisory    — Informational counterpart to the blocking gate.
 #   merge-revert-guard    — Advisory by design.
 #   e2e-smoke             — Playwright; advisory by design (flake tolerance).
@@ -685,33 +686,15 @@ jobs:
         # real finding — the same defect 794a fixed on the npm side.
         run: bash ../scripts/pip_audit_gate.sh --mode blocking -- -r requirements.txt
 
-  # ── Dependency Audit: pip (advisory — all severities) ────────
-  pip-audit-advisory:
-    name: Python Dependency Audit (advisory)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # pin: v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install pip-audit and project dependencies
-        run: |
-          pip install pip-audit
-          pip install -r requirements.txt
-
       - name: Audit all vulnerabilities (advisory)
+        # Sprint 822: formerly its own job, which installed the full
+        # requirements.txt a second time. Same environment, so a separate step.
+        # `if: always()` keeps the full report when the blocking step fails;
+        # `continue-on-error` keeps this step from failing the required check.
         # Sprint 794b: `--desc` is dropped deliberately — it does nothing
-        # alongside `--format json`, which the gate requires, and the readable
-        # summary is built from the JSON instead.
+        # alongside `--format json`, which the gate requires.
+        if: always()
+        continue-on-error: true
         run: bash ../scripts/pip_audit_gate.sh --mode advisory -- -r requirements.txt
 
   # ── Dependency Audit: npm (blocking on HIGH/CRITICAL) ────────
