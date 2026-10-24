@@ -129,7 +129,7 @@ class BankRecExportInput(BaseModel):
 
 @router.post("/export/csv/bank-rec")
 @limiter.limit(RATE_LIMIT_EXPORT)
-async def export_csv_bank_rec(
+def export_csv_bank_rec(
     request: Request,
     export_input: BankRecExportInput,
     current_user: User = Depends(require_verified_user),

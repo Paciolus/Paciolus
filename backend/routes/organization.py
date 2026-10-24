@@ -81,7 +81,7 @@ class UpdateMemberRoleRequest(BaseModel):
 
 @router.post("", response_model=OrganizationResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def create_organization(
+def create_organization(
     body: CreateOrgRequest,
     request: Request,
     user: User = Depends(require_current_user),
@@ -115,7 +115,7 @@ async def create_organization(
 
 
 @router.get("", response_model=OrganizationWithMemberCountResponse)
-async def get_organization(
+def get_organization(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -129,7 +129,7 @@ async def get_organization(
 
 @router.put("", response_model=OrganizationResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def update_organization(
+def update_organization(
     body: UpdateOrgRequest,
     request: Request,
     user: User = Depends(require_current_user),
@@ -149,9 +149,20 @@ async def update_organization(
 # ---------------------------------------------------------------------------
 
 
+def _lock_org_for_seat_check(db: Session, org_id: int) -> Organization | None:
+    """Take a row lock on the organization before a seat-limit check.
+
+    The seat check counts members + pending invites, then the caller inserts.
+    Without a lock two concurrent requests both see a free seat and both
+    insert. ``SELECT ... FOR UPDATE`` holds the lock until the caller commits,
+    so a second request blocks and then counts the first one's row.
+    """
+    return db.query(Organization).filter(Organization.id == org_id).with_for_update().first()
+
+
 @router.post("/invite", response_model=OrganizationInviteCreateResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def create_invite(
+def create_invite(
     body: InviteRequest,
     request: Request,
     user: User = Depends(require_current_user),
@@ -161,7 +172,11 @@ async def create_invite(
     org = get_user_org(db, user)
     require_admin(db, user, org)
 
-    # Check seat limit against org subscription (not the inviter's personal subscription)
+    # Check seat limit against org subscription (not the inviter's personal subscription).
+    # Sprint 821: this handler now runs in the threadpool, so two invites can
+    # race between the seat count and the insert. Lock the organization row
+    # first so seat reservations serialize (Postgres; a no-op on SQLite).
+    _lock_org_for_seat_check(db, org.id)
     check_seat_limit_for_org(db, org.id)
 
     # Check for duplicate pending invite
@@ -206,7 +221,7 @@ async def create_invite(
 
 
 @router.get("/invites", response_model=list[OrganizationInviteResponse])
-async def list_invites(
+def list_invites(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
@@ -228,7 +243,7 @@ async def list_invites(
 
 @router.delete("/invites/{invite_id}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def revoke_invite(
+def revoke_invite(
     invite_id: int,
     request: Request,
     user: User = Depends(require_current_user),
@@ -257,7 +272,7 @@ async def revoke_invite(
 
 @router.post("/invite/accept/{token}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def accept_invite(
+def accept_invite(
     token: str,
     request: Request,
     user: User = Depends(require_current_user),
@@ -291,7 +306,7 @@ async def accept_invite(
         raise HTTPException(status_code=410, detail="This invite has expired.")
 
     # Check seat limit for the org (uses org subscription, not inviter's)
-    org = db.query(Organization).filter(Organization.id == invite.organization_id).first()
+    org = _lock_org_for_seat_check(db, invite.organization_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found.")
 
@@ -331,7 +346,7 @@ async def accept_invite(
 
 
 @router.get("/members", response_model=list[OrganizationMemberResponse])
-async def list_members(
+def list_members(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
@@ -358,7 +373,7 @@ async def list_members(
 
 @router.put("/members/{member_id}/role", response_model=OrganizationMemberResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def update_member_role(
+def update_member_role(
     member_id: int,
     body: UpdateMemberRoleRequest,
     request: Request,
@@ -390,7 +405,7 @@ async def update_member_role(
 
 @router.delete("/members/{member_id}", response_model=DetailResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def remove_member(
+def remove_member(
     member_id: int,
     request: Request,
     user: User = Depends(require_current_user),

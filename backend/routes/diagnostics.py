@@ -199,7 +199,7 @@ def _summary_to_response(summary: DiagnosticSummary) -> DiagnosticSummaryRespons
 
 @router.post("/diagnostics/summary", response_model=DiagnosticSummaryResponse, status_code=201)
 @limiter.limit(RATE_LIMIT_WRITE)
-async def save_diagnostic_summary(
+def save_diagnostic_summary(
     request: Request,
     summary_data: DiagnosticSummaryCreate,
     current_user: User = Depends(require_verified_user),
@@ -285,7 +285,7 @@ async def save_diagnostic_summary(
 
 
 @router.get("/diagnostics/summary/{client_id}/previous", response_model=Optional[DiagnosticSummaryResponse])
-async def get_previous_diagnostic_summary(
+def get_previous_diagnostic_summary(
     client_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
@@ -310,7 +310,7 @@ async def get_previous_diagnostic_summary(
 
 
 @router.get("/diagnostics/summary/{client_id}/history", response_model=DiagnosticHistoryResponse)
-async def get_diagnostic_history(
+def get_diagnostic_history(
     client_id: int,
     limit: int = Query(default=10, ge=1, le=50),
     current_user: User = Depends(require_current_user),

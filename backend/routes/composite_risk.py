@@ -134,7 +134,7 @@ class CompositeRiskProfileResponse(BaseModel):
     response_model=CompositeRiskProfileResponse,
 )
 @limiter.limit(RATE_LIMIT_AUDIT)
-async def build_risk_profile(
+def build_risk_profile(
     request: Request,
     body: CompositeRiskProfileRequest,
     current_user: User = Depends(require_verified_user),

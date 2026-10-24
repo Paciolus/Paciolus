@@ -181,7 +181,7 @@ async def _process_bulk_files(
 
 
 @router.get("/{job_id}/status", response_model=BulkUploadStatusResponse)
-async def get_bulk_status(
+def get_bulk_status(
     job_id: str,
     user: User = Depends(require_verified_user),
 ) -> dict[str, Any]:
