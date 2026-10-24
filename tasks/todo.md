@@ -1464,6 +1464,55 @@ binding to lowercase and break the current production database, which holds name
 
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
 
+#### 786b step 3 — @types/node 26 shipped; jest-dom 7 is BLOCKED by an npm bug
+
+**`@types/node` 25.6.0 → 26.6.5: done.** A major the canonical sequence does not list — it names
+three frontend majors, `npm outdated` reports four. Type-only, so no runtime surface, and verified
+on all three criteria anyway: `tsc --noEmit` exit 0, 207 suites / 2,036 tests / 5 snapshots, build
+compiled with 64 dynamic page routes. The lockfile diff was audited rather than trusted: exactly
+two entries moved, `@types/node` and its transitive `undici-types` 7.19.2 → 8.9.0.
+
+**`@testing-library/jest-dom` 6.9.1 → 7.0.1: blocked, and not by a dependency conflict.**
+
+Every install path crashes inside npm itself:
+
+```
+npm error Cannot read properties of null (reading 'edgesOut')
+    at #loadPeerSet (@npmcli/arborist/lib/arborist/build-ideal-tree.js:1289:38)
+```
+
+Four approaches tried — `npm install --save-dev @testing-library/jest-dom@7`, a manual
+`package.json` edit followed by `npm install`, `npm install --package-lock-only`, and clearing
+`node_modules/.package-lock.json` first. All four crash in the same place: arborist's peer-set
+loader, on npm 10.9.0 / Node 22.11.0.
+
+**There is no real incompatibility.** jest-dom 7.0.1's peers are `vitest` (optional) and
+`@testing-library/dom >=10 <11` (required). This project declares `@testing-library/dom ^10.4.1`
+and has 10.4.1 installed, which satisfies it. Checked against the registry metadata rather than
+inferred from the error.
+
+**`--legacy-peer-deps` "works" and must not be used.** It completes, because it skips the code path
+that crashes — and the resulting lockfile **drops 75 entries**, including `eslint` 9.39.4,
+`webpack` 5.112.0, `terser` and the entire eslint plugin chain, because those existed only as
+peer-derived entries. Audited by diffing the lockfile rather than by trusting the exit code; the
+tree was reverted and rebuilt with `npm ci`, and `tsc` plus 2,036 tests confirm it is back to
+baseline.
+
+**What would unblock it**, in preference order:
+
+1. **Upgrade npm.** This is a known arborist defect in the 10.x line, and the fix is not something
+   this repository can carry. Needs a decision because it changes the toolchain on the dev machine
+   and in CI (`setup-node` pins Node 22 but takes whatever npm ships with it).
+2. Wait for a jest-dom release that restructures the peer set.
+
+**Not forced.** A green `npm ci` on a lockfile missing eslint and webpack is exactly the kind of
+false green this sprint has spent its time removing — CI would install from it happily and the lint
+job would then fail for an unrelated-looking reason.
+
+**Still pending in step 3:** `typescript` 7 and `framer-motion` 14 (12 → 14, two majors). Both are
+independent of jest-dom, so the npm bug does not block them unless it proves to be general rather
+than peer-set specific.
+
 #### 786b step 2 — the patch batch: COMPLETE
 
 Five patch-level pins raised in one commit, as the sequence prescribes: `APScheduler` 3.11.3,
