@@ -727,7 +727,12 @@ def test_inferred_cutoff_period_is_rounded_to_whole_months():
 
 @pytest.mark.parametrize(
     "name",
-    ["Inventory Reserve for Obsolescence", "Inventory Reserve", "Provision for Doubtful Debts", "Accumulated Impairment"],
+    [
+        "Inventory Reserve for Obsolescence",
+        "Inventory Reserve",
+        "Provision for Doubtful Debts",
+        "Accumulated Impairment",
+    ],
 )
 def test_asset_reserves_are_contra_accounts(name):
     """T7: a credit-balance inventory reserve was flagged as abnormal."""
@@ -735,3 +740,28 @@ def test_asset_reserves_are_contra_accounts(name):
     from classification_rules import AccountCategory
 
     assert is_balance_abnormal(AccountCategory.ASSET, -39077.87, name) is False
+
+
+def test_partial_deliveries_against_one_po_line_are_combined():
+    from three_way_match_engine import Invoice, PurchaseOrder, Receipt, run_three_way_match
+
+    pos = [PurchaseOrder(po_number="PO-3", vendor="Acme", quantity=100, unit_price=10, total_amount=1000, row_number=1)]
+    invoices = [
+        Invoice(
+            invoice_number="INV-3",
+            po_reference="PO-3",
+            vendor="Acme",
+            quantity=100,
+            unit_price=10,
+            total_amount=1000,
+            row_number=1,
+        )
+    ]
+    receipts = [
+        Receipt(po_reference="PO-3", vendor="Acme", quantity_received=60, receipt_date="2025-03-01", row_number=1),
+        Receipt(po_reference="PO-3", vendor="Acme", quantity_received=40, receipt_date="2025-03-09", row_number=2),
+    ]
+    result = run_three_way_match(pos, invoices, receipts)
+    assert result.variances == []
+    assert result.unmatched_receipts == []
+    assert result.full_matches[0].receipt.quantity_received == 100

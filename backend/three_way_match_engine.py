@@ -21,6 +21,7 @@ Audit Standards References:
 """
 
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from difflib import SequenceMatcher
 from enum import Enum
@@ -1260,6 +1261,39 @@ def _line_distance(po: PurchaseOrder, doc: Invoice | Receipt) -> tuple[int, floa
     return desc_rank, qty_gap, price_gap
 
 
+def _same_line_receipts(po: PurchaseOrder, po_line_count: int, open_receipts: list[Receipt]) -> list[Receipt]:
+    """Receipts that are deliveries against this PO line.
+
+    Every receipt on a single-line PO; on a multi-line PO, the receipts whose
+    description is this line's. Without descriptions a multi-line PO cannot
+    be split by line, so nothing is combined.
+    """
+    if po_line_count == 1:
+        return list(open_receipts)
+    desc = _norm_desc(po.description)
+    if not desc:
+        return []
+    return [r for r in open_receipts if _norm_desc(r.description) == desc]
+
+
+def _combine_receipts(receipts: list[Receipt]) -> Receipt:
+    """One receipt carrying the total delivered quantity and the last delivery date."""
+    dates = [r.receipt_date for r in receipts if r.receipt_date]
+    first = receipts[0]
+    return Receipt(
+        receipt_number=", ".join(r.receipt_number for r in receipts if r.receipt_number) or None,
+        po_reference=first.po_reference,
+        invoice_reference=first.invoice_reference,
+        vendor=first.vendor,
+        description=first.description,
+        quantity_received=sum(r.quantity_received for r in receipts),
+        receipt_date=max(dates, key=lambda d: parse_date(d) or date.min) if dates else None,
+        received_by=first.received_by,
+        condition=first.condition,
+        row_number=first.row_number,
+    )
+
+
 def _closest_line(po: PurchaseOrder, candidates: list[Any]) -> Any:
     if not candidates:
         return None
@@ -1329,9 +1363,18 @@ def run_three_way_match(
             )
 
             # Find receipt(s) with this PO reference
-            linked_receipt = _closest_line(
-                po, [rec for rec in rec_by_po_ref.get(po_num, []) if rec.row_number not in matched_rec_ids]
-            )
+            open_receipts = [rec for rec in rec_by_po_ref.get(po_num, []) if rec.row_number not in matched_rec_ids]
+            linked_receipt = _closest_line(po, open_receipts)
+            consumed_receipts = [linked_receipt] if linked_receipt is not None else []
+            # Sprint 829: a PO delivered in instalments has several receipts for
+            # one line. Matching only the first reported a quantity variance of
+            # the undelivered remainder plus an "unmatched" receipt — a PO for
+            # 100 received as 60 + 40 scored high risk.
+            if linked_receipt is not None:
+                partials = _same_line_receipts(po, len(po_list), open_receipts)
+                if len(partials) > 1:
+                    consumed_receipts = partials
+                    linked_receipt = _combine_receipts(partials)
 
             # Also try linking receipt via invoice reference
             if not linked_receipt and linked_invoice and linked_invoice.invoice_number:
@@ -1356,8 +1399,8 @@ def run_three_way_match(
                 matched_po_ids.add(po.row_number)
                 if linked_invoice:
                     matched_inv_ids.add(linked_invoice.row_number)
-                if linked_receipt:
-                    matched_rec_ids.add(linked_receipt.row_number)
+                for rec in consumed_receipts or ([linked_receipt] if linked_receipt else []):
+                    matched_rec_ids.add(rec.row_number)
 
                 if is_full:
                     result.full_matches.append(match)

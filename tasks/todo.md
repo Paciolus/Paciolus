@@ -533,7 +533,9 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
 - [x] **RT-02 / RT-09 / T7** — the year-end window ends at the configured period end (else
       the last entry's month-end); inferred cut-off periods round out to whole months; asset
       reserves ("reserve for", "inventory reserve", "provision for") are contra accounts.
-- [ ] Open P2/P3: W3 partial deliveries; JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
+- [x] **W3** — receipts delivered in instalments against one PO line are combined (every
+      receipt on a single-line PO; same-description receipts on a multi-line PO).
+- [ ] Open P2/P3: JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
       PR-T7 monthly staff in a biweekly population; Decimal→string serialization in details.
 - [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
       accounts), and Key Metrics states what the ratios leave out.
