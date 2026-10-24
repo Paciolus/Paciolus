@@ -512,7 +512,7 @@ overstatements — the two-sided test is the AICPA approach the CEO chose.
 ---
 
 ### Sprint 826: Tax tools — 1099 rules, W-2 coverage, book-to-tax loss years
-**Status:** PARTIAL — F0–F8, W3–W7, W10, B3–B5 merged 2026-10-23; W1/W2 await the statutory-table decision; see the items below.
+**Status:** PARTIAL — F0–F8, W3–W7, W10, B3–B5 merged 2026-10-23; W1/W2 done 2026-10-24; B1 and the remaining items below are open.
 **Priority:** **P1** — F1–F3 change whether a 1099 is due; W2 flags a correct HSA contribution
 HIGH with an excise-tax message.
 
@@ -532,12 +532,17 @@ valuation allowance) needs a scope call.
       royalties $10); a MISC is due when any box qualifies. The $10 royalty figure is
       long-standing and not indexed, but goes on the 793b confirmation list with the rest.
 - [x] **F7** — `other` → 1099-MISC box 3.
-- [ ] **W1/W2 — design question first.** Both need new statutory fields (SIMPLE catch-up 50+ and
-      60–63; HSA age-55 catch-up). Adding them to `StatutoryLimits` means a 2026 request that
-      today fully overrides the 11 existing fields would be refused (the new fields would be
-      "missing", and Sprint 811 deliberately refuses rather than falls back). Decide with 793b:
-      optional fields that disable only their own check when absent, or a breaking change to
-      the override contract.
+- [x] **W1/W2 — done 2026-10-24 (CEO decision 6, option C).** Three optional fields
+      (`hsa_catchup_55`, `limit_simple_catchup_50`, `limit_simple_catchup_60_63`) that never count as
+      missing, so an 11-field 2026 override still works. When a figure is absent and an employee
+      could qualify, the check does not run and the response says so in a new `checks_not_run` list
+      (also in the results view and CSV). Amounts over the base limit stay HIGH, but when age or the
+      catch-up figure is unknown the finding says the catch-up could not be checked instead of
+      asserting an excess contribution. SIMPLE plans now use SIMPLE catch-up figures (the old code
+      allowed the 401(k) $7,500, missing real over-contributions). 2025 figures with sources:
+      HSA $1,000 (IRC §223(b)(3)(B)); SIMPLE 50+ $3,500 and 60–63 $5,250 (IRC §414(v); IRS Notice
+      2024-80). All on the 793b confirmation list in the engine. Not modelled: SECURE 2.0 §117 higher
+      SIMPLE limits for small employers.
 - [x] **W3** — Boxes 4 and 6 are compared with what payroll actually withheld (when supplied),
       and Box 12 codes D/W/S with payroll deferrals and HSA contributions.
 - [x] **W4 (part)** — duplicate and orphan W-2 drafts are reported in the summary, IDs match
