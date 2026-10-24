@@ -77,13 +77,12 @@ _TEST_DESCRIPTIONS: dict[str, str] = {
     ),
     "bank_only_items": (
         "Identifies transactions present on the bank statement but absent from the "
-        "general ledger. These represent outstanding deposits in transit that have "
-        "not yet been recorded in the books."
+        "general ledger — bank charges, interest, direct credits and returned items "
+        "not yet recorded in the books."
     ),
     "ledger_only_items": (
         "Identifies transactions recorded in the general ledger but not yet cleared "
-        "at the bank. These represent outstanding checks or disbursements pending "
-        "bank clearance."
+        "at the bank — outstanding checks and disbursements, and deposits in transit."
     ),
     "stale_deposits": (
         "Flags outstanding deposits older than 10 days before the statement date. "

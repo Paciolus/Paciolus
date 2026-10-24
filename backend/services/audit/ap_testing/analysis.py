@@ -33,6 +33,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.fuzzy_match import similarity_at_least
+from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
@@ -457,7 +458,7 @@ class FlaggedPayment:
             "severity": self.severity.value,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 

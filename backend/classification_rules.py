@@ -194,6 +194,17 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("debt", AccountCategory.LIABILITY, 0.75),
     ClassificationRule("credit card", AccountCategory.LIABILITY, 0.80, is_phrase=True),
     ClassificationRule("due to", AccountCategory.LIABILITY, 0.80, is_phrase=True),
+    # Sprint 829: a revolving facility is a liability; it was unclassified.
+    ClassificationRule("line of credit", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    # ...and the accrued/payable forms of the expense keywords added below, so
+    # "Accrued Salaries" and "Payroll Taxes Payable" stay liabilities.
+    ClassificationRule("accrued salaries", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("accrued wage", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("accrued payroll", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("payroll taxes payable", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("payroll tax payable", AccountCategory.LIABILITY, 0.95, is_phrase=True),
+    ClassificationRule("taxes payable", AccountCategory.LIABILITY, 0.90, is_phrase=True),
+    ClassificationRule("accrued property tax", AccountCategory.LIABILITY, 0.95, is_phrase=True),
     # -------------------------------------------------------------------------
     # EQUITY (12 keywords)
     # Source: GAAP standard terminology, ERPNext schema
@@ -254,6 +265,19 @@ DEFAULT_RULES: list[ClassificationRule] = [
     ClassificationRule("bad debt expense", AccountCategory.EXPENSE, 0.90, is_phrase=True),
     ClassificationRule("tax expense", AccountCategory.EXPENSE, 0.75, is_phrase=True),
     ClassificationRule("loss on sale", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    # Sprint 829: common expense names that were unclassified — or, worse,
+    # "Salaries - Sales" read as revenue because only "sales" matched.
+    ClassificationRule("salaries", AccountCategory.EXPENSE, 0.85),
+    ClassificationRule("salary", AccountCategory.EXPENSE, 0.85),
+    ClassificationRule("wages", AccountCategory.EXPENSE, 0.85),
+    ClassificationRule("payroll tax", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("advertising", AccountCategory.EXPENSE, 0.85),
+    ClassificationRule("legal fee", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("service charge", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("bank fee", AccountCategory.EXPENSE, 0.90, is_phrase=True),
+    ClassificationRule("property tax", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("licenses and permit", AccountCategory.EXPENSE, 0.85, is_phrase=True),
+    ClassificationRule("subscription", AccountCategory.EXPENSE, 0.75),
     ClassificationRule("expense", AccountCategory.EXPENSE, 0.50),
     ClassificationRule("cost", AccountCategory.EXPENSE, 0.45),
 ]

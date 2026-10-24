@@ -797,3 +797,49 @@ def test_monthly_staff_in_a_biweekly_payroll_are_measured_against_their_own_cade
     flagged_emps = {f.entry.employee_id for f in result.flagged_entries}
     assert "M1" not in flagged_emps
     assert "W1" in flagged_emps
+
+
+def test_flagged_entry_details_serialize_numbers_not_strings():
+    from services.audit.je_testing.analysis import JETestingConfig, test_reciprocal_entries
+
+    entries = [
+        _je(1, "JE-1", "2025-03-05", "Rent", debit=5000),
+        _je(2, "JE-2", "2025-03-06", "Rent", credit=5000),
+    ]
+    details = test_reciprocal_entries(entries, JETestingConfig()).flagged_entries[0].to_dict()["details"]
+    assert isinstance(details["matched_amount"], float)
+
+
+def test_a_net_column_trial_balance_is_told_its_columns_are_missing():
+    """T8: rows were read but no Debit/Credit columns — not "no data ingested"."""
+    from audit.pipeline import audit_trial_balance_streaming
+
+    result = audit_trial_balance_streaming(b"Account,Net\nCash,100\nRevenue,-100\n", "tb.csv")
+    assert result["failure_reason"] == "columns_not_detected"
+
+    empty = audit_trial_balance_streaming(b"Account,Debit,Credit\n", "tb.csv")
+    assert empty["failure_reason"] == "zero_rows_ingested"
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("Customer Deposits", "liability"),
+        ("Salaries - Sales", "expense"),
+        ("Payroll Taxes - Sales", "expense"),
+        ("Advertising", "expense"),
+        ("Legal Fees", "expense"),
+        ("Line of Credit", "liability"),
+        ("Bank Service Charges", "expense"),
+        ("Property Taxes", "expense"),
+        ("Accrued Salaries", "liability"),
+        ("Payroll Taxes Payable", "liability"),
+        ("Accrued Property Taxes", "liability"),
+        ("Sales Revenue", "revenue"),
+    ],
+)
+def test_classifier_reads_common_account_names(name, expected):
+    """T4: these were unknown, or classified on the wrong side of the TB."""
+    from account_classifier import create_classifier
+
+    assert create_classifier(None).classify(name, 0).category.value == expected

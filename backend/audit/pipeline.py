@@ -71,7 +71,9 @@ def audit_trial_balance_streaming(
 
     try:
         # ── Stage 1: Ingestion ───────────────────────────────────────
+        rows_read = 0
         for chunk, rows_processed in process_tb_chunked(file_bytes, filename, chunk_size):
+            rows_read += len(chunk)
             auditor.process_chunk(chunk, rows_processed)
             del chunk
 
@@ -86,7 +88,13 @@ def audit_trial_balance_streaming(
         # BLOCKING. A downstream consumer can key off `analysis_failed`
         # or `failure_reason` to display the failure notice.
         if auditor.total_rows == 0 or auditor.debit_col is None or auditor.credit_col is None:
-            if auditor.total_rows == 0:
+            # Sprint 829: process_chunk returns before counting rows when the
+            # columns are not found, so total_rows is 0 then too — a file of
+            # rows with a single Net column was told it contained no data.
+            # Rows were read but the columns were missing: say that.
+            if auditor.total_rows == 0 and not (
+                rows_read and (auditor.debit_col is None or auditor.credit_col is None)
+            ):
                 failure_reason = "zero_rows_ingested"
                 message = (
                     "ANALYSIS COULD NOT BE COMPLETED — No data was successfully "

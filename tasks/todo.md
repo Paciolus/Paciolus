@@ -537,8 +537,20 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       receipt on a single-line PO; same-description receipts on a multi-line PO).
 - [x] **PR-T7** — an employee with a regular cadence *longer* than the population's (monthly
       staff in a biweekly payroll) is measured against it; shorter regular cadences stay flagged.
-- [ ] Open P2/P3: JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
-      Decimal→string serialization in details.
+- [x] **Classifier (T4 follow-up)** — phrase rules match a plural last word ("Customer
+      Deposits" was an asset); salaries/wages/advertising/legal fees/bank charges/property and
+      payroll taxes/line of credit added, with accrued/payable phrases so liabilities stay
+      liabilities. "Salaries - Sales" was revenue.
+- [x] **Bank rec bridge** — the results bridge put bank-only items on the bank side and
+      ledger-only items on the GL side, so it did not tie; reconciling items now adjust the side
+      that has not recorded them. Memo descriptions of bank-only / ledger-only corrected.
+- [x] **T8 / serialization** — a Net-column TB is told its columns are missing (not "no data");
+      flagged-entry `details` serialize Decimals as numbers.
+- [ ] Open P2/P3 (CEO calls in `tasks/ceo-actions.md`): JE composite scoring; month-end and
+      holiday noise; equity incl. current earnings in ratios. Case-sensitive account merge
+      ("CASH" vs "Cash") left as is — merging keys is a wider change.
+
+Register: `reports/sprint-829-discovery-round2-2026-10-23.md`.
 - [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
       accounts), and Key Metrics states what the ratios leave out.
 - [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a

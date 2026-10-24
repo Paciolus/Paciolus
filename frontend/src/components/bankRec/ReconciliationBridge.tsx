@@ -18,26 +18,31 @@ interface ReconciliationBridgeProps {
 
 export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
   const categories = useMemo(() => {
+    // Sprint 829: reconciling items adjust the side that has not recorded them.
+    // Items in the books but not yet at the bank (outstanding checks, deposits
+    // in transit) adjust the bank side; items at the bank but not yet in the
+    // books (fees, interest, direct credits) adjust the GL side. The two were
+    // crossed, so the bridge did not tie.
     let outstandingChecks = 0
     let depositsInTransit = 0
-    let outstandingDeposits = 0
-    let unrecordedChecks = 0
+    let unrecordedBankCredits = 0
+    let unrecordedBankCharges = 0
 
     for (const m of summary.matches) {
-      if (m.match_type === 'bank_only') {
-        if (m.bank_txn && m.bank_txn.amount < 0) outstandingChecks += m.bank_txn.amount
-        if (m.bank_txn && m.bank_txn.amount > 0) outstandingDeposits += m.bank_txn.amount
-      } else if (m.match_type === 'ledger_only') {
+      if (m.match_type === 'ledger_only') {
+        if (m.ledger_txn && m.ledger_txn.amount < 0) outstandingChecks += m.ledger_txn.amount
         if (m.ledger_txn && m.ledger_txn.amount > 0) depositsInTransit += m.ledger_txn.amount
-        if (m.ledger_txn && m.ledger_txn.amount < 0) unrecordedChecks += m.ledger_txn.amount
+      } else if (m.match_type === 'bank_only') {
+        if (m.bank_txn && m.bank_txn.amount > 0) unrecordedBankCredits += m.bank_txn.amount
+        if (m.bank_txn && m.bank_txn.amount < 0) unrecordedBankCharges += m.bank_txn.amount
       }
     }
 
     const adjustedBank = summary.total_bank + outstandingChecks + depositsInTransit
-    const adjustedGL = summary.total_ledger + outstandingDeposits + unrecordedChecks
+    const adjustedGL = summary.total_ledger + unrecordedBankCredits + unrecordedBankCharges
     const difference = adjustedBank - adjustedGL
 
-    return { outstandingChecks, depositsInTransit, outstandingDeposits, unrecordedChecks, adjustedBank, adjustedGL, difference }
+    return { outstandingChecks, depositsInTransit, unrecordedBankCredits, unrecordedBankCharges, adjustedBank, adjustedGL, difference }
   }, [summary])
 
   return (
@@ -62,8 +67,8 @@ export function ReconciliationBridge({ summary }: ReconciliationBridgeProps) {
         {/* GL Side */}
         <div className="space-y-2">
           <BridgeRow label="GL Cash Balance" amount={summary.total_ledger} bold />
-          <BridgeRow label="  Plus: Outstanding Deposits" amount={categories.outstandingDeposits} indent color="sage" />
-          <BridgeRow label="  Less: Unrecorded Checks" amount={categories.unrecordedChecks} indent color="clay" />
+          <BridgeRow label="  Plus: Bank Credits Not Yet Recorded" amount={categories.unrecordedBankCredits} indent color="sage" />
+          <BridgeRow label="  Less: Bank Charges Not Yet Recorded" amount={categories.unrecordedBankCharges} indent color="clay" />
           <div className="border-t border-theme-divider my-1" />
           <BridgeRow label="Adjusted GL Balance" amount={categories.adjustedGL} bold />
         </div>
