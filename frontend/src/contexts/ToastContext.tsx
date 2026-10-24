@@ -16,6 +16,7 @@ import {
   createContext,
   useContext,
   useCallback,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -30,8 +31,13 @@ export interface Toast {
   duration?: number
 }
 
-interface ToastContextValue {
-  toasts: Toast[]
+/**
+ * Sprint 820: actions and state live in separate contexts. The actions are
+ * stable for the provider's lifetime, so the components that only *raise*
+ * toasts (pages, upload and export hooks) no longer re-render every time a
+ * toast appears or expires — only the container, which reads the list, does.
+ */
+export interface ToastActions {
   addToast: (toast: Omit<Toast, 'id'>) => void
   removeToast: (id: string) => void
   success: (title: string, description?: string) => void
@@ -39,7 +45,8 @@ interface ToastContextValue {
   info: (title: string, description?: string) => void
 }
 
-const ToastContext = createContext<ToastContextValue | null>(null)
+const ToastActionsContext = createContext<ToastActions | null>(null)
+const ToastStateContext = createContext<Toast[] | null>(null)
 
 let toastCounter = 0
 
@@ -57,36 +64,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => removeToast(id), duration)
   }, [removeToast])
 
-  const success = useCallback((title: string, description?: string) => {
-    addToast({ type: 'success', title, description })
-  }, [addToast])
-
-  const error = useCallback((title: string, description?: string) => {
-    addToast({ type: 'error', title, description })
-  }, [addToast])
-
-  const info = useCallback((title: string, description?: string) => {
-    addToast({ type: 'info', title, description })
-  }, [addToast])
+  const actions = useMemo<ToastActions>(() => ({
+    addToast,
+    removeToast,
+    success: (title, description) => addToast({ type: 'success', title, description }),
+    error: (title, description) => addToast({ type: 'error', title, description }),
+    info: (title, description) => addToast({ type: 'info', title, description }),
+  }), [addToast, removeToast])
 
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, success, error, info }}>
-      {children}
-    </ToastContext.Provider>
+    <ToastActionsContext.Provider value={actions}>
+      <ToastStateContext.Provider value={toasts}>
+        {children}
+      </ToastStateContext.Provider>
+    </ToastActionsContext.Provider>
   )
 }
 
 /** No-op fallback when used outside ToastProvider (e.g., in tests) */
-const NOOP_TOAST: ToastContextValue = {
-  toasts: [],
+const NOOP_ACTIONS: ToastActions = {
   addToast: () => {},
   removeToast: () => {},
   success: () => {},
   error: () => {},
   info: () => {},
 }
+const NO_TOASTS: Toast[] = []
 
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext)
-  return ctx ?? NOOP_TOAST
+/** Raise toasts. Stable across renders; does not subscribe to the toast list. */
+export function useToast(): ToastActions {
+  return useContext(ToastActionsContext) ?? NOOP_ACTIONS
+}
+
+/** The current toast list — for the container that renders them. */
+export function useToastState(): Toast[] {
+  return useContext(ToastStateContext) ?? NO_TOASTS
 }

@@ -9,7 +9,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { useToast, type ToastType } from '@/contexts/ToastContext'
+import { useToast, useToastState, type ToastType } from '@/contexts/ToastContext'
 
 const TOAST_STYLES: Record<ToastType, { bg: string; border: string; icon: string; text: string }> = {
   success: {
@@ -51,7 +51,8 @@ const TOAST_ICONS: Record<ToastType, React.ReactNode> = {
 }
 
 export function ToastContainer() {
-  const { toasts, removeToast } = useToast()
+  const toasts = useToastState()
+  const { removeToast } = useToast()
 
   return (
     <div

@@ -126,3 +126,24 @@ describe('Toast Notification System', () => {
     expect(toastEl).toBeInTheDocument()
   })
 })
+
+describe('Sprint 820: raising a toast does not re-render the raisers', () => {
+  it('an actions-only consumer renders once while toasts come and go', () => {
+    let renders = 0
+    function Raiser() {
+      renders += 1
+      const { success } = useToast()
+      return <button onClick={() => success('Saved')}>Raise</button>
+    }
+    render(
+      <ToastProvider>
+        <Raiser />
+        <ToastContainer />
+      </ToastProvider>
+    )
+    const before = renders
+    fireEvent.click(screen.getByText('Raise'))
+    expect(screen.getByText('Saved')).toBeInTheDocument()
+    expect(renders).toBe(before)
+  })
+})
