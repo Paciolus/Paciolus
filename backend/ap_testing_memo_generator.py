@@ -50,7 +50,7 @@ _AP_CONFIG = TestingMemoConfig(
     test_descriptions=AP_TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the AP payment register "
-        "in accordance with professional auditing standards (ISA 240, ISA 500, PCAOB AS 2401):"
+        "with reference to professional auditing standards (ISA 240, ISA 500, PCAOB AS 2401):"
     ),
     risk_assessments={
         "low": (

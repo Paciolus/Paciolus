@@ -1,8 +1,9 @@
 """
 Bank Reconciliation Testing Memo PDF Generator (Sprint 128 / Sprint 503 rewrite)
 
-Auto-generated reconciliation memo per ISA 500 (Audit Evidence) /
-ISA 505 (External Confirmations) / PCAOB AS 2310.
+Auto-generated reconciliation memo with reference to ISA 500 (Audit Evidence).
+The tool reconciles the client's bank and ledger records; a bank confirmation
+(ISA 505 / PCAOB AS 2310) is a separate procedure the auditor may perform.
 Renaissance Ledger aesthetic consistent with existing PDF exports.
 
 Sections:
@@ -104,9 +105,9 @@ _TEST_DESCRIPTIONS: dict[str, str] = {
         "or payment fraud per ISA 240."
     ),
     "interbank_transfers": (
-        "Flags same-day matching debit/credit pairs above $10,000 as potential "
-        "check kiting indicators per ISA 240 (A40). Kiting involves exploiting "
-        "float between accounts to artificially inflate balances."
+        "Flags same-day matching debit/credit pairs above $10,000 (a Paciolus default) "
+        "as potential check-kiting indicators. Kiting involves exploiting float between "
+        "accounts to artificially inflate balances, a fraud risk the auditor considers under ISA 240."
     ),
     "high_value_transactions": (
         "Flags individual transactions exceeding performance materiality. High-value "
@@ -991,12 +992,14 @@ def generate_bank_rec_memo(
         "elevated": (
             "The reconciling difference and/or outstanding item volume may indicate "
             "recording errors, omissions, or unusual transactions requiring detailed "
-            "investigation per ISA 500 and ISA 505."
+            "investigation (ISA 500). The engagement team may also consider confirming "
+            "balances directly with the bank (ISA 505)."
         ),
         "high": (
             "Significant reconciliation exceptions were identified. The reconciling "
-            "difference and outstanding items require immediate investigation per "
-            "ISA 500, ISA 505, and ISA 240."
+            "difference and outstanding items require immediate investigation (ISA 500), "
+            "including consideration of fraud risk (ISA 240) and of confirming balances "
+            "directly with the bank (ISA 505)."
         ),
     }
 
@@ -1024,7 +1027,10 @@ def generate_bank_rec_memo(
         story,
         styles,
         domain="bank reconciliation analysis testing procedures",
-        isa_reference="ISA 500 (Audit Evidence), ISA 505 (External Confirmations), and PCAOB AS 2310",
+        isa_reference=(
+            "ISA 500 (Audit Evidence). It reconciles the client's own records and is not a bank "
+            "confirmation under ISA 505 (External Confirmations) or PCAOB AS 2310"
+        ),
     )
 
     # Build PDF

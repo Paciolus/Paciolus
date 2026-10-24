@@ -41,7 +41,7 @@ export default function W2ReconciliationPage() {
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
             Reconcile payroll year-to-date totals to draft W-2s and Form 941 quarterly filings before
             year-end filing. Detects per-employee box mismatches, SS wage-base overages, retirement plan
-            limit breaches, and 941-to-W-2 reconciliation gaps.
+            limit breaches, and gaps between the 941 quarterlies and payroll year-to-date totals.
           </p>
         </div>
 
@@ -80,9 +80,8 @@ export default function W2ReconciliationPage() {
                 <div className="theme-card p-6">
                   <h3 className="font-serif text-content-primary text-sm mb-2">Form 941 Tie-Out</h3>
                   <p className="font-sans text-content-tertiary text-xs">
-                    Rolls quarterly 941 totals into a YTD comparison against W-2 aggregates &mdash;
-                    flags the common &ldquo;941 over-reported, W-2 under-reported&rdquo; pattern that
-                    triggers IRS CP2100B notices.
+                    Sums the quarterly 941 totals and compares them with payroll year-to-date totals
+                    &mdash; an annual comparison, so supply all four quarters or none.
                   </p>
                 </div>
                 <div className="theme-card p-6">

@@ -69,7 +69,8 @@ describe('Form1099Page', () => {
     expect(screen.getByText('Upload Vendors and Payments')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Prepare 1099 Candidates/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument()
-    expect(screen.getByText('IRS Thresholds Built-In')).toBeInTheDocument()
+    // Sprint 837: card renamed — thresholds are now selected by tax year.
+    expect(screen.getByText('Thresholds by Tax Year')).toBeInTheDocument()
     expect(screen.getByText('Processor Safe-Harbor')).toBeInTheDocument()
     expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
     expect(screen.getByText(/corporate \/ processor safe-harbors/i)).toBeInTheDocument()

@@ -15,13 +15,14 @@ indicators. Deterministic tests (Sprint 685 post-consolidation):
 4. Revenue decline — period-over-period revenue decrease
 5. High leverage — debt-to-equity ratio above 3.0
 6. Negative operating cash flow — optional; runs when
-   ``operating_cash_flow`` is supplied. ISA 570.16 explicitly names
-   this as a financial indicator distinct from accrual-basis losses.
+   ``operating_cash_flow`` is supplied. ISA 570's application material lists
+   negative operating cash flows among its examples of financial events
+   or conditions, distinct from accrual-basis losses.
 7. Covenant breach — optional; runs when ``covenant_thresholds``
    is supplied (auditor-configurable floors/ceilings on current
    ratio, interest coverage, debt/equity).
 
-Categories ISA 570.16 flags that this engine CANNOT detect from TB
+Example categories in ISA 570's application material that this engine CANNOT detect from TB
 alone are documented in ``DISCLAIMER`` and surfaced as narrative
 prompts in ``_build_narrative``:
   * Loss of key customer / supplier
@@ -35,7 +36,9 @@ Guardrail: Descriptive metrics only — factual observations, no
 conclusions. This analysis does NOT constitute an audit opinion on
 going concern. All computation is ephemeral (zero-storage compliance).
 
-ISA 570 (Going Concern) ¶16, IAS 1.25-26.
+ISA 570 (Going Concern) application material (examples of events or conditions;
+Sprint 837 removed unconfirmed paragraph numbers), IAS 1.25-26.
+The 3.0 leverage and 10% revenue-decline thresholds are Paciolus conventions.
 """
 
 from dataclasses import dataclass, field
@@ -50,10 +53,11 @@ REVENUE_DECLINE_THRESHOLD = 0.10  # 10% decline triggers indicator
 DISCLAIMER = (
     "IMPORTANT: This analysis presents factual financial metrics only and does "
     "not constitute an audit conclusion regarding going concern. The indicators "
-    "surfaced here are the TB-derivable subset of ISA 570 ¶16 — they cover "
+    "surfaced here are a TB-derivable subset of the examples in ISA 570's "
+    "application material — they cover "
     "liquidity, leverage, profitability, revenue trajectory, and (when "
-    "supplied) operating cash flow and covenant compliance. ISA 570 ¶16 also "
-    "names indicators this engine CANNOT derive from a trial balance alone: "
+    "supplied) operating cash flow and covenant compliance. ISA 570 also "
+    "gives examples this engine CANNOT derive from a trial balance alone: "
     "loss of key customers or management, labor disputes, material pending "
     "litigation, non-compliance with capital requirements, and inability to "
     "obtain essential financing. Auditors must evaluate those categories "
@@ -236,13 +240,13 @@ def _test_negative_operating_cash_flow(
     operating_cash_flow: float,
     materiality_threshold: float,
 ) -> GoingConcernIndicator:
-    """Sprint 685: ISA 570 ¶16(b) — negative operating cash flow.
+    """Sprint 685: negative operating cash flow (an ISA 570 example indicator).
 
     Distinct from "recurring losses" because accrual-basis losses can
     co-exist with positive cash flow (e.g., depreciation-heavy businesses),
     and cash losses can co-exist with accrual profit (e.g., working
-    capital growth). ISA 570 explicitly names both as separate
-    financial-event indicators.
+    capital growth). ISA 570's application material lists both among
+    its examples of financial events or conditions.
 
     Fires when operating cash flow is negative and its magnitude exceeds
     the engagement's materiality threshold. Below-materiality negative
@@ -284,8 +288,8 @@ def _test_negative_operating_cash_flow(
         description=(
             f"Operating cash flow is negative at ${operating_cash_flow:,.2f} "
             f"(exceeds materiality threshold of ${materiality_threshold:,.2f}). "
-            "ISA 570 ¶16(b) names negative operating cash flow as a financial "
-            "going-concern indicator distinct from accrual-basis losses."
+            "ISA 570 lists negative operating cash flows among its examples of "
+            "events or conditions that may cast doubt on going concern."
         ),
         metric_value=operating_cash_flow,
         threshold=-materiality_threshold,
@@ -301,7 +305,7 @@ def _test_covenant_breach(
     interest_expense: Optional[float],
     thresholds: CovenantThresholds,
 ) -> GoingConcernIndicator:
-    """Sprint 685: ISA 570 ¶16(d) — debt-covenant breach indicator.
+    """Sprint 685: debt-covenant breach indicator (an ISA 570 example indicator).
 
     Takes auditor-supplied covenant floors/ceilings and flags the FIRST
     breach found (breaches compound; the auditor memo lists them all
@@ -341,8 +345,8 @@ def _test_covenant_breach(
         description = (
             f"{len(breaches)} debt-covenant breach"
             + ("es" if len(breaches) > 1 else "")
-            + f": {'; '.join(breaches)}. ISA 570 ¶16(d) identifies covenant "
-            "non-compliance as a financial going-concern indicator."
+            + f": {'; '.join(breaches)}. ISA 570 lists breach of loan agreement terms among its examples "
+            "of events or conditions that may cast doubt on going concern."
         )
         return GoingConcernIndicator(
             indicator_name="Debt Covenant Breach",
@@ -541,12 +545,12 @@ def compute_going_concern_profile(
             and revenue-decline tests.
         prior_expenses: Optional prior-period expenses for recurring-losses.
         operating_cash_flow: Sprint 685 — optional. When supplied and the
-            entity has negative OCF exceeding materiality, ISA 570 ¶16(b)
+            entity has negative OCF exceeding materiality, the negative-OCF
             indicator fires.
         materiality_threshold: Used only for the cash-flow test's sub-
             materiality filter. Pass 0 to flag any negative OCF.
         covenant_thresholds: Sprint 685 — optional. Auditor-configurable
-            loan-covenant floors/ceilings. When supplied, ISA 570 ¶16(d)
+            loan-covenant floors/ceilings. When supplied, the covenant
             breach indicator evaluates.
         operating_income: Needed only if
             ``covenant_thresholds.min_interest_coverage`` is set.

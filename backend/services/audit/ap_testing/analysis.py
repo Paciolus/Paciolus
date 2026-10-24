@@ -1751,11 +1751,11 @@ def test_invoice_without_po(
     """AP-T14: Invoice Without PO.
 
     Sprint 682 — flags payments above the materiality threshold with a
-    blank ``po_number`` field. Per ACFE 2024 Report to the Nations,
-    billing schemes (fictitious-invoice fraud) account for ~19% of
-    occupational fraud cases — missing PO linkage is the canonical
-    first-line screen because legitimate vendor payments in a
-    PO-required environment should always trace to an approved PO.
+    blank ``po_number`` field. The ACFE Report to the Nations discusses
+    billing schemes (fictitious-invoice fraud) as a common occupational
+    fraud scheme; missing PO linkage is a useful first-line screen because
+    legitimate vendor payments in a PO-required environment should trace
+    to an approved PO. (Sprint 837: an unverified percentage was removed.)
 
     Only runs when a PO column was detected; without it the assertion
     is meaningless (every payment would flag) and the test emits a
@@ -1802,8 +1802,8 @@ def test_invoice_without_po(
                 severity=severity,
                 issue=(
                     f"Payment ${abs(p.amount):,.2f} to {p.vendor_name or '(no vendor)'} "
-                    "has no PO Number. ACFE 2024: billing schemes — 19% of "
-                    "occupational fraud — typically lack PO linkage."
+                    "has no PO Number. Payments without PO linkage may warrant review "
+                    "for billing-scheme risk (ACFE 2024 Report to the Nations)."
                 ),
                 confidence=0.85,
                 details={

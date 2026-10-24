@@ -2,7 +2,7 @@
 Inventory Testing Memo PDF Generator (Sprint 118, simplified Sprint 157)
 
 Config-driven wrapper around shared memo template.
-Domain: IAS 2 / ISA 501 / ISA 540 / PCAOB AS 2501.
+Domain: IAS 2 / ISA 500 / ISA 540 / PCAOB AS 2501.
 
 CONTENT-08: Duration Breakdown (slow-moving age buckets) and
 Inventory Turnover note via build_extra_sections callback.
@@ -43,9 +43,8 @@ _INV_CONFIG = TestingMemoConfig(
     test_descriptions=INV_TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the inventory register "
-        "in accordance with professional auditing standards "
+        "with reference to professional auditing standards "
         "(ASC 330-10: Inventory, "
-        "ISA 501: Audit Evidence \u2014 Specific Considerations for Selected Items, "
         "ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates \u2014 "
         "NRV estimation and obsolescence indicators, "
         "PCAOB AS 2501: Auditing Accounting Estimates). "
@@ -76,7 +75,8 @@ _INV_CONFIG = TestingMemoConfig(
             "the inventory data returned HIGH flag density across the automated tests. "
             "Significant inventory anomaly indicators were detected that require "
             "detailed investigation. The engagement team should evaluate whether additional "
-            "inventory procedures are appropriate per ISA 501 and PCAOB AS 2501."
+            "inventory procedures are appropriate, such as attendance at physical inventory "
+            "counting (ISA 501) and testing of NRV estimates (PCAOB AS 2501)."
         ),
     },
 )

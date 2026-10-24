@@ -47,7 +47,7 @@ export default function SODPage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
             <span className="text-sage-700 text-sm font-sans font-medium">
-              SOC 1 / AICPA / COSO 2013
+              COSO 2013 Principle 10
             </span>
           </div>
           <h1 className="type-tool-title mb-3">Segregation of Duties Checker</h1>
@@ -112,9 +112,10 @@ export default function SODPage() {
               </div>
 
               <DisclaimerBox>
-                The SoD Checker evaluates permission combinations against a standards-informed rule library
-                derived from <Citation code="SOC 1" />, AICPA segregation-of-incompatible-duties guidance,
-                and <Citation code="COSO 2013" /> Principle 10 (selects and develops control activities).
+                The SoD Checker evaluates permission combinations against a Paciolus rule library informed by
+                general segregation-of-incompatible-duties guidance and <Citation code="COSO 2013" /> Principle 10
+                (selects and develops control activities). The analysis can support <Citation code="SOC 1" /> or
+                SOX 404 work; it is not a procedure those frameworks require.
                 Detected conflicts are candidates for auditor review; suitability of compensating controls
                 and the classification of any deficiency remain a judgment call per
                 ISA 265 / AU-C 265.

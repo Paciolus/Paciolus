@@ -253,7 +253,6 @@ function StandardsTab() {
   const STANDARDS = [
     { code: 'ISA 240',        title: 'Auditor Responsibilities — Fraud',       tools: 'JE Testing, Revenue Testing' },
     { code: 'ISA 500',        title: 'Audit Evidence',                          tools: 'AR Aging, Fixed Assets' },
-    { code: 'ISA 501',        title: 'Specific Considerations — Cutoff',        tools: 'TB Diagnostics (Cutoff Risk)' },
     { code: 'ISA 520',        title: 'Analytical Procedures',                   tools: 'TB Diagnostics, Multi-Period' },
     { code: 'ISA 530',        title: 'Audit Sampling',                          tools: 'Statistical Sampling, JE Testing' },
     { code: 'ISA 540',        title: 'Auditing Accounting Estimates',           tools: 'AR Aging, Fixed Assets' },

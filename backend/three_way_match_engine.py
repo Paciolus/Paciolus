@@ -15,8 +15,8 @@ ZERO-STORAGE COMPLIANCE:
 - No raw procurement data is stored
 
 Audit Standards References:
-- ISA 505: External Confirmations
-- ISA 500: Audit Evidence
+- ISA 500: Audit Evidence (matching the client's own POs, receipts and invoices;
+  this is not external confirmation, so ISA 505 is not cited — Sprint 837)
 - PCAOB AS 1105: Audit Evidence
 """
 

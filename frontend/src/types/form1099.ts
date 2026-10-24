@@ -96,10 +96,40 @@ export interface W9CollectionRow {
   reason: string
 }
 
+/** Sprint 837: one reporting threshold applied to the run, with its basis. */
+export interface ThresholdItem1099 {
+  form_type: string
+  box: number
+  description: string
+  amount: string
+  basis: string
+  needs_confirmation: boolean
+}
+
+export interface ThresholdSchedule1099 {
+  tax_year: number
+  figures_from_tax_year: number
+  items: ThresholdItem1099[]
+  confirm_against: string
+}
+
+/** Sprint 837: a payee at or above $600 but below the year's threshold. */
+export interface BelowThresholdPayee {
+  vendor_id: string
+  vendor_name: string
+  form_type: string
+  total: string
+  box_amounts: VendorBoxAmount[]
+  reason: string
+}
+
 export interface Form1099Response {
   tax_year: number
   candidates: Form1099Candidate[]
   data_quality: VendorDataQuality[]
   w9_collection_list: W9CollectionRow[]
   summary: Record<string, unknown>
+  thresholds?: ThresholdSchedule1099 | null
+  notices?: string[]
+  below_threshold_payees?: BelowThresholdPayee[]
 }

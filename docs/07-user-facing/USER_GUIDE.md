@@ -275,7 +275,7 @@ Upload a General Ledger export. Required columns: Entry Number, Date, Account, D
 **Tier 2 — Statistical (5 tests):**
 - Benford's Law first-digit analysis
 - Round amount concentration
-- Weekend/holiday posting detection
+- Weekend/holiday posting detection (Paciolus conventions — ISA 240 / AS 2401 do not name weekend, holiday or after-hours postings)
 - Unusual user activity
 - Description anomaly detection
 
@@ -285,7 +285,7 @@ Upload a General Ledger export. Required columns: Entry Number, Date, Account, D
 - Cross-period entries
 - Related party indicators
 - Fraud keyword detection
-- Holiday posting detection (ISA 240.A40, JT-19)
+- Holiday posting detection (JT-19; a Paciolus convention, not a test named by ISA 240)
 - And additional pattern-based tests
 
 ### 5.3 Results
@@ -331,8 +331,8 @@ Upload an AP payment register. Key columns: Vendor, Invoice Number, Amount, Paym
 - **AP-T4:** Round dollar amounts ($10K+ thresholds)
 - **AP-T5:** Payment before invoice date
 - **AP-T14:** Invoice without PO — payments above materiality with a blank purchase-order
-  reference. Per the ACFE 2024 *Report to the Nations*, billing schemes account for roughly
-  19% of occupational fraud cases, and missing PO linkage is the canonical indicator.
+  reference. The ACFE *Report to the Nations* discusses billing schemes as a common
+  occupational fraud scheme; a payment with no PO linkage may warrant review.
   Requires a PO-number column; skipped with a reason when absent.
 
 **Tier 2 — Statistical (5 tests):**
@@ -435,8 +435,8 @@ Upload a payroll register. Key columns: Employee Name/ID, Gross Pay, Pay Date. O
   completes the employee-identity check: same ID with different names points at ID reuse,
   same name with different IDs is the classic ghost-employee pattern.
 - **PR-T13:** Gross-to-net reconciliation — flags rows where gross pay − deductions ≠ net pay.
-  Named in the AICPA *Employee Benefit Plan Audit Guide* Ch. 5 as a first-line integrity check:
-  if the three columns do not reconcile, at least one of them is wrong.
+  An arithmetic integrity check (Paciolus convention): if the three columns do not reconcile,
+  at least one of them is wrong.
 
 **Tier 2 — Statistical (3 tests):**
 - **PR-T6:** Unusual pay amounts (per-department z-score outliers)
@@ -505,7 +505,7 @@ Upload a revenue register or sales journal. Key columns: Transaction ID, Date, A
 ### 10.2 Test Battery (18 Tests)
 
 **Tier 1 — Structural (5 tests):**
-- **RT-01:** Large manual entries
+- **RT-01:** Large manual entries (fixed $50,000 Paciolus default threshold, not performance materiality)
 - **RT-02:** Year-end concentration
 - **RT-03:** Round revenue amounts
 - **RT-04:** Sign anomalies (credit-balance revenue accounts)
@@ -513,7 +513,7 @@ Upload a revenue register or sales journal. Key columns: Transaction ID, Date, A
 
 **Tier 2 — Statistical (5 tests):**
 - **RT-06:** Amount z-score outliers
-- **RT-07:** Revenue trend variance
+- **RT-07:** Revenue trend variance (current-period net revenue vs. a prior-period total you supply)
 - **RT-08:** Customer concentration risk
 - **RT-09:** Period-end cut-off risk (early-recognition exposure)
 - **RT-09b:** Prior-period timing — entries dated near the *period start*. Split from RT-09,
@@ -525,8 +525,8 @@ Upload a revenue register or sales journal. Key columns: Transaction ID, Date, A
 - **RT-10:** Benford's Law first-digit analysis
 - **RT-11:** Duplicate entries
 - **RT-12:** Contra-revenue anomalies
-- **RT-17:** Contract validity (ASC 606 Step 1). Flags three combinations, any of which means
-  revenue is recognised without the contract structure ASC 606 requires:
+- **RT-17:** Contract data completeness (informed by ASC 606 Step 1). Checks for missing
+  contract fields; it does not evaluate whether a contract is valid. Flags three combinations:
   a `contract_id` with no `performance_obligation_id` (Step 2 requires identified obligations);
   a `recognition_method` with no `contract_id` (no underlying contract to support recognition);
   and point-in-time recognition with no `obligation_satisfaction_date` (ASC 606-10-25-30 requires
@@ -536,8 +536,12 @@ Upload a revenue register or sales journal. Key columns: Transaction ID, Date, A
 **Tier 4 — Contract-Aware (4 tests, optional):**
 - **RT-13:** Recognition timing (ASC 606 Step 5)
 - **RT-14:** Obligation linkage (ASC 606 Step 2)
-- **RT-15:** Modification treatment (ASC 606-10-25-12)
-- **RT-16:** SSP allocation (ASC 606 Step 4)
+- **RT-15:** Modification treatment (ASC 606-10-25-12). Mixed modification treatments within a
+  contract may warrant review; ASC 606 / IFRS 15 can require different treatments for different
+  modifications, so a flag is not a finding of non-compliance.
+- **RT-16:** SSP allocation (ASC 606 Step 4). Mixed allocation bases within a contract may
+  warrant review; different standalone-selling-price methods can be appropriate for different
+  obligations.
 
 Contract-aware tests activate when contract columns are detected. If columns are absent, tests are skipped with a reason — no errors are raised.
 
@@ -573,7 +577,7 @@ Contract-aware tests activate when contract columns are detected. If columns are
 **Tier 2 — Statistical (5 tests):**
 - **AR-05:** Aging bucket concentration
 - **AR-06:** Past-due concentration
-- **AR-07:** Allowance adequacy against the aging profile
+- **AR-07:** Allowance adequacy — allowance-to-AR ratio against a Paciolus default range (1%–10%, configurable)
 - **AR-08:** Customer concentration
 - **AR-09:** DSO trend deviation
 
@@ -812,7 +816,7 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 - Mismatched Social Security and Medicare wages between payroll and the draft W-2
 - Mis-applied Social Security wage base caps
 - Over-contributions to HSAs and retirement plans
-- Quarterly 941 totals that do not sum to the W-3 summary
+- Quarterly 941 totals that do not agree to the payroll year-to-date totals
 
 > **Check the statutory limits before relying on the cap and over-limit findings.** The engine
 > holds **one fixed set** of limits — Social Security wage base, HSA self-only and family,
@@ -834,7 +838,8 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
   > supplying only Q1 compares one quarter's totals to the whole year and reports a large
   > mismatch that means nothing. This is a limitation of the current implementation, not a
   > finding about your data.
-- **W-3 totals** — the computed summary the four 941s should agree to.
+- **W-3 totals** — the computed summary of the draft W-2s, reported for review (the 941 check
+  compares the 941s with payroll year-to-date totals, not with the W-3).
 
 **The engine flags discrepancies; it does not decide which number is right.** When payroll and the draft W-2 disagree, determining the correct figure is a practitioner judgment about the underlying facts.
 
@@ -865,23 +870,33 @@ Plus the tax year. Entity type drives the corporate safe harbour, and payment me
 
 ### 18.2 Thresholds
 
-| Form | Threshold the engine applies (aggregate per vendor) |
-|------|------------------------------------------------------|
-| 1099-NEC — nonemployee compensation | $600 |
-| 1099-MISC — rents, royalties, medical, legal | $600 |
-| 1099-INT — interest | $10 |
+The engine selects thresholds by the `tax_year` you supply (aggregate per payee; 1099-MISC is
+tested box by box):
 
-> **These are fixed, and the reporting thresholds are not.** The engine applies the table above
-> to whatever `tax_year` you supply and does not vary by year or sub-category — so for a year in
-> which a threshold has moved, the candidate list will be wrong in both directions: vendors below
-> the current threshold included, and vendors above a *lowered* one omitted. Confirm the
-> thresholds for your filing year before treating the candidate list as complete. Tracked as
-> **Sprint 793**. The vendor aggregation, the corporate safe harbour, the processor exemption and
-> the data-quality report are unaffected.
+| Form / box | Through 2025 | 2026 | 2027 and later |
+|------------|--------------|------|----------------|
+| 1099-NEC — nonemployee compensation | $600 | $2,000 | $2,000, with a notice |
+| 1099-MISC box 1 rents, box 3 other income, box 6 medical | $600 | $2,000 | $2,000, with a notice |
+| 1099-MISC box 2 royalties | $10 | $10 | $10 |
+| 1099-MISC box 10 gross proceeds to an attorney | $600 | $600 (confirm) | $600 (confirm) |
+| 1099-INT — interest | $10 | $10 | $10 |
+
+> **Where the 2026 figures come from.** Secondary sources report that the One Big Beautiful Bill
+> Act (2025) raised the 1099-NEC and 1099-MISC threshold to $2,000 for payments made after
+> December 31, 2025, indexed for inflation from 2027. Paciolus does not hold the indexed figure
+> for 2027 or later, so it applies $2,000 (an indexed threshold can only be equal or higher, so no
+> required filing is missed) and says so in a notice. Whether the change reaches attorney gross
+> proceeds (box 10, IRC §6045(f)) is not confirmed, so $600 is kept — the conservative choice.
+> Every run lists the thresholds applied and their basis: confirm them against the IRS
+> Instructions for Forms 1099-MISC and 1099-NEC for your year.
 
 ### 18.3 Reading the Output
 
 - **Candidates** — vendors meeting a threshold, with per-box amounts.
+- **Below the reporting threshold** — payees that reached $600 but not the year's threshold (for
+  2026, between $600 and $2,000). Not required; shown so a threshold change never hides a payee.
+- **Notices and thresholds applied** — the figures used for the run, their basis, and any figure
+  to confirm.
 - **Data quality** — vendors missing a TIN or address, or with inconsistent records. Fix these before filing; a missing TIN is the most common cause of a rejected submission.
 - **W-9 collection list** — vendors you need a W-9 from, derived from the data-quality findings.
 
@@ -889,9 +904,9 @@ Plus the tax year. Entity type drives the corporate safe harbour, and payment me
 
 ### 18.4 Exporting
 
-- **1099 Candidates (CSV)** — the candidate listing only: form type, vendor, total reportable,
+- **1099 Candidates (CSV)** — the candidate listing (form type, vendor, total reportable,
   per-box categories, payment count, excluded amount, and the per-candidate review flag with its
-  reasons.
+  reasons), followed by the below-threshold payees, any notices, and the thresholds applied.
 
   The **data-quality report and the W-9 collection list are not in the CSV** — they are returned
   by the API and shown on screen, but the export does not carry them. Work through those on

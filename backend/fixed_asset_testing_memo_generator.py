@@ -26,7 +26,7 @@ FA_TEST_DESCRIPTIONS = {
     "missing_fields": "Flags fixed asset entries missing critical register fields (cost, identifier, acquisition date), a data completeness anomaly indicator.",
     "negative_values": "Flags assets with negative cost or negative accumulated depreciation, indicating data entry errors or improper adjustments.",
     "over_depreciation": "Flags assets where accumulated depreciation exceeds original cost by more than 1%, indicating possible calculation errors or improper depreciation entries.",
-    "useful_life_outliers": "Flags assets with useful life estimates outside reasonable bounds (below 0.5 years or above 50 years), an estimation anomaly indicator per ISA 540.",
+    "useful_life_outliers": "Flags assets with useful life estimates outside 0.5–50 years (Paciolus default bounds, configurable). Useful life is an accounting estimate (ISA 540); the bounds themselves are a Paciolus convention, not set by ISA 540.",
     "cost_zscore_outliers": (
         "Uses z-score analysis to identify fixed assets with acquisition costs that "
         "are statistically unusual relative to the population distribution. Assets "
@@ -36,10 +36,9 @@ FA_TEST_DESCRIPTIONS = {
     "age_concentration": "Flags disproportionate concentration of total asset cost in a single acquisition year, indicating potential bulk capitalization anomalies.",
     "duplicate_assets": "Flags assets with identical cost, description, and acquisition date \u2014 potential duplicate capitalization or double-counting.",
     "residual_value_anomalies": (
-        "Flags assets where the recorded residual (salvage) value is inconsistent "
-        "with the asset type, useful life, or industry norms. Anomalies include "
-        "residual values exceeding 30% of original cost, or negative residual values "
-        "requiring documented justification per ISA 540."
+        "Flags assets whose recorded residual (salvage) value exceeds 30% of original "
+        "cost (a Paciolus default, configurable), or is negative. Residual value is an "
+        "accounting estimate (ISA 540); the 30% bound is a Paciolus convention, not set by ISA 540."
     ),
     "lease_indicators": (
         "Scans asset descriptions for keywords suggesting operating or finance leases "
@@ -64,7 +63,7 @@ _FA_CONFIG = TestingMemoConfig(
     test_descriptions=FA_TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the fixed asset register "
-        "in accordance with professional auditing standards "
+        "with reference to professional auditing standards "
         "(ASC 360-10: Property, Plant, and Equipment, "
         "ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates \u2014 "
         "depreciation methods, useful life, and residual value estimation, "

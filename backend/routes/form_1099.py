@@ -217,6 +217,50 @@ def export_1099_csv(
             ]
         )
 
+    # Sprint 837: the CSV carries the same transparency as the API response —
+    # payees below the year's threshold, any notice, and the thresholds applied.
+    if result.below_threshold_payees:
+        writer.writerow([])
+        writer.writerow([f"Below the {result.tax_year} reporting threshold — not required, shown for review"])
+        writer.writerow(["Tax Year", "Form Type", "Vendor ID", "Vendor Name", "Total", "Categories", "Reason"])
+        for payee in result.below_threshold_payees:
+            categories = "; ".join(f"{b.category} (box {b.box})={b.amount}" for b in payee.box_amounts)
+            writer.writerow(
+                [
+                    result.tax_year,
+                    payee.form_type,
+                    payee.vendor_id,
+                    payee.vendor_name,
+                    str(payee.total),
+                    categories,
+                    payee.reason,
+                ]
+            )
+
+    if result.notices:
+        writer.writerow([])
+        writer.writerow(["Notices"])
+        for notice in result.notices:
+            writer.writerow([notice])
+
+    if result.thresholds is not None:
+        writer.writerow([])
+        writer.writerow([f"Thresholds applied for tax year {result.tax_year}"])
+        writer.writerow(["Form Type", "Box", "Description", "Threshold", "Basis", "Needs Confirmation"])
+        for item in result.thresholds.items:
+            row = item.to_dict()
+            writer.writerow(
+                [
+                    row["form_type"],
+                    row["box"],
+                    row["description"],
+                    row["amount"],
+                    row["basis"],
+                    "Yes" if row["needs_confirmation"] else "No",
+                ]
+            )
+        writer.writerow([result.thresholds.confirm_against()])
+
     buffer.seek(0)
     return StreamingResponse(
         iter([buffer.getvalue()]),

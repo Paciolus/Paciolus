@@ -12,10 +12,19 @@ it flags candidates for practitioner review rather than asserting a
 filing obligation. 1099 rules are IRS-defined and outside platform
 judgment.
 
-Reference thresholds for tax year 2026 (unchanged from 2025):
-  * 1099-NEC nonemployee compensation — $600 aggregate per vendor
-  * 1099-MISC rents / royalties / medical / legal — $600 aggregate
-  * 1099-INT interest — $10 aggregate
+Reporting thresholds are keyed by tax year (Sprint 837); see
+``THRESHOLDS_BY_TABLE_YEAR`` and ``thresholds_for_year()``:
+  * Tax years through 2025: 1099-NEC $600; 1099-MISC boxes 1/3/6/10 $600,
+    box 2 (royalties) $10; 1099-INT $10.
+  * Tax year 2026: 1099-NEC and 1099-MISC boxes 1/3/6 $2,000 (One Big
+    Beautiful Bill Act, 2025, for payments made after December 31, 2025);
+    royalties and 1099-INT stay $10; box 10 attorney gross proceeds stays
+    $600 pending confirmation.
+  * Tax years 2027+: the inflation-indexed figure is not tabulated; the 2026
+    figures are applied with a notice (an indexed threshold can only be
+    at least $2,000, so applying $2,000 cannot miss a required filing).
+  * The result carries the thresholds applied and their basis, and lists
+    payees at or above $600 but below the year's threshold separately.
   * Corporations are generally exempt, except for medical/legal payments
   * Credit-card / third-party network payments are reportable by the
     payment processor on 1099-K, not by the payer — we exclude those.
@@ -101,8 +110,10 @@ CATEGORY_TO_FORM_BOX: dict[PaymentCategory, tuple[FormType, int]] = {
     PaymentCategory.OTHER: (FormType.MISC, 3),
 }
 
-# Filing thresholds in dollars. Each form type aggregates per-vendor
-# dollars across all boxes within that form type.
+# Filing thresholds in dollars for tax years through 2025. Each form type
+# aggregates per-vendor dollars across all boxes within that form type.
+# Sprint 837: kept as the pre-2026 figures; the engine resolves the run's
+# thresholds through ``thresholds_for_year()``.
 FORM_THRESHOLDS: dict[FormType, Decimal] = {
     FormType.NEC: Decimal("600"),
     FormType.MISC: Decimal("600"),
@@ -121,6 +132,192 @@ MISC_BOX_THRESHOLDS: dict[int, Decimal] = {
     6: Decimal("600"),  # medical and health care payments
     10: Decimal("600"),  # gross proceeds paid to an attorney
 }
+
+# The pre-2026 general threshold. A payee at or above it but below the run
+# year's threshold is listed for review rather than silently dropped.
+LEGACY_GENERAL_THRESHOLD = Decimal("600")
+
+
+# =============================================================================
+# Thresholds keyed by tax year (Sprint 837)
+# =============================================================================
+#
+# This engine applied $600 to every tax year and its docstring said 2026 was
+# unchanged. Multiple secondary sources (CPA Practice Advisor, Avalara, Patriot
+# Software, TaxBandits) report that the One Big Beautiful Bill Act (2025) raised
+# the 1099-NEC and 1099-MISC reporting threshold from $600 to $2,000 for
+# payments made after December 31, 2025, indexed for inflation from 2027.
+# Royalties ($10, IRC §6050N) and interest ($10, IRC §6049) are not affected.
+# Attorney gross proceeds (1099-MISC box 10) are reported under IRC §6045(f);
+# whether that threshold changed is uncertain, so $600 is kept: the
+# conservative choice, because a lower threshold flags more candidates.
+#
+# ---------------------------------------------------------------------------
+# Sprint 793b practitioner confirmation list: every threshold below.
+# Paciolus is not an authority; these restate the authorities' figures, and each
+# needs a practitioner's sign-off against the IRS Instructions for Forms
+# 1099-MISC, 1099-NEC and 1099-INT for the year before 793b closes.
+#
+#   Tax years through 2025 (table year 2025)
+#   - 1099-NEC box 1 $600 ................ IRC §6041A(a)
+#   - 1099-MISC box 1 rents $600 ......... IRC §6041(a)
+#   - 1099-MISC box 2 royalties $10 ...... IRC §6050N
+#   - 1099-MISC box 3 other income $600 .. IRC §6041(a)
+#   - 1099-MISC box 6 medical $600 ....... IRC §6041(a)
+#   - 1099-MISC box 10 attorney gross
+#     proceeds $600 ...................... IRC §6045(f)
+#   - 1099-INT box 1 $10 ................. IRC §6049
+#
+#   Tax year 2026 (table year 2026; also applied to 2027+ with a notice)
+#   - 1099-NEC box 1 $2,000 .............. IRC §6041A as amended by the One Big
+#                                          Beautiful Bill Act (2025). Secondary
+#                                          sources only; not yet checked against
+#                                          the statute text or IRS instructions
+#   - 1099-MISC boxes 1, 3, 6 $2,000 ..... IRC §6041 as amended by the One Big
+#                                          Beautiful Bill Act (2025), as above
+#   - 1099-MISC box 2 royalties $10 ...... IRC §6050N (reported unchanged)
+#   - 1099-MISC box 10 $600 [CONFIRM] .... IRC §6045(f). Whether OBBBA changed
+#                                          it is uncertain; $600 kept as the
+#                                          conservative figure
+#   - 1099-INT box 1 $10 ................. IRC §6049 (reported unchanged)
+#
+#   Tax years 2027+: inflation-indexed figure not tabulated. Add a row when the
+#   IRS publishes it; until then the 2026 row is applied with a notice.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ThresholdItem:
+    """One reporting threshold with the authority it restates."""
+
+    form_type: FormType
+    box: int
+    description: str
+    amount: Decimal
+    basis: str
+    needs_confirmation: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "form_type": self.form_type.value,
+            "box": self.box,
+            "description": self.description,
+            "amount": str(self.amount.quantize(CENT)),
+            "basis": self.basis,
+            "needs_confirmation": self.needs_confirmation,
+        }
+
+
+_PRE_2026_ITEMS: tuple[ThresholdItem, ...] = (
+    ThresholdItem(FormType.NEC, 1, "Nonemployee compensation", Decimal("600"), "IRC §6041A(a)"),
+    ThresholdItem(FormType.MISC, 1, "Rents", Decimal("600"), "IRC §6041(a)"),
+    ThresholdItem(FormType.MISC, 2, "Royalties", Decimal("10"), "IRC §6050N"),
+    ThresholdItem(FormType.MISC, 3, "Other income", Decimal("600"), "IRC §6041(a)"),
+    ThresholdItem(FormType.MISC, 6, "Medical and health care payments", Decimal("600"), "IRC §6041(a)"),
+    ThresholdItem(FormType.MISC, 10, "Gross proceeds paid to an attorney", Decimal("600"), "IRC §6045(f)"),
+    ThresholdItem(FormType.INT, 1, "Interest income", Decimal("10"), "IRC §6049"),
+)
+
+_OBBBA_BASIS = (
+    "One Big Beautiful Bill Act (2025): $2,000 for payments made after December 31, 2025, "
+    "as reported by secondary sources"
+)
+
+_2026_ITEMS: tuple[ThresholdItem, ...] = (
+    ThresholdItem(FormType.NEC, 1, "Nonemployee compensation", Decimal("2000"), f"IRC §6041A; {_OBBBA_BASIS}"),
+    ThresholdItem(FormType.MISC, 1, "Rents", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
+    ThresholdItem(FormType.MISC, 2, "Royalties", Decimal("10"), "IRC §6050N (reported unchanged)"),
+    ThresholdItem(FormType.MISC, 3, "Other income", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
+    ThresholdItem(FormType.MISC, 6, "Medical and health care payments", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
+    ThresholdItem(
+        FormType.MISC,
+        10,
+        "Gross proceeds paid to an attorney",
+        Decimal("600"),
+        "IRC §6045(f). Whether the 2025 change applies to this box is not confirmed; "
+        "$600 is applied as the conservative figure (a lower threshold flags more candidates)",
+        needs_confirmation=True,
+    ),
+    ThresholdItem(FormType.INT, 1, "Interest income", Decimal("10"), "IRC §6049 (reported unchanged)"),
+)
+
+# Keyed by table year. A tax year uses the latest table year not after it.
+THRESHOLDS_BY_TABLE_YEAR: dict[int, tuple[ThresholdItem, ...]] = {
+    2025: _PRE_2026_ITEMS,
+    2026: _2026_ITEMS,
+}
+LATEST_TABULATED_YEAR = max(THRESHOLDS_BY_TABLE_YEAR)
+
+
+@dataclass(frozen=True)
+class ThresholdSchedule:
+    """The thresholds applied to one run, with their provenance."""
+
+    tax_year: int
+    table_year: int
+    items: tuple[ThresholdItem, ...]
+    notices: tuple[str, ...]
+
+    def box_threshold(self, form_type: FormType, box: int) -> Decimal:
+        for item in self.items:
+            if item.form_type == form_type and item.box == box:
+                return item.amount
+        # Unmapped MISC box: the general (other income) figure.
+        return self.form_threshold(FormType.MISC)
+
+    def form_threshold(self, form_type: FormType) -> Decimal:
+        """Threshold for NEC / INT, or the general 1099-MISC figure (box 3)."""
+        box = 3 if form_type == FormType.MISC else 1
+        for item in self.items:
+            if item.form_type == form_type and item.box == box:
+                return item.amount
+        raise KeyError(f"no threshold tabulated for {form_type.value} box {box}")
+
+    def confirm_against(self) -> str:
+        return f"Confirm against the IRS Instructions for Forms 1099-MISC, 1099-NEC and 1099-INT for {self.tax_year}."
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "tax_year": self.tax_year,
+            "figures_from_tax_year": self.table_year,
+            "items": [i.to_dict() for i in self.items],
+            "confirm_against": self.confirm_against(),
+        }
+
+
+def thresholds_for_year(tax_year: int) -> ThresholdSchedule:
+    """Resolve the reporting thresholds for ``tax_year``.
+
+    Years up to 2025 use the 2025 table (the $600 rules applied for decades).
+    Years after the latest table use the latest table with a notice: for 2027+
+    that is the 2026 $2,000 figure, which an inflation-indexed threshold can
+    only equal or exceed, so applying it cannot miss a required filing.
+    """
+    eligible = [y for y in THRESHOLDS_BY_TABLE_YEAR if y <= tax_year]
+    table_year = max(eligible) if eligible else min(THRESHOLDS_BY_TABLE_YEAR)
+    notices: list[str] = []
+    if tax_year == 2026:
+        notices.append(
+            "For payments made after December 31, 2025, the 1099-NEC and 1099-MISC (rents, other income, "
+            "medical) reporting threshold is $2,000 under the One Big Beautiful Bill Act (2025), as reported "
+            "by secondary sources. Royalties and 1099-INT remain $10. Attorney gross proceeds (1099-MISC "
+            "box 10) are tested at $600 pending confirmation. Confirm against the IRS Instructions for "
+            "Forms 1099-MISC and 1099-NEC for 2026."
+        )
+    if tax_year > LATEST_TABULATED_YEAR:
+        notices.append(
+            f"The inflation-adjusted 1099-NEC / 1099-MISC threshold for {tax_year} is not in Paciolus. "
+            f"The {LATEST_TABULATED_YEAR} figures are applied ($2,000 for 1099-NEC and 1099-MISC boxes 1, 3 "
+            "and 6). An indexed threshold can only be equal or higher, so no required filing is missed, but "
+            f"some candidates may fall below the actual {tax_year} threshold. Confirm the {tax_year} figure "
+            f"against the IRS Instructions for Forms 1099-MISC and 1099-NEC for {tax_year}."
+        )
+    return ThresholdSchedule(
+        tax_year=tax_year,
+        table_year=table_year,
+        items=THRESHOLDS_BY_TABLE_YEAR[table_year],
+        notices=tuple(notices),
+    )
 
 
 class Form1099InputError(ValueError):
@@ -256,12 +453,45 @@ class W9CollectionRow:
 
 
 @dataclass
+class BelowThresholdPayee:
+    """Sprint 837: a payee at or above $600 but below the year's threshold.
+
+    Not a filing candidate. Listed so that a change in the threshold (2026:
+    $600 to $2,000) never removes a payee from view silently.
+    """
+
+    vendor_id: str
+    vendor_name: str
+    form_type: str
+    total: Decimal
+    box_amounts: list[VendorBoxAmount]
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "vendor_id": self.vendor_id,
+            "vendor_name": self.vendor_name,
+            "form_type": self.form_type,
+            "total": str(self.total),
+            "box_amounts": [b.to_dict() for b in self.box_amounts],
+            "reason": self.reason,
+        }
+
+
+@dataclass
 class Form1099Result:
     tax_year: int
     candidates: list[Form1099Candidate]
     data_quality: list[VendorDataQuality]
     w9_collection_list: list[W9CollectionRow]
     summary: dict[str, Any]
+    # Sprint 837: transparency about the thresholds applied.
+    thresholds: ThresholdSchedule | None = None
+    below_threshold_payees: list[BelowThresholdPayee] = field(default_factory=list)
+
+    @property
+    def notices(self) -> list[str]:
+        return list(self.thresholds.notices) if self.thresholds else []
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -270,6 +500,9 @@ class Form1099Result:
             "data_quality": [dq.to_dict() for dq in self.data_quality],
             "w9_collection_list": [w.to_dict() for w in self.w9_collection_list],
             "summary": self.summary,
+            "thresholds": self.thresholds.to_dict() if self.thresholds else None,
+            "notices": self.notices,
+            "below_threshold_payees": [b.to_dict() for b in self.below_threshold_payees],
         }
 
 
@@ -358,6 +591,7 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
     if config.tax_year < 2000 or config.tax_year > 2099:
         raise Form1099InputError(f"Tax year must be a reasonable 4-digit year (got {config.tax_year})")
 
+    schedule = thresholds_for_year(config.tax_year)
     vendors_by_id: dict[str, VendorRecord] = {v.vendor_id: v for v in config.vendors}
 
     # Sprint 826 (F3): the filing threshold applies per payee, and a payee is
@@ -418,6 +652,7 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
         grouped[(payee, form_type)].append(payment)
 
     candidates: list[Form1099Candidate] = []
+    below_threshold: list[BelowThresholdPayee] = []
     summary_totals: dict[str, Decimal] = defaultdict(lambda: ZERO)
     summary_counts: dict[str, int] = defaultdict(int)
 
@@ -431,22 +666,6 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
             by_category[p.payment_category] += p.amount
         total = sum(by_category.values(), ZERO)
 
-        if form_type == FormType.MISC:
-            by_box: dict[int, Decimal] = defaultdict(lambda: ZERO)
-            for category, amount in by_category.items():
-                by_box[_resolve_box(category)] += amount
-            meets_threshold = any(
-                amount >= MISC_BOX_THRESHOLDS.get(box, FORM_THRESHOLDS[FormType.MISC]) for box, amount in by_box.items()
-            )
-        else:
-            meets_threshold = total >= FORM_THRESHOLDS[form_type]
-        if not meets_threshold:
-            # Below threshold — still report for audit, but clearly marked
-            # as below-threshold so the candidate list stays focused on
-            # filings the practitioner actually needs to make.
-            excluded_dollars[(payee, form_type)] += total
-            continue
-
         box_amounts = [
             VendorBoxAmount(
                 category=cat.value,
@@ -456,6 +675,53 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
             )
             for cat, amount in sorted(by_category.items(), key=lambda pair: pair[0].value)
         ]
+
+        # Sprint 837: thresholds come from the run's tax year, not a fixed table.
+        if form_type == FormType.MISC:
+            by_box: dict[int, Decimal] = defaultdict(lambda: ZERO)
+            for category, amount in by_category.items():
+                by_box[_resolve_box(category)] += amount
+            meets_threshold = any(
+                amount >= schedule.box_threshold(FormType.MISC, box) for box, amount in by_box.items()
+            )
+            # Would have met the pre-2026 $600 figure in some box whose threshold is now higher.
+            near_boxes = [
+                (box, amount)
+                for box, amount in sorted(by_box.items())
+                if LEGACY_GENERAL_THRESHOLD <= amount < schedule.box_threshold(FormType.MISC, box)
+            ]
+            below_reason = "; ".join(
+                f"box {box} ${amount:,.2f} is below the {config.tax_year} threshold of "
+                f"${schedule.box_threshold(FormType.MISC, box):,.2f}"
+                for box, amount in near_boxes
+            )
+        else:
+            threshold = schedule.form_threshold(form_type)
+            meets_threshold = total >= threshold
+            near_boxes = [(1, total)] if LEGACY_GENERAL_THRESHOLD <= total < threshold else []
+            below_reason = (
+                f"${total:,.2f} is below the {config.tax_year} {form_type.value} threshold of ${threshold:,.2f}"
+            )
+        if not meets_threshold:
+            # Below threshold: not a candidate, so the candidate list stays
+            # focused on filings the practitioner needs to make. A payee that
+            # reaches $600 is listed separately for review (Sprint 837).
+            excluded_dollars[(payee, form_type)] += total
+            if near_boxes:
+                below_threshold.append(
+                    BelowThresholdPayee(
+                        vendor_id=vendor.vendor_id,
+                        vendor_name=vendor.vendor_name,
+                        form_type=form_type.value,
+                        total=_quantise(total),
+                        box_amounts=box_amounts,
+                        reason=(
+                            f"Below the {config.tax_year} reporting threshold — not required, shown for review "
+                            f"({below_reason})."
+                        ),
+                    )
+                )
+            continue
 
         dq = _assess_vendor(vendor)
         review_reasons: list[str] = []
@@ -523,6 +789,7 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
         "data_quality_issue_count": sum(1 for dq in assessed.values() if dq.has_issue),
         "payments_without_vendor": len(payments_without_vendor),
         "payments_outside_tax_year": payments_outside_tax_year,
+        "below_threshold_count": len(below_threshold),
     }
 
     # Deterministic output ordering — form type then vendor name.
@@ -534,4 +801,6 @@ def prepare_1099s(config: Form1099Config) -> Form1099Result:
         data_quality=sorted(assessed.values(), key=lambda dq: dq.vendor_name.lower()),
         w9_collection_list=sorted(w9_list, key=lambda w: w.vendor_name.lower()),
         summary=summary,
+        thresholds=schedule,
+        below_threshold_payees=sorted(below_threshold, key=lambda b: (b.form_type, b.vendor_name.lower())),
     )

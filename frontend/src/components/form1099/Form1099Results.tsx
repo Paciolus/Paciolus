@@ -35,11 +35,27 @@ interface Props {
 
 export function Form1099Results({ result }: Props) {
   const { candidates, data_quality, w9_collection_list, tax_year } = result
+  const notices = result.notices ?? []
+  const belowThreshold = result.below_threshold_payees ?? []
+  const thresholds = result.thresholds ?? null
   const flagged = candidates.filter(c => c.flagged_for_review).length
   const qualityIssues = data_quality.filter(dq => dq.has_issue).length
 
   return (
     <div className="space-y-6">
+      {notices.length > 0 && (
+        <section
+          aria-label="Threshold notices"
+          className="p-4 rounded-lg border border-clay-200 bg-clay-50 space-y-2"
+        >
+          {notices.map(notice => (
+            <p key={notice} className="font-sans text-sm text-clay-700">
+              {notice}
+            </p>
+          ))}
+        </section>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Counter label="Tax year" value={tax_year} />
         <Counter label="Filing candidates" value={candidates.length} />
@@ -94,6 +110,43 @@ export function Form1099Results({ result }: Props) {
         )}
       </section>
 
+      {belowThreshold.length > 0 && (
+        <section className="theme-card p-6">
+          <h3 className="font-serif text-lg text-content-primary mb-1">
+            Below the {tax_year} Reporting Threshold{' '}
+            <span className="font-sans text-sm text-content-tertiary">({belowThreshold.length})</span>
+          </h3>
+          <p className="font-sans text-xs text-content-tertiary mb-4">
+            Not required, shown for review: these payees reached $600 but not the {tax_year} threshold.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-sans">
+              <thead>
+                <tr className="border-b border-theme text-left text-xs uppercase tracking-wider text-content-tertiary">
+                  <th className="py-2 pr-3">Vendor</th>
+                  <th className="py-2 px-3">Form</th>
+                  <th className="py-2 px-3 text-right">Total</th>
+                  <th className="py-2 pl-3">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {belowThreshold.map(p => (
+                  <tr key={`${p.vendor_id}-${p.form_type}`} className="border-b border-theme/40 last:border-0">
+                    <td className="py-2 pr-3">
+                      <div className="font-medium text-content-primary">{p.vendor_name}</div>
+                      <div className="font-mono text-xs text-content-tertiary">{p.vendor_id}</div>
+                    </td>
+                    <td className="py-2 px-3 font-mono text-xs">{p.form_type}</td>
+                    <td className="py-2 px-3 text-right font-mono">{formatAmount(p.total)}</td>
+                    <td className="py-2 pl-3 text-xs text-content-tertiary">{p.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section className="theme-card p-6">
         <h3 className="font-serif text-lg text-content-primary mb-4">
           W-9 Collection Queue{' '}
@@ -138,6 +191,47 @@ export function Form1099Results({ result }: Props) {
           </ul>
         )}
       </section>
+
+      {thresholds && (
+        <section className="theme-card p-6">
+          <h3 className="font-serif text-lg text-content-primary mb-1">Thresholds Applied</h3>
+          <p className="font-sans text-xs text-content-tertiary mb-4">
+            Tax year <span className="font-mono">{thresholds.tax_year}</span>, using the figures for{' '}
+            <span className="font-mono">{thresholds.figures_from_tax_year}</span>. {thresholds.confirm_against}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-sans">
+              <thead>
+                <tr className="border-b border-theme text-left text-xs uppercase tracking-wider text-content-tertiary">
+                  <th className="py-2 pr-3">Form / box</th>
+                  <th className="py-2 px-3">Payment</th>
+                  <th className="py-2 px-3 text-right">Threshold</th>
+                  <th className="py-2 pl-3">Basis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {thresholds.items.map(item => (
+                  <tr key={`${item.form_type}-${item.box}`} className="border-b border-theme/40 last:border-0">
+                    <td className="py-2 pr-3 font-mono text-xs">
+                      {item.form_type} box {item.box}
+                    </td>
+                    <td className="py-2 px-3 text-content-primary">{item.description}</td>
+                    <td className="py-2 px-3 text-right font-mono">{formatAmount(item.amount)}</td>
+                    <td className="py-2 pl-3 text-xs text-content-tertiary">
+                      {item.basis}
+                      {item.needs_confirmation && (
+                        <span className="ml-2 inline-block px-2 py-0.5 rounded-full font-medium bg-clay-100 text-clay-700 border border-clay-200">
+                          Confirm
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

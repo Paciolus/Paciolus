@@ -1,6 +1,6 @@
 """
 Paciolus — Cutoff Period Risk Indicator Engine
-Sprint 358: Phase XLIX — ISA 501
+Sprint 358: Phase XLIX
 
 Identifies accounts where TB balance patterns suggest period-end cutoff risk.
 Targets accrual, prepaid, and deferred revenue accounts with three
@@ -12,7 +12,9 @@ deterministic tests:
 Guardrail: Descriptive metrics only — factual observations, no conclusions.
 All computation is ephemeral (zero-storage compliance).
 
-ISA 501 (Audit Evidence — Specific Considerations), ASC 855.
+Cut-off is an assertion considered under ISA 315; ASC 855. (Sprint 837: ISA 501,
+which addresses inventory count attendance, litigation and segment information,
+was removed — it does not govern cut-off testing.)
 """
 
 from dataclasses import dataclass, field

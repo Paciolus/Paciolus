@@ -57,7 +57,7 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="PCAOB",
         code="AS 2310",
         title="The Confirmation Process",
-        usage=("bank reconciliation memo", "AR aging memo"),
+        usage=("AR aging memo", "bank reconciliation memo — named as a separate procedure, not what the tool does"),
     ),
     Standard(
         body="PCAOB",
@@ -146,9 +146,14 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="ISA",
         code="ISA 501",
         title="Audit Evidence — Specific Considerations for Selected Items",
-        usage=("inventory memo",),
+        usage=("inventory memo — attendance at counting named as an additional procedure", "sampling memo"),
     ),
-    Standard(body="ISA", code="ISA 505", title="External Confirmations", usage=("bank reconciliation memo",)),
+    Standard(
+        body="ISA",
+        code="ISA 505",
+        title="External Confirmations",
+        usage=("bank reconciliation memo — named as a separate procedure, not what the tool does",),
+    ),
     Standard(
         body="ISA",
         code="ISA 520",
@@ -419,7 +424,68 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="Nigrini",
         code="Nigrini 2012",
         title="Benford's Law: Applications for Forensic Accounting",
-        usage=("JE testing — Benford minimum-N=300 rationale",),
+        usage=("Benford MAD conformity bands; informs the Paciolus minimum population",),
+    ),
+    Standard(
+        body="Statistics",
+        code="Iglewicz & Hoaglin 1993",
+        title="How to Detect and Handle Outliers (modified z-score)",
+        usage=("JE testing T8 — month-end concentration compared with the client's own months",),
+    ),
+    # ── Methodology catalog (frontend/src/content/methodology-sources.ts) ──
+    Standard(
+        body="ASC",
+        code="ASC 850",
+        title="Related Party Disclosures",
+        usage=("TB diagnostics — related-party account flag",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §3101",
+        title="Tax on employees (FICA: Social Security, Medicare, Additional Medicare Tax)",
+        usage=("W-2 reconciliation tool",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §3121",
+        title="Definitions (wages; Social Security wage base)",
+        usage=("W-2 reconciliation tool",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §402(g)",
+        title="Limitation on exclusion for elective deferrals",
+        usage=("W-2 reconciliation tool — 401(k) deferral limit",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §223(b)(3)",
+        title="HSA additional contributions for individuals age 55 or older",
+        usage=("W-2 reconciliation tool — HSA catch-up",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §6049",
+        title="Returns regarding payments of interest",
+        usage=("Form 1099 preparation tool — 1099-INT",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §6050N",
+        title="Returns regarding payments of royalties",
+        usage=("Form 1099 preparation tool — 1099-MISC royalties",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §6045(f)",
+        title="Returns relating to payments to attorneys",
+        usage=("Form 1099 preparation tool — 1099-MISC attorney gross proceeds",),
+    ),
+    Standard(
+        body="US Code",
+        code="5 U.S.C. §6103",
+        title="Federal holidays",
+        usage=("JE testing T19 — holiday posting calendar",),
     ),
 )
 

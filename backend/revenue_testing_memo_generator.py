@@ -31,7 +31,8 @@ from shared.report_styles import ledger_table_style
 
 REVENUE_TEST_DESCRIPTIONS = {
     "large_manual_entries": (
-        "Flags manual revenue entries exceeding performance materiality threshold (ISA 240 fraud risk indicator)."
+        "Flags manual revenue entries of $50,000 or more (a fixed Paciolus default threshold, not "
+        "performance materiality). Revenue is a presumed fraud risk under ISA 240."
     ),
     "year_end_concentration": (
         "Flags revenue concentrated in the last days of the period, a common revenue recognition anomaly indicator."
@@ -47,11 +48,12 @@ REVENUE_TEST_DESCRIPTIONS = {
     "unclassified_entries": ("Flags revenue entries missing account classification (unmapped to chart of accounts)."),
     "zscore_outliers": (
         "Uses z-score analysis to identify revenue transaction amounts that are "
-        "statistically unusual relative to the account\u2019s historical distribution."
+        "statistically unusual relative to the other revenue entries in the population tested."
     ),
     "trend_variance": (
-        "Compares monthly revenue totals to the period\u2019s trend line and flags "
-        "months where actual revenue deviates materially from the expected trend."
+        "Compares the period\u2019s net revenue total with the prior-period total supplied "
+        "by the auditor and flags a change above the configured percentage (Paciolus default 30%). "
+        "Skipped when no prior-period total is provided."
     ),
     "concentration_risk": ("Flags single accounts representing a disproportionate share of total revenue."),
     "cutoff_risk": (
@@ -73,18 +75,20 @@ REVENUE_TEST_DESCRIPTIONS = {
         "recognition date."
     ),
     "missing_obligation_linkage": (
-        "Flags revenue entries that cannot be linked to a corresponding contract "
-        "or purchase order in the source data, indicating possible "
-        "unsubstantiated revenue."
+        "Flags revenue entries that carry a contract ID but no performance obligation ID, "
+        "or a performance obligation ID but no contract ID, in the source data."
     ),
     "modification_treatment_mismatch": (
-        "Flags revenue entries that appear to reflect contract modifications "
-        "without evidence of updated transaction price allocation per "
-        "ASC 606-10-25-10."
+        "Flags contracts whose entries record more than one modification treatment, or "
+        "only some of which record a modification. ASC 606 / IFRS 15 can require different "
+        "treatments for different modifications, so a flag may warrant review rather than "
+        "indicating non-compliance."
     ),
     "allocation_inconsistency": (
-        "Tests whether revenue allocated across multiple performance obligations "
-        "reflects standalone selling prices per ASC 606-10-32-28."
+        "Flags contracts whose entries record more than one allocation basis, or record a "
+        "basis on only some entries. ASC 606 / IFRS 15 permit different standalone selling "
+        "price methods for different obligations, so a flag may warrant review rather than "
+        "indicating non-compliance."
     ),
 }
 
@@ -98,7 +102,7 @@ _REVENUE_CONFIG = TestingMemoConfig(
     test_descriptions=REVENUE_TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the revenue GL extract "
-        "in accordance with professional auditing standards "
+        "with reference to professional auditing standards "
         "(ISA 240: Auditor's Responsibilities Relating to Fraud \u2014 "
         "presumed fraud risk in revenue recognition, "
         "ISA 500: Audit Evidence, PCAOB AS 2401: Consideration of Fraud). "

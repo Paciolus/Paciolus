@@ -1185,9 +1185,8 @@ def test_ar_sl_negative_invoice(
         amount (a credit-memo or reversal that wasn't reconciled).
 
     Two separate auditor-facing assertions; a memo with one finding
-    combining both would muddy the auditor's follow-up. AICPA Audit
-    Guide for Receivables (§5.11) describes the two as distinct control
-    objectives.
+    combining both would muddy the auditor's follow-up. (Sprint 837
+    removed an unverifiable AICPA guide section reference.)
     """
     flagged: list[FlaggedAR] = []
 
@@ -1254,7 +1253,10 @@ def test_missing_allowance(
                 test_key="missing_allowance",
                 test_tier=TestTier.STRUCTURAL,
                 severity=Severity.HIGH,
-                issue="No Allowance for Doubtful Accounts detected in trial balance — required under IFRS 9/ASC 326",
+                issue=(
+                    "No Allowance for Doubtful Accounts detected in trial balance — IFRS 9/ASC 326 require "
+                    "expected credit losses to be recognised; confirm how they are recorded"
+                ),
                 confidence=0.90,
                 details={"total_ar": sum(a.balance for a in ar_accounts)},
             )

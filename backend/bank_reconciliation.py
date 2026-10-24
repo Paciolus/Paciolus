@@ -10,9 +10,10 @@ ZERO-STORAGE COMPLIANCE:
 - No raw transaction data is stored
 
 Audit Standards References:
-- ISA 500: Audit Evidence (bank reconciliation as substantive procedure)
+- ISA 500: Audit Evidence (reconciling the client's own bank and ledger records)
 - ISA 330: Auditor's Responses to Assessed Risks
-- PCAOB AS 2301: The Auditor's Responses to the Risks of Material Misstatement
+(Sprint 837: an unregistered PCAOB AS 2301 reference was removed. A bank
+confirmation under ISA 505 / AS 2310 is a separate procedure, not this tool.)
 """
 
 import csv

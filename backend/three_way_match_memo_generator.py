@@ -1,7 +1,7 @@
 """
 Three-Way Match Testing Memo PDF Generator (Sprint 94 / Sprint 504 rewrite)
 
-Auto-generated matching memo per ISA 505 / ISA 500 / PCAOB AS 1105.
+Auto-generated matching memo with reference to ISA 500 / PCAOB AS 1105.
 Renaissance Ledger aesthetic consistent with existing PDF exports.
 
 Sections:
@@ -122,12 +122,12 @@ _RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
     "elevated": (
         "Material variances and unmatched documents were detected that require "
         "focused investigation. The engagement team should evaluate whether additional "
-        "procedures are appropriate per ISA 505 and PCAOB AS 1105."
+        "procedures are appropriate per ISA 500 and PCAOB AS 1105."
     ),
     "high": (
         "Significant variances and/or unmatched documents were detected that require "
         "detailed investigation. The engagement team should evaluate whether additional "
-        "substantive procedures are appropriate per ISA 505 and PCAOB AS 1105."
+        "substantive procedures are appropriate per ISA 500 and PCAOB AS 1105."
     ),
 }
 
@@ -978,7 +978,7 @@ def generate_three_way_match_memo(
         story,
         styles,
         domain="three-way match validation",
-        isa_reference="ISA 500 (Audit Evidence) and ISA 505 (External Confirmations)",
+        isa_reference="ISA 500 (Audit Evidence) and PCAOB AS 1105 (Audit Evidence)",
     )
 
     # Build PDF

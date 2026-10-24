@@ -5,8 +5,9 @@ Reconciles per-employee payroll system totals against draft W-2 amounts
 and the four quarterly Forms 941 to catch the discrepancies that
 produce amended filings and IRS notices: mismatched Social Security
 and Medicare wages, mis-applied wage base caps, over-contributions to
-HSAs and retirement plans, and 941 totals that do not agree to the W-3
-summary.
+HSAs and retirement plans, and 941 totals that do not agree to the payroll
+year-to-date totals. (The four-quarter 941 sum is compared with payroll YTD,
+not with the W-3; the W-3 totals are computed and reported alongside. Sprint 837.)
 
 Zero-storage: form-input only. The engine is a diagnostic tool that
 flags discrepancies for practitioner review — it does not determine

@@ -68,11 +68,13 @@ export default function Form1099Page() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="theme-card p-6">
-                  <h3 className="font-serif text-content-primary text-sm mb-2">IRS Thresholds Built-In</h3>
+                  <h3 className="font-serif text-content-primary text-sm mb-2">Thresholds by Tax Year</h3>
                   <p className="font-sans text-content-tertiary text-xs">
-                    Applies the 1099-NEC $600 threshold, 1099-MISC category thresholds, and the $10 1099-INT
-                    floor. Medical and legal payments retain their reporting requirement even for corporate
-                    vendors (per IRC §6041A).
+                    Applies the thresholds for the tax year you enter: $600 for 1099-NEC and most 1099-MISC
+                    boxes through 2025, $2,000 from 2026 (One Big Beautiful Bill Act, 2025), and $10 for
+                    royalties and 1099-INT. Each run lists the figures applied and their basis; payees between
+                    $600 and the year&apos;s threshold are shown separately for review. Medical and legal
+                    payments stay reportable for corporate vendors (see the IRS 1099 instructions).
                   </p>
                 </div>
                 <div className="theme-card p-6">

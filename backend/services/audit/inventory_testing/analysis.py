@@ -13,7 +13,6 @@ ZERO-STORAGE COMPLIANCE:
 Audit Standards References:
 - IAS 2: Inventories
 - ASC 330: Inventory
-- ISA 501: Audit Evidence — Specific Considerations for Selected Items
 - ISA 540: Auditing Accounting Estimates
 - ISA 500: Audit Evidence
 

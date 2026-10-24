@@ -3,7 +3,8 @@ Segregation of Duties (SoD) Engine (Sprint 630).
 
 Analyzes a user-role and role-permission matrix against a hardcoded library of
 known SoD conflict rules. Per-user risk ranking with mitigating control
-suggestions. Required for SOC 1 / internal-audit engagements.
+suggestions. SoD analysis can support SOC 1, SOX 404 and internal-audit
+work; it is not itself required by those frameworks (Sprint 837).
 
 Form/upload-input only — zero-storage compliant. The engine consumes the two
 matrices, runs all rules against the effective per-user permission set, and
@@ -11,7 +12,9 @@ returns a ranked conflict matrix without persisting anything.
 
 Scope:
 - Single matrix per call. Multi-system role bridging is out-of-scope.
-- Hardcoded rule library covers the common AICPA / SOX 404 SoD patterns.
+- Hardcoded rule library covers common incompatible-duty patterns (a Paciolus
+  library informed by general SoD guidance; not a list published by AICPA or
+  required by SOX 404).
   Custom rules can be passed in via the `extra_rules` argument.
 - Mitigating controls are suggested per rule (compensating-control framework
   per COSO 2013) but are not assessed for operating effectiveness — that
@@ -102,7 +105,7 @@ DEFAULT_SOD_RULES: tuple[SodRule, ...] = (
         permissions_required=frozenset({"je_create"}),
         permissions_alternate=frozenset({"je_post", "je_approve"}),
         mitigation="Require independent JE approval workflow with auditor sampling.",
-        rationale="Self-approved manual JEs are the highest fraud-risk pathway (PCAOB AS 2401.58).",
+        rationale="Self-approved manual JEs bypass review; AS 2401 discusses management override through journal entries.",
     ),
     SodRule(
         code="JE-02",
@@ -120,7 +123,7 @@ DEFAULT_SOD_RULES: tuple[SodRule, ...] = (
         permissions_required=frozenset({"payroll_employee_create"}),
         permissions_alternate=frozenset({"payroll_payment_release"}),
         mitigation="HR adds employees; payroll only processes for active employees on HR roster.",
-        rationale="Ghost-employee fraud pattern (BLS 2023: ~17% of payroll fraud cases).",
+        rationale="Enables the ghost-employee fraud pattern (fictitious employees paid through payroll).",
     ),
     SodRule(
         code="PR-02",

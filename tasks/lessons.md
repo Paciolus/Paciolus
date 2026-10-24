@@ -4,6 +4,28 @@
 
 ---
 
+## A citation is a claim; catalogue them before you trust them (Sprints 835/837, 2026-10-24)
+
+Writing one catalog row per test — rule, source, and whether the number is ours —
+surfaced about forty citations in shipped code and memos that the sources do not
+support: fraud statistics nobody could trace, a paragraph reference to a guide
+section that does not appear to exist, confirmation standards cited for matching
+the client's own records, "required" where a standard only lists an example. None
+was caught by `test_citation_consistency.py`, because that test only checks that a
+cited code is *registered*, not that the standard says what we say it says.
+
+**Pattern: registration is not verification.** For a product whose stance is
+"we share what the authorities say", every attribution needs a stated strength
+(required / described / published method / our convention) that a reviewer can
+check against the source. Default to the weaker claim and drop paragraph numbers
+you cannot confirm.
+
+Also learned: deleting a merged PR's branch closed the PR stacked on it, and
+`ci.yml` only runs on PRs into `main` — retarget stacked PRs before merging the
+base, and run the full suite locally on anything stacked.
+
+---
+
 ## Averaging hid false positives; a floor surfaced them (Sprint 831, 2026-10-24)
 
 The composite score averaged per-test flag rates, so a test that flagged 100% of a
