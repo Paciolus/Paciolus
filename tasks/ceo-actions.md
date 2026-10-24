@@ -34,11 +34,30 @@ Three gates left between here and announcement. The code is launch-ready; the ga
 
 ---
 
+## ⚖️ Claims review — decisions and actions (2026-10-24)
+
+The legal-and-security claims review (https://claude.ai/artifact/MFTYHezjA4zakoiKwgnNb2; full detail in `reports/claims-review-2026-10-24.md`) is lined up as Sprints 840–845 in `tasks/todo.md`.
+
+**Decided:** counsel reviews the Terms of Service, Privacy Policy and DPA once the website is finalized. Factual corrections to those pages happen now, without waiting.
+
+**Your decisions (defaults in brackets are what the next session will use unless you say otherwise):**
+1. Storage positioning — [Option B: plain description + "what we keep" list; drop "Zero-Storage" as a promise].
+2. Refund policy — 30-day money-back, or no partial-period refunds? [ask — no default]
+3. Legal entity — Paciolus, Inc. or Paciolus LLC? [ask — no default]
+4. Repository visibility — private, or public with rewritten compliance docs? [ask; recommend private]
+5. Product line — [“Diagnostic Intelligence for Financial Professionals”], “Audit Analytics”, or keep “Audit Intelligence”?
+6. Support promise — [“Email support; we aim to reply within 1–2 business days” for every tier].
+7. Verify ISA 315: does it prescribe the 4×4 inherent × control matrix the composite-risk tool attributes to “Appendix 1”? (Sprint 843 H12)
+
+**Verify in your consoles:** Neon region and PITR window; Render service region; an R2 lifecycle rule deleting `shares/` after ≤2 days; Sentry DSN set in production and its retention; whether Loki is enabled (Grafana Labs would be an unlisted processor); Render log retention; MFA on GitHub, Render, Vercel, Stripe, Sentry, Neon, Cloudflare and SendGrid; whether provider DPAs/SCCs were accepted; `JWT_EXPIRATION_MINUTES` and `TRUSTED_PROXY_IPS` on Render; TLS minimum on Vercel/Render; whether help@, privacy@ and security@ mailboxes exist.
+
+**At website-final:** one counsel review of the Terms, Privacy Policy and DPA as contracts (liability, arbitration, governing law, refunds, auto-renewal disclosure for your state), plus any founder-CPA marketing copy against your state board's rules.
+
 ## 🧭 Methodology calls — DECIDED 2026-10-24
 
 You approved every recommendation in the decision doc (https://claude.ai/artifact/9zuEgMNHBTstNTJSxHcGeQ), with the instruction to be as conservative as possible and to document every source. Implementation: Sprint 831 (calls 2–4 below), Sprint 832 (call 1), Sprint 825 (sampling), Sprint 826 (W-2), Sprint 833 (SoD, bank-rec), Sprint 790 (upload counter), Sprint 834 (storage wording), Sprint 835 (sources page). The original text of the four calls is kept below for the record.
 
-**Still yours:** counsel review of the storage wording in the Terms of Service §5.3 and the Privacy Policy, which I did not edit because they are legal documents (see Sprint 834 in `tasks/todo.md` for the proposed text).
+**Still yours:** see "Claims review" below — counsel now reviews the finished legal pages at website-final, and the wrong storage sentences are fixed in Sprints 841/844 without waiting.
 
 ### Original calls (2026-10-23, Sprint 829)
 

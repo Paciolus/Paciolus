@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-24] (this PR): claims-review backlog — full findings saved to `reports/claims-review-2026-10-24.md`; Sprints 840–845 filed with a next-session start block; merge SHAs recorded for 836–839; Sprint 834 marked superseded; `ceo-actions.md` and `SESSION_STATE.md` refreshed (tasks/todo.md, tasks/ceo-actions.md, SESSION_STATE.md, reports/)
 - [2026-10-23] (this PR): record the 2026-10-23 merges — statuses and commit SHAs for Sprints 812–829; SESSION_STATE refreshed (tasks/todo.md, SESSION_STATE.md)
 - [2026-10-23] Sprint 797 follow-up — `test_alembic_head_matches_base_metadata_foreign_keys` ran in-process and was therefore measuring another fixture's dialect. First push of this branch went green on both SQLite jobs and **red on PostgreSQL 15**, reporting `organizations.subscription_id`, `tool_activities.engagement_id` and `users.organization_id` as "in Alembic but not in model". **The drift was never real.** Those three are the ORM's `use_alter=True` FKs (they break the organizations → users → subscriptions cycle), and `use_alter` changes how `create_all()` emits a constraint per dialect: SQLite inlines it because it cannot `ALTER TABLE ADD CONSTRAINT`, PostgreSQL emits a separate ALTER. `Base.metadata` is process-global, so the session `db_engine` fixture's `create_all()` against Postgres left the shared metadata in a state where the test's *own* SQLite `create_all()` stopped emitting all three — and both halves of the test use SQLite, so only the models half lost them. Reproduced locally with a mock PG engine (no server): the old test fails with the three CI errors verbatim, the fixed one passes. Now runs in a clean subprocess, for the same reason — and with the same docstring warning — that `test_init_db_alone_creates_every_table` beside it already did. Sprint 797 learned that lesson for one test and not its neighbour. Files: `backend/tests/test_alembic_models_parity.py`, `tasks/todo.md`, `tasks/lessons.md`.
 - [2026-10-23] carry-forward consolidation — after PRs #198 + #199 merged (28 findings from the two 2026-10-22 reviews), recorded every known-unaddressed item in one `CARRIED FORWARD` block so the next session starts from a list rather than re-deriving one: the two items needing a practitioner or a roadmap call (793b's 2026 figures, A-8's §179/§168(k)/real-property scope), the four parked with owners named (T-1, T-2, T-5, D-6), the seven surfaces neither review examined — **auth/CSRF/JWT/injection/rate-limiting is the largest** — and three contrast items that were blocked on the route→theme map and are **now unblocked** because Sprint 809 built it. Also filed **Sprint 823**: measured that only 11 of the 18 tools have synthetic generators, and **six of the seven uncovered ones are exactly the tools Sprint 689 added** — the framework predates that 12→18 expansion and was never extended to it. Notes that `ceo-actions.md:65` cannot be executed as written, because 14 of the 18 tools do not take a trial balance. No code changed. Files: `tasks/todo.md`.
@@ -96,6 +97,8 @@
 ---
 
 ## Active Phase
+> **▶ Next session: start at "NEXT SESSION — START HERE" below (Sprints 840–845, from the 2026-10-24 claims review —
+> [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md)).** The worklist that follows is older context.
 > **WORKLIST — 2026-10-20 (authoritative order).** Consolidated in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543), which re-verified the 2026-10-19 launch-readiness assessment against current source and found ten items neither that doc nor the 2026-10-20 worklist covered.
 >
 > | Track | Scope | Sprints | Owner |
@@ -351,6 +354,167 @@
 > Sprints 812–831 archived to `tasks/archive/sprints-812-831-details.md`.
 > Sprints 790–835 archived to `tasks/archive/sprints-790-835-details.md`.
 
+> **▶ NEXT SESSION — START HERE (written 2026-10-24).** The CEO asked for a legal-and-security claims review
+> and approved fixing everything it found. **Full findings with file:line for every item:**
+> [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md) (CEO-readable version:
+> https://claude.ai/artifact/MFTYHezjA4zakoiKwgnNb2). Work **Sprints 840 → 845 in order**, one PR each (or 840 alone
+> first — it is the only one with security defects). CEO direction: no "tricky" language, accuracy over polish;
+> correct wrong facts now, including in the Terms/Privacy pages; **counsel reviews the Terms, Privacy and DPA once
+> the website is finalized** (CEO action in `ceo-actions.md`), so don't block on counsel.
+>
+> **Before the first `Sprint N:` commit:** Active Phase has 4 COMPLETE sprints (836–839), so marking one more
+> COMPLETE trips the archival gate — run `sh scripts/archive_sprints.sh` first.
+>
+> **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
+> storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
+> refund policy — **ask** (30-day money-back vs no partial-period refunds; keep the website Terms wording until
+> answered but fix the tier names); product line **"Diagnostic Intelligence for Financial Professionals"**; support
+> promise **"Email support; we aim to reply within 1–2 business days"** for every tier; legal entity — **ask**
+> (LLC vs Inc.; don't guess); repository visibility — **ask** (recommend private; rewrite the docs either way).
+>
+> **Working rules learned this session:** retarget a stacked PR to `main` *before* merging its base (deleting the
+> base branch closes it), and CI only runs on PRs into `main`; `rmdir` a worktree's `frontend/node_modules`
+> junction *before* `git worktree remove --force`, or the main checkout's node_modules is wiped; run the full backend
+> suite locally (~13 min) before pushing; every automated review thread must be fixed, replied to and resolved.
+
+### Sprint 840: Security defects found by the claims review
+**Status:** PENDING. **Priority:** P0 (S1, S2) / P1 — fix before launch; several honest claims depend on these.
+**Source:** `reports/claims-review-2026-10-24.md` Part 1 (file:line for each).
+
+- [ ] **S1** `/internal/metrics/*` (`routes/internal_metrics.py:38-70`) lets any paying owner read company-wide
+      MRR/ARR/churn/revenue history → `Depends(require_superadmin)`. Test: a Solo owner gets 403.
+- [ ] **S2** Sentry (`main.py:102-131`): `include_local_variables=False`, `max_value_length≈1024`; `before_send` drops
+      exception values, frame vars and breadcrumbs; check `routes/export_sharing.py:363` `exc_info`. Test the scrubber.
+- [ ] **S3** Impersonation truly read-only: refuse tokens with `imp` on mutating methods inside
+      `require_current_user` (covers lowercase `bearer` and the cookie path), refuse revoked token IDs, remove the
+      "revoked = allowed" branch (`security_middleware.py:871-904`); make the stop endpoint reachable; fix org-ID
+      fallback (`internal_admin.py:323-327`).
+- [ ] **S4** One shared formula-escaped CSV writer for every export; fix the six unescaped ones (heatmap, SoD, 1099,
+      intercompany, book-to-tax, lease) + a guard test that scans export code.
+- [ ] **S5** `log_secure_operation` → real `logging` to stdout/Loki; persist auth failures, lockouts, token reuse
+      and impersonation events to a DB table (Alembic migration; single head).
+- [ ] **S6** Log exception type names only, never filenames or raw exception text (8 call sites listed).
+- [ ] **S7** Decompression limits ~100–200 MB uncompressed, ratio ~20 (`upload_pipeline.py:66-68`).
+- [ ] **S8** Delete the share row only after R2 confirms (`cleanup_scheduler.py:431-437`); CEO adds an R2 lifecycle rule.
+- [ ] **Lows:** dummy bcrypt for unknown emails + uniform registration response; rate-limit coverage (middleware or
+      decorators) and a test; `get_client_ip()` for the passcode throttle; bind/pop the preflight cache token; decide
+      on the >1 MB `/tmp` spool (keep in memory within the 100 MB cap, or disclose); approver from the session and no
+      self-approval for adjustments; (MFA is its own future sprint — note only).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 841: One honest storage statement everywhere
+**Status:** PENDING. **Priority:** P1. **Source:** report Part 2 (A1–A26 + Medium list).
+
+- [ ] Adopt Option B wording (report Part 2) in every location A1–A26 and the Medium list: SEO metadata, homepage
+      pillars/evidence band/demo zone, About, login/register, **verification and password-reset email templates
+      (html + txt)**, TB tool page, WelcomeModal, workspace footer, portfolio page, multi-currency page, error pages,
+      Privacy §2–3 + retention table, Terms §5 (fix facts only; counsel reviews later), USER_GUIDE, Subprocessor
+      List, DPA §2.3/§11.3, ZERO_STORAGE_ARCHITECTURE (add an R2 section), Security/Access Control policy absolutes.
+- [ ] USER_GUIDE: stop calling "Clear All Activity History" a GDPR erasure (it archives).
+- [ ] Sentry/log claims (`trust/page.tsx:148, 193`) only after Sprint 840 S2/S6 land.
+- [ ] Guard test: fail the build if "never stored", "never written to disk", "no database to breach",
+      "architecturally impossible", "zero exposure" or "Zero-Storage compliant" reappears in customer-facing files
+      (frontend `src/app`, `src/components`, `src/content`, `src/domain`, backend `templates/`, `docs/04-compliance`,
+      `docs/07-user-facing`).
+- [ ] Optional later (CEO): Option C — stop storing `tool_runs.flagged_accounts` etc. so "we keep nothing from your
+      uploads" becomes literally true.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 842: Billing, pricing and business claims
+**Status:** PENDING. **Priority:** P1 (trial/auto-renewal disclosure is the legal-risk item). **Source:** report Part 3.
+
+- [ ] Trial: remove "no credit card required"; disclose card required + charge amount + date on the pricing page and
+      `(auth)/checkout/page.tsx`; replace the non-existent day-8 read-only flow description.
+- [ ] Remove "Most Popular" (or "Recommended for teams").
+- [ ] One refund policy across website Terms and the markdown copy, current tier names (CEO decision pending).
+- [ ] Row limit "up to 500,000 rows and 100 MB"; billing anchor "monthly from your start date"; invoicing "contact
+      us"; downgrade FAQ (exports aren't stored).
+- [ ] One support promise everywhere (pricing tiers, contact page/meta, USER_GUIDE); drop "dedicated account
+      manager", "custom SLA", "8 hr response" unless the CEO wants to keep and staff them.
+- [ ] Test counts and speed claims: derive "N automated tests" from the registry (97 today), drop "140+", "108 tests",
+      "under 3 seconds average", "days now takes seconds"; demo "overview of all 18 tools", fix "of 12".
+- [ ] USER_GUIDE prices/limits/seats/upload counts; "optionally passcode-protected"; "(.xlsx/.xls)"; "Branded" only
+      for Enterprise.
+- [ ] Consistency test pinning pricing copy numbers to `domain/pricing.ts` / `shared/entitlements.py`.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 843: Professional positioning, memo wording and disclaimers
+**Status:** PENDING. **Priority:** P1. **Source:** report Part 4 (H1–H13, M1–M12, L1–L10, disclaimer set).
+
+- [ ] Homepage hero (H1, H2), WelcomeModal (H3), demo memo card + AS 1215 badge (H4), About (H5, M5, L9), feature
+      pillars (H6), "every memo follows ISA/PCAOB format" (M4), approach meta "aligned" (M6).
+- [ ] Standard-name hero badges on nine tool pages + tools index + demo strip → quiet "References …" line;
+      "ISA 500 Audit Evidence" → "Bank-to-book matching" (H7).
+- [ ] Memo cover fields "(entered by user)" + cover line (H8); "Conclusion" → "Summary of Results" with the
+      flag-density wording (H9); bank-rec/TWM "immaterial / satisfactory" (H10); TB report "appears sound",
+      "Risk Assessment", "Findings", "Material Exceptions" (H11); memo disclaimer "sufficient" (M1); sampling
+      PASS/FAIL → "UEL ≤ TM" (M2); demo PASS chips (M3).
+- [ ] Composite risk ISA 315 "Appendix 1 matrix" claim (H12) — **CEO verifies against ISA 315 first**; likely relabel
+      as a Paciolus convention and add composite risk to `methodology-sources.ts`.
+- [ ] Rename "Form 1099 Preparation" → "1099 Vendor Threshold Review" (H13) across registry, ledger, pages, tests.
+- [ ] Fraud framing "detection" → "indicators" (M7); tax disclaimer on 1099, W-2, Book-to-Tax, **Depreciation and Loan
+      Amortization** (M8); USER_GUIDE "compliant", "client-ready", "Guarantees" (M9); independence line on
+      intercompany / adjusting entries / book-to-tax / FS (M11).
+- [ ] Adopt the standard disclaimer set verbatim (site footer, tool pages, memo cover + footer, tax tools).
+- [ ] Stale test counts (L1, with a consistency test), hero animation copy (L3, L7), "7 standards" (L4), "Audit
+      Intelligence" naming per CEO decision (L5: about/approach meta, `main.py:243`, `email_service.py:577`,
+      `memo_base.py:795`), memo title ISA 520 (L10).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 844: Privacy promises and legal-page accuracy (account deletion feature)
+**Status:** PENDING. **Priority:** P1. **Source:** report Part 5. Counsel reviews the finished pages at website-final.
+
+- [ ] Account deletion: change copy now to "email privacy@paciolus.com; deleted within 30 days", then **build**
+      self-service deletion (hard-delete user, clients, engagements, summaries, tool runs, sessions, follow-ups,
+      misstatements, expectations; R2 shares; cancel Stripe subscription; keep only what billing/law requires and say
+      so) + a data-export endpoint; termination hard-delete job; disclose that history "clear" archives.
+- [ ] Remove the DPO line → privacy contact; fix the entity name everywhere (CEO decision); providers and regions
+      (Neon us-east-1, Render region, SendGrid, Cloudflare R2, Render Key Value, Loki if enabled) in Privacy,
+      Subprocessor List, DPA, Security Policy; passwords "hashed" not "encrypted".
+- [ ] Checkout DPA checkbox: publish the DPA at a real URL (updated for Neon/R2/actual data) or remove the checkbox
+      until it exists; Trust page DPA status consistent.
+- [ ] Make the website Terms/Privacy authoritative; delete or sync the markdown copies (dates, arbitration body,
+      refunds, seat caps, CCPA days, "[State]", placeholders, non-existent /history routes).
+- [ ] "72 hours (GDPR requirement)" → "without undue delay, and regulators as the law requires"; remove analytics
+      collection claims; drop "compliant 2024" years; CPRA rights; Terms service description (18 tools, 10 formats).
+- [ ] Trust/Privacy security claims list in report Part 5 (15-minute tokens, lockout, rate-limit wording, no RLS,
+      TLS 1.2+, memory "released", share-link exception, "enterprise-grade", monitoring/on-call).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 845: Honest compliance documents (the repo is public)
+**Status:** PENDING. **Priority:** P1. **Source:** report Part 6. **CEO decision:** repo private or public.
+
+- [ ] Rewrite `docs/04-compliance/` as short, accurate solo-operator documents: SOC 2 status ("none performed or
+      scheduled"); no pen test / bug bounty / PGP claims; disclose.io safe-harbor instead of CFAA/CMA/DMCA language;
+      incident response = founder best-effort + 15-minute uptime probe + Sentry; BCP/DR = Neon PITR, independent
+      backups in progress (Sprint 778), no SLA/RTO/RPO promises; audit logging as it actually is; MFA status;
+      Neon not Render.
+- [ ] Code fix the docs depend on: audit-chain write links across users but verifies per user
+      (`routes/activity.py:153-163` vs `shared/audit_chain.py:85-118`) — make them agree; NULL-hash rows; deletion
+      guard on the admin audit log (`main.py:149`).
+- [ ] Fix `dr-test-monthly.yml` / `backup-integrity-check.yml` to target Neon + R2 (overlaps Sprint 778).
+- [ ] If the CEO chooses private: `gh repo edit --visibility private` is a CEO action (it is outward-facing); note the
+      git history still holds the old text for anyone who cloned it.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 837: Citation corrections; 1099 thresholds by tax year
 **Status:** COMPLETE 2026-10-24 — found by the Sprint 835 catalog; practitioner confirmation items below.
 **Priority:** P1 — customer-visible text cited standards for things they do not say.
@@ -382,7 +546,7 @@
 paragraph numbers that were kept (606-10-25-12, -25-13, -25-30), and the benchmark sample sizes still
 returned by the benchmarks API (unverifiable; not changed).
 
-**Commit SHA:** recorded on merge.
+**Commit SHA:** 4ed14103 (PR #228).
 
 ---
 
@@ -409,7 +573,7 @@ returned by the benchmarks API (unverifiable; not changed).
 **Effect to know:** old saved values now take effect, and are disclosed on every result (e.g. an old
 Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
 
-**Commit SHA:** recorded on merge.
+**Commit SHA:** 66693307 (PR #229).
 
 ---
 
@@ -426,7 +590,7 @@ Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
 - [x] USER_GUIDE §17 callout rewritten for per-year statutory limits and the catch-up "check not run" notice.
 - [x] Admin customer views show the window-aware upload count (Sprint 790) instead of the raw counter.
 
-**Commit SHA:** recorded on merge.
+**Commit SHA:** 66693307 (PR #229).
 
 ---
 
@@ -449,12 +613,12 @@ Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
       account/debit/credit). The bank-rec memo does not print `active_thresholds` although a comment says it
       does.
 
-**Commit SHA:** recorded on merge.
+**Commit SHA:** 5f82d818 (PR #230).
 
 ---
 
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
-**Status:** PARTIAL — marketing and user-guide copy corrected 2026-10-24; the Terms of Service §5.3 and the Privacy Policy wait for counsel (proposed text below).
+**Status:** PARTIAL — Trust/Approach lists and USER_GUIDE §22 corrected 2026-10-24 (PR #225). **Superseded by Sprints 841 and 844**, which fix every remaining storage sentence, the Terms and Privacy included (CEO 2026-10-24: correct wrong facts now; counsel reviews the finished legal pages at website-final).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.
 **Source:** CEO decision 8 (Sprint 818 item 3) and code-health decision 1, 2026-10-24.
 
