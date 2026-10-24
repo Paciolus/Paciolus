@@ -263,10 +263,14 @@ def redis_probe(request: Request) -> DependencyStatus:
     ``healthy`` with ``details.redis="not_configured"`` — the rate limiter is
     using its in-memory fallback and there's nothing to probe.
     """
-    import os
+    # Sprint 819: config's value, not os.environ. config resolves REDIS_URL
+    # through the secrets chain; reading the environment here meant a URL
+    # supplied as a secrets file was used by the rate limiter while this probe
+    # reported "not_configured" and healthy — a check that was not looking.
+    from config import REDIS_URL
 
     start = time.perf_counter()
-    redis_url = os.environ.get("REDIS_URL", "").strip()
+    redis_url = (REDIS_URL or "").strip()
     if not redis_url:
         latency_ms = (time.perf_counter() - start) * 1000
         return DependencyStatus(
