@@ -27,6 +27,38 @@ from shared.entitlements import TierEntitlements, get_entitlements
 logger = logging.getLogger(__name__)
 
 
+_SUB_CACHE_KEY = "_paciolus_subscription_by_user"
+
+
+def _user_subscription(db: Session, user_id: int) -> object:
+    """The user's Subscription row, queried at most once per session.
+
+    Sprint 821: a testing upload resolved it three times (tool access, then
+    the upload limit twice). The row is remembered in the session's own
+    ``info`` dict — it lives exactly as long as the request's session — and is
+    re-validated on every use: a row deleted, detached or re-pointed since is
+    dropped and re-queried, and an expired one refreshes on attribute access
+    as usual. A miss is not remembered, so a row created later in the request
+    is still found.
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    from subscription_model import Subscription
+
+    cache: dict[int, object] = db.info.setdefault(_SUB_CACHE_KEY, {})
+    sub = cache.get(user_id)
+    if sub is not None:
+        state = sa_inspect(sub)
+        if state.session is db and not state.deleted and not state.was_deleted and not state.detached:
+            if sub.user_id == user_id:
+                return sub
+        cache.pop(user_id, None)
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
+    if sub is not None:
+        cache[user_id] = sub
+    return sub
+
+
 def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
     """Derive entitlements from BOTH User.tier AND Subscription.status.
 
@@ -47,9 +79,9 @@ def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
     if not isinstance(db, Session):
         return get_entitlements(UserTier(user.tier.value))
 
-    from subscription_model import Subscription, SubscriptionStatus
+    from subscription_model import SubscriptionStatus
 
-    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    sub = _user_subscription(db, user.id)
 
     if sub is None:
         # No subscription row — trust the tier (checkout flow always creates one in production)
@@ -106,9 +138,7 @@ def check_upload_limit(
         return user  # unlimited
 
     # Try subscription-based counting first
-    from subscription_model import Subscription
-
-    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    sub = _user_subscription(db, user.id)
     if sub and sub.uploads_used_current_period is not None:
         count = sub.uploads_used_current_period
     else:
@@ -146,9 +176,7 @@ def increment_upload_count(db: Session, user_id: int) -> None:
     Called after a successful upload/analysis.
     No-op if user has no subscription (free tier uses ActivityLog counting).
     """
-    from subscription_model import Subscription
-
-    sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
+    sub = _user_subscription(db, user_id)
     if sub:
         sub.uploads_used_current_period = (sub.uploads_used_current_period or 0) + 1
         db.commit()
