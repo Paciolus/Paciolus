@@ -231,6 +231,9 @@ class UserSodSummary:
     low_severity_count: int
     risk_score: float  # high*3 + med*2 + low*1
     risk_tier: str  # "high" | "moderate" | "low"
+    # Sprint 833: why the tier differs from what the score alone would give.
+    # None when the tier is simply the score band.
+    risk_tier_reason: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -242,6 +245,7 @@ class UserSodSummary:
             "low_severity_count": self.low_severity_count,
             "risk_score": round(self.risk_score, 2),
             "risk_tier": self.risk_tier,
+            "risk_tier_reason": self.risk_tier_reason,
         }
 
 
@@ -326,11 +330,39 @@ def _effective_permissions(
 
 
 def _risk_tier(score: float) -> str:
+    """Score band only. See `_tier_user` for the HIGH-conflict floor."""
     if score >= 6:
         return "high"
     if score >= 3:
         return "moderate"
     return "low"
+
+
+HIGH_CONFLICT_TIER_REASON = "Tiered high: at least one HIGH-severity conflict"
+
+_TIER_RANK = {"high": 2, "moderate": 1, "low": 0}
+
+
+def _tier_user(score: float, high_count: int) -> tuple[str, Optional[str]]:
+    """Resolve a user's risk tier and, when it is not the plain score band, why.
+
+    Sprint 833 (CEO decision, Sprint 827 item D2): any HIGH-severity conflict
+    tiers the user "high" regardless of total score. Under the score bands
+    alone a user with a single HIGH conflict scored 3 and read "moderate",
+    understating a combination such as create-and-post journal entries.
+
+    Basis: COSO 2013 Internal Control -- Integrated Framework, Control
+    Activities component (Principle 10), treats segregation of incompatible
+    duties as a control activity that reduces the risk of error or fraud --
+    which is why a single incompatible combination matters on its own. The
+    tier floor itself (one HIGH conflict => "high") is a Paciolus convention;
+    COSO does not prescribe risk tiers or scoring. The numeric score is
+    unchanged so rankings within a tier still reflect conflict volume.
+    """
+    band = _risk_tier(score)
+    if high_count > 0 and band != "high":
+        return "high", HIGH_CONFLICT_TIER_REASON
+    return band, None
 
 
 def analyze_segregation_of_duties(
@@ -390,7 +422,7 @@ def analyze_segregation_of_duties(
         med_count = sum(1 for c in user_conflicts if c.severity == SodSeverity.MEDIUM)
         low_count = sum(1 for c in user_conflicts if c.severity == SodSeverity.LOW)
         score = high_count * 3.0 + med_count * 2.0 + low_count * 1.0
-        tier = _risk_tier(score)
+        tier, tier_reason = _tier_user(score, high_count)
 
         if user_conflicts:
             users_with_conflicts += 1
@@ -407,10 +439,13 @@ def analyze_segregation_of_duties(
                 low_severity_count=low_count,
                 risk_score=score,
                 risk_tier=tier,
+                risk_tier_reason=tier_reason,
             )
         )
 
-    summaries.sort(key=lambda s: (s.risk_score, s.conflict_count), reverse=True)
+    # Tier first so a floored "high" user never ranks below a "moderate" one
+    # with a larger score (e.g. one HIGH = 3 vs two MEDIUM = 4).
+    summaries.sort(key=lambda s: (_TIER_RANK[s.risk_tier], s.risk_score, s.conflict_count), reverse=True)
 
     rule_permissions = {p for rule in rules for p in (*rule.permissions_required, *rule.permissions_alternate)}
     matrix_permissions = {p for perms in role_map.values() for p in perms}
@@ -436,7 +471,9 @@ def sod_result_to_csv(result: SodResult) -> str:
     writer = csv.writer(buffer)
 
     writer.writerow(["USER RISK SUMMARY"])
-    writer.writerow(["User ID", "User Name", "Conflicts", "High", "Medium", "Low", "Risk Score", "Risk Tier"])
+    writer.writerow(
+        ["User ID", "User Name", "Conflicts", "High", "Medium", "Low", "Risk Score", "Risk Tier", "Tier Basis"]
+    )
     for summary in result.user_summaries:
         writer.writerow(
             [
@@ -448,6 +485,7 @@ def sod_result_to_csv(result: SodResult) -> str:
                 summary.low_severity_count,
                 f"{summary.risk_score:.2f}",
                 summary.risk_tier,
+                summary.risk_tier_reason or "",
             ]
         )
 

@@ -218,6 +218,8 @@ class BankRecMemoInput(WorkpaperMetadata):
     summary: dict
     bank_column_detection: Optional[dict] = None
     ledger_column_detection: Optional[dict] = None
+    # Sprint 833: split-match search bounds, disclosed in the memo methodology.
+    split_search: Optional[dict] = None
     filename: str = "bank_reconciliation"
 
 

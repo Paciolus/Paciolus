@@ -19,6 +19,7 @@ Sections:
 
 import io
 from typing import Any, Optional
+from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -73,7 +74,9 @@ _TEST_DESCRIPTIONS: dict[str, str] = {
     "exact_match": (
         "Reconciles bank statement transactions to general ledger entries using "
         "exact amount matching with configurable date tolerance. Greedy algorithm "
-        "matches largest amounts first to minimize residual differences."
+        "matches largest amounts first to minimize residual differences. Remaining "
+        "bank items are then compared with combinations of 2-4 same-sign ledger items "
+        "(split matching) within a bounded search; see the split-matching note."
     ),
     "bank_only_items": (
         "Identifies transactions present on the bank statement but absent from the "
@@ -838,6 +841,15 @@ def generate_bank_rec_memo(
             )
         )
         story.append(Spacer(1, 8))
+
+    # Sprint 833: the split-match search is bounded (a Paciolus convention);
+    # disclose the bounds and how many open bank items were not searched
+    # exhaustively. Those items remain reconciling items in Section IV.
+    split_search = rec_result.get("split_search") or {}
+    split_note = split_search.get("note")
+    if split_note:
+        story.append(Paragraph(f"<b>Split matching:</b> {xml_escape(str(split_note))}", styles["MemoBodySmall"]))
+        story.append(Spacer(1, 6))
 
     # Methodology statement
     build_methodology_statement(

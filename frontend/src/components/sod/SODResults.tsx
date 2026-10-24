@@ -55,7 +55,12 @@ export function SODResults({ result }: SODResultsProps) {
       )}
 
       <section className="theme-card p-6">
-        <h3 className="font-serif text-lg text-content-primary mb-4">Per-User Risk Summary</h3>
+        <h3 className="font-serif text-lg text-content-primary mb-2">Per-User Risk Summary</h3>
+        <p className="font-sans text-xs text-content-tertiary mb-4">
+          Score = 3 per high, 2 per medium, 1 per low conflict. Tier: high at a score of 6 or more, or
+          with any high-severity conflict; moderate at 3 or more. These thresholds are a Paciolus
+          convention, not a COSO requirement.
+        </p>
         {user_summaries.length === 0 ? (
           <p className="font-sans text-sm text-content-tertiary">No users in input.</p>
         ) : (
@@ -88,6 +93,9 @@ export function SODResults({ result }: SODResultsProps) {
                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-sans font-medium ${RISK_TIER_STYLES[s.risk_tier]}`}>
                         {s.risk_tier}
                       </span>
+                      {s.risk_tier_reason && (
+                        <div className="mt-1 font-sans text-xs text-content-tertiary">{s.risk_tier_reason}</div>
+                      )}
                     </td>
                   </tr>
                 ))}

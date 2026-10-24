@@ -14,7 +14,13 @@ interface BankRecMatchTableProps {
 type SortField = 'date' | 'description' | 'bank_amount' | 'ledger_amount' | 'type'
 type SortDir = 'asc' | 'desc'
 
-const TYPE_ORDER: Record<MatchType, number> = { bank_only: 3, ledger_only: 2, matched: 1 }
+const TYPE_ORDER: Record<MatchType, number> = { bank_only: 3, ledger_only: 2, split: 1, matched: 0 }
+
+/** Ledger side of a row — a split shows the sum of its pieces. */
+function ledgerAmount(m: ReconciliationMatchData): number | null {
+  if (m.match_type === 'split') return m.ledger_txns.reduce((sum, t) => sum + t.amount, 0)
+  return m.ledger_txn ? m.ledger_txn.amount : null
+}
 
 function matchTypeBadge(type: MatchType) {
   return (
@@ -26,6 +32,9 @@ function matchTypeBadge(type: MatchType) {
 
 function getCategoryLabel(m: ReconciliationMatchData): { label: string; color: string } | null {
   if (m.match_type === 'matched') return null
+  if (m.match_type === 'split') {
+    return { label: `Split \u00b7 ${m.ledger_txns.length} ledger items`, color: 'bg-sage-50 text-sage-700 border-sage-200' }
+  }
   if (m.match_type === 'bank_only') {
     return m.bank_txn.amount > 0
       ? { label: 'Outstanding Deposit', color: 'bg-sage-50 text-sage-700 border-sage-200' }
@@ -79,7 +88,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
           cmp = Math.abs(a.bank_txn?.amount || 0) - Math.abs(b.bank_txn?.amount || 0)
           break
         case 'ledger_amount':
-          cmp = Math.abs(a.ledger_txn?.amount || 0) - Math.abs(b.ledger_txn?.amount || 0)
+          cmp = Math.abs(ledgerAmount(a) || 0) - Math.abs(ledgerAmount(b) || 0)
           break
         case 'date':
           cmp = getDate(a).localeCompare(getDate(b))
@@ -138,6 +147,7 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
           <option value="matched">Matched</option>
           <option value="bank_only">Bank Only</option>
           <option value="ledger_only">Ledger Only</option>
+          <option value="split">Split Match</option>
         </select>
         <span className="font-sans text-xs text-content-tertiary">
           {filtered.length} of {matches.length} items
@@ -200,9 +210,12 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                     : '\u2014'}
                 </td>
                 <td className="px-4 py-3 font-mono text-sm text-content-primary text-right">
-                  {m.ledger_txn
-                    ? `$${Math.abs(m.ledger_txn.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-                    : '\u2014'}
+                  {(() => {
+                    const amount = ledgerAmount(m)
+                    return amount !== null
+                      ? `$${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                      : '\u2014'
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   {matchTypeBadge(m.match_type)}
@@ -216,6 +229,11 @@ export function BankRecMatchTable({ matches }: BankRecMatchTableProps) {
                       </span>
                     ) : null
                   })()}
+                  {m.split_search_limited && (
+                    <span className="block mt-1 font-sans text-[10px] text-clay-700">
+                      Split search not exhaustive
+                    </span>
+                  )}
                 </td>
               </motion.tr>
             ))}

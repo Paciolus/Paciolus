@@ -79,6 +79,18 @@ DEFAULT_AMOUNT_TOLERANCE: Decimal = Decimal("0.01")
 DEFAULT_BANK_REC_MATERIALITY: Decimal = Decimal("50000.00")
 DEFAULT_BANK_REC_PERFORMANCE_MATERIALITY: Decimal = Decimal("50000.00")
 
+# Sprint 833 (CEO decision 2, Sprint 815 item 2): the split-match pass
+# combines 2-4 ledger items per bank item, so its cost grows with the fourth
+# power of the candidate pool -- 80 same-day candidates took ~2s per bank
+# item, 200 was 64.7M combinations. The pool is first narrowed losslessly
+# (date window, same sign, no piece larger than the bank amount), then capped
+# at this many candidates, nearest-dated first. 20 candidates is at most
+# 6,175 combinations per bank item. PACIOLUS CONVENTION -- no auditing
+# standard prescribes a search bound. A bank item whose pool exceeded the cap
+# and found no split stays an open reconciling item and is counted in the
+# result's ``split_search`` disclosure; nothing is cleared because of the cap.
+DEFAULT_SPLIT_MATCH_MAX_CANDIDATES: int = 20
+
 
 @dataclass
 class BankRecConfig:
@@ -94,6 +106,10 @@ class BankRecConfig:
     date_tolerance_days: int = 0
     materiality: Decimal = field(default_factory=lambda: DEFAULT_BANK_REC_MATERIALITY)
     performance_materiality: Decimal = field(default_factory=lambda: DEFAULT_BANK_REC_PERFORMANCE_MATERIALITY)
+    # Sprint 833: candidate-pool cap for the split-match pass (see
+    # DEFAULT_SPLIT_MATCH_MAX_CANDIDATES). The split date window is
+    # ``date_tolerance_days`` -- 0 means same day, as in the one-to-one pass.
+    split_match_max_candidates: int = DEFAULT_SPLIT_MATCH_MAX_CANDIDATES
 
     def __post_init__(self) -> None:
         # Coerce float / int / str inputs to Decimal so monetary
@@ -110,6 +126,8 @@ class BankRecConfig:
                 f"materiality={self.materiality}, "
                 f"performance_materiality={self.performance_materiality}"
             )
+        if self.split_match_max_candidates < 2:
+            raise ValueError(f"split_match_max_candidates must be at least 2; got {self.split_match_max_candidates}")
 
 
 # =============================================================================
@@ -339,6 +357,10 @@ class ReconciliationMatch:
     match_type: MatchType = MatchType.MATCHED
     match_confidence: float = 0.0
     ledger_txns: list[LedgerTransaction] = field(default_factory=list)  # Sprint 639
+    # Sprint 833: True on a BANK_ONLY item whose split-match candidate pool
+    # exceeded ``split_match_max_candidates`` -- the 2-4 item split search
+    # did not try every candidate, so a split may exist that was not found.
+    split_search_limited: bool = False
 
     def to_dict(self) -> dict:
         result = {
@@ -349,6 +371,8 @@ class ReconciliationMatch:
         }
         if self.ledger_txns:
             result["ledger_txns"] = [t.to_dict() for t in self.ledger_txns]
+        if self.split_search_limited:
+            result["split_search_limited"] = True
         return result
 
 
@@ -453,6 +477,9 @@ class BankRecResult:
     # ("caller" | "default") so memos, PDFs, and audit workpapers can
     # disclose what shaped the high-value test and the diagnostic score.
     active_thresholds: Optional[dict] = None
+    # Sprint 833: how the split-match search was bounded and how many open
+    # bank items it could not search exhaustively. See split_search_disclosure.
+    split_search: Optional[dict] = None
 
     def to_dict(self) -> dict:
         result: dict = {
@@ -470,6 +497,8 @@ class BankRecResult:
             result["suggested_journal_entries"] = [je.to_dict() for je in self.suggested_journal_entries]
         if self.active_thresholds is not None:
             result["active_thresholds"] = self.active_thresholds
+        if self.split_search is not None:
+            result["split_search"] = self.split_search
         return result
 
 
@@ -675,18 +704,20 @@ def _find_split_subset(
 ) -> list[tuple[int, LedgerTransaction]] | None:
     """Find a subset of ``candidates`` summing to ``target_amount`` within tolerance.
 
-    Small n (< ~20) here — candidates are pre-filtered to ledger rows
-    whose dates fall inside the bank txn's window. Brute-force
-    combinations up to ``max_size`` keep the search bounded. Returns
-    None when no subset reconciles.
+    ``candidates`` is at most ``split_match_max_candidates`` long (Sprint
+    830) -- the caller narrows and caps the pool -- so brute-force
+    combinations up to ``max_size`` stay bounded. Returns None when no
+    subset reconciles.
     """
     from itertools import combinations
 
+    amounts = [c[1].amount for c in candidates]
+    lo, hi = target_amount - tolerance, target_amount + tolerance
     for size in range(2, min(max_size, len(candidates)) + 1):
-        for combo in combinations(candidates, size):
-            total = sum((c[1].amount for c in combo), Decimal("0"))
-            if abs(total - target_amount) <= tolerance:
-                return list(combo)
+        for combo in combinations(range(len(candidates)), size):
+            total = sum((amounts[i] for i in combo), Decimal("0"))
+            if lo <= total <= hi:
+                return [candidates[i] for i in combo]
     return None
 
 
@@ -699,6 +730,12 @@ def _split_match_pass(
     Mutates ``matches`` in place. A BANK_ONLY entry converts to SPLIT
     when 2–4 LEDGER_ONLY entries sum to within ``amount_tolerance`` of
     the bank amount and fall within the bank's date window.
+
+    Sprint 833: the per-bank-item pool is capped at
+    ``config.split_match_max_candidates`` (a Paciolus convention). When the
+    cap bites and no split is found, the BANK_ONLY entry is flagged
+    ``split_search_limited`` -- it stays an open reconciling item, never
+    cleared, and the result discloses the count.
     """
     tolerance = Decimal(str(config.amount_tolerance))
     bank_only: list[tuple[int, ReconciliationMatch]] = [
@@ -726,7 +763,6 @@ def _split_match_pass(
         target = bank_txn.amount
 
         # Build date-filtered candidate pool.
-        candidate_indices: list[int] = []
         candidates: list[tuple[int, LedgerTransaction]] = []
         for ledger_match_idx, ledger_match in ledger_only:
             if ledger_match_idx in consumed_ledger_indices:
@@ -746,14 +782,32 @@ def _split_match_pass(
                 ldate = ledger_date_cache.get(id(ltx))
                 if ldate and abs((bank_date - ldate).days) > config.date_tolerance_days:
                     continue
+            # Sprint 833 (lossless): every piece has the bank amount's sign,
+            # so no single piece can exceed the bank amount plus tolerance.
+            if abs(ltx.amount) > abs(target) + tolerance:
+                continue
             candidates.append((ledger_match_idx, ltx))
-            candidate_indices.append(ledger_match_idx)
 
         if len(candidates) < 2:
             continue
 
+        limited = False
+        cap = config.split_match_max_candidates
+        if len(candidates) > cap:
+            # Nearest-dated first (undated last), then larger pieces, then
+            # ledger order -- deterministic for a given input.
+            def _rank(pair: tuple[int, LedgerTransaction], _bank_date: Optional[date] = bank_date) -> tuple:
+                ldate = ledger_date_cache.get(id(pair[1]))
+                distance = abs((_bank_date - ldate).days) if (_bank_date and ldate) else 10**9
+                return (distance, -abs(pair[1].amount), pair[0])
+
+            candidates = sorted(candidates, key=_rank)[:cap]
+            limited = True
+
         subset = _find_split_subset(target, candidates, tolerance)
         if subset is None:
+            if limited:
+                bank_match.split_search_limited = True
             continue
 
         # Apply: bank_only entry becomes SPLIT; ledger_only siblings removed.
@@ -768,6 +822,41 @@ def _split_match_pass(
     # Remove consumed ledger_only rows (in reverse order so indices stay valid).
     for idx in sorted(consumed_ledger_indices, reverse=True):
         del matches[idx]
+
+
+def split_search_disclosure(matches: list[ReconciliationMatch], config: BankRecConfig) -> dict:
+    """Describe the bounds the split-match search ran under (Sprint 833).
+
+    Always emitted, so a reader can see the search was bounded even when the
+    bound changed nothing. The bounds are Paciolus conventions.
+    """
+    limited = sum(1 for m in matches if m.match_type == MatchType.BANK_ONLY and m.split_search_limited)
+    window = config.date_tolerance_days
+    window_text = (
+        "dated the same day as the bank item" if window == 0 else f"dated within ±{window} days of the bank item"
+    )
+    note = (
+        f"Split matching (one bank item to 2–{_MAX_SPLIT_SET_SIZE} ledger items) searched ledger items "
+        f"{window_text} (undated items were not date-filtered), at most "
+        f"{config.split_match_max_candidates} candidates per bank item. "
+    )
+    if limited == 1:
+        note += "1 bank item was not searched exhaustively; it remains an open reconciling item for investigation. "
+    elif limited:
+        note += (
+            f"{limited} bank items were not searched exhaustively; they remain open reconciling items "
+            "for investigation. "
+        )
+    else:
+        note += "No open bank item exceeded the candidate limit. "
+    note += "These search limits are a Paciolus convention, not a requirement of any auditing standard."
+    return {
+        "date_window_days": window,
+        "max_candidates": config.split_match_max_candidates,
+        "max_set_size": _MAX_SPLIT_SET_SIZE,
+        "limited_count": limited,
+        "note": note,
+    }
 
 
 # =============================================================================
@@ -1630,6 +1719,7 @@ def reconcile_bank_statement(
         "performance_materiality": str(config.performance_materiality),
         "amount_tolerance": str(config.amount_tolerance),
         "date_tolerance_days": config.date_tolerance_days,
+        "split_match_max_candidates": config.split_match_max_candidates,
         "materiality_source": materiality_source,
     }
 
@@ -1642,4 +1732,5 @@ def reconcile_bank_statement(
         composite_score=composite_score,
         suggested_journal_entries=suggested_jes,
         active_thresholds=active_thresholds,
+        split_search=split_search_disclosure(matches, config),
     )
