@@ -361,12 +361,7 @@ def _compute_dunning_metrics(db: Session, since: datetime, until: datetime) -> d
     active_count = len(active_episodes)
 
     # At-risk MRR: sum MRR of subscriptions with active dunning
-    at_risk_mrr = 0.0
-    for ep in active_episodes:
-        sub = db.query(Subscription).filter(Subscription.id == ep.subscription_id).first()
-        if sub:
-            at_risk_mrr += _subscription_monthly_revenue(sub)
-    at_risk_mrr = round(at_risk_mrr, 2)
+    at_risk_mrr = _episodes_mrr(db, active_episodes)
 
     # Recovered in 30d — use <= for upper bound since `until` is "now"
     # and episodes resolved in the same tick must be included.
@@ -380,12 +375,7 @@ def _compute_dunning_metrics(db: Session, since: datetime, until: datetime) -> d
         .all()
     )
     recovered_count = len(recovered)
-    recovered_mrr = 0.0
-    for ep in recovered:
-        sub = db.query(Subscription).filter(Subscription.id == ep.subscription_id).first()
-        if sub:
-            recovered_mrr += _subscription_monthly_revenue(sub)
-    recovered_mrr = round(recovered_mrr, 2)
+    recovered_mrr = _episodes_mrr(db, recovered)
 
     # Lost to dunning in 30d
     lost = (
@@ -398,12 +388,7 @@ def _compute_dunning_metrics(db: Session, since: datetime, until: datetime) -> d
         .all()
     )
     lost_count = len(lost)
-    lost_mrr = 0.0
-    for ep in lost:
-        sub = db.query(Subscription).filter(Subscription.id == ep.subscription_id).first()
-        if sub:
-            lost_mrr += _subscription_monthly_revenue(sub)
-    lost_mrr = round(lost_mrr, 2)
+    lost_mrr = _episodes_mrr(db, lost)
 
     # Recovery rate
     total_resolved = recovered_count + lost_count
@@ -680,6 +665,23 @@ def _snapshot_from_inputs(history: dict, point_date: datetime) -> dict:
         "active_subscribers": active_count,
         "trialing": trialing_count,
     }
+
+
+def _episodes_mrr(db: Session, episodes: list) -> float:
+    """Summed MRR of the subscriptions behind ``episodes``, in one query.
+
+    Sprint 821: each episode used to look its subscription up separately.
+    An episode counts once per episode, as before — two episodes on one
+    subscription count its MRR twice.
+    """
+    ids = {ep.subscription_id for ep in episodes if ep.subscription_id is not None}
+    if not ids:
+        return 0.0
+    subs = {sub.id: sub for sub in db.query(Subscription).filter(Subscription.id.in_(ids)).all()}
+    total = sum(
+        _subscription_monthly_revenue(subs[ep.subscription_id]) for ep in episodes if ep.subscription_id in subs
+    )
+    return round(total, 2)
 
 
 def _generate_date_points(start: datetime, end: datetime, granularity: str) -> list[datetime]:
