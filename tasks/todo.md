@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-23] (this PR): record the 2026-10-23 merges — statuses and commit SHAs for Sprints 812–829; SESSION_STATE refreshed (tasks/todo.md, SESSION_STATE.md)
 - [2026-10-23] Sprint 797 follow-up — `test_alembic_head_matches_base_metadata_foreign_keys` ran in-process and was therefore measuring another fixture's dialect. First push of this branch went green on both SQLite jobs and **red on PostgreSQL 15**, reporting `organizations.subscription_id`, `tool_activities.engagement_id` and `users.organization_id` as "in Alembic but not in model". **The drift was never real.** Those three are the ORM's `use_alter=True` FKs (they break the organizations → users → subscriptions cycle), and `use_alter` changes how `create_all()` emits a constraint per dialect: SQLite inlines it because it cannot `ALTER TABLE ADD CONSTRAINT`, PostgreSQL emits a separate ALTER. `Base.metadata` is process-global, so the session `db_engine` fixture's `create_all()` against Postgres left the shared metadata in a state where the test's *own* SQLite `create_all()` stopped emitting all three — and both halves of the test use SQLite, so only the models half lost them. Reproduced locally with a mock PG engine (no server): the old test fails with the three CI errors verbatim, the fixed one passes. Now runs in a clean subprocess, for the same reason — and with the same docstring warning — that `test_init_db_alone_creates_every_table` beside it already did. Sprint 797 learned that lesson for one test and not its neighbour. Files: `backend/tests/test_alembic_models_parity.py`, `tasks/todo.md`, `tasks/lessons.md`.
 - [2026-10-23] carry-forward consolidation — after PRs #198 + #199 merged (28 findings from the two 2026-10-22 reviews), recorded every known-unaddressed item in one `CARRIED FORWARD` block so the next session starts from a list rather than re-deriving one: the two items needing a practitioner or a roadmap call (793b's 2026 figures, A-8's §179/§168(k)/real-property scope), the four parked with owners named (T-1, T-2, T-5, D-6), the seven surfaces neither review examined — **auth/CSRF/JWT/injection/rate-limiting is the largest** — and three contrast items that were blocked on the route→theme map and are **now unblocked** because Sprint 809 built it. Also filed **Sprint 823**: measured that only 11 of the 18 tools have synthetic generators, and **six of the seven uncovered ones are exactly the tools Sprint 689 added** — the framework predates that 12→18 expansion and was never extended to it. Notes that `ceo-actions.md:65` cannot be executed as written, because 14 of the 18 tools do not take a trial balance. No code changed. Files: `tasks/todo.md`.
 - [2026-10-20] nightly audit artifacts — 2026-10-20 batch (daily brief + 6 sentinel JSONs + run_log) plus `.baseline.json` refreshed to the new QA Warden values (8,700 backend / 2,013 frontend, 0 failures — the first all-green baseline since 2026-05-31). Overall verdict RED on **Dependency Sentinel alone**: 68 backend / 22 frontend outdated, 5 security-relevant. Scanned for secrets before staging (no `sk_live`/`sk_test`/private-key/credentialed-URL matches). Files: `reports/nightly/*`.
@@ -277,9 +278,7 @@
 > whole-project mypy run is possible. Harmless in CI (Linux). Delete when convenient.
 
 ### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
-**Status:** PARTIAL — discovery done 2026-10-23 (**58 findings, 21 P1**, register in
-[`reports/sprint-823-discovery-2026-10-23.md`](../reports/sprint-823-discovery-2026-10-23.md));
-remediation split into Sprints 824–827. Generator registration (items 3 and 5) not yet done.
+**Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (items 3 and 5) not yet done.
 **Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
 surface in the product. The full-spectrum review found three P1s in its first hour of doing
 exactly this, on fewer than 70 synthetic accounts.
@@ -342,7 +341,7 @@ reproductions, actual vs expected values and code locations, is in the report.
 
 
 ### Sprint 824: Statistical sampling evaluation and the shared amount parser
-**Status:** IN REVIEW — 2026-10-23. Sprint 823 findings P-1, P-2, S1, S2, S4, S5, S7, S8, S9.
+**Status:** COMPLETE 2026-10-23 — merged as PR #205. S3/S6 moved to Sprint 825 (methodology decision).
 **Priority:** **P1** — S1 changed an audit conclusion.
 
 - [x] **S1 — top stratum.** An item at or above the sampling interval is examined with certainty,
@@ -366,7 +365,7 @@ passes) and S6 (understatements evaluated as overstatements) need a chosen metho
 classical-variables evaluation with a sample standard deviation, and a separate understatement
 bound — not a patch.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 40044bc7 (PR #205).
 
 ---
 
@@ -378,7 +377,7 @@ bound — not a patch.
 ---
 
 ### Sprint 826: Tax tools — 1099 rules, W-2 coverage, book-to-tax loss years
-**Status:** PENDING. Sprint 823 findings F0–F8, W1–W10, B1–B6.
+**Status:** PARTIAL — F0–F8, W3–W7, W10, B3–B5 merged 2026-10-23; W1/W2 await the statutory-table decision; see the items below.
 **Priority:** **P1** — F1–F3 change whether a 1099 is due; W2 flags a correct HSA contribution
 HIGH with an excise-tax message.
 
@@ -423,12 +422,12 @@ valuation allowance) needs a scope call.
       counted as `informational_notices`, not as a discrepancy. **W10** — negative tolerance refused.
 - [ ] F5, F9, W4 (W-3 vs 941), W8, W9, B1, B2, B5, B6.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 8f7046ac (PR #206); 38df065f (PR #213); 643f7d42 (PR #214); 9d774226 (PR #215).
 
 ---
 
 ### Sprint 827: Fixed assets, intercompany, SoD, cash flow projector
-**Status:** IN PROGRESS. Sprint 823 findings A1–A8, I1–I5, D1–D2, C1–C6, P-3.
+**Status:** PARTIAL — A1–A3, A6, I1–I5, D1, D2 (part), C1, C4 merged 2026-10-23; open items listed below.
 **Priority:** **P1** — A1 and I1 produce wrong output on correct input for every DDB register and
 every IC revenue/expense pair.
 
@@ -469,13 +468,12 @@ every IC revenue/expense pair.
       C2–C6 (cash flow scenario deferral, footing, edge cases), I4's investment/payable pairing,
       P-3 (non-USD / EU number formats — needs a locale decision).
 
-**Commit SHA:** TBD.
+**Commit SHA:** 8f7046ac (PR #206); 38df065f (PR #213).
 
 ---
 
 ### Sprint 829: Discovery round 2 — the eleven tools Sprint 823 did not cover
-**Status:** IN PROGRESS. A second round of discovery agents ran the original tools (TB, JE, AP,
-payroll, revenue, AR, inventory, bank rec, three-way match) against realistic synthetic input.
+**Status:** COMPLETE 2026-10-23 — merged as PR #218 and live on Render. The four methodology calls it surfaced (equity in ratios, JE scoring, holiday list, month-end threshold) are tracked in `tasks/ceo-actions.md`.
 **Priority:** **P1** — several findings produce wrong output on correct input.
 
 - [x] **AR-1** — aging uses the shared `parse_date`, so Excel date cells are aged (a whole
@@ -556,12 +554,12 @@ Register: `reports/sprint-829-discovery-round2-2026-10-23.md`.
 - [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a
       different category; compatible keywords still refine placement within the type.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 106c5782 (PR #218).
 
 ---
 
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
-**Status:** IN REVIEW — code complete 2026-10-23; post-deploy verification pending.
+**Status:** COMPLETE 2026-10-23 — merged as PR #201 and verified live: the public `/export-sharing/{token}` probe flipped 500 → 404 on the deployed SHA.
 **Priority:** **P0** — every Professional/Enterprise org feature is down in production.
 **Source:** Code health review 2026-10-23, routes pass. Re-verified on the live app object.
 
@@ -594,7 +592,7 @@ Affected (19): `routes/organization.py:86,134,156,233,262,364,395`,
 Sprint 698 per-IP passcode throttle. With `request=None` that branch could never run — though
 the route 500'd before reaching it anyway, so the throttle was not bypassed, merely unreachable.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 6fb9f33c (PR #201).
 
 ---
 
@@ -673,7 +671,7 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - **Branded header struck through by the gold rule** on the accrual memo, which draws its own
   page header at the same 0.5in line. Branded header moved to 0.35in for all memos.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
 
 ---
 
@@ -745,7 +743,7 @@ matching is the likely fix; it needs a sweep of real column names first.
 **Also observed:** both sampling routes accept `nan`/`inf` form floats (Pydantic's default) and
 return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family as above; filed here.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 91753ba2 (PR #202).
 
 ---
 
@@ -798,7 +796,7 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 - **Item 5** — `@pytest.mark.slow` test pins a 100k-row JE run under 30s (runs in the nightly
   slow job, not PR CI); AST guard asserts every engine entry point carries the memo.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 50b55bc7 (PR #203).
 
 ---
 
@@ -910,7 +908,7 @@ now disclosed in the test description rather than silent.
 - **Item 6:** `background4.jpg` (22 MB, unreferenced) deleted; `background5.jpg` 7.1 MB → 140 KB
   (1920px, q72 progressive — it renders at 6% opacity).
 
-**Commit SHA:** TBD.
+**Commit SHA:** 1f058c4b (PR #207).
 
 ---
 
@@ -956,12 +954,12 @@ the 2026-10-19 DECISION block above records that the database persists
 `analytical_expectations` (expected and actual values) and `diagnostic_summaries` (aggregate
 totals). That is a question for the CEO and counsel before anyone edits the copy.
 
-**Commit SHA:** TBD.
+**Commit SHA:** c6cc8e7c (PR #204).
 
 ---
 
 ### Sprint 819: Backend deduplication
-**Status:** PENDING.
+**Status:** PARTIAL — items 6 (`_to_decimal` half) and 9 done 2026-10-23; the rest pending.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, engines + routes + exports passes.
 
@@ -1006,12 +1004,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    `currency_engine.py:821` (254 lines; lookup copied 3×, per-cell `df.at` loop under a
    "Vectorized" comment), `payroll_testing/analysis.py:1659` (145 lines).
 
-**Commit SHA:** TBD.
+**Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9).
 
 ---
 
 ### Sprint 820: Frontend consolidation and bundle weight
-**Status:** PENDING.
+**Status:** PARTIAL — item 3 (Terms + Privacy as server components) done 2026-10-23; the rest pending.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, frontend pass.
 
@@ -1034,12 +1032,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
    `fadeUp` copies → `lib/motion.ts:71`.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 391f1c14 (PR #211).
 
 ---
 
 ### Sprint 821: Database and event-loop efficiency
-**Status:** PENDING.
+**Status:** PARTIAL — the async-handler item done 2026-10-23 (41 handlers, AST guard, plus the share-claim and seat-reservation races the review found); the rest pending.
 **Priority:** P3 — low traffic today; cheap now, expensive at scale.
 **Source:** Code health review 2026-10-23, routes pass.
 
@@ -1060,12 +1058,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 - [ ] Convert `RequestId`, `SecurityHeaders`, `Impersonation` middleware from `BaseHTTPMiddleware`
       to pure ASGI — **benchmark first**; impact unmeasured.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 4d0c979d (PR #217).
 
 ---
 
 ### Sprint 822: CI and repository weight
-**Status:** PENDING.
+**Status:** PARTIAL — the pip-audit item done 2026-10-23; `reports/nightly/` awaits CEO decision 5; root clutter pending.
 **Priority:** P3.
 **Source:** Code health review 2026-10-23, repo pass.
 
@@ -1079,7 +1077,7 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
       `EXECUTIVE_SUMMARY_NONTECH.md`, root `MEMORY.md` — check each for live references, then move to
       `docs/` or `tasks/archive/`.
 
-**Commit SHA:** TBD.
+**Commit SHA:** 0463165e (PR #210).
 
 ---
 > **DIGITAL EXCELLENCE COUNCIL REVIEW — 2026-10-22.** Full report:
