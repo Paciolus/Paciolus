@@ -366,6 +366,31 @@ state them.
 
 ---
 
+### Sprint 832: Equity in the ratios includes unclosed current-period earnings
+**Status:** COMPLETE 2026-10-24 — CEO decision 1.
+**Priority:** P1 — ROE was overstated, and for a loss-making client leverage was understated.
+
+- [x] `ratio_engine.unclosed_earnings_adjustment()` is the one rule: unclosed earnings = revenue −
+      expenses; 0 on a closed TB; and 0 when the totals already balance as A = L + E without them
+      (closed equity sent with income-statement figures — Paciolus convention, so nothing is counted
+      twice). `validate_balance_sheet_equation` calls the same function.
+- [x] Debt-to-equity, ROE (both ends of the prior-period average), equity ratio, DuPont multiplier
+      and its ROE cross-check, common-size equity %, the going-concern leverage and net-liability
+      tests, and the financial-statements PDF D/E all use effective equity.
+- [x] Disclosed beside the ratios: "Equity includes $X of unclosed current-period earnings" in the
+      Key Metrics panel, the financial-statements PDF and the Excel ratio sheet; API `analytics`
+      gains `equity_includes_current_earnings`, `effective_equity`, `equity_basis_note`. Basis cited
+      at topic level (ASC 505 / IAS 1; closing entries move net income to retained earnings).
+
+**Known effects:** saved history and trends mix bases at this sprint (a step change). The equation
+check can now read "balanced" where A = L + E holds and revenue ≠ expenses; the separate debit/credit
+check still catches a TB that does not balance. Raw `total_equity` variance analysis and
+percentage-of-equity materiality are unchanged (not ratios).
+
+**Commit SHA:** recorded on merge.
+
+---
+
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
 **Status:** PARTIAL — marketing and user-guide copy corrected 2026-10-24; the Terms of Service §5.3 and the Privacy Policy wait for counsel (proposed text below).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.

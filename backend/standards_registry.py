@@ -224,6 +224,13 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         title="Risks and Uncertainties",
         usage=("revenue testing memo", "follow-up procedures in memo PDFs"),
     ),
+    # Sprint 832: equity-basis disclosure beside equity-based ratios.
+    Standard(
+        body="ASC",
+        code="ASC 505",
+        title="Equity",
+        usage=("ratio engine — equity-basis disclosure (unclosed current-period earnings)",),
+    ),
     Standard(
         body="ASC",
         code="ASC 450",
@@ -245,7 +252,10 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="IAS",
         code="IAS 1",
         title="Presentation of Financial Statements",
-        usage=("financial statement generator — disclosure framing",),
+        usage=(
+            "financial statement generator — disclosure framing",
+            "ratio engine — equity-basis disclosure (unclosed current-period earnings)",
+        ),
     ),
     Standard(body="IAS", code="IAS 2", title="Inventories", usage=("inventory testing memo",)),
     Standard(
