@@ -700,3 +700,38 @@ def test_small_group_outliers_can_be_flagged():
     entries = [_je(i, f"JE-{i}", "2025-03-05", "Supplies", debit=a) for i, a in enumerate(amounts)]
     je = test_unusual_amounts(entries, JETestingConfig())
     assert [f.entry.row_number for f in je.flagged_entries] == [9]
+
+
+def test_year_end_window_uses_the_period_end_not_the_last_entry():
+    from services.audit.revenue_testing.analysis import (
+        RevenueEntry,
+        RevenueTestingConfig,
+        test_year_end_concentration,
+    )
+
+    dates = ["2025-06-15", "2025-12-26", "2025-12-27", "2025-12-28", "2025-12-31", "2026-01-02", "2026-01-03"]
+    entries = [RevenueEntry(amount=-1000, date=d, row_number=i, account_name="Sales") for i, d in enumerate(dates, 1)]
+    result = test_year_end_concentration(entries, RevenueTestingConfig(period_end="2025-12-31"))
+    assert {f.entry.date for f in result.flagged_entries} == {"2025-12-26", "2025-12-27", "2025-12-28", "2025-12-31"}
+
+
+def test_inferred_cutoff_period_is_rounded_to_whole_months():
+    from datetime import date
+
+    from services.audit.revenue_testing.analysis import RevenueTestingConfig, _resolve_period_boundaries
+
+    dated = [(None, date(2025, 4, 2)), (None, date(2025, 6, 24))]
+    p_start, p_end, _ = _resolve_period_boundaries(dated, RevenueTestingConfig())
+    assert (p_start, p_end) == (date(2025, 4, 1), date(2025, 6, 30))
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["Inventory Reserve for Obsolescence", "Inventory Reserve", "Provision for Doubtful Debts", "Accumulated Impairment"],
+)
+def test_asset_reserves_are_contra_accounts(name):
+    """T7: a credit-balance inventory reserve was flagged as abnormal."""
+    from audit.classification import is_balance_abnormal
+    from classification_rules import AccountCategory
+
+    assert is_balance_abnormal(AccountCategory.ASSET, -39077.87, name) is False

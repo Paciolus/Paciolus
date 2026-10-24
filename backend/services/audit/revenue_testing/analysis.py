@@ -856,11 +856,15 @@ def test_year_end_concentration(
             flagged_entries=[],
         )
 
-    # Use the last date in the data as period end
-    max_date = max(d for _, d in dated)
-    cutoff_date = date(max_date.year, max_date.month, max_date.day)
-
+    # Sprint 829: the configured period end, as RT-09 uses — the last date in
+    # the data put January entries in "year-end" revenue and dropped the real
+    # last week of December. Without one, the month-end of the last entry.
     from datetime import timedelta
+
+    configured_end = parse_date(config.period_end) if config.period_end else None
+    cutoff_date = configured_end or _month_end(max(d for _, d in dated))
+    period_start = parse_date(config.period_start) if config.period_start else None
+    dated = [(e, d) for e, d in dated if d <= cutoff_date and (period_start is None or d >= period_start)]
 
     boundary = cutoff_date - timedelta(days=config.year_end_days)
 
@@ -1338,6 +1342,12 @@ def test_concentration_risk(
     )
 
 
+def _month_end(d: date) -> date:
+    import calendar
+
+    return date(d.year, d.month, calendar.monthrange(d.year, d.month)[1])
+
+
 def _resolve_period_boundaries(dated: list, config: RevenueTestingConfig) -> tuple:
     """Sprint 683: shared period-boundary resolution for RT-09 / RT-09b.
 
@@ -1348,15 +1358,20 @@ def _resolve_period_boundaries(dated: list, config: RevenueTestingConfig) -> tup
     if len(dated) < 2:
         return None, None, "Insufficient dated entries for cut-off analysis."
 
+    # Sprint 829: without configured dates, round the inferred period out to
+    # whole months. Taking the first and last entry dates as the boundaries
+    # meant those entries were always "near the boundary" — a Q2 file flagged
+    # 06-24 as within 3 days of period end when the quarter ends 06-30.
     if config.period_start:
         p_start = parse_date(config.period_start)
     else:
-        p_start = min(d for _, d in dated)
+        first = min(d for _, d in dated)
+        p_start = date(first.year, first.month, 1)
 
     if config.period_end:
         p_end = parse_date(config.period_end)
     else:
-        p_end = max(d for _, d in dated)
+        p_end = _month_end(max(d for _, d in dated))
 
     if not p_start or not p_end:
         return None, None, "Could not determine period boundaries."

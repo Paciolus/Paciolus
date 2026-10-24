@@ -530,9 +530,10 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       values and large absolute differences; IN-08 ignores one SKU across locations and never
       groups on cost alone; AP fuzzy duplicates skip fixed-amount recurring series; round-amount
       caps list the largest and count all; JE/AP unusual amounts use leave-one-out z-scores.
-- [ ] Open P2/P3: RT-02 year-end window ignores `period_end`; RT-09 period from first/last entry
-      dates; W3 partial deliveries; T7 inventory reserve flagged as natural-balance violation;
-      JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
+- [x] **RT-02 / RT-09 / T7** — the year-end window ends at the configured period end (else
+      the last entry's month-end); inferred cut-off periods round out to whole months; asset
+      reserves ("reserve for", "inventory reserve", "provision for") are contra accounts.
+- [ ] Open P2/P3: W3 partial deliveries; JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
       PR-T7 monthly staff in a biweekly population; Decimal→string serialization in details.
 - [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
       accounts), and Key Metrics states what the ratios leave out.

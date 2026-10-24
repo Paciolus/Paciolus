@@ -809,6 +809,12 @@ CONTRA_ASSET_KEYWORDS: list[str] = [
     "reserve — ",
     "reserve - ",
     "obsolescence reserve",
+    # Sprint 829: "Inventory Reserve for Obsolescence" (credit) was flagged as a
+    # natural-balance violation and scored as a credit-balance risk factor.
+    "reserve for",
+    "inventory reserve",
+    "provision for",  # IFRS wording: "Provision for doubtful debts"
+    "accumulated impairment",
     "valuation allowance",
     "contra asset",
     "contra-asset",
