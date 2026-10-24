@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice } from '@/components/bankRec'
+import { BankRecRunSettings, BankRecThresholdsApplied, validateBankRecThresholds, type BankRecThresholdInputs } from '@/components/bankRec/BankRecRunSettings'
 import { FileDropZone, GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
@@ -60,7 +61,10 @@ function ColumnDetectionWarning({ label, detection }: {
 
 export default function BankRecPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
-  const { status, result, error, reconcile, reset } = useBankReconciliation()
+  // Sprint 839: optional per-run materiality / performance materiality.
+  const [thresholdInputs, setThresholdInputs] = useState<BankRecThresholdInputs>({ materiality: '', performanceMateriality: '' })
+  const validated = useMemo(() => validateBankRecThresholds(thresholdInputs), [thresholdInputs])
+  const { status, result, error, reconcile, reset } = useBankReconciliation(validated.thresholds)
   useCanvasAccentSync(status)
   const [bankFile, setBankFile] = useState<File | null>(null)
   const [ledgerFile, setLedgerFile] = useState<File | null>(null)
@@ -71,9 +75,9 @@ export default function BankRecPage() {
   const isVerified = user?.is_verified !== false
 
   const handleReconcile = useCallback(async () => {
-    if (!bankFile || !ledgerFile) return
+    if (!bankFile || !ledgerFile || !validated.valid) return
     await reconcile(bankFile, ledgerFile)
-  }, [bankFile, ledgerFile, reconcile])
+  }, [bankFile, ledgerFile, reconcile, validated.valid])
 
   const handleNewReconciliation = useCallback(() => {
     reset()
@@ -188,13 +192,19 @@ export default function BankRecPage() {
                     />
                   </div>
 
+                  <BankRecRunSettings
+                    inputs={thresholdInputs}
+                    onChange={setThresholdInputs}
+                    errors={validated.errors}
+                  />
+
                   <div className="flex items-center justify-between">
                     <ZeroStorageNotice />
                     <button
                       onClick={handleReconcile}
-                      disabled={!bankFile || !ledgerFile}
+                      disabled={!bankFile || !ledgerFile || !validated.valid}
                       className={`px-6 py-2.5 rounded-xl text-sm font-sans font-medium transition-colors ${
-                        bankFile && ledgerFile
+                        bankFile && ledgerFile && validated.valid
                           ? 'bg-sage-600 text-oatmeal-50 hover:bg-sage-700'
                           : 'bg-surface-card-secondary border border-theme text-content-tertiary cursor-not-allowed'
                       }`}
@@ -279,6 +289,9 @@ export default function BankRecPage() {
 
                 {/* Reconciliation Bridge */}
                 <ReconciliationBridge summary={result.summary} />
+
+                {/* Sprint 839: which materiality figures this run used, and where each came from */}
+                {result.active_thresholds && <BankRecThresholdsApplied thresholds={result.active_thresholds} />}
 
                 {/* Column Detection Warnings */}
                 {(result.bank_column_detection.requires_mapping || result.bank_column_detection.detection_notes.length > 0) && (

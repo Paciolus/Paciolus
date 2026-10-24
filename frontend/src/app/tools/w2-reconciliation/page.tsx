@@ -20,12 +20,14 @@ import {
 } from '@/components/shared'
 import { W2FileUpload } from '@/components/w2Reconciliation/W2FileUpload'
 import { W2Results } from '@/components/w2Reconciliation/W2Results'
-import { useW2Reconciliation } from '@/hooks/useW2Reconciliation'
+import { useW2Reconciliation, useW2SupportedYears } from '@/hooks/useW2Reconciliation'
 
 export default function W2ReconciliationPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const isVerified = user?.is_verified !== false
   const { status, result, error, analyze, exportCsv } = useW2Reconciliation()
+  // Sprint 839: which tax years the app can run, from the backend.
+  const { supported } = useW2SupportedYears()
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
@@ -58,6 +60,8 @@ export default function W2ReconciliationPage() {
                 onAnalyze={analyze}
                 onExport={exportCsv}
                 loading={status === 'loading'}
+                supportedYears={supported?.tax_years ?? null}
+                supportedNote={supported?.note}
               />
 
               {error && (

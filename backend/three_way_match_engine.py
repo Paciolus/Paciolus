@@ -25,7 +25,7 @@ from datetime import date
 from decimal import Decimal
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.fuzzy_match import similarity_at_least
@@ -730,6 +730,75 @@ def detect_receipt_columns(column_names: list[str]) -> ReceiptColumnDetectionRes
     result.overall_confidence = min(confidences) if confidences else 0.0
     result.detection_notes = list(det.detection_notes)
     return result
+
+
+# =============================================================================
+# MANUAL COLUMN MAPPING (Sprint 839)
+# =============================================================================
+
+# Fields whose absence leaves the detection below the confidence floor; used
+# to decide whether a manual mapping fully replaces auto-detection.
+_REQUIRED_COLUMN_FIELDS: dict[type, tuple[str, ...]] = {
+    POColumnDetectionResult: ("po_number_column", "vendor_column", "total_amount_column"),
+    InvoiceColumnDetectionResult: ("invoice_number_column", "vendor_column", "total_amount_column"),
+    ReceiptColumnDetectionResult: ("vendor_column", "quantity_received_column"),
+}
+
+ColumnDetectionT = TypeVar(
+    "ColumnDetectionT", POColumnDetectionResult, InvoiceColumnDetectionResult, ReceiptColumnDetectionResult
+)
+
+
+class ColumnMappingError(ValueError):
+    """A manual column mapping names an unknown field or a column not in the file."""
+
+
+def mappable_column_fields(detection_cls: type) -> tuple[str, ...]:
+    """The ``*_column`` fields a manual mapping may set for one document type."""
+    from dataclasses import fields as dc_fields
+
+    return tuple(f.name for f in dc_fields(detection_cls) if f.name.endswith("_column"))
+
+
+def validate_column_mapping_keys(mapping: dict[str, Any], detection_cls: type, label: str) -> None:
+    """Reject keys that are not column fields of ``detection_cls`` (no file needed)."""
+    allowed = mappable_column_fields(detection_cls)
+    unknown = sorted(k for k in mapping if k not in allowed)
+    if unknown:
+        raise ColumnMappingError(
+            f"{label} column mapping has unknown field(s): {', '.join(unknown)}. Allowed fields: {', '.join(allowed)}."
+        )
+    not_text = sorted(k for k, v in mapping.items() if not isinstance(v, str) or not v.strip())
+    if not_text:
+        raise ColumnMappingError(f"{label} column mapping must name a column for: {', '.join(not_text)}.")
+
+
+def apply_column_mapping(
+    detection: ColumnDetectionT, mapping: Optional[dict[str, Any]], label: str
+) -> ColumnDetectionT:
+    """Apply a manual column mapping on top of auto-detection.
+
+    Every mapped column must exist in the uploaded file (otherwise the mapping
+    is refused rather than silently producing empty fields). Confidence is set
+    to 1.0 only when every required field was mapped by hand; otherwise the
+    auto-detection confidence stands. A note records the mapping.
+    """
+    if not mapping:
+        return detection
+    validate_column_mapping_keys(mapping, type(detection), label)
+    missing = sorted({v for v in mapping.values() if v not in detection.all_columns})
+    if missing:
+        raise ColumnMappingError(
+            f"{label} column mapping names column(s) not in the file: {', '.join(repr(m) for m in missing)}."
+        )
+    for key, column in mapping.items():
+        setattr(detection, key, column)
+    required = _REQUIRED_COLUMN_FIELDS.get(type(detection), ())
+    if required and all(f in mapping for f in required):
+        detection.overall_confidence = 1.0
+    described = ", ".join(f"{k} = '{v}'" for k, v in sorted(mapping.items()))
+    detection.detection_notes.append(f"Manual column mapping applied: {described}.")
+    return detection
 
 
 # =============================================================================

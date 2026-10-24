@@ -980,7 +980,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'convention',
         sources: [],
         configurable: true,
-        note: 'The weights, the 0.85 vendor-similarity cut-off (SequenceMatcher ratio) and the 0.70 composite cut-off are Paciolus defaults. The vendor-similarity cut-off can be changed in the tool\'s saved settings; the weights and the composite cut-off cannot be changed in the app.',
+        note: 'The weights, the 0.85 vendor-similarity cut-off (SequenceMatcher ratio) and the 0.70 composite cut-off are Paciolus defaults. The vendor-similarity cut-off can be changed in the tool\'s saved settings or for one run, the composite cut-off for one run; the weights cannot be changed in the app.',
       },
       {
         test: 'Amount variance (PO vs invoice)',
@@ -1062,11 +1062,11 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
       },
       {
         test: 'Reconciling difference',
-        rule: 'Reports total bank amount minus total ledger amount across matched, split, bank-only and ledger-only items. A difference greater than $0.01 adds 15 points to the diagnostic score, plus 10 more when it exceeds performance materiality (default $50,000, which the API can override).',
+        rule: 'Reports total bank amount minus total ledger amount across matched, split, bank-only and ledger-only items. A difference greater than $0.01 adds 15 points to the diagnostic score, plus 10 more when it exceeds performance materiality (default $50,000, which can be entered for each run).',
         kind: 'convention',
         sources: [],
-        configurable: false,
-        note: 'The point values and the $50,000 default are Paciolus conventions. The API accepts materiality and performance materiality. The app does not send them today, so the defaults apply.',
+        configurable: true,
+        note: 'The point values and the $50,000 default are Paciolus conventions. Materiality and performance materiality can be entered in the run settings; the results state each figure used and whether it was entered or is the default.',
       },
       {
         test: 'Stale deposits in transit',
@@ -1102,10 +1102,10 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
       },
       {
         test: 'High-value transactions',
-        rule: 'Flags any single bank or ledger transaction at or above materiality (default $50,000, which the API can override), rated MEDIUM.',
+        rule: 'Flags any single bank or ledger transaction at or above materiality (default $50,000, which can be entered for each run), rated MEDIUM.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The code compares against materiality, while the memo text says performance materiality. Both default to $50,000.',
       },
       {
@@ -1611,7 +1611,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'convention',
         sources: [],
         configurable: false,
-        note: 'The per-request override exists in the API but is not yet exposed in the app.',
+        note: 'The per-request override exists in the API but is not exposed in the app; the tool page lists the tax years the app supports, read from the backend.',
       },
       {
         test: 'Social Security wage base',

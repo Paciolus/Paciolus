@@ -3,8 +3,9 @@
  */
 import ThreeWayMatchPage from '@/app/tools/three-way-match/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useSettings } from '@/hooks/useSettings'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
-import { render, screen } from '@/test-utils'
+import { fireEvent, render, screen } from '@/test-utils'
 
 const mockRunMatch = jest.fn()
 const mockReset = jest.fn()
@@ -21,6 +22,10 @@ jest.mock('@/hooks/useThreeWayMatch', () => ({
   useThreeWayMatch: jest.fn(() => ({
     status: 'idle', result: null, error: null, runMatch: mockRunMatch, reset: mockReset,
   })),
+}))
+
+jest.mock('@/hooks/useSettings', () => ({
+  useSettings: jest.fn(() => ({ practiceSettings: {}, isLoading: false, error: null, fetchPracticeSettings: jest.fn() })),
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
@@ -61,12 +66,14 @@ jest.mock('framer-motion', () => ({
 
 const mockUseAuthSession = useAuthSession as jest.Mock
 const mockUseTWM = useThreeWayMatch as jest.Mock
+const mockUseSettings = useSettings as jest.Mock
 
 describe('ThreeWayMatchPage', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockUseAuthSession.mockReturnValue({ user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, logout: jest.fn(), token: 'test-token' })
     mockUseTWM.mockReturnValue({ status: 'idle', result: null, error: null, runMatch: mockRunMatch, reset: mockReset })
+    mockUseSettings.mockReturnValue({ practiceSettings: null, fetchPracticeSettings: jest.fn() })
   })
 
   it('renders hero header', () => {
@@ -142,5 +149,71 @@ describe('ThreeWayMatchPage', () => {
     expect(screen.getByText('Purchase Orders')).toBeInTheDocument()
     expect(screen.getByText('Invoices')).toBeInTheDocument()
     expect(screen.getByText('Receipts / GRN')).toBeInTheDocument()
+  })
+
+  // Sprint 839: per-run tolerances, prefilled from saved settings
+  describe('run settings', () => {
+    const openPanel = () => fireEvent.click(screen.getByRole('button', { name: /Run settings/ }))
+
+    it('prefills from saved settings and sends nothing until a value changes', () => {
+      mockUseSettings.mockReturnValue({ practiceSettings: { three_way_match_config: { date_window_days: 60 } }, fetchPracticeSettings: jest.fn() })
+      render(<ThreeWayMatchPage />)
+      openPanel()
+      expect(screen.getByLabelText('Date window')).toHaveValue('60')
+      expect(screen.getByLabelText('Fuzzy match minimum score')).toHaveValue('70')
+      expect(screen.getByText(/Prefilled from your saved settings/)).toBeInTheDocument()
+      expect(mockUseTWM).toHaveBeenLastCalledWith({})
+    })
+
+    it('uses the Paciolus defaults when nothing is saved', () => {
+      render(<ThreeWayMatchPage />)
+      openPanel()
+      expect(screen.getByLabelText('Date window')).toHaveValue('30')
+      expect(screen.getByText(/Prefilled from the Paciolus defaults/)).toBeInTheDocument()
+    })
+
+    it('passes only changed values to the hook, in engine units', () => {
+      render(<ThreeWayMatchPage />)
+      openPanel()
+      fireEvent.change(screen.getByLabelText('Fuzzy match minimum score'), { target: { value: '80' } })
+      fireEvent.change(screen.getByLabelText('Quantity tolerance'), { target: { value: '2' } })
+      fireEvent.click(screen.getByRole('checkbox'))
+      expect(mockUseTWM).toHaveBeenLastCalledWith({ fuzzy_composite_threshold: 0.8, quantity_tolerance: 2, enable_fuzzy_matching: false })
+      expect(screen.getByRole('button', { name: /Run settings/ })).toHaveTextContent('3 changed for this run')
+    })
+
+    it('blocks the run for an out-of-range value', () => {
+      render(<ThreeWayMatchPage />)
+      openPanel()
+      fireEvent.change(screen.getByLabelText('Date window'), { target: { value: '500' } })
+      expect(screen.getByText('Date window must be between 0 and 365.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Run Match' })).toBeDisabled()
+    })
+
+    it('blocks the run until saved settings have loaded (PR #230 review)', () => {
+      mockUseSettings.mockReturnValue({ practiceSettings: null, isLoading: true, error: null, fetchPracticeSettings: jest.fn() })
+      render(<ThreeWayMatchPage />)
+      expect(screen.getByText('Loading your saved settings…')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Run Match' })).toBeDisabled()
+    })
+
+    it('sends every displayed value when saved settings could not be loaded', () => {
+      mockUseSettings.mockReturnValue({ practiceSettings: null, isLoading: false, error: 'Failed to fetch settings', fetchPracticeSettings: jest.fn() })
+      render(<ThreeWayMatchPage />)
+      expect(screen.getByText(/could not be loaded, so every value shown above will be sent/)).toBeInTheDocument()
+      const sent = mockUseTWM.mock.calls.at(-1)?.[0] as Record<string, unknown>
+      expect(sent.date_window_days).toBe(30)
+      expect(sent.enable_fuzzy_matching).toBe(true)
+      expect(Object.keys(sent)).toHaveLength(7)
+    })
+
+    it('reset returns to the prefilled values', () => {
+      render(<ThreeWayMatchPage />)
+      openPanel()
+      fireEvent.change(screen.getByLabelText('Amount tolerance'), { target: { value: '5' } })
+      fireEvent.click(screen.getByRole('button', { name: /Reset to defaults/ }))
+      expect(screen.getByLabelText('Amount tolerance')).toHaveValue('0.01')
+      expect(mockUseTWM).toHaveBeenLastCalledWith({})
+    })
   })
 })

@@ -54,6 +54,17 @@ export const PAYROLL_TOGGLES = [
   { key: 'enable_tax_id_duplicates', label: 'Duplicate Tax IDs' },
 ]
 
+/**
+ * Sprint 839: Three-Way Match engine fields that are not in the saved-settings
+ * drawer but can be set per run on the tool page. Labels and display scaling
+ * for the results notice.
+ */
+export const TWM_RUN_ONLY_FIELDS = [
+  { key: 'quantity_tolerance', label: 'Quantity Tolerance', suffix: 'units' },
+  { key: 'fuzzy_composite_threshold', label: 'Fuzzy Match Minimum Score', suffix: '%', displayScale: 100 },
+  { key: 'enable_fuzzy_matching', label: 'Fuzzy Fallback Matching' },
+]
+
 export const TWM_THRESHOLDS = [
   { key: 'amount_tolerance', label: 'Amount Tolerance', description: 'Maximum difference before flagging a variance', prefix: '$', step: '0.01', min: 0 },
   { key: 'price_variance_threshold', label: 'Price Variance Threshold', description: '% difference in unit price before flagging', suffix: '%', displayScale: 100, fallback: 5, step: 1, min: 1, max: 50 },

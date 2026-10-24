@@ -4,7 +4,7 @@
 import W2ReconciliationPage from '@/app/tools/w2-reconciliation/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useW2Reconciliation } from '@/hooks/useW2Reconciliation'
-import { render, screen } from '@/test-utils'
+import { fireEvent, render, screen } from '@/test-utils'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(),
@@ -12,6 +12,11 @@ jest.mock('@/contexts/AuthSessionContext', () => ({
 
 jest.mock('@/hooks/useW2Reconciliation', () => ({
   useW2Reconciliation: jest.fn(),
+  // Sprint 839: supported tax years come from the backend.
+  useW2SupportedYears: jest.fn(() => ({
+    supported: { tax_years: [2025], note: 'Other years are refused rather than reconciled with the limits of another year.' },
+    loaded: true,
+  })),
 }))
 
 jest.mock('@/utils/telemetry', () => ({
@@ -75,5 +80,37 @@ describe('W2ReconciliationPage', () => {
     expect(screen.getByText('Form 941 Tie-Out')).toBeInTheDocument()
     expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
     expect(screen.getByText(/candidates for review before filing W-2/i)).toBeInTheDocument()
+  })
+
+  // Sprint 839
+  describe('supported tax years', () => {
+    beforeEach(() => {
+      mockUseAuthSession.mockReturnValue({
+        user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, token: 't',
+      })
+    })
+
+    it('states the supported tax years before upload', () => {
+      render(<W2ReconciliationPage />)
+      const notice = screen.getByTestId('w2-supported-years')
+      expect(notice).toHaveTextContent('Tax year supported in the app: 2025')
+      expect(notice).toHaveTextContent(/refused rather than reconciled/)
+    })
+
+    it('explains an unsupported tax year before the run and blocks it', () => {
+      render(<W2ReconciliationPage />)
+      fireEvent.change(screen.getByLabelText('Tax year'), { target: { value: '2026' } })
+      const alert = screen.getByTestId('w2-unsupported-year')
+      expect(alert).toHaveTextContent('Tax year 2026 cannot be reconciled in the app yet')
+      expect(alert).toHaveTextContent('only for tax year 2025')
+      expect(screen.getByRole('button', { name: /Run Reconciliation/i })).toBeDisabled()
+      expect(screen.getByRole('button', { name: /Download CSV/i })).toBeDisabled()
+    })
+
+    it('shows no year message for a supported year', () => {
+      render(<W2ReconciliationPage />)
+      fireEvent.change(screen.getByLabelText('Tax year'), { target: { value: '2025' } })
+      expect(screen.queryByTestId('w2-unsupported-year')).not.toBeInTheDocument()
+    })
   })
 })

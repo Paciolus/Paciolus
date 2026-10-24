@@ -29,6 +29,7 @@ from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access
 from shared.tool_run_recorder import maybe_record_tool_run
 from w2_reconciliation_engine import (
+    STATUTORY_LIMITS_BY_YEAR,
     EmployeePayroll,
     EmployeeW2Draft,
     Form941Quarter,
@@ -215,6 +216,30 @@ def _build_config(payload: W2ReconciliationRequest) -> W2ReconciliationConfig:
         form_941_quarters=form_941,
         tolerance=_to_decimal("tolerance", payload.tolerance),
         **overrides,
+    )
+
+
+class W2SupportedYearsResponse(BaseModel):
+    """Tax years the app can reconcile without a statutory-limits override."""
+
+    tax_years: list[int]
+    note: str
+
+
+@router.get("/audit/w2-reconciliation/supported-years", response_model=W2SupportedYearsResponse)
+def get_supported_tax_years() -> W2SupportedYearsResponse:
+    """Tax years with a built-in statutory limit table (Sprint 839).
+
+    Read-only reference data, so public like the benchmark lists. The web form
+    cannot send ``statutory_limits``, so these are the only years it can run;
+    the page reads them here instead of hard-coding them.
+    """
+    return W2SupportedYearsResponse(
+        tax_years=sorted(STATUTORY_LIMITS_BY_YEAR),
+        note=(
+            "Each year's wage base and contribution limits are built in only after the figures are "
+            "confirmed. Other years are refused rather than reconciled with another year's limits."
+        ),
     )
 
 

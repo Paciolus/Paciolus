@@ -24699,6 +24699,31 @@
             ],
             "title": "Settings Ignored"
           },
+          "settings_run_overrides": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "maxProperties": 20,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Run Overrides"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -24889,6 +24914,30 @@
             },
             "title": "Settings Ignored",
             "type": "array"
+          },
+          "settings_run_overrides": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Run Overrides",
+            "type": "object"
           },
           "summary": {
             "$ref": "#/components/schemas/ThreeWayMatchSummaryResponse"
@@ -26861,6 +26910,28 @@
           "tax_year"
         ],
         "title": "W2ReconciliationRequest",
+        "type": "object"
+      },
+      "W2SupportedYearsResponse": {
+        "description": "Tax years the app can reconcile without a statutory-limits override.",
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "tax_years": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Tax Years",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tax_years",
+          "note"
+        ],
+        "title": "W2SupportedYearsResponse",
         "type": "object"
       },
       "WaitlistRequest": {
@@ -30706,6 +30777,28 @@
           }
         ],
         "summary": "Export Reconciliation Csv",
+        "tags": [
+          "w2-reconciliation"
+        ]
+      }
+    },
+    "/audit/w2-reconciliation/supported-years": {
+      "get": {
+        "description": "Tax years with a built-in statutory limit table (Sprint 839).\n\nRead-only reference data, so public like the benchmark lists. The web form\ncannot send ``statutory_limits``, so these are the only years it can run;\nthe page reads them here instead of hard-coding them.",
+        "operationId": "get_supported_tax_years_audit_w2_reconciliation_supported_years_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/W2SupportedYearsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Supported Tax Years",
         "tags": [
           "w2-reconciliation"
         ]

@@ -74,6 +74,7 @@ export default function SourcesPage() {
   const counts = countByKind()
   const totalRules = KIND_ORDER.reduce((sum, kind) => sum + counts[kind], 0)
   const cited = citedCodesByAuthority()
+  const toolCount = METHODOLOGY_SOURCES.filter(t => t.toolKey !== 'composite_risk_score').length
 
   return (
     <main id="main-content" className="relative pt-32 pb-24 px-6">
@@ -98,8 +99,8 @@ export default function SourcesPage() {
             How to read each rule
           </h2>
           <p className="font-sans text-sm text-oatmeal-400 mb-6">
-            <span className="font-mono">{totalRules}</span> rules across{' '}
-            <span className="font-mono">{METHODOLOGY_SOURCES.length}</span> tools and scores, each marked with one of
+            <span className="font-mono">{totalRules}</span> rules across the{' '}
+            <span className="font-mono">{toolCount}</span> tools and the composite risk score, each marked with one of
             four kinds of basis.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

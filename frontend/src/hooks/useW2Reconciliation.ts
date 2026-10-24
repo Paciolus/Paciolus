@@ -4,14 +4,37 @@
  * W-2 / W-3 Reconciliation hook — Sprint 689d.
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { describeW2Error } from '@/components/w2Reconciliation/taxYearSupport'
 import type {
   W2ReconciliationRequest,
   W2ReconciliationResponse,
 } from '@/types/w2Reconciliation'
-import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
+import { apiDownload, apiGet, apiPost, downloadBlob } from '@/utils/apiClient'
+
+export interface W2SupportedYears {
+  tax_years: number[]
+  note: string
+}
+
+/** Sprint 839: tax years the app can run, read from the backend (never hard-coded). */
+export function useW2SupportedYears(): { supported: W2SupportedYears | null; loaded: boolean } {
+  const { token } = useAuthSession()
+  const [supported, setSupported] = useState<W2SupportedYears | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    apiGet<W2SupportedYears>('/audit/w2-reconciliation/supported-years', token ?? null).then(response => {
+      if (cancelled) return
+      if (response.ok && response.data && Array.isArray(response.data.tax_years)) setSupported(response.data)
+      setLoaded(true)
+    })
+    return () => { cancelled = true }
+  }, [token])
+  return { supported, loaded }
+}
 
 export type W2Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -56,7 +79,7 @@ export function useW2Reconciliation(): UseW2ReconciliationReturn {
       return true
     }
     setStatus('error')
-    setError(response.error || 'Failed to run W-2 reconciliation')
+    setError(describeW2Error(response.error, payload.tax_year) || 'Failed to run W-2 reconciliation')
     return false
   }, [token, engagement, engagementId])
 
@@ -69,7 +92,7 @@ export function useW2Reconciliation(): UseW2ReconciliationReturn {
       downloadBlob(response.blob, response.filename || 'w2_reconciliation.csv')
       return true
     }
-    setError(response.error || 'Failed to export CSV')
+    setError(describeW2Error(response.error, payload.tax_year) || 'Failed to export CSV')
     return false
   }, [token])
 

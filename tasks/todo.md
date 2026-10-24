@@ -431,19 +431,25 @@ Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
 ---
 
 ### Sprint 839: API inputs with no path from the app
-**Status:** PENDING — found in Sprint 838.
-**Priority:** P1 for W-2 (a 2026 reconciliation cannot be run from the app); P2 otherwise.
+**Status:** COMPLETE 2026-10-24 — found in Sprint 838. Column-mapping UI for bank rec / TWM still needs its own design.
 
-- [ ] **W-2:** the `statutory_limits` override is API-only, and only 2025 has a built-in table, so the web
-      form refuses every other tax year. Depends on Sprint 793b (practitioner-confirmed 2026 figures); until
-      then, either an override form or a clear in-app message that only 2025 is supported.
-- [ ] **Bank rec:** `materiality` / `performance_materiality` and `bank_column_mapping` /
-      `ledger_column_mapping` are accepted (and honoured) but never sent by `useBankReconciliation.ts`.
-- [ ] **Three-Way Match:** the seven per-run overrides are never sent (Sprint 836 made five reachable via
-      saved settings; `quantity_tolerance` only via presets; `fuzzy_composite_threshold` is missing from the
-      frontend config type); `po/invoice/receipt_column_mapping` are parsed by the route and then ignored.
+- [x] **Bank rec:** per-run materiality and performance materiality in a "Run settings" panel (validated
+      in the app and the route — `nan`/`inf` now refused); a "Thresholds applied" card shows each figure and
+      whether it was entered for the run or is the Paciolus default (`active_thresholds.threshold_sources`;
+      the old single `materiality_source` called a defaulted performance materiality "caller").
+- [x] **Three-Way Match:** per-run panel for all seven tolerances, prefilled from saved settings, sending
+      only changed values; per-run values disclosed in `settings_run_overrides` (results notice + memo
+      table); `fuzzy_composite_threshold` added to the frontend config. PO / invoice / receipt column
+      mappings are now applied to detection (400 on bad JSON, unknown fields or missing columns) instead of
+      being parsed and ignored.
+- [x] **W-2:** public `GET /audit/w2-reconciliation/supported-years`; the page states the supported years
+      before upload and blocks an unsupported year with a plain message. No override form (2026 figures
+      await Sprint 793b).
+- [ ] Column-mapping UI for bank rec and TWM (the TB `ColumnMappingModal` is hard-wired to
+      account/debit/credit). The bank-rec memo does not print `active_thresholds` although a comment says it
+      does.
 
-**Commit SHA:** TBD.
+**Commit SHA:** recorded on merge.
 
 ---
 

@@ -133,10 +133,33 @@ export interface SuggestedJournalEntry {
   confidence: number
 }
 
+/** Where a threshold came from: supplied for this run ('caller') or the Paciolus default. */
+export type ThresholdSource = 'caller' | 'default'
+
+/**
+ * Sprint 763 / 839: the thresholds the engine applied. Monetary values are
+ * strings (Decimal precision). `threshold_sources` (Sprint 839) says per
+ * threshold whether this run supplied it; `materiality_source` is 'caller'
+ * when either was supplied.
+ */
+export interface BankRecActiveThresholds {
+  materiality: string
+  performance_materiality: string
+  amount_tolerance: string
+  date_tolerance_days: number
+  split_match_max_candidates?: number
+  materiality_source: ThresholdSource
+  threshold_sources?: {
+    materiality: ThresholdSource
+    performance_materiality: ThresholdSource
+  }
+}
+
 export interface BankRecResult {
   summary: ReconciliationSummaryData
   bank_column_detection: BankColumnDetectionData
   ledger_column_detection: BankColumnDetectionData
   split_search?: SplitSearchDisclosure | null
   suggested_journal_entries?: SuggestedJournalEntry[] | null
+  active_thresholds?: BankRecActiveThresholds | null
 }

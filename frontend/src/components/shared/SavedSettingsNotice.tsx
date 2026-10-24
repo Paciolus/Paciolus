@@ -6,6 +6,7 @@ import {
   PAYROLL_THRESHOLDS,
   PAYROLL_TOGGLES,
   TWM_THRESHOLDS,
+  TWM_RUN_ONLY_FIELDS,
 } from '@/components/settings/testingConfigFields'
 import type { ToolSettingsKey } from '@/components/shared/ToolSettingsDrawer'
 import {
@@ -28,7 +29,7 @@ const FIELDS: Record<ToolSettingsKey, FieldDef[]> = {
   je: [...JE_THRESHOLDS, ...JE_TOGGLES],
   ap: [...AP_THRESHOLDS, ...AP_TOGGLES],
   payroll: [...PAYROLL_THRESHOLDS, ...PAYROLL_TOGGLES],
-  three_way_match: TWM_THRESHOLDS,
+  three_way_match: [...TWM_THRESHOLDS, ...TWM_RUN_ONLY_FIELDS],
 }
 
 const DEFAULTS: Record<ToolSettingsKey, Record<string, unknown>> = {
@@ -61,6 +62,8 @@ interface SavedSettingsNoticeProps {
   tool: ToolSettingsKey
   applied?: Record<string, SavedSettingValue>
   ignored?: SavedSettingIgnored[]
+  /** Sprint 839: values set for this run only (Three-Way Match run settings). */
+  runOverrides?: Record<string, SavedSettingValue>
   className?: string
 }
 
@@ -70,12 +73,14 @@ interface SavedSettingsNoticeProps {
  * Says, on the results view, which of the user's saved settings changed a
  * threshold from the Paciolus default on this run, and which saved settings
  * were not applied (clay accent). Renders nothing when every threshold was a
- * Paciolus default and nothing was ignored.
+ * Paciolus default and nothing was ignored. Sprint 839: values set for this
+ * run only are listed first, in their own block.
  */
-export function SavedSettingsNotice({ tool, applied, ignored, className = 'mb-6' }: SavedSettingsNoticeProps) {
+export function SavedSettingsNotice({ tool, applied, ignored, runOverrides, className = 'mb-6' }: SavedSettingsNoticeProps) {
   const appliedEntries = Object.entries(applied ?? {})
   const ignoredEntries = ignored ?? []
-  if (appliedEntries.length === 0 && ignoredEntries.length === 0) return null
+  const runEntries = Object.entries(runOverrides ?? {})
+  if (appliedEntries.length === 0 && ignoredEntries.length === 0 && runEntries.length === 0) return null
 
   const fields = FIELDS[tool]
   const defaults = DEFAULTS[tool]
@@ -84,10 +89,37 @@ export function SavedSettingsNotice({ tool, applied, ignored, className = 'mb-6'
 
   return (
     <div className={`space-y-3 ${className}`} data-testid="saved-settings-notice">
+      {runEntries.length > 0 && (
+        <div className="bg-surface-card border border-theme border-l-4 border-l-obsidian-500 rounded-xl p-4" role="status" data-testid="run-overrides-notice">
+          <h3 className="font-serif text-sm text-content-primary">
+            {runEntries.length === 1 ? '1 threshold was' : `${runEntries.length} thresholds were`} set for this run only
+          </h3>
+          <ul className="mt-2 space-y-1">
+            {runEntries.map(([key, value]) => {
+              const field = fieldFor(key)
+              const hasDefault = key in defaults
+              return (
+                <li key={key} className="font-sans text-xs text-content-secondary">
+                  {field?.label ?? humanize(key)}:{' '}
+                  <span className="font-mono text-content-primary">{formatSettingValue(value, field)}</span>
+                  {hasDefault && (
+                    <span className="text-content-tertiary">
+                      {' '}(default <span className="font-mono">{formatSettingValue(defaults[key], field)}</span>)
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+          <p className="mt-2 font-sans text-xs text-content-tertiary">
+            These values replace your saved settings and the Paciolus defaults for this run; the memo states them.
+          </p>
+        </div>
+      )}
       {count > 0 && (
         <div className="bg-surface-card border border-theme border-l-4 border-l-sage-500 rounded-xl p-4" role="status">
           <h3 className="font-serif text-sm text-content-primary">
-            {count} {count === 1 ? 'threshold' : 'thresholds'} differed from Paciolus defaults on this run
+            Your saved settings changed {count} {count === 1 ? 'threshold' : 'thresholds'} from Paciolus defaults
           </h3>
           <ul className="mt-2 space-y-1">
             {appliedEntries.map(([key, value]) => {

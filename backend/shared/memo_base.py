@@ -405,6 +405,37 @@ def _setting_label(key: str) -> str:
     return key.replace("_", " ").strip().capitalize()
 
 
+def _settings_table(values: dict[str, Any], defaults: dict[str, Any], styles: dict) -> Table:
+    """Setting / this-run value / Paciolus default table for the disclosure."""
+    rows: list[list[Any]] = [["Setting", "This run", "Paciolus default"]]
+    for key in sorted(values):
+        default_text = _format_setting_value(defaults[key]) if key in defaults else "—"
+        rows.append(
+            [
+                Paragraph(xml_escape(_setting_label(str(key))), styles["MemoTableCell"]),
+                Paragraph(xml_escape(_format_setting_value(values[key])), styles["MemoTableCell"]),
+                Paragraph(xml_escape(default_text), styles["MemoTableCell"]),
+            ]
+        )
+    table = Table(rows, colWidths=[2.9 * inch, 1.9 * inch, 1.8 * inch], repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (0, -1), 0),
+            ]
+        )
+    )
+    return table
+
+
 def build_saved_settings_disclosure(
     story: list,
     styles: dict,
@@ -420,19 +451,36 @@ def build_saved_settings_disclosure(
     When the result carries neither field (an older client) nothing is drawn;
     when it carries an empty ``settings_applied`` the memo says only that no
     threshold differed from the defaults through these settings — never that
-    every threshold was a default, since the memo cannot see every input
-    (PR #229 review). Three-Way Match reports its effective non-default
-    thresholds, per-run values included.
+    every threshold was a default (PR #229 review).
+    ``result["settings_run_overrides"]`` (Sprint 839) maps engine field ->
+    value for thresholds supplied for this run only; they are stated first,
+    in their own table.
     """
     applied = result.get("settings_applied")
     ignored = result.get("settings_ignored") or []
-    if applied is None and not ignored:
+    # Sprint 839: values the preparer supplied for this run only.
+    run_overrides = result.get("settings_run_overrides") or {}
+    if applied is None and not ignored and not run_overrides:
         return
     applied = applied or {}
     defaults = defaults or {}
 
-    story.append(Paragraph("<b>Thresholds that differed from the Paciolus defaults</b>", styles["MemoBody"]))
-    if not applied:
+    heading = (
+        "Thresholds set for this run and from saved settings" if run_overrides else "Thresholds that differed from the Paciolus defaults"
+    )
+    story.append(Paragraph(f"<b>{heading}</b>", styles["MemoBody"]))
+    if run_overrides:
+        count = len(run_overrides)
+        noun = "threshold was" if count == 1 else "thresholds were"
+        story.append(
+            Paragraph(
+                f"{count} {noun} set by the preparer for this run only; these values replace any saved "
+                "setting and the Paciolus default.",
+                styles["MemoBodySmall"],
+            )
+        )
+        story.append(_settings_table(run_overrides, defaults, styles))
+    if not applied and not run_overrides:
         story.append(
             Paragraph(
                 "No saved setting (or per-run tolerance, where the tool accepts one) changed a threshold from the "
@@ -440,43 +488,17 @@ def build_saved_settings_disclosure(
                 styles["MemoBodySmall"],
             )
         )
-    else:
+    elif applied:
         count = len(applied)
         noun = "threshold" if count == 1 else "thresholds"
         story.append(
             Paragraph(
-                f"{count} {noun} differed from the Paciolus defaults on this run, from the preparer's saved settings "
-                "or a value supplied for the run. Results above and below reflect these values, not the defaults.",
+                f"{count} {noun} differed from the Paciolus defaults on this run through the preparer's saved "
+                "settings. Results above and below reflect these values, not the defaults.",
                 styles["MemoBodySmall"],
             )
         )
-        rows: list[list[Any]] = [["Setting", "This run", "Paciolus default"]]
-        for key in sorted(applied):
-            default_text = _format_setting_value(defaults[key]) if key in defaults else "—"
-            rows.append(
-                [
-                    Paragraph(xml_escape(_setting_label(str(key))), styles["MemoTableCell"]),
-                    Paragraph(xml_escape(_format_setting_value(applied[key])), styles["MemoTableCell"]),
-                    Paragraph(xml_escape(default_text), styles["MemoTableCell"]),
-                ]
-            )
-        table = Table(rows, colWidths=[2.9 * inch, 1.9 * inch, 1.8 * inch], repeatRows=1)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(table)
+        story.append(_settings_table(applied, defaults, styles))
     if ignored:
         count = len(ignored)
         noun = "setting was" if count == 1 else "settings were"

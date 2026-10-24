@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
+import { TWMRunSettings, computeTWMRunOverrides, twmBaseline, type TWMRunEdits } from '@/components/threeWayMatch/TWMRunSettings'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
+import { useSettings } from '@/hooks/useSettings'
 import { useTestingExport } from '@/hooks/useTestingExport'
 import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 
@@ -26,7 +28,21 @@ import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 
 export default function ThreeWayMatchPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
-  const { status, result, error, runMatch, reset } = useThreeWayMatch()
+  // Sprint 839: per-run tolerances, prefilled from saved settings (Sprint 836).
+  const { practiceSettings, isLoading: settingsLoading, error: settingsError, fetchPracticeSettings } = useSettings()
+  const savedTwm = practiceSettings?.three_way_match_config ?? null
+  const baseline = useMemo(() => twmBaseline(savedTwm), [savedTwm])
+  const [runEdits, setRunEdits] = useState<TWMRunEdits>({})
+  // PR #230 review: until saved settings load, the panel would show defaults
+  // while the backend applied saved values. Wait for them; if they cannot be
+  // loaded, send every displayed value so the panel and the run agree.
+  const settingsFailed = Boolean(settingsError) && practiceSettings === null
+  const settingsReady = practiceSettings !== null || settingsFailed
+  const validatedRun = useMemo(
+    () => computeTWMRunOverrides(runEdits, baseline, { sendAll: settingsFailed }),
+    [runEdits, baseline, settingsFailed],
+  )
+  const { status, result, error, runMatch, reset } = useThreeWayMatch(validatedRun.overrides)
   useCanvasAccentSync(status)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
     '/export/three-way-match-memo',
@@ -39,13 +55,21 @@ export default function ThreeWayMatchPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
 
   const isVerified = user?.is_verified !== false
-  const canRun = poFile && invoiceFile && receiptFile && status !== 'loading'
+  const canRun =
+    poFile && invoiceFile && receiptFile && status !== 'loading' && validatedRun.valid && settingsReady && !settingsLoading
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleRunMatch = useCallback(async () => {
-    if (!poFile || !invoiceFile || !receiptFile) return
+    if (!poFile || !invoiceFile || !receiptFile || !validatedRun.valid || !settingsReady) return
     await runMatch(poFile, invoiceFile, receiptFile)
-  }, [poFile, invoiceFile, receiptFile, runMatch])
+  }, [poFile, invoiceFile, receiptFile, runMatch, validatedRun.valid, settingsReady])
+
+  // The drawer saves through its own settings instance; refresh the prefill
+  // when it closes so the run settings show the newly saved values.
+  const handleSettingsClose = useCallback(() => {
+    setSettingsOpen(false)
+    void fetchPracticeSettings()
+  }, [fetchPracticeSettings])
 
   const handleNewMatch = useCallback(() => {
     reset()
@@ -141,6 +165,24 @@ export default function ThreeWayMatchPage() {
                   />
                 </div>
 
+                <TWMRunSettings
+                  baseline={baseline}
+                  fromSavedSettings={savedTwm !== null}
+                  edits={runEdits}
+                  onEditsChange={setRunEdits}
+                  validated={validatedRun}
+                />
+                {!settingsReady && (
+                  <p className="mt-2 font-sans text-xs text-content-tertiary" role="status">
+                    Loading your saved settings…
+                  </p>
+                )}
+                {settingsFailed && (
+                  <p className="mt-2 font-sans text-xs text-clay-600" role="status">
+                    Your saved settings could not be loaded, so every value shown above will be sent for this run.
+                  </p>
+                )}
+
                 {/* Run Match Button */}
                 <div className="flex items-center justify-center gap-4 mt-6">
                   <button
@@ -221,8 +263,8 @@ export default function ThreeWayMatchPage() {
                   </div>
                 </div>
 
-                {/* Sprint 836: saved settings that changed a threshold, or were not applied */}
-                <SavedSettingsNotice tool="three_way_match" applied={result.settings_applied} ignored={result.settings_ignored} />
+                {/* Sprint 836: saved settings that changed a threshold, or were not applied; Sprint 839: values set for this run */}
+                <SavedSettingsNotice tool="three_way_match" applied={result.settings_applied} ignored={result.settings_ignored} runOverrides={result.settings_run_overrides} />
 
                 {/* Evidence Summary */}
                 <ProofSummaryBar proof={extractTWMProof(result)} />
@@ -299,7 +341,7 @@ export default function ThreeWayMatchPage() {
         )}
       </div>
 
-      <ToolSettingsDrawer toolKey="three_way_match" open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ToolSettingsDrawer toolKey="three_way_match" open={settingsOpen} onClose={handleSettingsClose} />
     </main>
   )
 }

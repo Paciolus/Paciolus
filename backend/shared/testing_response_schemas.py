@@ -615,6 +615,9 @@ class ThreeWayMatchResponse(BaseModel):
     config: ThreeWayMatchConfigResponse
     settings_applied: dict[str, SettingsAppliedValue] = {}
     settings_ignored: list[SettingIgnoredResponse] = []
+    # Sprint 839: values supplied for this run only (they win over saved
+    # settings; the saved value each replaced is listed in settings_ignored).
+    settings_run_overrides: dict[str, SettingsAppliedValue] = {}
 
 
 # ═══════════════════════════════════════════════════════════════
