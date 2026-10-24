@@ -1058,7 +1058,8 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
       range in `routes/internal_metrics.py:129`; batch dunning lookups (`:365,384,402,538`,
       `dunning_engine.py:162,168`). *(History part done 2026-10-24: three queries total, points
       evaluated in memory, 400-point cap and end-before-start → 400. The old per-point function
-      also crashed comparing SQLite's naive timestamps with aware dates. Dunning batching open.)*
+      also crashed comparing SQLite's naive timestamps with aware dates. Dunning metrics batched
+      2026-10-24 too: one subscription query per category instead of one per episode.)*
 - [ ] One Alembic migration dropping the 26 `primary_key=True, index=True` duplicate indexes and
       the single-column indexes covered by composites (`ToolActivity.user_id`, `TeamActivityLog.organization_id`).
       Mind Sprint 741c/797 chain-vs-ORM guards.

@@ -488,3 +488,37 @@ class TestNewEpisodeAfterResolution:
         assert ep2.id != ep1.id
         assert ep2.state == DunningState.FIRST_ATTEMPT_FAILED
         assert ep2.failure_count == 1
+
+
+class TestDunningMetricsBatched:
+    """Sprint 821: episode MRR is resolved with one subscription query, not one per episode."""
+
+    @patch("email_service.send_dunning_first_failure")
+    def test_recovered_and_lost_mrr_and_query_count(self, mock_email, db_session, sub_user, pro_user_sub):
+        from sqlalchemy import event
+
+        from billing.dunning_engine import handle_payment_failed
+        from billing.internal_metrics import _subscription_monthly_revenue, compute_churn_metrics
+
+        _, sub_a = sub_user
+        _, sub_b = pro_user_sub
+        handle_payment_failed(db_session, sub_a)
+        handle_payment_failed(db_session, sub_b)
+
+        selects: list[str] = []
+
+        def _listener(conn, cursor, statement, params, context, executemany):
+            if statement.lstrip().upper().startswith("SELECT") and "FROM subscriptions" in statement:
+                selects.append(statement)
+
+        engine = db_session.get_bind()
+        event.listen(engine, "before_cursor_execute", _listener)
+        try:
+            result = compute_churn_metrics(db_session)
+        finally:
+            event.remove(engine, "before_cursor_execute", _listener)
+
+        expected = round(_subscription_monthly_revenue(sub_a) + _subscription_monthly_revenue(sub_b), 2)
+        assert result["dunning"]["total_at_risk_mrr"] == expected
+        episode_lookups = [s for s in selects if "subscriptions.id IN" in s]
+        assert len(episode_lookups) == 1
