@@ -91,27 +91,30 @@ const comparisonRows = [
   },
 ]
 
+// Sprint 834 (CEO decision 8): kept identical in substance to the Trust page
+// lists, which say exactly what the database holds.
 const weStore = [
   'User account (name, email)',
   'Client metadata (names, industries)',
-  'Engagement records (narratives only)',
-  'Aggregate diagnostic metadata (category totals, ratios, row counts)',
+  'Aggregate totals from each analysis (category totals, ratios, row counts)',
+  'Names of accounts a tool flagged (no amounts)',
+  'What you enter in an engagement, including materiality, analytical expectations and uncorrected misstatements',
+  'Report files shared by link, for up to 48 hours',
   'Usage statistics (anonymized)',
 ]
 
 const weNeverStore = [
-  'Line-level trial balance rows',
-  'Individual account balances',
-  'Journal entries or transaction details',
   'Uploaded files',
-  'Anomaly details tied to specific accounts or amounts',
+  'Line-level trial balance rows from your uploads',
+  'Journal entries or transaction details from your uploads',
+  'Flagged-entry details from your uploads',
 ]
 
 const securityAdvantages = [
-  'No database to breach \u2014 zero financial data at rest',
-  'No backup tapes with client data',
-  'No data migration risks during updates',
-  'Simplified incident response \u2014 line-level financial data was never stored',
+  'No uploaded files or line-level ledger data at rest to breach',
+  'No backup tapes with uploaded client data',
+  'No data migration risks for uploaded data during updates',
+  'Simplified incident response — line-level financial data was never stored',
 ]
 
 const tradeOffs = [

@@ -366,6 +366,38 @@ state them.
 
 ---
 
+### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
+**Status:** PARTIAL — marketing and user-guide copy corrected 2026-10-24; the Terms of Service §5.3 and the Privacy Policy wait for counsel (proposed text below).
+**Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.
+**Source:** CEO decision 8 (Sprint 818 item 3) and code-health decision 1, 2026-10-24.
+
+- [x] **Trust page and Approach page** "What we store / never store" lists rewritten against the models:
+      stored = account and client metadata, aggregate totals per analysis (`diagnostic_summaries`,
+      `activity_logs`), flagged account names without amounts (`tool_runs.flagged_accounts`), engagement
+      content the auditor enters (materiality, follow-up notes, intercompany mappings,
+      `analytical_expectations`, `uncorrected_misstatements`), shared report files for up to 48 hours
+      (`export_shares` / R2); never stored = uploaded files, line-level rows, journal entries, invoices,
+      payments, payroll records, flagged-entry details. "No database to breach — zero financial data at
+      rest" removed from the Approach page.
+- [x] **USER_GUIDE §22** rewritten the same way (it said account names and balances are never stored).
+- [x] **Bulk upload** removed from the Enterprise feature list, comparison table, FAQ, feature picker
+      label, `UpgradeModal` and USER_GUIDE tier table. The route is a stub (marks files "complete"
+      without analysis); Sprint 790 stops it consuming allowance. Route and entitlement kept until 817
+      item 4 decides wire-or-delete.
+- [ ] **Counsel:** Terms of Service §5.3 ("Paciolus never stores … individual account numbers,
+      descriptions, or balances"), the Terms tier table ("bulk upload" under Enterprise), the Privacy
+      Policy commitment "We never store your financial data" and its "No database to breach" line.
+      Not edited because they are versioned legal documents. Proposed replacement for §5.3: *"Paciolus
+      never stores the files you upload or the line-level records in them (trial balance rows, journal
+      entries, invoices, payments, payroll records). It stores aggregate results of each analysis, the
+      names of accounts a tool flagged (without amounts), content you enter into an engagement
+      (including materiality, analytical expectations and uncorrected misstatements), and report files
+      you share by link for up to 48 hours."* Same facts for the Privacy commitment.
+
+**Commit SHA:** recorded on merge.
+
+---
+
 ### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
 **Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (items 3 and 5) not yet done.
 **Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
@@ -834,7 +866,7 @@ copy does not, so tests of the domain module test code that never renders.
   table disagrees with the domain, and fails if any of the three surfaces re-declares a price,
   seat or tier literal (2 of its 6 tests fail on the pre-change files).
 
-**Item 3 — not done, and it needs a decision rather than a refactor.** Consolidating the two
+**Item 3 — decided 2026-10-24 (CEO decision 8) and moved to Sprint 834.** Original note: Consolidating the two
 "we store / we never store" lists means choosing one wording for Zero-Storage compliance copy.
 More importantly, **both lists may be inaccurate**: they promise Paciolus never stores
 "individual account balances" or "anomaly details tied to specific accounts or amounts", while

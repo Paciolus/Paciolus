@@ -35,7 +35,7 @@ const TIERS = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Bulk upload', 'Custom PDF branding', '7-day free trial'],
+    features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Custom PDF branding', '7-day free trial'],
   },
 ]
 
