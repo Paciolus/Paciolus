@@ -119,7 +119,10 @@ class AccountClassifier:
             if rule.is_phrase:
                 # Use word boundaries for phrase matching
                 escaped = re.escape(rule.keyword)
-                pattern = re.compile(rf'\b{escaped}\b', re.IGNORECASE)
+                # Sprint 829: allow a plural on the last word — "customer
+                # deposit" never matched "Customer Deposits", so the account
+                # fell to the bare "deposit" rule and was classified an asset.
+                pattern = re.compile(rf'\b{escaped}(?:s|es)?\b', re.IGNORECASE)
                 self._phrase_patterns.append((pattern, rule))
             else:
                 self._keyword_rules.append(rule)

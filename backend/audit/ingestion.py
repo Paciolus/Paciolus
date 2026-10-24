@@ -16,7 +16,7 @@ from typing import Any
 
 import pandas as pd
 
-from security_utils import log_secure_operation
+from security_utils import _strip_currency_formatting, log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 
@@ -47,8 +47,8 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
         }
 
     # Convert columns to numeric, coercing errors to NaN
-    debits = pd.to_numeric(df[debit_col], errors="coerce").fillna(0)
-    credits = pd.to_numeric(df[credit_col], errors="coerce").fillna(0)
+    debits = pd.to_numeric(df[debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
+    credits = pd.to_numeric(df[credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
 
     total_debits = math.fsum(debits.values)
     total_credits = math.fsum(credits.values)
@@ -129,8 +129,8 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         return []
 
     # Convert to numeric (on the copy)
-    df[debit_col] = pd.to_numeric(df[debit_col], errors="coerce").fillna(0)
-    df[credit_col] = pd.to_numeric(df[credit_col], errors="coerce").fillna(0)
+    df[debit_col] = pd.to_numeric(df[debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
+    df[credit_col] = pd.to_numeric(df[credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
 
     # Performance optimization: Vectorized processing instead of iterrows()
     account_names = df[account_col].astype(str).str.strip()

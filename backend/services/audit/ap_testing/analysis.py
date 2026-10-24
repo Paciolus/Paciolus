@@ -33,6 +33,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.fuzzy_match import similarity_at_least
+from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
@@ -43,6 +44,7 @@ from shared.testing_enums import (  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
+    leave_one_out_zscores,
     score_to_risk_tier,  # noqa: F401 — re-export for backward compat
     zscore_to_severity,  # noqa: E402
 )
@@ -296,6 +298,7 @@ class APColumnDetectionResult:
             "description_column": self.description_column,
             "gl_account_column": self.gl_account_column,
             "payment_method_column": self.payment_method_column,
+            "po_number_column": self.po_number_column,
             "has_dual_dates": self.has_dual_dates,
             "has_check_numbers": self.has_check_numbers,
             "overall_confidence": round(self.overall_confidence, 2),
@@ -367,6 +370,9 @@ def detect_ap_columns(column_names: list[str]) -> APColumnDetectionResult:
     result.description_column = detection.get_column("description_column")
     result.gl_account_column = detection.get_column("gl_account_column")
     result.payment_method_column = detection.get_column("payment_method_column")
+    # Sprint 829: detected by AP_COLUMN_CONFIGS since Sprint 682 but never copied
+    # onto the result, so AP-T14 (Invoice Without PO) always reported "skipped".
+    result.po_number_column = detection.get_column("po_number_column")
 
     # Dual-date flag
     if result.invoice_date_column and result.payment_date_column:
@@ -452,7 +458,7 @@ class FlaggedPayment:
             "severity": self.severity.value,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 
@@ -934,18 +940,19 @@ def test_round_dollar_amounts(
                 )
                 break  # Only flag the largest pattern match
 
-        if len(flagged) >= config.round_amount_max_flags:
-            break
-
-    # Sort by amount descending
+    # Sprint 829: count every round amount, then keep the largest for display.
+    # The loop used to stop at the cap in file order, so a $500K round entry
+    # after fifty $10K ones was never seen and the count stopped at 50.
     flagged.sort(key=lambda f: abs(f.entry.amount), reverse=True)
+    total_flagged = len(flagged)
+    flagged = flagged[: config.round_amount_max_flags]
 
-    flag_rate = len(flagged) / max(len(payments), 1)
+    flag_rate = total_flagged / max(len(payments), 1)
     return APTestResult(
         test_name="Round Dollar Amounts",
         test_key="round_dollar_amounts",
         test_tier=TestTier.STRUCTURAL,
-        entries_flagged=len(flagged),
+        entries_flagged=total_flagged,
         total_entries=len(payments),
         flag_rate=flag_rate,
         severity=Severity.LOW,
@@ -1035,6 +1042,31 @@ def test_payment_before_invoice(
 # =============================================================================
 
 
+_RECURRING_MIN_PAYMENTS = 3
+_RECURRING_MIN_SPACING_DAYS = 25  # roughly monthly or longer
+
+
+def _recurring_rows(group: list[APPayment], tolerance: Decimal) -> set[int]:
+    """Row numbers of payments that belong to a fixed-amount recurring series.
+
+    A series is 3+ payments of the same amount (within tolerance) whose
+    consecutive dates are all at least ~a month apart.
+    """
+    by_amount: dict[Decimal, list[APPayment]] = {}
+    for p in group:
+        anchor = next((k for k in by_amount if abs(k - p.amount) <= tolerance), p.amount)
+        by_amount.setdefault(anchor, []).append(p)
+    rows: set[int] = set()
+    for series in by_amount.values():
+        dated = sorted(((d, p) for p in series if (d := parse_date(p.payment_date)) is not None), key=lambda dp: dp[0])
+        if len(dated) < _RECURRING_MIN_PAYMENTS:
+            continue
+        gaps = [(dated[k][0] - dated[k - 1][0]).days for k in range(1, len(dated))]
+        if all(g >= _RECURRING_MIN_SPACING_DAYS for g in gaps):
+            rows.update(p.row_number for _, p in dated)
+    return rows
+
+
 def test_fuzzy_duplicate_payments(
     payments: list[APPayment],
     config: APTestingConfig,
@@ -1058,12 +1090,18 @@ def test_fuzzy_duplicate_payments(
     for vendor, group in vendor_groups.items():
         if len(group) < 2:
             continue
+        recurring = _recurring_rows(group, tolerance)
 
         for i in range(len(group)):
             for j in range(i + 1, len(group)):
                 a, b = group[i], group[j]
                 # Amount match within tolerance
                 if abs(a.amount - b.amount) > tolerance:
+                    continue
+                # Sprint 829: a fixed amount paid on a schedule (rent, a lease,
+                # insurance) is not a duplicate — 12 monthly lease payments
+                # were 20 HIGH flags and $129K of "recovery value".
+                if a.row_number in recurring and b.row_number in recurring:
                     continue
                 # Must be different dates
                 date_a = parse_date(a.payment_date)
@@ -1210,13 +1248,13 @@ def test_unusual_payment_amounts(
         if len(set(amounts)) < 2:
             continue  # All same amount — no variance
 
-        mean = statistics.mean(amounts)
-        stdev = statistics.stdev(amounts)
-        if stdev == 0:
+        if statistics.stdev(amounts) == 0:
             continue
 
-        for p in group:
-            z = abs(abs(p.amount) - mean) / stdev
+        # Sprint 829: each payment is measured against the vendor's other payments.
+        for p, (z_signed, mean_f, stdev_f) in zip(group, leave_one_out_zscores(amounts)):
+            z = Decimal(str(round(abs(z_signed), 6)))
+            mean, stdev = Decimal(str(round(mean_f, 2))), Decimal(str(round(stdev_f, 2)))
             if z < config.unusual_amount_stddev:
                 continue
 
@@ -2020,6 +2058,8 @@ class APTestingEngine(AuditEngineBase):
             detection.gl_account_column = column_mapping["gl_account_column"]
         if "payment_method_column" in column_mapping:
             detection.payment_method_column = column_mapping["payment_method_column"]
+        if "po_number_column" in column_mapping:
+            detection.po_number_column = column_mapping["po_number_column"]
         detection.overall_confidence = 1.0
         return detection
 

@@ -87,3 +87,21 @@ def monetary_equal(a: float | Decimal | str | int | None, b: float | Decimal | s
         True if both values are equal after 2dp quantization.
     """
     return quantize_monetary(a) == quantize_monetary(b)
+
+
+def decimals_to_floats(value: object) -> object:
+    """Return ``value`` with every Decimal (at any depth) as a float.
+
+    Sprint 829: flagged-entry ``details`` mixed Decimals and floats, and a
+    response model serializes a Decimal inside ``dict[str, Any]`` as a JSON
+    string — so the same field (JE ``details.amount``) reached the client as a
+    number from one test and a string from another. Details are display data;
+    they go out as numbers.
+    """
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        return {k: decimals_to_floats(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [decimals_to_floats(v) for v in value]
+    return value

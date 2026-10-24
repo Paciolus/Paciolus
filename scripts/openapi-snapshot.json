@@ -118,6 +118,17 @@
             ],
             "title": "Payment Method Column"
           },
+          "po_number_column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Po Number Column"
+          },
           "requires_mapping": {
             "title": "Requires Mapping",
             "type": "boolean"

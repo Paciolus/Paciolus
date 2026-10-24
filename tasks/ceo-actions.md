@@ -34,6 +34,19 @@ Three gates left between here and announcement. The code is launch-ready; the ga
 
 ---
 
+## 🧭 Methodology calls waiting on you (added 2026-10-23, Sprint 829)
+
+Discovery round 2 found these. They are judgement calls about what a tool *should* conclude, so they are not bugs I can just fix. Each one has a recommendation. Reply with yes, no, or something else.
+
+1. **Equity in the ratios for a TB that has not been closed.** ROE, debt-to-equity, the equity ratio and the DuPont equity multiplier all use equity *without* the current year's earnings. On the discovery TB, D/E reads 0.56 against a true 0.48, and ROE reads 16.5% against 14.1%. The accounting-equation check was fixed in Sprint 829. The ratios were not, because `CategoryTotals` is also a public API input. **Recommend:** derive equity including current-period earnings inside the ratio engine.
+2. **The JE composite averages flag rates and ignores flag severity.** One $250K out-of-balance entry used to rate LOW. Sprint 829 added a floor for unbalanced entries only. Two other effects remain: 482 HIGH flags still rate LOW, and a Benford failure that flags no entries lowers the score. **Recommend:** a scoring sprint that weights flagged-row severity.
+3. **Holiday postings.** The calendar is the full US federal list, so Columbus Day and Veterans Day postings are flagged even though most businesses are open on those days. **Recommend:** drop both from the JE-19 list.
+4. **Month-end clustering.** A normal close, with about 13% of entries in the last 3 days, flagged 7 of 12 months. **Recommend:** raise the threshold, or compare each month with the client's own months instead of a fixed share.
+
+The earlier open calls are still listed in `tasks/todo.md`: Sprint 790 (upload counter), Sprint 825 (sampling S3/S6), Sprint 826 W1/W2, Sprint 818 item 3, and SoD single-HIGH tiering.
+
+---
+
 ## Phase 1 — Restore Login ✅ DONE 2026-04-09
 
 Render Standard deploy live. Neon (us-east-1 pooled) + Upstash Redis + Sentry wired. SendGrid Domain Authentication for `paciolus.com` verified after an initial DMARC bounce on the `@gmail.com` sender — DNS records (SPF/DKIM/DMARC) added to Vercel, propagated in under 2 minutes, and verified by SendGrid. Email verification flow confirmed end-to-end in Gmail inbox. Smoke test green (health, CSRF, register with HttpOnly cookies, /auth/me, wrong-password, logout). First user landed in the fresh Neon DB.

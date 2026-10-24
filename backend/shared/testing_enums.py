@@ -11,6 +11,8 @@ Used by:
 - three_way_match_engine.py (Sprint 91+)
 """
 
+import statistics
+from decimal import Decimal
 from enum import Enum
 
 
@@ -117,6 +119,39 @@ def normalize_risk_tier(tier: object, *, default: str = "low") -> str:
     if t in _TIER_ALIASES:
         return _TIER_ALIASES[t]
     return default
+
+
+def leave_one_out_zscores(amounts: list[Decimal]) -> list[tuple[float, float, float]]:
+    """(z, mean, stdev) for each amount against the *other* amounts in its group.
+
+    Sprint 829: with the candidate inside its own mean and stdev, the largest
+    z any item can reach in a group of n is (n−1)/√n — under 3.0 for n ≤ 10.
+    Nine $101–$109 payments and one $1,000,000 payment to the same vendor were
+    not flagged. Measuring each item against the rest removes that ceiling.
+
+    Falls back to the inclusive statistics when the others have no spread (or
+    there are fewer than three items): a zero leave-one-out stdev would make
+    any difference at all infinitely unusual.
+    """
+    n = len(amounts)
+    if n < 2:
+        return [(0.0, float(a), 0.0) for a in amounts]
+    inc_mean = statistics.mean(amounts)
+    inc_stdev = statistics.stdev(amounts)
+    total = sum(amounts, Decimal("0"))
+    total_sq = sum((a * a for a in amounts), Decimal("0"))
+    out: list[tuple[float, float, float]] = []
+    for a in amounts:
+        if n >= 3:
+            m = (total - a) / (n - 1)
+            var = (total_sq - a * a - (n - 1) * m * m) / (n - 2)
+            sd = float(var) ** 0.5 if var > 0 else 0.0
+            if sd > 0:
+                out.append(((float(a) - float(m)) / sd, float(m), sd))
+                continue
+        sd_inc = float(inc_stdev)
+        out.append((((float(a) - float(inc_mean)) / sd_inc) if sd_inc else 0.0, float(inc_mean), sd_inc))
+    return out
 
 
 def zscore_to_severity(z: float) -> Severity:

@@ -60,6 +60,7 @@ export interface APColumnDetection {
   description_column: string | null
   gl_account_column: string | null
   payment_method_column: string | null
+  po_number_column?: string | null
   has_dual_dates: boolean
   has_check_numbers: boolean
   overall_confidence: number

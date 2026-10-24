@@ -258,8 +258,14 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
     total_assets = category_totals.total_assets
     total_liabilities = category_totals.total_liabilities
     total_equity = category_totals.total_equity
+    # Sprint 829: a pre-closing TB still carries the year's revenue and expense
+    # balances; until they close to retained earnings, current-period earnings
+    # are part of equity. Without them every unclosed TB failed the equation by
+    # exactly its net income — reported as a "significant imbalance" on a TB
+    # whose debits equal its credits. On a closed TB both totals are zero.
+    current_period_earnings = category_totals.total_revenue - category_totals.total_expenses
 
-    liabilities_plus_equity = total_liabilities + total_equity
+    liabilities_plus_equity = total_liabilities + total_equity + current_period_earnings
     difference = total_assets - liabilities_plus_equity
 
     # Decimal-aware balance check (Sprint 340)
@@ -307,6 +313,7 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
         "total_assets": round(total_assets, 2),
         "total_liabilities": round(total_liabilities, 2),
         "total_equity": round(total_equity, 2),
+        "current_period_earnings": round(current_period_earnings, 2),
         "liabilities_plus_equity": round(liabilities_plus_equity, 2),
         "difference": round(difference, 2),
         "abs_difference": round(abs_diff, 2),

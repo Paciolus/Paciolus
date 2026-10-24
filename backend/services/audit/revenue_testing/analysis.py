@@ -26,6 +26,7 @@ from typing import Optional
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
+from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
@@ -477,7 +478,7 @@ class FlaggedRevenue:
             "severity": self.severity.value,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 
@@ -856,11 +857,15 @@ def test_year_end_concentration(
             flagged_entries=[],
         )
 
-    # Use the last date in the data as period end
-    max_date = max(d for _, d in dated)
-    cutoff_date = date(max_date.year, max_date.month, max_date.day)
-
+    # Sprint 829: the configured period end, as RT-09 uses — the last date in
+    # the data put January entries in "year-end" revenue and dropped the real
+    # last week of December. Without one, the month-end of the last entry.
     from datetime import timedelta
+
+    configured_end = parse_date(config.period_end) if config.period_end else None
+    cutoff_date = configured_end or _month_end(max(d for _, d in dated))
+    period_start = parse_date(config.period_start) if config.period_start else None
+    dated = [(e, d) for e, d in dated if d <= cutoff_date and (period_start is None or d >= period_start)]
 
     boundary = cutoff_date - timedelta(days=config.year_end_days)
 
@@ -967,6 +972,17 @@ def test_round_revenue_amounts(
     )
 
 
+def _revenue_sign(entries: list[RevenueEntry]) -> int:
+    """+1 when the file records revenue as positive numbers, −1 when as credits.
+
+    Sprint 829: a revenue register has one amount column and the exporter
+    picks the sign. The file's dominant sign is its normal side; amounts on the
+    other side are returns, reversals and other contra activity.
+    """
+    nonzero = [e.amount for e in entries if e.amount != 0]
+    return 1 if nonzero and sum(1 for a in nonzero if a > 0) > len(nonzero) / 2 else -1
+
+
 def test_sign_anomalies(
     entries: list[RevenueEntry],
     config: RevenueTestingConfig,
@@ -990,10 +1006,17 @@ def test_sign_anomalies(
             flagged_entries=[],
         )
 
+    # Sprint 829: a revenue register has one amount column, and its sign
+    # convention is the exporter's choice. A sales register that lists sales as
+    # positive numbers had 100% of its rows flagged as "debit balances". The
+    # file's own dominant sign is the normal side; the anomalies are the
+    # opposite sign. Ledger convention (credits negative) is unchanged.
+    positive_is_normal = _revenue_sign(entries) > 0
+
     flagged: list[FlaggedRevenue] = []
     for e in entries:
-        if e.amount <= 0:
-            continue  # Credit/zero — normal for revenue
+        if e.amount == 0 or (e.amount > 0) == positive_is_normal:
+            continue  # Normal side for this file
 
         # Check if it's clearly a contra-revenue entry
         if _is_contra_revenue(e.description, e.account_name, config.contra_keywords):
@@ -1009,9 +1032,16 @@ def test_sign_anomalies(
                 test_key="sign_anomalies",
                 test_tier=TestTier.STRUCTURAL,
                 severity=severity,
-                issue=f"Debit balance in revenue: ${amt:,.2f} — {e.account_name or e.account_number or 'unknown account'}",
+                issue=(
+                    f"{'Negative' if positive_is_normal else 'Debit'} amount in revenue: ${amt:,.2f} — "
+                    f"{e.account_name or e.account_number or 'unknown account'}"
+                ),
                 confidence=0.85,
-                details={"amount": e.amount, "account": e.account_name or e.account_number},
+                details={
+                    "amount": e.amount,
+                    "account": e.account_name or e.account_number,
+                    "sign_convention": "sales_positive" if positive_is_normal else "credit_negative",
+                },
             )
         )
 
@@ -1024,7 +1054,10 @@ def test_sign_anomalies(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
-        description="Flags debit balances in revenue accounts (normally credit).",
+        description=(
+            "Flags revenue entries on the opposite side to the file's normal sign "
+            f"({'sales recorded as positive' if positive_is_normal else 'credits recorded as negative'})."
+        ),
         flagged_entries=flagged,
     )
 
@@ -1182,7 +1215,9 @@ def test_revenue_trend_variance(
             flagged_entries=[],
         )
 
-    current_total = sum((abs(e.amount) for e in entries), Decimal("0"))
+    # Sprint 829: net revenue. Summing |amount| added returns to revenue — $1.2M
+    # of sales less $150K of returns read as $1.35M, a 35% "increase".
+    current_total = sum((e.amount for e in entries), Decimal("0")) * _revenue_sign(entries)
     variance_pct = float(current_total - Decimal(str(config.prior_period_total))) / abs(config.prior_period_total)
 
     flagged: list[FlaggedRevenue] = []
@@ -1242,7 +1277,11 @@ def test_concentration_risk(
 
     Flags if a single account represents >50% of total revenue.
     """
-    total_revenue = sum((abs(e.amount) for e in entries), Decimal("0"))
+    # Sprint 829: gross revenue on the file's normal side. The |amount| base
+    # counted returns and contra accounts as revenue, diluting every share.
+    sign = _revenue_sign(entries)
+    normal_side = [e for e in entries if e.amount * sign > 0]
+    total_revenue = sum((abs(e.amount) for e in normal_side), Decimal("0"))
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Revenue Concentration Risk",
@@ -1259,7 +1298,7 @@ def test_concentration_risk(
     # Group by account
     account_totals: dict[str, Decimal] = {}
     account_entries: dict[str, list[RevenueEntry]] = {}
-    for e in entries:
+    for e in normal_side:
         key = (e.account_name or e.account_number or "unknown").lower().strip()
         account_totals[key] = account_totals.get(key, Decimal("0")) + abs(e.amount)
         account_entries.setdefault(key, []).append(e)
@@ -1304,6 +1343,12 @@ def test_concentration_risk(
     )
 
 
+def _month_end(d: date) -> date:
+    import calendar
+
+    return date(d.year, d.month, calendar.monthrange(d.year, d.month)[1])
+
+
 def _resolve_period_boundaries(dated: list, config: RevenueTestingConfig) -> tuple:
     """Sprint 683: shared period-boundary resolution for RT-09 / RT-09b.
 
@@ -1314,15 +1359,20 @@ def _resolve_period_boundaries(dated: list, config: RevenueTestingConfig) -> tup
     if len(dated) < 2:
         return None, None, "Insufficient dated entries for cut-off analysis."
 
+    # Sprint 829: without configured dates, round the inferred period out to
+    # whole months. Taking the first and last entry dates as the boundaries
+    # meant those entries were always "near the boundary" — a Q2 file flagged
+    # 06-24 as within 3 days of period end when the quarter ends 06-30.
     if config.period_start:
         p_start = parse_date(config.period_start)
     else:
-        p_start = min(d for _, d in dated)
+        first = min(d for _, d in dated)
+        p_start = date(first.year, first.month, 1)
 
     if config.period_end:
         p_end = parse_date(config.period_end)
     else:
-        p_end = max(d for _, d in dated)
+        p_end = _month_end(max(d for _, d in dated))
 
     if not p_start or not p_end:
         return None, None, "Could not determine period boundaries."

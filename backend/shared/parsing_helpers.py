@@ -214,13 +214,24 @@ def memoized_parse(kind: str, value: object, parse: Callable[[Any], _T]) -> _T:
         return result
 
 
-def parse_date(date_str: Optional[str]) -> Optional[date]:
+def parse_date(date_str: object) -> Optional[date]:
     """Try to parse a date string into a :class:`date` object.
 
     Supports ISO, US, EU, and datetime formats. Memoised inside ``parse_memo()``.
     """
     if not date_str:
         return None
+    # Sprint 829: an .xlsx cell can arrive as a datetime / pandas Timestamp
+    # rather than text; every one of those parsed to None (payroll pay dates
+    # from an Excel register were all missing). NaT is a datetime too.
+    if isinstance(date_str, datetime):
+        try:
+            result = date_str.date()
+        except ValueError:
+            return None
+        return result if result == result else None  # NaT.date() is NaT, which != itself
+    if isinstance(date_str, date):
+        return date_str
     return memoized_parse("date", date_str, _parse_date_uncached)
 
 
@@ -235,6 +246,20 @@ def _parse_date_uncached(date_str: str) -> Optional[date]:
         "%Y-%m-%d %H:%M:%S",
         "%m/%d/%Y %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
+        # Sprint 829: forms seen in exported ledgers that were silently skipped.
+        # All are unambiguous and only tried after the numeric forms above.
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %I:%M:%S %p",
+        "%m/%d/%y",  # 2-digit year, US order (the order the 4-digit forms prefer)
+        "%d.%m.%Y",  # dotted dates are day-first everywhere they are used
+        "%d-%b-%Y",
+        "%d %b %Y",
+        "%b %d, %Y",
+        "%B %d, %Y",
+        "%Y%m%d",
     ):
         try:
             return datetime.strptime(date_str.strip(), fmt).date()

@@ -35,6 +35,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.fuzzy_match import similarity_at_least
+from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
@@ -672,7 +673,7 @@ class FlaggedEmployee:
             "severity": self.severity,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 
@@ -1473,16 +1474,32 @@ def _test_pay_frequency_anomalies(
     interval_counts = Counter(all_intervals)
     expected_cadence = interval_counts.most_common(1)[0][0]
 
-    # Allow deviation threshold (e.g., 50% of expected cadence)
-    min_interval = expected_cadence * (1 - config.frequency_deviation_threshold)
-    max_interval = expected_cadence * (1 + config.frequency_deviation_threshold)
-
+    population_cadence = expected_cadence
+    dev = config.frequency_deviation_threshold
     flagged_rows: set[int] = set()
 
     for key, group in emp_groups.items():
         dated = sorted([e for e in group if e.pay_date], key=lambda e: e.pay_date or date.min)
         if len(dated) < 3:
             continue
+
+        # Sprint 829: an employee with a regular cadence of their own (monthly
+        # staff in a biweekly population) is measured against it — every one
+        # of their intervals was flagged against the population's 14 days.
+        own = [
+            (dated[k].pay_date - dated[k - 1].pay_date).days  # type: ignore[operator]
+            for k in range(1, len(dated))
+        ]
+        own_median = statistics.median(own)
+        regular = sum(1 for d in own if own_median * (1 - dev) <= d <= own_median * (1 + dev))
+        # Only a *longer* own cadence: being paid more often than everyone else,
+        # however regularly, is the extra-pay-run pattern this test exists for.
+        own_is_regular = regular * 3 >= len(own) * 2
+        expected_cadence = (
+            round(own_median) if own_is_regular and own_median > population_cadence * (1 + dev) else population_cadence
+        )
+        min_interval = expected_cadence * (1 - dev)
+        max_interval = expected_cadence * (1 + dev)
 
         for i in range(1, len(dated)):
             d_cur = dated[i].pay_date
@@ -1721,6 +1738,13 @@ def _test_ghost_employee_indicators(
 
     flagged_rows: set[int] = set()
 
+    # Sprint 829: in a single-period register every employee has exactly one
+    # entry, so "single pay entry" flagged the whole payroll. It is an outlier
+    # signal only when the register spans several pay dates and most employees
+    # were paid more than once.
+    single_entry_share = sum(1 for g in emp_groups.values() if len(g) == 1) / max(len(emp_groups), 1)
+    single_entry_is_unusual = len(set(all_dates)) > 1 and single_entry_share < 0.5
+
     for emp_key, group in emp_groups.items():
         indicators: list[str] = []
 
@@ -1731,7 +1755,7 @@ def _test_ghost_employee_indicators(
                 indicators.append("No department assignment")
 
         # Indicator 2: Single pay entry
-        if len(group) == 1:
+        if len(group) == 1 and single_entry_is_unusual:
             indicators.append("Single pay entry in period")
 
         # Indicator 3: Payments only in first/last month

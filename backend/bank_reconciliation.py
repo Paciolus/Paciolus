@@ -734,7 +734,15 @@ def _split_match_pass(
             ltx = ledger_match.ledger_txn
             if ltx is None:
                 continue
-            if bank_date and config.date_tolerance_days > 0:
+            # Sprint 829: a split is one deposit (or one payment) recorded in
+            # pieces, so every piece has the bank amount's sign. Mixed signs let
+            # a $1,000 deposit "reconcile" against +$1,500 and a −$500 cheque.
+            if target == 0 or (ltx.amount > 0) != (target > 0) or ltx.amount == 0:
+                continue
+            # Sprint 829: a zero date tolerance means the same date, as in the
+            # one-to-one pass — it was skipping the date filter altogether, so
+            # splits paired rows from any day of the period.
+            if bank_date:
                 ldate = ledger_date_cache.get(id(ltx))
                 if ldate and abs((bank_date - ldate).days) > config.date_tolerance_days:
                     continue
@@ -908,6 +916,16 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
                 total_bank += m.bank_txn.amount
             if m.ledger_txn:
                 total_ledger += m.ledger_txn.amount
+        elif m.match_type == MatchType.SPLIT:
+            # Sprint 829: a split is a match — one bank line against several
+            # ledger lines. It fell through every branch, so a reconciliation
+            # cleared entirely by splits reported 0 matched and $0 on both sides.
+            matched_count += 1
+            if m.bank_txn:
+                matched_amount += abs(m.bank_txn.amount)
+                total_bank += m.bank_txn.amount
+            for ltx in m.ledger_txns or ([m.ledger_txn] if m.ledger_txn else []):
+                total_ledger += ltx.amount
         elif m.match_type == MatchType.BANK_ONLY:
             bank_only_count += 1
             if m.bank_txn:
@@ -1136,14 +1154,21 @@ def _compute_item_age_days(date_str: Optional[str], reference_date: Optional[dat
 
 
 def _test_stale_deposits(
-    bank_only_items: list[ReconciliationMatch],
+    ledger_only_items: list[ReconciliationMatch],
     reference_date: Optional[date] = None,
 ) -> RecTestResult:
-    """Flag bank-only items older than 10 days (stale deposits in transit)."""
+    """Flag deposits in transit older than 10 days.
+
+    Sprint 829: a deposit in transit is a receipt in the books that the bank
+    has not yet credited — a LEDGER-only receipt. The test read BANK-only
+    items (bank activity missing from the books: fees, interest, returned
+    items), so it never saw a deposit in transit and called bank credits
+    "deposits outstanding".
+    """
     flagged: list[RecFlaggedItem] = []
-    for m in bank_only_items:
-        txn = m.bank_txn
-        if not txn:
+    for m in ledger_only_items:
+        txn = m.ledger_txn
+        if not txn or txn.amount <= 0:
             continue
         age = _compute_item_age_days(txn.date, reference_date)
         if age is not None and age > 10:
@@ -1175,11 +1200,14 @@ def _test_stale_checks(
     ledger_only_items: list[ReconciliationMatch],
     reference_date: Optional[date] = None,
 ) -> RecTestResult:
-    """Flag ledger-only items older than 90 days (stale outstanding checks)."""
+    """Flag outstanding checks (ledger-only payments) older than 90 days.
+
+    Sprint 829: receipts are deposits in transit (above), not checks.
+    """
     flagged: list[RecFlaggedItem] = []
     for m in ledger_only_items:
         txn = m.ledger_txn
-        if not txn:
+        if not txn or txn.amount >= 0:
             continue
         age = _compute_item_age_days(txn.date, reference_date)
         if age is not None and age > 90:
@@ -1335,11 +1363,10 @@ def run_reconciliation_tests(
     reference_date: Optional[date] = None,
 ) -> list[RecTestResult]:
     """Run all 5 reconciliation tests on the match results."""
-    bank_only = [m for m in matches if m.match_type == MatchType.BANK_ONLY]
     ledger_only = [m for m in matches if m.match_type == MatchType.LEDGER_ONLY]
 
     return [
-        _test_stale_deposits(bank_only, reference_date),
+        _test_stale_deposits(ledger_only, reference_date),
         _test_stale_checks(ledger_only, reference_date),
         _test_nsf_items(matches),
         _test_interbank_transfers(matches),
@@ -1575,11 +1602,17 @@ def reconcile_bank_statement(
     # 4. Calculate summary
     summary = calculate_summary(matches)
 
+    # Sprint 829: outstanding items are aged to the statement's closing date,
+    # not the day the file is processed — a December reconciliation reviewed
+    # in March had every reconciling item reported as months stale.
+    statement_dates = [d for d in (parse_date(t.date) for t in bank_txns) if d]
+    statement_end = max(statement_dates) if statement_dates else None
+
     # 5. Run reconciliation tests
-    rec_tests = run_reconciliation_tests(matches, materiality=config.materiality)
+    rec_tests = run_reconciliation_tests(matches, materiality=config.materiality, reference_date=statement_end)
 
     # 6. Compute outstanding items aging
-    outstanding_aging = compute_outstanding_items_aging(matches)
+    outstanding_aging = compute_outstanding_items_aging(matches, reference_date=statement_end)
 
     # 7. Compute composite diagnostic score
     composite_score = compute_bank_rec_diagnostic_score(

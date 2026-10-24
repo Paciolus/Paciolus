@@ -58,7 +58,7 @@ from classification_rules import (
 )
 from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
 from ratio_engine import CategoryTotals, extract_category_totals
-from security_utils import DEFAULT_CHUNK_SIZE, log_secure_operation
+from security_utils import DEFAULT_CHUNK_SIZE, _strip_currency_formatting, log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 
@@ -224,8 +224,8 @@ class StreamingAuditor:
             log_secure_operation("streaming_error", "Required columns not found")
             return
 
-        debits = pd.to_numeric(chunk[self.debit_col], errors="coerce").fillna(0)
-        credits = pd.to_numeric(chunk[self.credit_col], errors="coerce").fillna(0)
+        debits = pd.to_numeric(chunk[self.debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
+        credits = pd.to_numeric(chunk[self.credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
 
         # Sprint 666 Issue 2: Exclude totals rows from aggregation.
         # Heuristic: blank account name + both debit AND credit non-zero.

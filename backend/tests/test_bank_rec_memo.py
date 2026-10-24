@@ -844,14 +844,15 @@ class TestRecFlaggedItemSeverity:
         from datetime import date
 
         from bank_reconciliation import (
-            BankTransaction,
+            LedgerTransaction,
             MatchType,
             ReconciliationMatch,
             _test_stale_deposits,
         )
 
-        bank_txn = BankTransaction(date="2025-11-01", description="Old deposit", amount=1000.0)
-        match = ReconciliationMatch(bank_txn=bank_txn, match_type=MatchType.BANK_ONLY)
+        # Sprint 829: a deposit in transit is in the books, not yet on the statement.
+        ledger_txn = LedgerTransaction(date="2025-11-01", description="Old deposit", amount=1000.0)
+        match = ReconciliationMatch(ledger_txn=ledger_txn, match_type=MatchType.LEDGER_ONLY)
         result = _test_stale_deposits([match], reference_date=date(2025, 12, 31))
         assert result.flagged_count == 1
         assert result.flagged_items[0].severity == "high"
@@ -861,14 +862,15 @@ class TestRecFlaggedItemSeverity:
         from datetime import date
 
         from bank_reconciliation import (
-            BankTransaction,
+            LedgerTransaction,
             MatchType,
             ReconciliationMatch,
             _test_stale_deposits,
         )
 
-        bank_txn = BankTransaction(date="2025-12-15", description="Recent deposit", amount=500.0)
-        match = ReconciliationMatch(bank_txn=bank_txn, match_type=MatchType.BANK_ONLY)
+        # Sprint 829: a deposit in transit is in the books, not yet on the statement.
+        ledger_txn = LedgerTransaction(date="2025-12-15", description="Recent deposit", amount=500.0)
+        match = ReconciliationMatch(ledger_txn=ledger_txn, match_type=MatchType.LEDGER_ONLY)
         result = _test_stale_deposits([match], reference_date=date(2025, 12, 31))
         assert result.flagged_count == 1
         assert result.flagged_items[0].severity == "medium"

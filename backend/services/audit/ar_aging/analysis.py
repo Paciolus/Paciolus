@@ -29,7 +29,8 @@ from decimal import Decimal
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns, match_column
-from shared.parsing_helpers import safe_decimal, safe_int, with_parse_memo
+from shared.monetary import decimals_to_floats
+from shared.parsing_helpers import parse_date, safe_decimal, safe_int, with_parse_memo
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
     SEVERITY_WEIGHTS,
@@ -332,6 +333,9 @@ class ARSubledgerEntry:
     aging_bucket: Optional[str] = None
     credit_limit: Optional[Decimal] = None
     row_number: int = 0
+    # Sprint 829: True when aging_days is age since invoice (no due date), which
+    # is not days past due — past-due tests must not read it as delinquency.
+    aged_from_invoice_date: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.amount, (int, float)):
@@ -408,7 +412,7 @@ class FlaggedAR:
             "severity": self.severity.value,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 
@@ -581,6 +585,10 @@ def compute_aging_schedule(sl_entries: list["ARSubledgerEntry"]) -> list[dict]:
     total_amount = Decimal("0")
     for entry in sl_entries:
         days = entry.aging_days if entry.aging_days is not None else 0
+        # Sprint 829: an invoice not yet due has negative days past due. It
+        # belongs in Current — it fell into no bucket, so the schedule summed
+        # to less than the ledger and disagreed with ar_summary.
+        days = max(days, 0)
         total_amount += entry.amount
         for b in buckets:
             if b["low"] <= days <= b["high"]:
@@ -741,6 +749,13 @@ def detect_sl_columns(column_names: list[str]) -> SLColumnDetection:
 # =============================================================================
 
 
+_NON_TRADE_RECEIVABLE = re.compile(
+    r"\b(notes?|loans?|officers?|employees?|shareholders?|stockholders?|related|intercompany|"
+    r"interest|tax(es)?|vat|gst|insurance)\b"
+)
+_NOT_EARNED_REVENUE = re.compile(r"\b(deferred|unearned|payable|tax(es)?|cost\s+of)\b")
+
+
 def _classify_account(account_name: str) -> tuple[str, float]:
     """Classify a TB account based on name. Returns (classification, confidence)."""
     if not account_name:
@@ -752,6 +767,15 @@ def _classify_account(account_name: str) -> tuple[str, float]:
     allowance_score = match_column(name_lower, ALLOWANCE_PATTERNS)
     ar_score = match_column(name_lower, AR_ACCOUNT_PATTERNS)
     revenue_score = match_column(name_lower, REVENUE_ACCOUNT_PATTERNS)
+    # Sprint 829: the unanchored "receivable" / "revenue" / leading "sales"
+    # patterns also matched balances that are not trade AR or earned revenue.
+    # "Notes Receivable - Officer" counted as trade AR and "Deferred Revenue" /
+    # "Sales Tax Payable" as revenue — on an otherwise clean TB that read a 5%
+    # allowance as 0.91% (HIGH) and a 36.5-day DSO as 118 (HIGH).
+    if _NON_TRADE_RECEIVABLE.search(name_lower):
+        ar_score = 0.0
+    if _NOT_EARNED_REVENUE.search(name_lower):
+        revenue_score = 0.0
 
     best_class = "other"
     best_score = 0.0
@@ -858,14 +882,13 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
     from datetime import datetime
 
     try:
-        # Try common date formats
-        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d", "%m-%d-%Y", "%d-%m-%Y"):
-            try:
-                due = datetime.strptime(due_date_str.strip(), fmt).date()
-                break
-            except ValueError:
-                continue
-        else:
+        # Sprint 829: the shared parser. It tries the same six date formats in
+        # the same order, then the datetime forms — so an Excel date cell
+        # ("2025-06-01 00:00:00") is aged instead of falling through to None,
+        # which the schedule treated as 0 days: a whole .xlsx sub-ledger landed
+        # in Current.
+        due = parse_date(due_date_str)
+        if due is None:
             return None
 
         ref = None
@@ -925,6 +948,7 @@ def parse_sl_entries(
 ) -> list[ARSubledgerEntry]:
     """Parse sub-ledger rows into entry objects."""
     entries: list[ARSubledgerEntry] = []
+    aged_from_invoice_date = 0
 
     for i, row in enumerate(rows):
         customer_name = None
@@ -972,6 +996,15 @@ def parse_sl_entries(
         # Compute aging_days if not provided
         if aging_days is None and due_date:
             aging_days = _compute_aging_days(due_date, reference_date_str)
+        # Sprint 829: a sub-ledger with only an invoice date was never aged —
+        # every invoice sat in Current with no warning. Age it from the invoice
+        # date instead, and say so (age since invoice is not days past due).
+        invoice_aged = False
+        if aging_days is None and not due_date and not aging_bucket and invoice_date:
+            aging_days = _compute_aging_days(invoice_date, reference_date_str)
+            if aging_days is not None:
+                aged_from_invoice_date += 1
+                invoice_aged = True
         if aging_days is None and aging_bucket:
             aging_days = _parse_aging_bucket_to_days(aging_bucket)
 
@@ -995,9 +1028,15 @@ def parse_sl_entries(
                 aging_bucket=aging_bucket,
                 credit_limit=credit_limit,
                 row_number=i + 1,
+                aged_from_invoice_date=invoice_aged,
             )
         )
 
+    if aged_from_invoice_date:
+        detection.detection_notes.append(
+            f"No due date column: {aged_from_invoice_date} invoice(s) aged from the invoice date, so the "
+            "buckets show age since invoice rather than days past due."
+        )
     return entries
 
 
@@ -1237,12 +1276,18 @@ def test_negative_aging(
     sl_entries: list[ARSubledgerEntry],
     config: ARAgingConfig,
 ) -> ARTestResult:
-    """T1-AR03: Flag sub-ledger entries with negative aging days (date logic errors)."""
+    """T1-AR03: Flag sub-ledger entries with negative aging days (date logic errors).
+
+    Sprint 829: negative days past due on an invoice with a due date is an
+    invoice not yet due — normal, and every open sub-ledger has them. Only a
+    negative age with no due date behind it (supplied directly, or measured
+    from an invoice dated after the as-of date) is a date error.
+    """
     flagged: list[FlaggedAR] = []
 
     if config.negative_aging_enabled:
         for e in sl_entries:
-            if e.aging_days is not None and e.aging_days < 0:
+            if e.aging_days is not None and e.aging_days < 0 and not e.due_date:
                 flagged.append(
                     FlaggedAR(
                         entry=_sl_to_entry(e),
@@ -1410,7 +1455,13 @@ def test_past_due_concentration(
             description="Concentration of AR balance in past-due categories",
         )
 
-    past_due = [e for e in sl_entries if e.aging_days is not None and e.aging_days > config.past_due_days]
+    # Age since invoice is not delinquency: an invoice on net-90 terms aged 59
+    # days from its invoice date is not past due (PR #218 review).
+    past_due = [
+        e
+        for e in sl_entries
+        if e.aging_days is not None and e.aging_days > config.past_due_days and not e.aged_from_invoice_date
+    ]
     past_due_total = sum(e.amount for e in past_due)
     past_due_pct = past_due_total / total_ar
 
@@ -1515,7 +1566,19 @@ def test_customer_concentration(
 ) -> ARTestResult:
     """T2-AR08: Flag when a single customer exceeds 20% of total AR."""
     flagged: list[FlaggedAR] = []
-    total_ar = sum(e.amount for e in sl_entries)
+
+    # Group by customer
+    customer_totals: dict[str, Decimal] = {}
+    customer_entries: dict[str, list[ARSubledgerEntry]] = {}
+    for e in sl_entries:
+        key = e.customer_name or e.customer_id or "Unknown"
+        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
+        customer_entries.setdefault(key, []).append(e)
+
+    # Sprint 829: the base is what customers owe — customers in credit are not
+    # receivables. Netting a $4,000 credit balance into the total made four
+    # $2,500 customers look like 41.7% each (HIGH) instead of 25%.
+    total_ar = sum((v for v in customer_totals.values() if v > 0), Decimal("0"))
 
     if total_ar <= 0:
         return ARTestResult(
@@ -1528,14 +1591,6 @@ def test_customer_concentration(
             severity=Severity.LOW,
             description="Concentration of AR balance by customer",
         )
-
-    # Group by customer
-    customer_totals: dict[str, Decimal] = {}
-    customer_entries: dict[str, list[ARSubledgerEntry]] = {}
-    for e in sl_entries:
-        key = e.customer_name or e.customer_id or "Unknown"
-        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
-        customer_entries.setdefault(key, []).append(e)
 
     for customer, amount in customer_totals.items():
         pct = amount / total_ar

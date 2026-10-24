@@ -473,6 +473,93 @@ every IC revenue/expense pair.
 
 ---
 
+### Sprint 829: Discovery round 2 — the eleven tools Sprint 823 did not cover
+**Status:** IN PROGRESS. A second round of discovery agents ran the original tools (TB, JE, AP,
+payroll, revenue, AR, inventory, bank rec, three-way match) against realistic synthetic input.
+**Priority:** **P1** — several findings produce wrong output on correct input.
+
+- [x] **AR-1** — aging uses the shared `parse_date`, so Excel date cells are aged (a whole
+      .xlsx sub-ledger was landing in Current).
+- [x] **AR-2** — a sub-ledger with only an invoice date is aged from it, with a note.
+- [x] **AR-3** — non-trade receivables (notes, loans, officers, related party, tax, …) and
+      non-earned revenue (deferred, unearned, cost of) are no longer classified as trade AR/revenue.
+- [x] **IN-5** — `selling_price_column` is detected and overridable, so IN-T10 (LCM/NRV) can run.
+- [x] **T1** — currency-formatted debit/credit cells ("$1,234.00", "(500)") in a CSV/Excel TB are
+      parsed instead of coerced to zero.
+- [x] **T6** — DuPont and common-size values serialize as JSON numbers, not strings.
+- [x] **JE-1** — reciprocal entries no longer pair an entry's own debit and credit lines
+      (61% of a clean GL was flagged HIGH).
+- [x] **JE-2** — just-below-threshold counts rows, not flags (flag rate reached 2.0), and its
+      split pass sums debits and credits separately.
+- [x] **JE-3** — unbalanced entries floor the composite: any → Moderate, any over $1,000 →
+      Elevated. A GL with a $250K out-of-balance entry was rated LOW.
+- [x] **JE-4** — after-hours treats a file whose every timestamp is exactly midnight as
+      date-only (100% of an .xlsx GL was flagged as 00:00 postings).
+- [x] **JE-5** — numbering gaps read the trailing sequence per series, so year-prefixed IDs
+      ("JE-2025-0001") are tested.
+- [x] **Dates** — the shared `parse_date` accepts datetime/Timestamp cells (every payroll pay
+      date from an .xlsx register was None) and `01-Jan-2025`, `Jan 5, 2025`, `20250105` and
+      fractional-second forms that JE and others skipped silently.
+- [x] **PR-T9** — "single pay entry" is a ghost indicator only in a multi-period register where
+      most employees were paid more than once; a single pay run flagged the whole payroll.
+- [x] **AP-T14** — `po_number_column` is copied onto the detection result, serialized and
+      overridable; Invoice-Without-PO always reported "skipped".
+- [x] **RT-04** — the file's dominant sign is the normal side; a register listing sales as
+      positive had 100% of rows flagged as debit balances.
+- [x] **T2 (equation)** — A = L + E includes current-period earnings, so a pre-closing TB is not
+      a "significant imbalance" of its net income.
+- [x] **B1** — bank split matches take only same-sign ledger rows, and a zero date tolerance
+      means the same date (it disabled the date filter).
+- [x] **B3** — deposits in transit are ledger-only receipts (the test read bank-only items),
+      outstanding checks are ledger-only payments, and both age to the statement's last date.
+- [x] **W1** — a multi-line PO's lines pair with the closest invoice/receipt line (description,
+      quantity, price) instead of file order.
+- [x] **W2** — invoice quantity is compared with quantity received (`billed_quantity`
+      variance); the memo and results card show quantities as units against the receipt.
+- [ ] Open: **T2 (ratios)** — ROE / D-E / equity multiplier use equity without current-period
+      earnings on an unclosed TB; `CategoryTotals` is a public input shape, so the fix needs a
+      decision on where "effective equity" is derived.
+- [x] **T3** — named non-current balances (non-current, long-term, mortgage, deferred tax) stay
+      out of current; deferred revenue, customer deposits and lines of credit count as current
+      liabilities; the AR allowance nets into receivables and current assets.
+- [x] **Dates (2)** — `01/08/25`, `08.01.2025`, ISO `…Z`, fractional ISO and 12-hour times parse;
+      JE after-hours reads the same forms.
+- [x] **P2s** — bank-rec summary counts SPLIT matches; RT-07 trends net revenue and RT-08 uses the
+      normal-side base; AR-03 no longer flags not-yet-due invoices and the schedule buckets them
+      in Current; AR-08 excludes customers in credit from the base; IN-03 catches zero extended
+      values and large absolute differences; IN-08 ignores one SKU across locations and never
+      groups on cost alone; AP fuzzy duplicates skip fixed-amount recurring series; round-amount
+      caps list the largest and count all; JE/AP unusual amounts use leave-one-out z-scores.
+- [x] **RT-02 / RT-09 / T7** — the year-end window ends at the configured period end (else
+      the last entry's month-end); inferred cut-off periods round out to whole months; asset
+      reserves ("reserve for", "inventory reserve", "provision for") are contra accounts.
+- [x] **W3** — receipts delivered in instalments against one PO line are combined (every
+      receipt on a single-line PO; same-description receipts on a multi-line PO).
+- [x] **PR-T7** — an employee with a regular cadence *longer* than the population's (monthly
+      staff in a biweekly payroll) is measured against it; shorter regular cadences stay flagged.
+- [x] **Classifier (T4 follow-up)** — phrase rules match a plural last word ("Customer
+      Deposits" was an asset); salaries/wages/advertising/legal fees/bank charges/property and
+      payroll taxes/line of credit added, with accrued/payable phrases so liabilities stay
+      liabilities. "Salaries - Sales" was revenue.
+- [x] **Bank rec bridge** — the results bridge put bank-only items on the bank side and
+      ledger-only items on the GL side, so it did not tie; reconciling items now adjust the side
+      that has not recorded them. Memo descriptions of bank-only / ledger-only corrected.
+- [x] **T8 / serialization** — a Net-column TB is told its columns are missing (not "no data");
+      flagged-entry `details` serialize Decimals as numbers.
+- [ ] Open P2/P3 (CEO calls in `tasks/ceo-actions.md`): JE composite scoring; month-end and
+      holiday noise; equity incl. current earnings in ratios. Case-sensitive account merge
+      ("CASH" vs "Cash") left as is — merging keys is a wider change.
+
+Register: `reports/sprint-829-discovery-round2-2026-10-23.md`.
+- [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
+      accounts), and Key Metrics states what the ratios leave out.
+- [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a
+      different category; compatible keywords still refine placement within the type.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 812: Nineteen rate-limited routes 500 on every call
 **Status:** IN REVIEW — code complete 2026-10-23; post-deploy verification pending.
 **Priority:** **P0** — every Professional/Enterprise org feature is down in production.

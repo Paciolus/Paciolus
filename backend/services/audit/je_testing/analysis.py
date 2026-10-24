@@ -56,6 +56,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E4
 from shared.data_quality import FieldQualityConfig  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.holiday_calendar import get_holiday_dates  # noqa: E402
+from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import memoized_parse, parse_date, safe_decimal, safe_str, with_parse_memo  # noqa: E402
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
@@ -66,6 +67,7 @@ from shared.testing_enums import (  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
+    leave_one_out_zscores,  # noqa: E402
     score_to_risk_tier,  # noqa: E402, F401 — re-export for backward compat
     zscore_to_severity,  # noqa: E402
 )
@@ -564,7 +566,7 @@ class FlaggedEntry:
             "severity": self.severity.value,
             "issue": self.issue,
             "confidence": round(self.confidence, 2),
-            "details": self.details,
+            "details": decimals_to_floats(self.details),
         }
 
 
@@ -1116,18 +1118,19 @@ def test_round_amounts(
                 )
                 break  # Only flag the largest pattern match
 
-        if len(flagged) >= config.round_amount_max_flags:
-            break
-
-    # Sort by amount descending
+    # Sprint 829: count every round amount, then keep the largest for display.
+    # The loop used to stop at the cap in file order, so a $500K round entry
+    # after fifty $10K ones was never seen and the count stopped at 50.
     flagged.sort(key=lambda f: f.entry.abs_amount, reverse=True)
+    total_flagged = len(flagged)
+    flagged = flagged[: config.round_amount_max_flags]
 
-    flag_rate = len(flagged) / max(len(entries), 1)
+    flag_rate = total_flagged / max(len(entries), 1)
     return TestResult(
         test_name="Round Dollar Amounts",
         test_key="round_amounts",
         test_tier=TestTier.STRUCTURAL,
-        entries_flagged=len(flagged),
+        entries_flagged=total_flagged,
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.LOW,
@@ -1165,19 +1168,16 @@ def test_unusual_amounts(
         if len(amounts) < config.unusual_amount_min_entries:
             continue
 
-        mean = statistics.mean(amounts)
         if len(amounts) < 2:
             continue
-        stdev = statistics.stdev(amounts)
-        if stdev == 0:
+        if statistics.stdev(amounts) == 0:
             continue
 
-        threshold = float(mean) + config.unusual_amount_stddev * float(stdev)
-
-        for e in account_entries[acct]:
+        # Sprint 829: each entry is measured against the rest of its account.
+        for e, (z_score, mean, stdev) in zip(account_entries[acct], leave_one_out_zscores(amounts)):
             amt = e.abs_amount
-            if float(amt) > threshold:
-                z_score = float(amt - mean) / float(stdev)
+            threshold = mean + config.unusual_amount_stddev * stdev
+            if z_score > config.unusual_amount_stddev:
                 flagged.append(
                     FlaggedEntry(
                         entry=e,
@@ -1518,8 +1518,25 @@ def _extract_hour(date_str: Optional[str]) -> Optional[int]:
 
 
 def _extract_hour_uncached(date_str: str) -> Optional[int]:
+    t = _extract_time(date_str)
+    return t[0] if t else None
+
+
+def _extract_time(date_str: Optional[str]) -> Optional[tuple[int, int, int]]:
+    """(hour, minute, second) of a datetime string, or None if date-only."""
+    if not date_str:
+        return None
+    return memoized_parse("time", date_str, _extract_time_uncached)
+
+
+def _extract_time_uncached(date_str: str) -> Optional[tuple[int, int, int]]:
     for fmt in (
         "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %I:%M:%S %p",
         "%m/%d/%Y %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
         "%d/%m/%Y %H:%M:%S",
@@ -1527,7 +1544,8 @@ def _extract_hour_uncached(date_str: str) -> Optional[int]:
         "%m/%d/%Y %H:%M",
     ):
         try:
-            return datetime.strptime(date_str.strip(), fmt).hour
+            dt = datetime.strptime(date_str.strip(), fmt)
+            return (dt.hour, dt.minute, dt.second)
         except (ValueError, AttributeError):
             continue
     return None
@@ -1544,6 +1562,27 @@ def _extract_number(entry_id: Optional[str]) -> Optional[int]:
     if match:
         return int(match.group(1))
     return None
+
+
+_SERIES_ID = re.compile(r"^(.*?)(\d+)\s*$")
+
+
+def _extract_series(entry_id: Optional[str]) -> Optional[tuple[str, int]]:
+    """Split an entry ID into (series prefix, trailing sequence number).
+
+    Sprint 829: ``_extract_number`` read the *leading* digit run, so in
+    year-prefixed IDs ("JE-2025-0001") every entry numbered 2025 and gaps were
+    never seen — while the first entry of 2026 looked like a 1-entry gap. The
+    sequence is the trailing digits; everything before them names the series,
+    and each series is numbered on its own.
+    """
+    if not entry_id:
+        return None
+    m = _SERIES_ID.match(entry_id.strip())
+    if m:
+        return m.group(1).upper(), int(m.group(2))
+    num = _extract_number(entry_id)  # e.g. "JE001-A": no trailing digits
+    return ("", num) if num is not None else None
 
 
 def test_single_user_high_volume(
@@ -1645,10 +1684,26 @@ def test_after_hours_postings(
     flagged: list[FlaggedEntry] = []
     entries_with_time = 0
 
+    # Sprint 829: an Excel date cell reads back as "2025-06-01 00:00:00". When
+    # every timestamp in the file is exactly midnight there is no time data —
+    # flagging them all as 00:00 postings flagged 100% of an .xlsx GL. A real
+    # midnight posting among genuine timestamps is still tested.
+    # Decided per column, so a date-only posting column does not hide genuine
+    # timestamps in entry_date (PR #218 review).
+    def _column_has_time(attr: str) -> bool:
+        return any((t := _extract_time(getattr(e, attr))) is not None and t != (0, 0, 0) for e in entries)
+
+    columns = [a for a in ("posting_date", "entry_date") if _column_has_time(a)]
+    times: list[tuple[JournalEntry, tuple[int, int, int]]] = []
     for e in entries:
-        hour = _extract_hour(e.posting_date) or _extract_hour(e.entry_date)
-        if hour is None:
-            continue
+        for attr in columns:
+            t = _extract_time(getattr(e, attr))
+            if t is not None:
+                times.append((e, t))
+                break
+
+    for e, t in times:
+        hour = t[0]
         entries_with_time += 1
 
         # Within business hours: after_hours_end <= hour < after_hours_start
@@ -1725,13 +1780,13 @@ def test_numbering_gaps(
             flagged_entries=[],
         )
 
-    numbered: list[tuple[int, JournalEntry]] = []
+    series: dict[str, list[tuple[int, JournalEntry]]] = {}
     for e in entries:
-        num = _extract_number(e.entry_id)
-        if num is not None:
-            numbered.append((num, e))
+        parsed = _extract_series(e.entry_id)
+        if parsed is not None:
+            series.setdefault(parsed[0], []).append((parsed[1], e))
 
-    if len(numbered) < 2:
+    if sum(len(v) for v in series.values()) < 2:
         return TestResult(
             test_name="Sequential Numbering Gaps",
             test_key="numbering_gaps",
@@ -1744,12 +1799,15 @@ def test_numbering_gaps(
             flagged_entries=[],
         )
 
-    numbered.sort(key=lambda x: x[0])
     flagged: list[FlaggedEntry] = []
 
-    for i in range(1, len(numbered)):
-        prev_num, _ = numbered[i - 1]
-        curr_num, curr_entry = numbered[i]
+    pairs_in_order: list[tuple[int, int, JournalEntry]] = []
+    for numbered in series.values():
+        numbered.sort(key=lambda x: x[0])
+        for i in range(1, len(numbered)):
+            pairs_in_order.append((numbered[i - 1][0], numbered[i][0], numbered[i][1]))
+
+    for prev_num, curr_num, curr_entry in pairs_in_order:
         gap = curr_num - prev_num
 
         if gap >= config.numbering_gap_min_size:
@@ -2181,6 +2239,11 @@ def test_reciprocal_entries(
             for c_entry in credits:
                 if d_entry.row_number == c_entry.row_number:
                     continue
+                # Sprint 829: the two sides of one balanced entry are not a
+                # round trip. Pairing an entry's own debit with its own credit
+                # flagged 61% of a clean GL HIGH; reciprocity is between entries.
+                if d_entry.entry_id and d_entry.entry_id == c_entry.entry_id:
+                    continue
                 pair_key = (min(d_entry.row_number, c_entry.row_number), max(d_entry.row_number, c_entry.row_number))
                 if pair_key in seen_pairs:
                     continue
@@ -2296,14 +2359,17 @@ def test_just_below_threshold(
                 break  # Only flag once per entry (closest threshold)
 
     # Enhanced: detect split transactions
-    account_daily: dict[tuple[str, str], list[JournalEntry]] = {}
+    # Sprint 829: grouped by side. Summing a day's debits and credits to one
+    # account together called a $6K debit and its $6K reversal a $12K split.
+    account_daily: dict[tuple[str, str, str], list[JournalEntry]] = {}
     for e in entries:
         d = e.posting_date or e.entry_date or ""
-        if d and e.account:
-            key = (e.account.lower(), d)
+        if d and e.account and e.abs_amount > 0:
+            side = "debit" if e.debit > 0 else "credit"
+            key = (e.account.lower(), d, side)
             account_daily.setdefault(key, []).append(e)
 
-    for (acct, day), day_entries in account_daily.items():
+    for (acct, day, _side), day_entries in account_daily.items():
         if len(day_entries) < 2:
             continue
         total = sum(e.abs_amount for e in day_entries)
@@ -2330,12 +2396,15 @@ def test_just_below_threshold(
                     )
                 break
 
-    flag_rate = len(flagged) / max(len(entries), 1)
+    # Sprint 829: a row both just below a threshold and part of a split carries
+    # two flags; count rows, not flags (flag_rate reached 2.0 on a split day).
+    rows_flagged = len({f.entry.row_number for f in flagged})
+    flag_rate = rows_flagged / max(len(entries), 1)
     return TestResult(
         test_name="Just-Below-Threshold",
         test_key="just_below_threshold",
         test_tier=TestTier.ADVANCED,
-        entries_flagged=len(flagged),
+        entries_flagged=rows_flagged,
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
@@ -2827,6 +2896,10 @@ def run_test_battery(
     return results, benford_data
 
 
+_UNBALANCED_FLOOR = 11.0  # lowest Moderate score
+_UNBALANCED_FLOOR_HIGH = 26.0  # lowest Elevated score
+
+
 def calculate_composite_score(
     test_results: list[TestResult],
     total_entries: int,
@@ -2837,9 +2910,19 @@ def calculate_composite_score(
     """
     result = _shared_calc_cs(test_results, total_entries)
 
+    # Sprint 829: a ledger whose entries do not balance is a structural failure,
+    # but the flag-rate average diluted one unbalanced entry across 19 tests and
+    # rated a GL with a $250K out-of-balance entry LOW. Unbalanced entries floor
+    # the score: any at all → Moderate, any over $1,000 (HIGH) → Elevated.
+    score = result.score
+    unbalanced = next((tr for tr in test_results if tr.test_key == "unbalanced_entries"), None)
+    if unbalanced is not None and unbalanced.flagged_entries:
+        has_high = any(fe.severity == Severity.HIGH for fe in unbalanced.flagged_entries)
+        score = max(score, _UNBALANCED_FLOOR_HIGH if has_high else _UNBALANCED_FLOOR)
+
     return CompositeScore(
-        score=result.score,
-        risk_tier=result.risk_tier,
+        score=score,
+        risk_tier=score_to_risk_tier(score),
         tests_run=result.tests_run,
         total_entries=result.total_entries,
         total_flagged=result.total_flagged,

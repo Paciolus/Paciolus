@@ -284,15 +284,19 @@ class DupontDecomposition:
     prior_period_deltas: Optional[dict[str, float]] = None
 
     def to_dict(self) -> dict[str, Any]:
+        # Sprint 829 (round 2, T6): float at the boundary. round(Decimal) is a
+        # Decimal, which the TB response's `analytics: dict[str, Any]` serialises
+        # as a JSON *string* — and the frontend's formatDupont calls
+        # value.toFixed(4) on it, throwing a TypeError for every TB with DuPont.
         result: dict[str, Any] = {
-            "net_profit_margin": round(self.net_profit_margin, 4),
-            "asset_turnover": round(self.asset_turnover, 4),
-            "equity_multiplier": round(self.equity_multiplier, 4),
-            "decomposed_roe": round(self.decomposed_roe, 4),
+            "net_profit_margin": float(round(self.net_profit_margin, 4)),
+            "asset_turnover": float(round(self.asset_turnover, 4)),
+            "equity_multiplier": float(round(self.equity_multiplier, 4)),
+            "decomposed_roe": float(round(self.decomposed_roe, 4)),
             "verification_matches": self.verification_matches,
         }
         if self.prior_period_deltas is not None:
-            result["prior_period_deltas"] = {k: round(v, 4) for k, v in self.prior_period_deltas.items()}
+            result["prior_period_deltas"] = {k: float(round(v, 4)) for k, v in self.prior_period_deltas.items()}
         return result
 
 
@@ -1572,14 +1576,14 @@ class CommonSizeAnalyzer:
         non_current_assets = self.totals.total_assets - self.totals.current_assets
 
         return {
-            "current_assets_pct": round((self.totals.current_assets / base) * 100, 1),
-            "inventory_pct": round((self.totals.inventory / base) * 100, 1),
-            "accounts_receivable_pct": round((self.totals.accounts_receivable / base) * 100, 1),
-            "non_current_assets_pct": round((non_current_assets / base) * 100, 1),
-            "total_liabilities_pct": round((self.totals.total_liabilities / base) * 100, 1),
-            "current_liabilities_pct": round((self.totals.current_liabilities / base) * 100, 1),
-            "accounts_payable_pct": round((self.totals.accounts_payable / base) * 100, 1),
-            "total_equity_pct": round((self.totals.total_equity / base) * 100, 1),
+            "current_assets_pct": float(round((self.totals.current_assets / base) * 100, 1)),
+            "inventory_pct": float(round((self.totals.inventory / base) * 100, 1)),
+            "accounts_receivable_pct": float(round((self.totals.accounts_receivable / base) * 100, 1)),
+            "non_current_assets_pct": float(round((non_current_assets / base) * 100, 1)),
+            "total_liabilities_pct": float(round((self.totals.total_liabilities / base) * 100, 1)),
+            "current_liabilities_pct": float(round((self.totals.current_liabilities / base) * 100, 1)),
+            "accounts_payable_pct": float(round((self.totals.accounts_payable / base) * 100, 1)),
+            "total_equity_pct": float(round((self.totals.total_equity / base) * 100, 1)),
         }
 
     def income_statement_percentages(self) -> dict[str, float]:
@@ -1593,12 +1597,12 @@ class CommonSizeAnalyzer:
         operating_income = base - self.totals.cost_of_goods_sold - self.totals.operating_expenses
 
         return {
-            "cogs_pct": round((self.totals.cost_of_goods_sold / base) * 100, 1),
-            "gross_profit_pct": round((gross_profit / base) * 100, 1),
-            "operating_expenses_pct": round((self.totals.operating_expenses / base) * 100, 1),
-            "operating_income_pct": round((operating_income / base) * 100, 1),
-            "total_expenses_pct": round((self.totals.total_expenses / base) * 100, 1),
-            "net_income_pct": round((net_income / base) * 100, 1),
+            "cogs_pct": float(round((self.totals.cost_of_goods_sold / base) * 100, 1)),
+            "gross_profit_pct": float(round((gross_profit / base) * 100, 1)),
+            "operating_expenses_pct": float(round((self.totals.operating_expenses / base) * 100, 1)),
+            "operating_income_pct": float(round((operating_income / base) * 100, 1)),
+            "total_expenses_pct": float(round((self.totals.total_expenses / base) * 100, 1)),
+            "net_income_pct": float(round((net_income / base) * 100, 1)),
         }
 
     def to_dict(self) -> dict[str, dict[str, float]]:
@@ -2378,6 +2382,35 @@ CURRENT_ASSET_KEYWORDS = [
     "marketable securities",
 ]
 
+# Sprint 829: names that mark an account non-current. The current-keyword
+# fallback matched substrings, so "Non-current Receivable" ("current",
+# "receivable") and "Long-term Notes Payable" ("payable") were counted as
+# current — inflating or deflating the current ratio. Deferred taxes are
+# non-current under ASC 740 (ASU 2015-17) / IAS 1.56.
+_NON_CURRENT_MARKERS = (
+    "non-current",
+    "noncurrent",
+    "non current",
+    "long-term",
+    "long term",
+    "deferred tax",
+    "mortgage",
+)
+# Current liabilities whose names carry no "payable"/"accrued": they were left
+# out of current liabilities entirely. A revolving line of credit is current.
+_CURRENT_LIABILITY_EXTRA = ("deferred revenue", "unearned", "customer deposit", "line of credit")
+# The allowance is contra-AR: DSO and the current ratio use net receivables.
+_AR_ALLOWANCE_MARKERS = ("doubtful", "bad debt", "credit loss", "receivable")
+# ...unless the name is the current slice of a long-term balance.
+_CURRENT_PORTION_MARKERS = ("current portion", "current maturit", "due within one year")
+
+
+def _is_non_current_name(account_lower: str) -> bool:
+    if any(m in account_lower for m in _CURRENT_PORTION_MARKERS):
+        return False
+    return any(m in account_lower for m in _NON_CURRENT_MARKERS)
+
+
 # Sprint 293: Keywords for identifying accounts payable (trade payables)
 # Excludes notes payable, interest payable, taxes payable, etc.
 ACCOUNTS_PAYABLE_KEYWORDS = [
@@ -2546,6 +2579,11 @@ def extract_category_totals(
                     totals.inventory += amount
                 if "receivable" in account_lower:
                     totals.accounts_receivable += amount
+            elif _is_non_current_name(account_lower):
+                pass  # Sprint 829: named non-current — the keywords below would misfire
+            elif "allowance" in account_lower and any(m in account_lower for m in _AR_ALLOWANCE_MARKERS):
+                totals.current_assets += amount  # Sprint 829: net AR (amount is negative)
+                totals.accounts_receivable += amount
             elif any(kw in account_lower for kw in CURRENT_ASSET_KEYWORDS):
                 # Fallback: keyword matching
                 totals.current_assets += amount
@@ -2566,7 +2604,11 @@ def extract_category_totals(
                 totals.current_liabilities += amount
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
                     totals.accounts_payable += amount
-            elif any(kw in account_lower for kw in ["payable", "current", "short-term", "accrued"]):
+            elif _is_non_current_name(account_lower):
+                pass  # Sprint 829: named non-current
+            elif any(
+                kw in account_lower for kw in ("payable", "current", "short-term", "accrued", *_CURRENT_LIABILITY_EXTRA)
+            ):
                 totals.current_liabilities += amount
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
                     totals.accounts_payable += amount
@@ -2613,6 +2655,30 @@ def extract_category_totals(
     )
 
     return totals
+
+
+def summarize_unclassified(
+    account_balances: dict[str, dict[str, Any]],
+    classified_accounts: dict[str, str],
+) -> dict[str, Any]:
+    """Accounts ``extract_category_totals`` leaves out because their category is unknown.
+
+    Sprint 829: the ratios were computed without them and said nothing — a TB
+    with 59 unclassified accounts produced a confident current ratio. The
+    count and absolute balance travel with the analytics so every surface can
+    state what the ratios exclude.
+    """
+    count = 0
+    total = Decimal("0")
+    for name, balances in account_balances.items():
+        if classified_accounts.get(name, "unknown") != "unknown":
+            continue
+        net = Decimal(str(balances.get("debit", 0))) - Decimal(str(balances.get("credit", 0)))
+        if net == 0:
+            continue
+        count += 1
+        total += abs(net)
+    return {"count": count, "total_abs_balance": float(quantize_monetary(total))}
 
 
 def calculate_analytics(
