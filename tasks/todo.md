@@ -1028,9 +1028,11 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
    `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
 4. [ ] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
-5. [ ] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
+5. [x] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
    every toast. Memoize `CanvasAccent`/`AuthSession`/`UserProfile`/`Verification`/`Mapping` values
    only if profiling shows cost.
+   *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the stable
+   actions, `useToastState()` the list for the container. A render-count test pins it.)*
 6. [ ] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
 7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
    `fadeUp` copies → `lib/motion.ts:71`.
