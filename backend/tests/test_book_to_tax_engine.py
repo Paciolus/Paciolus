@@ -247,3 +247,29 @@ def test_temporary_reversal_reduces_the_beginning_dtl():
     deferred = calculate_book_to_tax(config).deferred_tax
     assert deferred.ending_dtl == Decimal("19500.00")
     assert deferred.ending_dta == Decimal("0")
+
+
+class TestSprint826CatalogConsistency:
+    """B5: a coded adjustment must keep its catalog nature."""
+
+    def _with(self, **kwargs):
+        entry = AdjustmentEntry(
+            label="Fines",
+            amount=Decimal("5000"),
+            difference_type=kwargs.get("difference_type", DifferenceType.PERMANENT),
+            direction=kwargs.get("direction", AdjustmentDirection.ADD),
+            code="fines_penalties",
+        )
+        return _config(adjustments=[entry])
+
+    def test_permanent_item_entered_as_temporary_is_rejected(self):
+        """It reduced taxable income and created a $1,050 DTL."""
+        with pytest.raises(BookToTaxInputError, match="permanent difference"):
+            calculate_book_to_tax(self._with(difference_type=DifferenceType.TEMPORARY))
+
+    def test_permanent_item_entered_in_the_wrong_direction_is_rejected(self):
+        with pytest.raises(BookToTaxInputError, match="always added to"):
+            calculate_book_to_tax(self._with(direction=AdjustmentDirection.SUBTRACT))
+
+    def test_catalog_consistent_entry_is_accepted(self):
+        assert calculate_book_to_tax(self._with()).schedule_m1 is not None
