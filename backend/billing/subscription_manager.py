@@ -188,8 +188,9 @@ def sync_subscription_from_stripe(
         # the next month. Harmless while the counter never moved; a lockout
         # once it meters every run. Reset here when the period start moves
         # forward (or is first learned); an out-of-order older event does not.
-        if _period_advanced(sub.current_period_start, period_start):
-            sub.uploads_used_current_period = 0
+        # This write may move updated_at: it *is* the processing of a Stripe
+        # event, which is what the webhook ordering check is meant to see.
+        period_advanced = _period_advanced(sub.current_period_start, period_start)
         sub.tier = tier
         sub.status = status
         sub.billing_interval = interval
@@ -200,6 +201,13 @@ def sync_subscription_from_stripe(
         sub.cancel_at_period_end = stripe_subscription.get("cancel_at_period_end", False)
         sub.seat_count = seat_quantity
         sub.additional_seats = additional_seats
+        if period_advanced:
+            from shared.entitlement_checks import upload_window_start
+
+            sub.uploads_used_current_period = 0
+            # Open the new period's monthly window explicitly (computed from the
+            # period fields just assigned) so the zero is attributed to it.
+            sub.uploads_window_start = upload_window_start(sub)
 
     # Also update the User.tier column — only grant plan tier if status is entitled (AUDIT-08-F1)
     user = db.query(User).filter(User.id == user_id).first()

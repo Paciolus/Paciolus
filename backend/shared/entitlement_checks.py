@@ -12,7 +12,7 @@ When "hard" (default), violations return 403 with upgrade_url.
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
@@ -122,6 +122,64 @@ def _raise_or_log(user: User, resource: str, detail: str) -> None:
     )
 
 
+# A billing period at most this long is a monthly period: its allowance window
+# is the period itself. Stripe's monthly periods run 28-31 days.
+_MONTHLY_PERIOD_MAX = timedelta(days=32)
+
+
+def _naive_utc(dt: datetime | None) -> datetime | None:
+    """Naive UTC, the representation the DateTime columns hold on both dialects."""
+    if dt is None:
+        return None
+    return dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _monthly_anniversary_on_or_before(anchor: datetime, now: datetime) -> datetime:
+    """The latest monthly anniversary of ``anchor`` that is <= ``now`` (both naive UTC).
+
+    The day of month is clamped to the month's length, so a Jan 31 anchor falls
+    on Feb 28 (29 in a leap year), Mar 31, Apr 30, ...
+    """
+    import calendar
+
+    year, month = now.year, now.month
+    for _ in range(2):
+        day = min(anchor.day, calendar.monthrange(year, month)[1])
+        candidate = anchor.replace(year=year, month=month, day=day)
+        if candidate <= now:
+            return candidate
+        year, month = (year - 1, 12) if month == 1 else (year, month - 1)
+    return candidate  # unreachable: the previous month's anniversary is always <= now
+
+
+def upload_window_start(sub: object, now: datetime | None = None) -> datetime:
+    """Start of the monthly allowance window ``sub`` is in at ``now`` (naive UTC).
+
+    Sprint 790 (PR #227 review): the allowance is **monthly** on every billing
+    interval, but the counter used to reset only when the billing period did -
+    once a year on an annual plan, so an annual subscriber at the cap in month 1
+    would have been locked out for eleven months.
+
+    - **Monthly period** (``current_period_start``..``current_period_end`` spans
+      at most 32 days): the window is the period itself, exactly as before.
+    - **Anything longer, or no period on record** (annual plans, admin-extended
+      periods, rows without Stripe dates): the window is the latest monthly
+      anniversary of the billing anchor - ``current_period_start``, else
+      ``created_at`` - that is <= now, with day-of-month clamping.
+    """
+    now_n = _naive_utc(now or datetime.now(UTC))
+    assert now_n is not None
+    start = _naive_utc(getattr(sub, "current_period_start", None))
+    end = _naive_utc(getattr(sub, "current_period_end", None))
+    if start is not None and end is not None and end - start <= _MONTHLY_PERIOD_MAX and start <= now_n:
+        return start
+    anchor = start or _naive_utc(getattr(sub, "created_at", None))
+    if anchor is None:
+        # No date at all to anchor on: fall back to the calendar month.
+        return now_n.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return _monthly_anniversary_on_or_before(anchor, now_n)
+
+
 def _metered_subscription(sub: object) -> bool:
     """Whether the subscription's own counter is the meter for this user.
 
@@ -150,13 +208,20 @@ def uploads_used_this_period(db: Session, user_id: int) -> int:
     and nowhere else. Bulk upload consumes nothing: it runs no engine yet.
 
     Source of the count:
-    - an ACTIVE/TRIALING subscription -> ``Subscription.uploads_used_current_period``;
+    - an ACTIVE/TRIALING subscription -> ``Subscription.uploads_used_current_period``,
+      counted only while ``uploads_window_start`` is the current monthly window
+      (see ``upload_window_start``) - a count from a closed window reads as 0;
     - otherwise (Free, or a lapsed subscription) -> this calendar month's
       ``ActivityLog`` rows. Exactly one source is ever read, so a user is never
       counted twice.
     """
     sub = _user_subscription(db, user_id)
     if _metered_subscription(sub):
+        stored = _naive_utc(getattr(sub, "uploads_window_start", None))
+        if stored is None or stored < upload_window_start(sub):
+            # The count belongs to an allowance window that has closed (or was
+            # never opened): this month's allowance is untouched.
+            return 0
         return int(sub.uploads_used_current_period or 0)  # type: ignore[attr-defined]
 
     now = datetime.now(UTC)
@@ -214,20 +279,49 @@ def increment_upload_count(db: Session, user_id: int) -> None:
     No-op if the user has no subscription row: Free is metered from ActivityLog,
     so there is nothing to advance and nothing is counted twice.
 
-    Sprint 790: one atomic ``UPDATE ... SET n = n + 1`` rather than a
-    read-modify-write on the ORM object, so two concurrent runs cannot lose an
-    increment. Commits only when a row was updated; the commit expires every
-    loaded instance (including the per-session cached row), so the next read
-    sees the new value.
+    One atomic ``UPDATE``, so concurrent runs cannot lose an increment, which
+    also rolls the monthly window over in the same statement: if the stored
+    window is missing or older than the current one, the counter restarts at 1
+    and the window moves to the current start; otherwise it is ``n + 1``. The
+    database re-evaluates the CASE against the row it locks, so two runs racing
+    across a window boundary yield 1 then 2, not 1 and 1.
+
+    **It must not move ``updated_at``** (PR #227 review). The webhook handler
+    orders Stripe events against ``Subscription.updated_at`` and acknowledges
+    an event created at-or-before it *without processing it*. The column's ORM
+    ``onupdate`` fires for any ORM-enabled UPDATE that does not set it, so a
+    routine upload landing between an event's creation and its delivery would
+    have silently dropped a renewal, cancellation or payment-status change.
+    Assigning the column to itself keeps it out of ``onupdate``'s reach.
+
+    Commits only when a row was updated; the commit expires every loaded
+    instance (including the per-session cached row), so the next read sees the
+    new values.
     """
-    from sqlalchemy import update
+    from sqlalchemy import case, or_, update
 
     from subscription_model import Subscription
 
+    sub = _user_subscription(db, user_id)
+    if sub is None:
+        return
+    window = upload_window_start(sub)
+
+    rolled_over = or_(
+        Subscription.uploads_window_start.is_(None),
+        Subscription.uploads_window_start < window,
+    )
     result = db.execute(
         update(Subscription)
         .where(Subscription.user_id == user_id)
-        .values(uploads_used_current_period=func.coalesce(Subscription.uploads_used_current_period, 0) + 1)
+        .values(
+            uploads_used_current_period=case(
+                (rolled_over, 1),
+                else_=func.coalesce(Subscription.uploads_used_current_period, 0) + 1,
+            ),
+            uploads_window_start=case((rolled_over, window), else_=Subscription.uploads_window_start),
+            updated_at=Subscription.updated_at,
+        )
         .execution_options(synchronize_session=False)
     )
     if not result.rowcount:  # type: ignore[attr-defined]

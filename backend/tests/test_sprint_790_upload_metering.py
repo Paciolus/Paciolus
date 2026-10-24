@@ -44,10 +44,25 @@ def _subscribe(db_session, user, *, used: int = 0, status=None, tier: str = "pro
         status=status or SubscriptionStatus.ACTIVE,
         billing_interval=BillingInterval.MONTHLY,
         uploads_used_current_period=used,
+        **_current_window(),
     )
     db_session.add(sub)
     db_session.flush()
     return sub
+
+
+def _naive_now() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _current_window() -> dict:
+    """A monthly period that started yesterday, with the counter's window open on it."""
+    start = _naive_now() - timedelta(days=1)
+    return {
+        "current_period_start": start,
+        "current_period_end": start + timedelta(days=30),
+        "uploads_window_start": start,
+    }
 
 
 def _counter(db_session, user_id: int) -> int:
@@ -399,13 +414,325 @@ def test_migration_resets_every_counter(tmp_path):
     assert values == [0, 0, 0]
 
 
-def test_reset_migration_is_the_single_head():
+def test_sprint_790_migrations_are_the_single_head():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 
     cfg = Config(str(_BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(_BACKEND / "migrations" / "alembic"))
-    assert ScriptDirectory.from_config(cfg).get_heads() == ["e7a90c3d5b18"]
+    assert ScriptDirectory.from_config(cfg).get_heads() == ["f3b81d6e2a47"]
+
+
+# ---------------------------------------------------------------------------
+# PR #227 review, P1 #1: metering must not move the webhook-ordering timestamp
+# ---------------------------------------------------------------------------
+
+
+def _pin_updated_at(db_session, user_id: int, when: datetime) -> None:
+    from sqlalchemy import text
+
+    db_session.execute(text("UPDATE subscriptions SET updated_at = :w WHERE user_id = :u"), {"w": when, "u": user_id})
+    db_session.commit()
+    db_session.expire_all()
+
+
+def _updated_at(db_session, user_id: int) -> datetime:
+    from sqlalchemy import text
+
+    raw = db_session.execute(
+        text("SELECT updated_at FROM subscriptions WHERE user_id = :u"), {"u": user_id}
+    ).scalar_one()
+    return raw if isinstance(raw, datetime) else datetime.fromisoformat(str(raw))
+
+
+class TestMeteringLeavesUpdatedAtAlone:
+    def test_an_increment_does_not_move_updated_at(self, make_user, db_session):
+        from shared.entitlement_checks import increment_upload_count
+
+        user = make_user(email="m790-u1@example.com")
+        _subscribe(db_session, user, used=3)
+        pinned = datetime(2026, 1, 2, 3, 4, 5)
+        _pin_updated_at(db_session, user.id, pinned)
+
+        increment_upload_count(db_session, user.id)
+
+        assert _counter(db_session, user.id) == 4
+        assert _updated_at(db_session, user.id) == pinned
+
+    def test_the_hourly_quota_reset_does_not_move_updated_at(self, make_user, db_session):
+        from cleanup_scheduler import reset_upload_quotas
+
+        user = make_user(email="m790-u2@example.com")
+        sub = _subscribe(db_session, user, used=9)
+        sub.current_period_end = _naive_now() - timedelta(days=1)
+        db_session.flush()
+        pinned = datetime(2026, 1, 2, 3, 4, 5)
+        _pin_updated_at(db_session, user.id, pinned)
+
+        assert reset_upload_quotas(db_session) >= 1
+
+        assert _counter(db_session, user.id) == 0
+        assert _updated_at(db_session, user.id) == pinned
+
+    def test_an_older_undelivered_webhook_is_still_processed_after_an_upload(self, make_user, db_session):
+        """Stripe creates the event, an upload lands, then the event is delivered."""
+        from unittest.mock import MagicMock
+
+        import billing.webhook_handler as wh
+        from shared.tool_run_recorder import maybe_record_tool_run
+
+        user = make_user(email="m790-u3@example.com")
+        sub = _subscribe(db_session, user)
+        sub.stripe_customer_id = "cus_m790_u3"
+        db_session.flush()
+        _pin_updated_at(db_session, user.id, _naive_now() - timedelta(hours=1))
+
+        event_created = int((datetime.now(UTC) - timedelta(minutes=5)).timestamp())
+        maybe_record_tool_run(db_session, None, user.id, "ap_testing", True, consumes_upload=True)
+        assert _counter(db_session, user.id) == 1
+
+        handler = MagicMock()
+        with patch.dict(wh.WEBHOOK_HANDLERS, {"customer.subscription.updated": handler}):
+            wh.process_webhook_event(
+                db_session,
+                "customer.subscription.updated",
+                {"customer": "cus_m790_u3", "metadata": {"paciolus_user_id": str(user.id)}},
+                event_created=event_created,
+            )
+        handler.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# PR #227 review, P1 #2: the allowance is monthly on every billing interval
+# ---------------------------------------------------------------------------
+
+
+class TestUploadWindow:
+    def _sub(self, start=None, end=None, created=None):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(current_period_start=start, current_period_end=end, created_at=created)
+
+    def test_monthly_period_is_its_own_window(self):
+        from shared.entitlement_checks import upload_window_start
+
+        start = datetime(2026, 3, 31, 9, 0)
+        sub = self._sub(start, datetime(2026, 4, 30, 9, 0))
+        # Even past the 30th of April (a clamped anniversary would be Apr 30),
+        # a monthly plan's window does not move until the period does.
+        assert upload_window_start(sub, datetime(2026, 4, 30, 8, 0)) == start
+        assert upload_window_start(sub, datetime(2026, 4, 3)) == start
+
+    def test_annual_plan_rolls_monthly_on_the_anchor_day(self):
+        from shared.entitlement_checks import upload_window_start
+
+        sub = self._sub(datetime(2026, 1, 15, 12, 0), datetime(2027, 1, 15, 12, 0))
+        assert upload_window_start(sub, datetime(2026, 1, 20)) == datetime(2026, 1, 15, 12, 0)
+        assert upload_window_start(sub, datetime(2026, 2, 15, 11, 59)) == datetime(2026, 1, 15, 12, 0)
+        assert upload_window_start(sub, datetime(2026, 2, 15, 12, 0)) == datetime(2026, 2, 15, 12, 0)
+        assert upload_window_start(sub, datetime(2026, 12, 31)) == datetime(2026, 12, 15, 12, 0)
+
+    def test_jan_31_anchor_clamps_to_month_end(self):
+        from shared.entitlement_checks import upload_window_start
+
+        sub = self._sub(datetime(2026, 1, 31), datetime(2027, 1, 31))
+        assert upload_window_start(sub, datetime(2026, 2, 28, 1)) == datetime(2026, 2, 28)
+        assert upload_window_start(sub, datetime(2026, 3, 30)) == datetime(2026, 2, 28)
+        assert upload_window_start(sub, datetime(2026, 3, 31)) == datetime(2026, 3, 31)
+        assert upload_window_start(sub, datetime(2026, 4, 30, 5)) == datetime(2026, 4, 30)
+        leap = self._sub(datetime(2028, 1, 31), datetime(2029, 1, 31))
+        assert upload_window_start(leap, datetime(2028, 2, 29, 1)) == datetime(2028, 2, 29)
+
+    def test_no_period_on_record_anchors_on_created_at(self):
+        from shared.entitlement_checks import upload_window_start
+
+        sub = self._sub(created=datetime(2026, 5, 10, 8, 0))
+        assert upload_window_start(sub, datetime(2026, 8, 9)) == datetime(2026, 7, 10, 8, 0)
+
+    def test_aware_and_naive_inputs_agree(self):
+        from shared.entitlement_checks import upload_window_start
+
+        sub = self._sub(datetime(2026, 1, 15, 12, 0, tzinfo=UTC), datetime(2027, 1, 15, 12, 0, tzinfo=UTC))
+        assert upload_window_start(sub, datetime(2026, 3, 1, tzinfo=UTC)) == datetime(2026, 2, 15, 12, 0)
+
+
+def _annual(db_session, user, *, used: int, window_months_ago: int, tier: str = "solo"):
+    """An annual subscription that started 70 days ago; counter window N months back."""
+    from shared.entitlement_checks import upload_window_start
+    from subscription_model import BillingInterval, Subscription, SubscriptionStatus
+
+    start = _naive_now() - timedelta(days=70)
+    sub = Subscription(
+        user_id=user.id,
+        tier=tier,
+        status=SubscriptionStatus.ACTIVE,
+        billing_interval=BillingInterval.ANNUAL,
+        current_period_start=start,
+        current_period_end=start + timedelta(days=365),
+        uploads_used_current_period=used,
+    )
+    db_session.add(sub)
+    db_session.flush()
+    current = upload_window_start(sub)
+    sub.uploads_window_start = current if window_months_ago == 0 else start
+    db_session.flush()
+    return sub, current
+
+
+class TestAnnualSubscribers:
+    def test_capped_in_an_earlier_month_is_allowed_again(self, make_user, db_session):
+        from models import UserTier
+        from shared.entitlement_checks import check_upload_limit, uploads_used_this_period
+
+        user = make_user(email="m790-a1@example.com", tier=UserTier.SOLO)
+        _annual(db_session, user, used=100, window_months_ago=2)
+        assert uploads_used_this_period(db_session, user.id) == 0
+        check_upload_limit(user=user, db=db_session)  # does not raise
+
+    def test_capped_in_the_current_month_is_refused(self, make_user, db_session):
+        from fastapi import HTTPException
+
+        from models import UserTier
+        from shared.entitlement_checks import check_upload_limit
+
+        user = make_user(email="m790-a2@example.com", tier=UserTier.SOLO)
+        _annual(db_session, user, used=100, window_months_ago=0)
+        with pytest.raises(HTTPException) as exc:
+            check_upload_limit(user=user, db=db_session)
+        assert exc.value.status_code == 403
+
+    def test_the_first_run_of_a_new_month_restarts_the_count_at_one(self, make_user, db_session):
+        from shared.entitlement_checks import increment_upload_count
+
+        user = make_user(email="m790-a3@example.com")
+        sub, current = _annual(db_session, user, used=100, window_months_ago=2)
+        increment_upload_count(db_session, user.id)
+        db_session.refresh(sub)
+        assert sub.uploads_used_current_period == 1
+        assert sub.uploads_window_start == current
+        increment_upload_count(db_session, user.id)
+        db_session.refresh(sub)
+        assert sub.uploads_used_current_period == 2
+
+    def test_a_null_window_reads_as_an_untouched_allowance(self, make_user, db_session):
+        from models import UserTier
+        from shared.entitlement_checks import uploads_used_this_period
+
+        user = make_user(email="m790-a4@example.com", tier=UserTier.SOLO)
+        sub = _subscribe(db_session, user, used=100, tier="solo")
+        sub.uploads_window_start = None
+        db_session.flush()
+        assert uploads_used_this_period(db_session, user.id) == 0
+
+    def test_monthly_plan_keeps_its_count_for_the_whole_period(self, make_user, db_session):
+        """Monthly behaviour is unchanged: the count holds until the period rolls."""
+        from fastapi import HTTPException
+
+        from models import UserTier
+        from shared.entitlement_checks import check_upload_limit, increment_upload_count
+
+        user = make_user(email="m790-a5@example.com", tier=UserTier.SOLO)
+        sub = _subscribe(db_session, user, used=99, tier="solo")
+        sub.current_period_start = _naive_now() - timedelta(days=29, hours=23)
+        sub.current_period_end = sub.current_period_start + timedelta(days=31)
+        sub.uploads_window_start = sub.current_period_start
+        db_session.flush()
+        increment_upload_count(db_session, user.id)
+        assert _counter(db_session, user.id) == 100
+        with pytest.raises(HTTPException):
+            check_upload_limit(user=user, db=db_session)
+
+    def test_renewal_opens_the_new_window(self, make_user, db_session):
+        from billing.subscription_manager import sync_subscription_from_stripe
+
+        user = make_user(email="m790-a6@example.com")
+        first = datetime.now(UTC) - timedelta(days=400)
+        renewed = datetime.now(UTC) - timedelta(days=35)
+
+        def _event(start):
+            return {
+                "id": "sub_m790_a6",
+                "status": "active",
+                "current_period_start": int(start.timestamp()),
+                "current_period_end": int((start + timedelta(days=365)).timestamp()),
+                "items": {"data": [{"plan": {"interval": "year"}, "quantity": 1}]},
+            }
+
+        sync_subscription_from_stripe(db_session, user.id, _event(first), "cus_m790_a6", "solo")
+        sub = _subscribe_lookup(db_session, user.id)
+        sub.uploads_used_current_period = 80
+        db_session.flush()
+        sync_subscription_from_stripe(db_session, user.id, _event(renewed), "cus_m790_a6", "solo")
+        assert sub.uploads_used_current_period == 0
+        # 35 days into an annual period, the current window is the first monthly anniversary.
+        start = renewed.replace(tzinfo=None, microsecond=0)
+        assert sub.uploads_window_start > start
+
+
+def test_concurrent_increments_do_not_lose_counts(tmp_path):
+    """Eight threads, five runs each, starting from a NULL window: exactly 40."""
+    import threading
+
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import sessionmaker
+
+    from shared.entitlement_checks import increment_upload_count
+    from subscription_model import Subscription
+
+    engine = create_engine(
+        f"sqlite:///{(tmp_path / 'race.db').as_posix()}",
+        connect_args={"check_same_thread": False, "timeout": 30},
+        isolation_level="AUTOCOMMIT",
+    )
+    # Only the subscriptions table: SQLite does not enforce the users FK here.
+    Subscription.__table__.create(engine)
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO subscriptions (user_id, tier, status, seat_count, additional_seats, "
+                "uploads_used_current_period, seat_version, cancel_at_period_end, created_at, updated_at) "
+                "VALUES (1, 'solo', 'ACTIVE', 1, 0, 0, 0, 0, :ts, :ts)"
+            ),
+            {"ts": _naive_now() - timedelta(days=3)},
+        )
+
+    Session = sessionmaker(bind=engine)
+    errors: list[BaseException] = []
+
+    def _worker():
+        try:
+            for _ in range(5):
+                s = Session()
+                try:
+                    increment_upload_count(s, 1)
+                finally:
+                    s.close()
+        except BaseException as exc:  # pragma: no cover - surfaced below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=_worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    with engine.connect() as conn:
+        total = conn.execute(text("SELECT uploads_used_current_period FROM subscriptions")).scalar_one()
+    engine.dispose()
+    assert not errors, errors
+    assert total == 40
+
+
+def test_window_migration_adds_the_column(tmp_path):
+    from sqlalchemy import create_engine, inspect
+
+    url = f"sqlite:///{(tmp_path / 'm790w.db').as_posix()}"
+    _alembic_upgrade(url, "f3b81d6e2a47")
+    engine = create_engine(url)
+    cols = {c["name"]: c for c in inspect(engine).get_columns("subscriptions")}
+    engine.dispose()
+    assert "uploads_window_start" in cols
+    assert cols["uploads_window_start"]["nullable"] is True
 
 
 # ---------------------------------------------------------------------------

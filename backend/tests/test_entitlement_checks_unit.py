@@ -626,6 +626,7 @@ class TestCheckUploadLimitSubscriptionPath:
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             uploads_used_current_period=50,
+            **_current_window(),
         )
         db_session.add(sub)
         db_session.flush()
@@ -645,6 +646,7 @@ class TestCheckUploadLimitSubscriptionPath:
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             uploads_used_current_period=100,  # SOLO limit is 100
+            **_current_window(),
         )
         db_session.add(sub)
         db_session.flush()
@@ -682,6 +684,7 @@ class TestIncrementUploadCount:
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             uploads_used_current_period=5,
+            **_current_window(),
         )
         db_session.add(sub)
         db_session.flush()
@@ -1590,3 +1593,19 @@ class TestCheckSeatLimitForOrg:
 
         with patch("shared.entitlement_checks._get_seat_enforcement_mode", return_value="hard"):
             check_seat_limit_for_org(db_session, org.id)
+
+
+def _current_window() -> dict:
+    """Subscription kwargs placing a seeded counter in the current monthly window.
+
+    Sprint 790 (PR #227 review): a count is only read while
+    ``uploads_window_start`` is the current window; a NULL window reads as 0.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    start = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
+    return {
+        "current_period_start": start,
+        "current_period_end": start + timedelta(days=30),
+        "uploads_window_start": start,
+    }

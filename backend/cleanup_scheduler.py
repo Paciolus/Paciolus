@@ -388,7 +388,11 @@ def reset_upload_quotas(db: Any) -> int:
             Subscription.current_period_end <= now,
             Subscription.uploads_used_current_period > 0,
         )
-        .values(uploads_used_current_period=0)
+        # PR #227 review: assign updated_at to itself so the column's ORM
+        # onupdate does not fire. The webhook handler skips Stripe events
+        # created at-or-before updated_at, so a maintenance reset bumping it
+        # would silently drop a renewal/cancellation event still in flight.
+        .values(uploads_used_current_period=0, updated_at=Subscription.updated_at)
     )
     count = int(result.rowcount)
     if count > 0:

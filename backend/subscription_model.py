@@ -114,7 +114,9 @@ class Subscription(Base):
         nullable=False,
         default="free",
     )
-    status: Mapped[SubscriptionStatus] = mapped_column(Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
+    status: Mapped[SubscriptionStatus] = mapped_column(
+        Enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE
+    )
     billing_interval: Mapped[BillingInterval | None] = mapped_column(Enum(BillingInterval), nullable=True)
 
     # Stripe references
@@ -131,6 +133,12 @@ class Subscription(Base):
 
     # Upload quota tracking (Phase LXIX — billing-cycle-aligned)
     uploads_used_current_period: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Start of the monthly allowance window the counter belongs to (Sprint 790,
+    # PR #227 review). The allowance is monthly on every billing interval, so an
+    # annual plan rolls its window over each month rather than each renewal.
+    # NULL, or older than the current window (shared.entitlement_checks.
+    # upload_window_start), means the stored count is stale and reads as 0.
+    uploads_window_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Seat mutation versioning (AUDIT-06 FIX 1 — optimistic concurrency + idempotency)
     seat_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -191,7 +199,9 @@ class ProcessedWebhookEvent(Base):
     __tablename__ = "processed_webhook_events"
 
     stripe_event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
-    processed_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now()
+    )
 
     def __repr__(self) -> str:
         return f"<ProcessedWebhookEvent(id={self.stripe_event_id})>"
@@ -234,7 +244,9 @@ class BillingEvent(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # When
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), index=True
+    )
 
     def __repr__(self) -> str:
         return f"<BillingEvent(id={self.id}, type={self.event_type}, tier={self.tier})>"
