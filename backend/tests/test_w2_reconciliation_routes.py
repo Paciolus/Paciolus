@@ -367,3 +367,84 @@ def test_every_promoted_route_guards_non_finite_decimals():
         with pytest.raises(HTTPException) as exc_info:
             parse_request_decimal("amount", bad)
         assert exc_info.value.status_code == 400, bad
+
+
+# ---------------------------------------------------------------------------
+# Sprint 826 (W1/W2, option C) — optional catch-up limits through the API
+# ---------------------------------------------------------------------------
+
+# Today's eleven fields, as a 2026 caller supplies them (illustrative values).
+_OLD_STYLE_2026_OVERRIDE = {
+    "ss_wage_base": "184500",
+    "ss_rate": "0.062",
+    "medicare_rate": "0.0145",
+    "additional_medicare_rate": "0.009",
+    "additional_medicare_threshold": "200000",
+    "hsa_self_only_limit": "4400",
+    "hsa_family_limit": "8750",
+    "limit_401k_elective": "24500",
+    "limit_401k_catchup_50": "8000",
+    "limit_401k_catchup_60_63": "11250",
+    "limit_simple_ira": "17000",
+}
+
+
+def _hsa_55_payload(tax_year: int, contribution: str) -> dict:
+    payload = _valid_payload()
+    payload["tax_year"] = tax_year
+    payload["employees"][0].update({"age": 57, "hsa_coverage": "self_only", "hsa_contributions": contribution})
+    return payload
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestSprint826CatchUpLimits:
+    @pytest.mark.asyncio
+    async def test_old_style_full_override_is_still_accepted_and_reports_what_did_not_run(
+        self, professional_user, db_session
+    ):
+        _override(professional_user, db_session)
+        try:
+            payload = _hsa_55_payload(2026, "4800")
+            payload["statutory_limits"] = dict(_OLD_STYLE_2026_OVERRIDE)
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            body = response.json()
+            [notice] = body["checks_not_run"]
+            assert notice["check"] == "hsa_catchup_55"
+            assert notice["reason"] == "limit_not_supplied"
+            hsa = [d for d in body["employee_discrepancies"] if d["kind"] == "hsa_over_limit"]
+            assert len(hsa) == 1 and "excise" not in hsa[0]["message"]
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_catchup_override_reaches_the_engine(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            payload = _hsa_55_payload(2026, "5400")
+            payload["statutory_limits"] = {**_OLD_STYLE_2026_OVERRIDE, "hsa_catchup_55": "1000"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=payload)
+            assert response.status_code == 200, response.text
+            body = response.json()
+            assert body["checks_not_run"] == []
+            assert [d for d in body["employee_discrepancies"] if d["kind"] == "hsa_over_limit"] == []
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_csv_export_carries_the_checks_not_run_section(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            payload = _hsa_55_payload(2026, "4800")
+            payload["employees"][0]["employee_id"] = "=E001"
+            payload["statutory_limits"] = dict(_OLD_STYLE_2026_OVERRIDE)
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation/export.csv", json=payload)
+            assert response.status_code == 200, response.text
+            assert "Checks Not Run" in response.text
+            assert "hsa_catchup_55" in response.text
+            assert "'=E001" in response.text  # formula trigger neutralised
+        finally:
+            app.dependency_overrides.clear()

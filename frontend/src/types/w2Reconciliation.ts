@@ -87,10 +87,27 @@ export interface W3Totals {
   employee_count: number
 }
 
+/**
+ * Sprint 826 (W1/W2): a catch-up check that could not run — its statutory
+ * figure was not supplied for the tax year, or the data has no age for the
+ * employees it would apply to. The message names the authority (e.g.
+ * IRC §223(b)(3), IRC §414(v)) whose figure was missing.
+ */
+export interface W2CheckNotRun {
+  check: string
+  reason: 'limit_not_supplied' | 'age_not_supplied'
+  employee_ids: string[]
+  message: string
+}
+
 export interface W2ReconciliationResponse {
   tax_year: number
   employee_discrepancies: W2Discrepancy[]
   form_941_mismatches: Form941Mismatch[]
   w3_totals: W3Totals
   summary: Record<string, unknown>
+  statutory_basis?: number | null
+  statutory_basis_source?: string | null
+  statutory_basis_note?: string
+  checks_not_run?: W2CheckNotRun[]
 }

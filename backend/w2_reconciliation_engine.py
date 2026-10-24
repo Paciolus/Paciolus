@@ -20,12 +20,19 @@ comment on that table for why (Sprint 811, finding A-7).
 Currently tabulated: **tax year 2025 only**. A 2026 engagement must supply the
 figures via the per-request ``statutory_limits`` override (Sprint 793a) until the
 2026 table lands with practitioner-confirmed values (Sprint 793b).
+
+Catch-up limits (Sprint 826, W1/W2 — CEO decision "option C") are optional:
+the HSA age-55 catch-up and the SIMPLE IRA age 50+ / 60-63 catch-ups run only
+when their figure is supplied (by the year's table or the override). When it is
+absent, or the employee's age is not in the data, the result's
+``checks_not_run`` says which check could not run and why, and an amount over
+the base limit is reported without asserting an excess contribution.
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import Any, ClassVar
@@ -72,6 +79,47 @@ class StatutoryLimitsUnavailableError(W2ReconciliationInputError):
 # practitioner, and they stay with Sprint 793b. Adding an unconfirmed 2026 row
 # here would recreate exactly the defect being fixed — a figure that reads as
 # authoritative because it is sitting in an authoritative-looking table.
+#
+# ---------------------------------------------------------------------------
+# Sprint 793b practitioner confirmation list — every statutory figure below.
+# Paciolus is not an authority; these restate the authorities' figures, and each
+# needs a practitioner's sign-off against the cited source before 793b closes.
+#
+#   Tax year 2025
+#   - SS wage base $176,100 ............ SSA 2025 COLA fact sheet
+#   - SS rate 6.2%; Medicare 1.45% ..... IRC §3101(a), §3101(b)(1)
+#   - Additional Medicare 0.9% over
+#     $200,000 wages .................... IRC §3101(b)(2), §3102(f) (not indexed)
+#   - HSA $4,300 self-only / $8,550
+#     family ............................ IRC §223(b)(2); Rev. Proc. 2024-25
+#   - HSA age-55 catch-up $1,000 ....... IRC §223(b)(3)(B) (statutory, not indexed)
+#                                        [Sprint 826, W2]
+#   - 401(k) elective $23,500 .......... IRC §402(g); IRS Notice 2024-80
+#   - 401(k) catch-up 50+ $7,500 ....... IRC §414(v)(2)(B)(i); IRS Notice 2024-80
+#   - 401(k) catch-up 60-63 $11,250 .... IRC §414(v)(2)(E)(i) (SECURE 2.0 §109);
+#                                        IRS Notice 2024-80
+#   - SIMPLE elective $16,500 .......... IRC §408(p)(2)(E); IRS Notice 2024-80
+#   - SIMPLE catch-up 50+ $3,500 ....... IRC §414(v)(2)(B)(ii); IRS Notice 2024-80
+#                                        [Sprint 826, W1]
+#   - SIMPLE catch-up 60-63 $5,250 ..... IRC §414(v)(2)(E)(ii) (SECURE 2.0 §109);
+#                                        IRS Notice 2024-80 [Sprint 826, W1]
+#   - HSA excess-contribution excise
+#     tax 6% (message text) ............ IRC §4973(a), §4973(g)
+#   - Age-60-63 tier from tax year 2025 . SECURE 2.0 Act §109 (taxable years
+#                                        beginning after 2024)
+#   - Catch-up age tested at year end .. IRC §223(b)(3)(A) ("attained age 55
+#                                        before the close of the taxable year");
+#                                        IRC §414(v)(5) (age 50 by end of the
+#                                        plan year). The engine treats the
+#                                        supplied `age` as age at year end.
+#
+#   Not modelled (practitioner to confirm scope): the SECURE 2.0 §117 increased
+#   SIMPLE limits (110% of the base and catch-up) for employers with 25 or fewer
+#   employees, or that elect them with a higher employer contribution. A SIMPLE
+#   plan using them is checked against the standard figures above.
+#
+#   Tax year 2026: no row. See `test_no_table_claims_to_be_2026_until_sprint_793b`.
+# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -92,6 +140,16 @@ class StatutoryLimits:
     limit_simple_ira: Decimal
     source: str
     verified_by: str
+    # Sprint 826 (W1/W2, CEO decision "option C"): catch-up limits are
+    # **optional**. A year whose figure is not tabulated (or a request override
+    # that does not supply it) leaves the field ``None``; the engine then does
+    # not run that catch-up check and says so in ``checks_not_run`` rather than
+    # skipping it silently or substituting a guess. Optional so that a 2026
+    # request which fully overrides the eleven required fields keeps working.
+    hsa_catchup_55: Decimal | None = None
+    limit_simple_catchup_50: Decimal | None = None
+    limit_simple_catchup_60_63: Decimal | None = None
+    catchup_source: str | None = None
 
 
 STATUTORY_LIMITS_BY_YEAR: dict[int, StatutoryLimits] = {
@@ -108,12 +166,30 @@ STATUTORY_LIMITS_BY_YEAR: dict[int, StatutoryLimits] = {
         limit_401k_catchup_50=Decimal("7500"),
         limit_401k_catchup_60_63=Decimal("11250"),
         limit_simple_ira=Decimal("16500"),
+        # Sprint 826 (W2). IRC §223(b)(3)(B): an HSA holder who has attained
+        # age 55 before the close of the taxable year may contribute an
+        # additional $1,000. A fixed statutory amount — not inflation-indexed
+        # (it is not among the §223(g) adjusted amounts), unchanged since 2009.
+        hsa_catchup_55=Decimal("1000"),
+        # Sprint 826 (W1). IRC §414(v)(2)(B)(ii) SIMPLE catch-up, as adjusted
+        # for 2025 by IRS Notice 2024-80 (News Release IR-2024-285): $3,500.
+        limit_simple_catchup_50=Decimal("3500"),
+        # Sprint 826 (W1). IRC §414(v)(2)(E)(ii), added by SECURE 2.0 Act §109
+        # (taxable years beginning after 2024): the greater of $5,000 or 150% of
+        # the regular SIMPLE catch-up — $5,250 for 2025 per IRS Notice 2024-80.
+        limit_simple_catchup_60_63=Decimal("5250"),
+        catchup_source=(
+            "IRC §223(b)(3)(B) (HSA age-55 catch-up, $1,000, statutory); "
+            "IRC §414(v) and IRS Notice 2024-80 (SIMPLE catch-up $3,500; age 60-63 $5,250)"
+        ),
         source="IRS Notice 2024-80 (retirement limits); SSA 2025 wage base; Rev. Proc. 2024-25 (HSA)",
         verified_by=(
             "These are the figures that shipped under a '2026' heading. The 2026-10-22 "
             "full-spectrum review identified them as the 2025 set, which is how they are "
             "now labelled. Not independently re-verified against the notices — Sprint 793b "
-            "owns practitioner confirmation of both 2025 and 2026."
+            "owns practitioner confirmation of both 2025 and 2026. The three catch-up "
+            "figures (Sprint 826) restate IRC §223(b)(3)(B) and IRS Notice 2024-80 and are "
+            "on the same 793b confirmation list."
         ),
     ),
 }
@@ -345,6 +421,16 @@ class W2ReconciliationConfig:
     limit_401k_catchup_60_63: Decimal = None  # type: ignore[assignment]
     limit_simple_ira: Decimal = None  # type: ignore[assignment]
 
+    # Sprint 826 (W1/W2): optional catch-up limits. Honestly typed
+    # `Decimal | None` — unlike the eleven above, `None` survives __post_init__
+    # when neither the caller nor the year's table supplies the figure, and the
+    # check that needs it then reports itself in `checks_not_run`. They never
+    # count towards "missing": a request that overrides the eleven required
+    # fields is still a full override and consults no table (non-breaking).
+    hsa_catchup_55: Decimal | None = None
+    limit_simple_catchup_50: Decimal | None = None
+    limit_simple_catchup_60_63: Decimal | None = None
+
     # Populated by __post_init__: the tax year whose table supplied any figure
     # the caller did not override, or None when the caller supplied them all.
     statutory_year: int | None = field(default=None, init=False)
@@ -364,6 +450,11 @@ class W2ReconciliationConfig:
         ("limit_401k_catchup_60_63", "limit_401k_catchup_60_63"),
         ("limit_simple_ira", "limit_simple_ira"),
     )
+    _OPTIONAL_STATUTORY_FIELDS: ClassVar[tuple[str, ...]] = (
+        "hsa_catchup_55",
+        "limit_simple_catchup_50",
+        "limit_simple_catchup_60_63",
+    )
 
     def __post_init__(self) -> None:
         missing = [attr for attr, _ in self._STATUTORY_FIELDS if getattr(self, attr) is None]
@@ -377,6 +468,12 @@ class W2ReconciliationConfig:
         for attr, source_attr in self._STATUTORY_FIELDS:
             if getattr(self, attr) is None:
                 object.__setattr__(self, attr, getattr(limits, source_attr))
+        # Optional catch-ups: fill from the table only where the table has a
+        # figure. A table without one leaves `None`, and the check reports
+        # itself as not run.
+        for attr in self._OPTIONAL_STATUTORY_FIELDS:
+            if getattr(self, attr) is None:
+                object.__setattr__(self, attr, getattr(limits, attr))
         object.__setattr__(self, "statutory_year", limits.tax_year)
         object.__setattr__(self, "statutory_source", limits.source)
 
@@ -471,6 +568,11 @@ class W2ReconciliationResult:
     # without having to go and read the engine.
     statutory_basis: int | None = None
     statutory_basis_source: str | None = None
+    # Sprint 826 (W1/W2, option C): checks that could not run, and why — a
+    # catch-up limit not supplied for the year, or no age in the data. Never a
+    # silent skip: each entry names the check, the employees affected, and the
+    # authority whose figure was missing.
+    checks_not_run: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -481,6 +583,7 @@ class W2ReconciliationResult:
             "summary": self.summary,
             "statutory_basis": self.statutory_basis,
             "statutory_basis_source": self.statutory_basis_source,
+            "checks_not_run": self.checks_not_run,
             "statutory_basis_note": (
                 f"Statutory limits applied: tax year {self.statutory_basis}."
                 if self.statutory_basis is not None
@@ -507,28 +610,288 @@ def _severity_for_diff(diff: Decimal, tolerance: Decimal) -> DiscrepancySeverity
     return DiscrepancySeverity.HIGH
 
 
-def _hsa_limit(coverage: HsaCoverage, config: W2ReconciliationConfig) -> Decimal:
-    if coverage == HsaCoverage.SELF_ONLY:
-        return config.hsa_self_only_limit
-    if coverage == HsaCoverage.FAMILY:
-        return config.hsa_family_limit
-    return ZERO
+# The age 60-63 catch-up tier exists only for taxable years beginning after
+# 2024 (SECURE 2.0 Act §109, adding IRC §414(v)(2)(E)). Before that, an employee
+# aged 60-63 had the ordinary age-50 catch-up.
+FIRST_YEAR_AGE_60_63_CATCHUP = 2025
 
 
-def _retirement_limit(employee: EmployeePayroll, config: W2ReconciliationConfig) -> Decimal:
-    """Compute the employee's max elective deferral including catch-up."""
-    if employee.retirement_plan_type == "simple_ira":
-        base = config.limit_simple_ira
+@dataclass(frozen=True)
+class _CatchUpTier:
+    """One age-based addition to a contribution limit (Sprint 826, W1/W2)."""
+
+    check: str  # stable id used in `checks_not_run`
+    label: str  # human-readable, shown in messages
+    citation: str  # the authority the figure comes from
+    config_field: str  # the override that supplies it
+    min_age: int
+    max_age: int | None
+    amount: Decimal | None  # None = not supplied for this run
+
+    def applies_to(self, age: int) -> bool:
+        return age >= self.min_age and (self.max_age is None or age <= self.max_age)
+
+
+@dataclass(frozen=True)
+class _LimitRule:
+    plan_label: str  # "self-only HSA", "401k", "simple_ira"
+    base: Decimal
+    tiers: tuple[_CatchUpTier, ...]  # most specific first
+    age_check: str  # `checks_not_run` id for "no age in the data"
+
+
+# (check id, label, citation, config field, min age, max age or None)
+_TierSpec = tuple[str, str, str, str, int, int | None]
+
+_HSA_CATCHUP_55: _TierSpec = ("hsa_catchup_55", "HSA age-55 catch-up", "IRC §223(b)(3)", "hsa_catchup_55", 55, None)
+_401K_CATCHUP_60_63: _TierSpec = (
+    "401k_catchup_60_63",
+    "401(k) age 60-63 catch-up",
+    "IRC §414(v)(2)(E)(i)",
+    "limit_401k_catchup_60_63",
+    60,
+    63,
+)
+_401K_CATCHUP_50: _TierSpec = (
+    "401k_catchup_50",
+    "401(k) age 50+ catch-up",
+    "IRC §414(v)(2)(B)(i)",
+    "limit_401k_catchup_50",
+    50,
+    None,
+)
+_SIMPLE_CATCHUP_60_63: _TierSpec = (
+    "simple_catchup_60_63",
+    "SIMPLE IRA age 60-63 catch-up",
+    "IRC §414(v)(2)(E)(ii)",
+    "limit_simple_catchup_60_63",
+    60,
+    63,
+)
+_SIMPLE_CATCHUP_50: _TierSpec = (
+    "simple_catchup_50",
+    "SIMPLE IRA age 50+ catch-up",
+    "IRC §414(v)(2)(B)(ii)",
+    "limit_simple_catchup_50",
+    50,
+    None,
+)
+
+_AGE_UNKNOWN_LABELS: dict[str, str] = {
+    "hsa_catchup_age_unknown": "HSA age-55 catch-up",
+    "401k_catchup_age_unknown": "401(k) catch-up",
+    "simple_catchup_age_unknown": "SIMPLE IRA catch-up",
+}
+
+
+def _tier(spec: _TierSpec, config: W2ReconciliationConfig) -> _CatchUpTier:
+    check, label, citation, config_field, min_age, max_age = spec
+    return _CatchUpTier(
+        check=check,
+        label=label,
+        citation=citation,
+        config_field=config_field,
+        min_age=min_age,
+        max_age=max_age,
+        amount=getattr(config, config_field),
+    )
+
+
+def _hsa_rule(coverage: HsaCoverage, config: W2ReconciliationConfig) -> _LimitRule:
+    base = config.hsa_self_only_limit if coverage == HsaCoverage.SELF_ONLY else config.hsa_family_limit
+    return _LimitRule(
+        plan_label=f"{coverage.value.replace('_', '-')} HSA",
+        base=base,
+        tiers=(_tier(_HSA_CATCHUP_55, config),),
+        age_check="hsa_catchup_age_unknown",
+    )
+
+
+def _retirement_rule(plan_type: str, config: W2ReconciliationConfig) -> _LimitRule:
+    has_60_63 = config.tax_year >= FIRST_YEAR_AGE_60_63_CATCHUP
+    if plan_type == "simple_ira":
+        specs: list[_TierSpec] = [_SIMPLE_CATCHUP_60_63] if has_60_63 else []
+        specs.append(_SIMPLE_CATCHUP_50)
+        return _LimitRule(
+            plan_label="simple_ira",
+            base=config.limit_simple_ira,
+            tiers=tuple(_tier(spec, config) for spec in specs),
+            age_check="simple_catchup_age_unknown",
+        )
+    specs_401k: list[_TierSpec] = [_401K_CATCHUP_60_63] if has_60_63 else []
+    specs_401k.append(_401K_CATCHUP_50)
+    return _LimitRule(
+        plan_label="401k",
+        base=config.limit_401k_elective,
+        tiers=tuple(_tier(spec, config) for spec in specs_401k),
+        age_check="401k_catchup_age_unknown",
+    )
+
+
+def _inferred_plan_type(employee: EmployeePayroll) -> str | None:
+    # Sprint 826 (W5): with no plan type the deferral went unchecked entirely —
+    # $30,000 of 401(k) deferrals at age 40 raised nothing. Infer the plan from
+    # which deferral field is populated.
+    return employee.retirement_plan_type or (
+        "401k" if employee.retirement_401k > 0 else "simple_ira" if employee.retirement_simple_ira > 0 else None
+    )
+
+
+def _check_contribution_limit(
+    employee: EmployeePayroll,
+    amount: Decimal,
+    rule: _LimitRule,
+    *,
+    kind: DiscrepancyKind,
+    subject: str,
+    consequence: str,
+    tax_year: int,
+    age_unknown_ids: dict[str, set[str]],
+) -> Discrepancy | None:
+    """
+    Compare a contribution with its limit, catch-ups included where they can be
+    established (Sprint 826, W1/W2).
+
+    Documented choice (CEO option C). An amount over the *base* limit is always
+    reported, at HIGH as before — it is a potential excess contribution, and
+    missing one costs the employee an excise tax or a corrective distribution.
+    What changes is the claim: an excess (and its consequence) is asserted only
+    when the limit used accounts for every catch-up the employee could have.
+    When it cannot — no age in the data, or the year's catch-up figure was not
+    supplied — the finding says "exceeds the base limit", names what could not
+    be assessed, and does not assert an excess.
+    """
+    base = rule.base
+    if amount <= base:
+        return None
+
+    age = employee.age
+    limit = base
+    tier_used: _CatchUpTier | None = None
+    hedge: str | None = None
+
+    if age is not None:
+        tier = next((t for t in rule.tiers if t.applies_to(age)), None)
+        if tier is not None and tier.amount is not None:
+            limit, tier_used = base + tier.amount, tier
+        elif tier is not None:
+            hedge = (
+                f"The employee (age {age}) may be entitled to the {tier.label} ({tier.citation}), "
+                f"but its figure for tax year {tax_year} was not supplied, so the catch-up could not be applied."
+            )
     else:
-        base = config.limit_401k_elective
+        known = [t for t in rule.tiers if t.amount is not None]
+        largest = max(known, key=lambda t: t.amount or ZERO) if known and len(known) == len(rule.tiers) else None
+        if largest is not None and largest.amount is not None and amount > base + largest.amount:
+            # Over even the most generous catch-up: an excess exists whatever
+            # the employee's age. Report only the part that is certain.
+            limit, tier_used = base + largest.amount, largest
+        else:
+            age_unknown_ids[rule.age_check].add(employee.employee_id)
+            hedge = "Catch-up eligibility is not verifiable from the data — no age was supplied."
+            if largest is not None and largest.amount is not None:
+                hedge += f" With the largest applicable catch-up the limit would be ${base + largest.amount:,.2f}."
+            else:
+                hedge += f" A catch-up figure for tax year {tax_year} was not supplied either."
 
-    if employee.age is None:
-        return base
-    if 60 <= employee.age <= 63 and employee.retirement_plan_type != "simple_ira":
-        return base + config.limit_401k_catchup_60_63
-    if employee.age >= 50:
-        return base + config.limit_401k_catchup_50
-    return base
+    if amount <= limit:
+        return None  # within the limit once the catch-up is applied
+
+    over = amount - limit
+    if hedge is not None:
+        message = (
+            f"{subject} ${amount:,.2f} exceeds the {rule.plan_label} base limit of ${base:,.2f} "
+            f"by ${over:,.2f}. {hedge} Not asserted as an excess contribution — confirm the "
+            f"employee's age and catch-up eligibility before treating it as one."
+        )
+    else:
+        breakdown = ""
+        if tier_used is not None and tier_used.amount is not None:
+            qualifier = "" if age is not None else "; the most allowed at any age"
+            breakdown = (
+                f" (${base:,.2f} base + ${tier_used.amount:,.2f} {tier_used.label}, {tier_used.citation}{qualifier})"
+            )
+        message = (
+            f"{subject} ${amount:,.2f} exceeds the {rule.plan_label} limit of ${limit:,.2f}"
+            f"{breakdown} by ${over:,.2f}. {consequence}"
+        )
+
+    return Discrepancy(
+        employee_id=employee.employee_id,
+        employee_name=employee.employee_name,
+        kind=kind,
+        severity=DiscrepancySeverity.HIGH,
+        expected=limit,
+        actual=amount,
+        difference=over,
+        message=message,
+    )
+
+
+def _checks_not_run(
+    employees: list[EmployeePayroll],
+    config: W2ReconciliationConfig,
+    age_unknown_ids: dict[str, set[str]],
+) -> list[dict[str, Any]]:
+    """
+    Sprint 826 (W1/W2, option C): every catch-up check that could not run.
+
+    ``limit_not_supplied`` — the year's figure is absent (no table value and no
+    override). Reported when at least one employee could qualify: covered by
+    the plan and within the tier's ages, or of unknown age. A missing figure
+    nobody could use is not reported; the check had nothing to do.
+
+    ``age_not_supplied`` — an amount over the base limit could not be resolved
+    because the employee has no age.
+    """
+    missing: dict[str, tuple[_CatchUpTier, set[str]]] = {}
+    for employee in employees:
+        rules: list[_LimitRule] = []
+        if employee.hsa_coverage != HsaCoverage.NONE:
+            rules.append(_hsa_rule(employee.hsa_coverage, config))
+        plan_type = _inferred_plan_type(employee)
+        if plan_type:
+            rules.append(_retirement_rule(plan_type, config))
+        for rule in rules:
+            for tier in rule.tiers:
+                if tier.amount is None and (employee.age is None or tier.applies_to(employee.age)):
+                    missing.setdefault(tier.check, (tier, set()))[1].add(employee.employee_id)
+
+    notices: list[dict[str, Any]] = []
+    for check in sorted(missing):
+        tier, ids = missing[check]
+        notices.append(
+            {
+                "check": check,
+                "reason": "limit_not_supplied",
+                "employee_ids": sorted(ids),
+                "message": (
+                    f"{tier.label} check not run — the {tier.citation} limit for tax year "
+                    f"{config.tax_year} was not supplied. {len(ids)} employee(s) who may qualify were "
+                    f"checked against the base limit only; any amount above it is reported without "
+                    f"asserting an excess contribution. Supply `{tier.config_field}` in the statutory "
+                    f"limits to run this check."
+                ),
+            }
+        )
+    for check in sorted(age_unknown_ids):
+        ids = age_unknown_ids[check]
+        if not ids:
+            continue
+        notices.append(
+            {
+                "check": check,
+                "reason": "age_not_supplied",
+                "employee_ids": sorted(ids),
+                "message": (
+                    f"{_AGE_UNKNOWN_LABELS[check]} eligibility not verified for {len(ids)} employee(s) — "
+                    f"the data has no age for them. Their amounts above the base limit are reported as "
+                    f"over the base limit, not as excess contributions. Add an age column (age at the "
+                    f"end of the tax year) to assess catch-up eligibility."
+                ),
+            }
+        )
+    return notices
 
 
 # =============================================================================
@@ -542,8 +905,11 @@ def _check_employee(
     config: W2ReconciliationConfig,
     *,
     draft_supplied: bool = True,
+    age_unknown_ids: dict[str, set[str]] | None = None,
 ) -> list[Discrepancy]:
     """Run every per-employee check, return the discrepancies found."""
+    if age_unknown_ids is None:
+        age_unknown_ids = defaultdict(set)
     issues: list[Discrepancy] = []
     tolerance = config.tolerance
 
@@ -771,56 +1137,37 @@ def _check_employee(
                 )
             )
 
-    # --- HSA over-limit ---
-    hsa_limit = _hsa_limit(employee.hsa_coverage, config)
-    if employee.hsa_coverage != HsaCoverage.NONE and employee.hsa_contributions > hsa_limit:
-        over = employee.hsa_contributions - hsa_limit
-        issues.append(
-            Discrepancy(
-                employee_id=employee.employee_id,
-                employee_name=employee.employee_name,
-                kind=DiscrepancyKind.HSA_OVER_LIMIT,
-                severity=DiscrepancySeverity.HIGH,
-                expected=hsa_limit,
-                actual=employee.hsa_contributions,
-                difference=over,
-                message=(
-                    f"HSA contribution ${employee.hsa_contributions:,.2f} exceeds "
-                    f"the {employee.hsa_coverage.value.replace('_', '-')} limit "
-                    f"of ${hsa_limit:,.2f} by ${over:,.2f}. "
-                    "Excess is subject to 6% excise tax unless withdrawn."
-                ),
-            )
+    # --- HSA over-limit (Sprint 826 W2: age-55 catch-up, IRC §223(b)(3)) ---
+    if employee.hsa_coverage != HsaCoverage.NONE:
+        finding = _check_contribution_limit(
+            employee,
+            employee.hsa_contributions,
+            _hsa_rule(employee.hsa_coverage, config),
+            kind=DiscrepancyKind.HSA_OVER_LIMIT,
+            subject="HSA contribution",
+            consequence="Excess is subject to the 6% excise tax (IRC §4973) unless withdrawn.",
+            tax_year=config.tax_year,
+            age_unknown_ids=age_unknown_ids,
         )
+        if finding is not None:
+            issues.append(finding)
 
-    # --- Retirement over-limit ---
-    # Sprint 826 (W5): with no plan type the deferral went unchecked entirely —
-    # $30,000 of 401(k) deferrals at age 40 raised nothing. Infer the plan from
-    # which deferral field is populated.
-    plan_type = employee.retirement_plan_type or (
-        "401k" if employee.retirement_401k > 0 else "simple_ira" if employee.retirement_simple_ira > 0 else None
-    )
+    # --- Retirement over-limit (Sprint 826 W1: SIMPLE catch-up has its own figures) ---
+    plan_type = _inferred_plan_type(employee)
     if plan_type:
         retirement_total = employee.retirement_401k if plan_type == "401k" else employee.retirement_simple_ira
-        limit = _retirement_limit(replace(employee, retirement_plan_type=plan_type), config)
-        if retirement_total > limit:
-            over = retirement_total - limit
-            issues.append(
-                Discrepancy(
-                    employee_id=employee.employee_id,
-                    employee_name=employee.employee_name,
-                    kind=DiscrepancyKind.RETIREMENT_OVER_LIMIT,
-                    severity=DiscrepancySeverity.HIGH,
-                    expected=limit,
-                    actual=retirement_total,
-                    difference=over,
-                    message=(
-                        f"Elective deferral ${retirement_total:,.2f} exceeds the "
-                        f"{plan_type} limit of ${limit:,.2f} by "
-                        f"${over:,.2f}. Excess must be distributed by April 15."
-                    ),
-                )
-            )
+        finding = _check_contribution_limit(
+            employee,
+            retirement_total,
+            _retirement_rule(plan_type, config),
+            kind=DiscrepancyKind.RETIREMENT_OVER_LIMIT,
+            subject="Elective deferral",
+            consequence="Excess must be distributed by April 15.",
+            tax_year=config.tax_year,
+            age_unknown_ids=age_unknown_ids,
+        )
+        if finding is not None:
+            issues.append(finding)
 
     return issues
 
@@ -916,6 +1263,7 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
 
     employee_discrepancies: list[Discrepancy] = []
     employees_missing_w2: list[str] = []
+    age_unknown_ids: dict[str, set[str]] = defaultdict(set)
 
     for employee in config.employees:
         w2 = w2_by_id.get(_key(employee.employee_id))
@@ -940,7 +1288,13 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
             )
             employees_missing_w2.append(employee.employee_id)
         employee_discrepancies.extend(
-            _check_employee(employee, w2, config, draft_supplied=employee.employee_id not in employees_missing_w2)
+            _check_employee(
+                employee,
+                w2,
+                config,
+                draft_supplied=employee.employee_id not in employees_missing_w2,
+                age_unknown_ids=age_unknown_ids,
+            )
         )
 
     # --- W-3 totals (sum of every W-2) ---
@@ -991,4 +1345,5 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         summary=summary,
         statutory_basis=config.statutory_year,
         statutory_basis_source=config.statutory_source,
+        checks_not_run=_checks_not_run(config.employees, config, age_unknown_ids),
     )

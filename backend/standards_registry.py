@@ -351,6 +351,25 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         usage=("Form 1099 preparation tool",),
     ),
     Standard(body="IRS", code="IRC §6051", title="Receipts for employees (W-2)", usage=("W-2 reconciliation tool",)),
+    # Sprint 826 (W1/W2): cited in the W-2 tool's catch-up findings and notices.
+    Standard(
+        body="IRS",
+        code="IRC §223",
+        title="Health savings accounts (incl. §223(b)(3) age-55 additional contribution)",
+        usage=("W-2 reconciliation tool — HSA limit and age-55 catch-up",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §414(v)",
+        title="Catch-up contributions for individuals age 50 or over (incl. SECURE 2.0 age 60-63)",
+        usage=("W-2 reconciliation tool — 401(k) and SIMPLE IRA catch-up",),
+    ),
+    Standard(
+        body="IRS",
+        code="IRC §4973",
+        title="Tax on excess contributions to certain tax-favored accounts",
+        usage=("W-2 reconciliation tool — HSA excess-contribution message",),
+    ),
     Standard(
         body="IRS",
         code="Pub 1220",
