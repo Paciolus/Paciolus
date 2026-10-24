@@ -32,6 +32,7 @@ const COMPANY_LINKS: FooterLink[] = [
   { label: 'About', href: '/about' },
   { label: 'Our Approach', href: '/approach' },
   { label: 'Trust & Security', href: '/trust' },
+  { label: 'Sources & Methodology', href: '/sources' },
   { label: 'Contact', href: '/contact' },
 ]
 
