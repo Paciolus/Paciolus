@@ -3,7 +3,9 @@ Paciolus API — Journal Entry Testing Routes
 """
 
 import asyncio
+import json
 import logging
+from datetime import date
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -15,6 +17,7 @@ from sqlalchemy.orm import Session
 from auth import require_verified_user
 from database import get_db
 from je_testing_engine import (
+    JETestingConfig,
     detect_gl_columns,
     parse_gl_entries,
     preview_sampling_strata,
@@ -29,6 +32,7 @@ from shared.helpers import (
     parse_json_list,
     parse_json_mapping,
 )
+from shared.holiday_calendar import us_federal_holiday_names
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
 from shared.testing_route import run_single_file_testing
@@ -47,6 +51,53 @@ class SamplingPreviewResponse(BaseModel):
     stratify_by: list[str]
 
 
+_MAX_CLOSURE_DATES = 60
+
+
+def _parse_holiday_calendar(raw: Optional[str]) -> Optional[JETestingConfig]:
+    """Build a JE config from the auditor's holiday calendar for this client.
+
+    Sprint 831 (CEO decision 3). ``raw`` is JSON:
+    ``{"exclude": ["Columbus Day"], "closed_dates": ["2025-12-24"]}``.
+    ``exclude`` names statutory holidays the client works (5 U.S.C. 6103 list);
+    ``closed_dates`` adds client-specific closure days. Anything malformed is a
+    400 rather than ignored: silently dropping the auditor's calendar would
+    change which entries are flagged without telling them.
+    """
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="holiday_calendar must be valid JSON.")
+    if not isinstance(payload, dict) or set(payload) - {"exclude", "closed_dates"}:
+        raise HTTPException(status_code=400, detail="holiday_calendar accepts only 'exclude' and 'closed_dates'.")
+
+    exclude = payload.get("exclude") or []
+    known = set(us_federal_holiday_names())
+    if not isinstance(exclude, list) or any(not isinstance(n, str) or n not in known for n in exclude):
+        raise HTTPException(
+            status_code=400,
+            detail=f"holiday_calendar.exclude must list US federal holiday names: {', '.join(sorted(known))}.",
+        )
+
+    closed = payload.get("closed_dates") or []
+    if not isinstance(closed, list) or len(closed) > _MAX_CLOSURE_DATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"holiday_calendar.closed_dates must be a list of at most {_MAX_CLOSURE_DATES} dates.",
+        )
+    try:
+        closed_dates = tuple(sorted({date.fromisoformat(d) for d in closed}))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="holiday_calendar.closed_dates must be ISO dates (YYYY-MM-DD).")
+
+    return JETestingConfig(
+        holiday_excluded_names=tuple(dict.fromkeys(exclude)),
+        holiday_additional_dates=closed_dates,
+    )
+
+
 @router.post("/audit/journal-entries", response_model=JETestingResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 async def audit_journal_entries(
@@ -55,10 +106,12 @@ async def audit_journal_entries(
     file: UploadFile = File(...),
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    holiday_calendar: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Run automated journal entry testing on a General Ledger extract."""
+    config = _parse_holiday_calendar(holiday_calendar)
     return await run_single_file_testing(
         file=file,
         column_mapping=column_mapping,
@@ -73,7 +126,7 @@ async def audit_journal_entries(
         run_engine=lambda rows, cols, mapping, fn: run_je_testing(
             rows=rows,
             column_names=cols,
-            config=None,
+            config=config,
             column_mapping=mapping,
         ),
         extract_accounts=extract_je_accounts,

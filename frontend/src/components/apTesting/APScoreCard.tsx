@@ -18,6 +18,7 @@ export function APScoreCard({ score }: APScoreCardProps) {
       flag_rate={score.flag_rate}
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
+      score_basis={score.score_basis}
       entity_label="payments"
     />
   )

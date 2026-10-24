@@ -27,7 +27,7 @@ Sprint 69 scope:
 - Preview strata + execute sampling with reproducible seeds
 
 Sprint 356 scope:
-- T19: Holiday Posting Detection (ISA 240 — entries on public holidays)
+- T19: Holiday Posting Detection (US federal holidays, 5 U.S.C. 6103; Paciolus convention)
 
 ZERO-STORAGE COMPLIANCE:
 - All GL files processed in-memory only
@@ -55,9 +55,10 @@ from shared.benford import BenfordAnalysis, analyze_benford, get_first_digit  # 
 from shared.column_detector import ColumnFieldConfig, detect_columns  # noqa: E402
 from shared.data_quality import FieldQualityConfig  # noqa: E402
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.holiday_calendar import get_holiday_dates  # noqa: E402
+from shared.holiday_calendar import COMMONLY_WORKED_HOLIDAYS, get_holiday_dates, holiday_base_name  # noqa: E402
 from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import memoized_parse, parse_date, safe_decimal, safe_str, with_parse_memo  # noqa: E402
+from shared.test_aggregator import FLOOR_ELEVATED, FLOOR_MODERATE, apply_score_floor
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -111,6 +112,10 @@ class JETestingConfig:
     # T8: Month-end clustering
     month_end_days: int = 3  # Last N days of month to check
     month_end_volume_multiplier: float = 2.0  # Flag if > Nx average daily
+    # Sprint 831: compare each month with the client's own other months.
+    month_end_baseline_min_months: int = 6  # Months needed before the comparison runs
+    month_end_outlier_modified_z: float = 3.5  # Iglewicz & Hoaglin (1993) outlier cut-off
+    month_end_outlier_min_gap: float = 0.05  # And at least 5 points above the client's median share
 
     # T9: Single-User High-Volume
     single_user_volume_pct: float = 0.25  # Flag users posting >25% of entries
@@ -159,9 +164,12 @@ class JETestingConfig:
     unusual_combo_max_frequency: int = 2  # Flag combos seen <= this many times
     unusual_combo_min_total_entries: int = 20  # Min entries with entry_id for analysis
 
-    # T19: Holiday Postings (ISA 240)
+    # T19: Holiday Postings (Paciolus convention; calendar per 5 U.S.C. 6103)
     holiday_posting_enabled: bool = True
     holiday_large_amount_threshold: float = 10000.0  # Amount weighting threshold
+    # Sprint 831: the auditor's calendar for this client.
+    holiday_excluded_names: tuple[str, ...] = ()  # Statutory holidays the client works
+    holiday_additional_dates: tuple[date, ...] = ()  # Client-specific closure days
 
     # Stratified Sampling
     sampling_default_rate: float = 0.10  # 10% default sample rate
@@ -646,6 +654,7 @@ class CompositeScore:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
         return {
@@ -657,6 +666,7 @@ class CompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
 
 
@@ -1398,14 +1408,57 @@ def test_weekend_postings(
     )
 
 
+def _month_end_outlier_months(
+    month_shares: dict[tuple[int, int], float],
+    config: JETestingConfig,
+) -> dict[tuple[int, int], float]:
+    """Months whose month-end share stands out from the client's own other months.
+
+    Sprint 831 (CEO decision 4): a fixed threshold flagged 7 of 12 months of a
+    normal close, because every close is concentrated at month-end. This asks
+    whether one month is unusual *for this client*. Each month is compared with
+    the median of the other months (leave-one-out) using the modified z-score
+    of Iglewicz & Hoaglin (1993), 0.6745 x (share - median) / MAD, with their
+    customary 3.5 cut-off, plus a minimum gap of 5 percentage points so a client
+    with near-identical months is not flagged over a fraction of a point. The
+    statistic is published; applying it here, and the 5-point gap, are Paciolus
+    conventions. Returns {month: median share of the other months}.
+    """
+    outliers: dict[tuple[int, int], float] = {}
+    if len(month_shares) < config.month_end_baseline_min_months:
+        return outliers
+    for month, share in month_shares.items():
+        others = [v for k, v in month_shares.items() if k != month]
+        median = statistics.median(others)
+        if share - median < config.month_end_outlier_min_gap:
+            continue
+        mad = statistics.median(abs(v - median) for v in others)
+        modified_z = float("inf") if mad == 0 else 0.6745 * (share - median) / mad
+        if modified_z >= config.month_end_outlier_modified_z:
+            outliers[month] = median
+    return outliers
+
+
 def test_month_end_clustering(
     entries: list[JournalEntry],
     config: JETestingConfig,
 ) -> TestResult:
     """T8: Flag unusual concentration of entries in last N days of month.
 
-    Compares last-N-day volume to monthly average daily volume.
-    Significance threshold: >Nx average daily volume (configurable).
+    Two views, both reported under T8 (Sprint 831, CEO decision 4):
+
+    - **Fixed threshold** (unchanged detection): last-N-day daily volume above
+      Nx the month's average daily volume. A normal close trips this most
+      months, so these flags are LOW, or MEDIUM when the concentration exceeds 4x.
+    - **Client baseline**: a month whose month-end share is an outlier against
+      the client's own other months (``_month_end_outlier_months``). These
+      flags are MEDIUM, or HIGH when the month also exceeds 4x. Needs
+      ``month_end_baseline_min_months`` months of data; with fewer, only the
+      fixed view runs and the description says so.
+
+    ISA 240 and PCAOB AS 2401 name entries made at the end of a period as a
+    characteristic of fraudulent journal entries; the thresholds are Paciolus
+    conventions.
     """
     # Parse dates and group by month
     monthly_entries: dict[tuple[int, int], list[tuple[date, JournalEntry]]] = {}
@@ -1417,9 +1470,9 @@ def test_month_end_clustering(
         month_key = (d.year, d.month)
         monthly_entries.setdefault(month_key, []).append((d, e))
 
-    flagged: list[FlaggedEntry] = []
-    flagged_months: list[str] = []
-
+    # Per month: month-end entries, their share of the month, the fixed-threshold
+    # ratio, average daily volume and month-end daily volume.
+    month_stats: dict[tuple[int, int], tuple[list[tuple[date, JournalEntry]], float, float, float, float]] = {}
     for (year, month), dated_entries in monthly_entries.items():
         total_in_month = len(dated_entries)
         if total_in_month < 10:
@@ -1431,33 +1484,56 @@ def test_month_end_clustering(
         # Count entries in last N days
         cutoff_day = days_in_month - config.month_end_days + 1
         month_end_entries = [(d, e) for d, e in dated_entries if d.day >= cutoff_day]
+        month_end_daily = len(month_end_entries) / config.month_end_days
+        ratio = month_end_daily / avg_daily if avg_daily > 0 else 0
+        share = len(month_end_entries) / total_in_month
+        month_stats[(year, month)] = (month_end_entries, share, ratio, avg_daily, month_end_daily)
+
+    outliers = _month_end_outlier_months({k: v[1] for k, v in month_stats.items()}, config)
+
+    flagged: list[FlaggedEntry] = []
+    for (year, month), (month_end_entries, share, ratio, avg_daily, month_end_daily) in sorted(month_stats.items()):
+        is_outlier = (year, month) in outliers
+        if not (ratio > config.month_end_volume_multiplier or is_outlier):
+            continue
+
+        month_label = f"{year}-{month:02d}"
         month_end_count = len(month_end_entries)
-        month_end_daily = month_end_count / config.month_end_days
-
-        if month_end_daily > avg_daily * config.month_end_volume_multiplier:
-            ratio = month_end_daily / avg_daily if avg_daily > 0 else 0
-            month_label = f"{year}-{month:02d}"
-            flagged_months.append(month_label)
-
-            for d, e in month_end_entries:
-                flagged.append(
-                    FlaggedEntry(
-                        entry=e,
-                        test_name="Month-End Clustering",
-                        test_key="month_end_clustering",
-                        test_tier=TestTier.STATISTICAL,
-                        severity=Severity.MEDIUM if ratio > 4 else Severity.LOW,
-                        issue=f"Month-end entry ({d.isoformat()}): {month_end_count} entries in last {config.month_end_days} days of {month_label} ({ratio:.1f}x avg daily volume)",
-                        confidence=min(ratio / 5.0, 1.0),
-                        details={
-                            "month": month_label,
-                            "month_end_count": month_end_count,
-                            "avg_daily": round(avg_daily, 1),
-                            "month_end_daily": round(month_end_daily, 1),
-                            "ratio": round(ratio, 2),
-                        },
-                    )
+        if is_outlier:
+            severity = Severity.HIGH if ratio > 4 else Severity.MEDIUM
+            reason = f"unusual for this client: {share:.0%} of the month's entries vs a typical {outliers[(year, month)]:.0%}"
+        else:
+            severity = Severity.MEDIUM if ratio > 4 else Severity.LOW
+            reason = f"{ratio:.1f}x avg daily volume"
+        for d, e in month_end_entries:
+            flagged.append(
+                FlaggedEntry(
+                    entry=e,
+                    test_name="Month-End Clustering",
+                    test_key="month_end_clustering",
+                    test_tier=TestTier.STATISTICAL,
+                    severity=severity,
+                    issue=f"Month-end entry ({d.isoformat()}): {month_end_count} entries in last {config.month_end_days} days of {month_label} ({reason})",
+                    confidence=min(ratio / 5.0, 1.0),
+                    details={
+                        "month": month_label,
+                        "month_end_count": month_end_count,
+                        "avg_daily": round(avg_daily, 1),
+                        "month_end_daily": round(month_end_daily, 1),
+                        "ratio": round(ratio, 2),
+                        "month_end_share": round(share, 4),
+                        "client_baseline_outlier": is_outlier,
+                    },
                 )
+            )
+
+    if len(month_stats) < config.month_end_baseline_min_months:
+        baseline_note = (
+            f" Client-baseline comparison not run: {len(month_stats)} month(s) with enough entries "
+            f"(needs {config.month_end_baseline_min_months})."
+        )
+    else:
+        baseline_note = f" Also compares each month with the client's own other months ({len(outliers)} unusual)."
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return TestResult(
@@ -1467,8 +1543,11 @@ def test_month_end_clustering(
         entries_flagged=len(flagged),
         total_entries=len(entries),
         flag_rate=flag_rate,
-        severity=Severity.LOW,
-        description=f"Flags months with >{config.month_end_volume_multiplier}x average daily volume in last {config.month_end_days} days.",
+        severity=Severity.MEDIUM if outliers else Severity.LOW,
+        description=(
+            f"Flags months with >{config.month_end_volume_multiplier}x average daily volume in last "
+            f"{config.month_end_days} days.{baseline_note}"
+        ),
         flagged_entries=flagged,
     )
 
@@ -2027,8 +2106,22 @@ def test_suspicious_keywords(
     )
 
 
+def _holiday_description(config: JETestingConfig) -> str:
+    """T19 description, naming the auditor's calendar changes when there are any."""
+    text = (
+        "Flags entries posted on US federal holidays (calendar per 5 U.S.C. 6103). Testing postings made "
+        "when offices are normally closed is a Paciolus convention, not a test named by ISA 240 or AS 2401. "
+        "Columbus Day and Veterans Day are flagged LOW."
+    )
+    if config.holiday_excluded_names:
+        text += f" Excluded by the auditor: {', '.join(config.holiday_excluded_names)}."
+    if config.holiday_additional_dates:
+        text += f" Client closure days added: {len(config.holiday_additional_dates)}."
+    return text
+
+
 # =============================================================================
-# T19 — HOLIDAY POSTINGS (Sprint 356, ISA 240)
+# T19 — HOLIDAY POSTINGS (Sprint 356; Paciolus convention)
 # =============================================================================
 
 
@@ -2038,12 +2131,18 @@ def test_holiday_postings(
 ) -> TestResult:
     """T19: Flag entries posted on public holidays.
 
-    Complements T7 (Weekend Postings). ISA 240 identifies entries posted
-    on public holidays as a fraud risk indicator — transactions recorded when
-    offices are closed warrant additional scrutiny.
+    Complements T7 (Weekend Postings). Postings made when offices are
+    normally closed may warrant scrutiny; ISA 240 and AS 2401 do not name
+    holiday postings specifically, so this test is a Paciolus convention.
 
     Detects the period year(s) from entry dates and generates the US federal
-    holiday calendar. Weights severity by amount (same pattern as T7).
+    holiday calendar (5 U.S.C. 6103). Weights severity by amount (same
+    pattern as T7).
+
+    Sprint 831 (CEO decision 3): Columbus Day and Veterans Day postings are
+    flagged LOW whatever the amount, because most businesses are open on them.
+    The auditor's calendar for the client applies on top: excluded holidays
+    are not flagged, added closure days are flagged like a holiday.
     """
     if not config.holiday_posting_enabled:
         return TestResult(
@@ -2076,8 +2175,11 @@ def test_holiday_postings(
             description="No parseable dates found — holiday test skipped.",
         )
 
-    # Generate holiday calendar for detected years
-    holidays = get_holiday_dates(years)
+    # Generate holiday calendar for detected years, then apply the auditor's calendar
+    excluded = set(config.holiday_excluded_names)
+    holidays = {d: n for d, n in get_holiday_dates(years).items() if holiday_base_name(n) not in excluded}
+    for closure in config.holiday_additional_dates:
+        holidays.setdefault(closure, "Client closure day")
 
     flagged: list[FlaggedEntry] = []
     for e in entries:
@@ -2089,7 +2191,10 @@ def test_holiday_postings(
             continue
 
         amt = e.abs_amount
-        if amt >= config.holiday_large_amount_threshold:
+        commonly_worked = holiday_base_name(holiday_name) in COMMONLY_WORKED_HOLIDAYS
+        if commonly_worked:
+            severity = Severity.LOW
+        elif amt >= config.holiday_large_amount_threshold:
             severity = Severity.HIGH
         elif amt >= config.holiday_large_amount_threshold / 5:
             severity = Severity.MEDIUM
@@ -2103,12 +2208,16 @@ def test_holiday_postings(
                 test_key="holiday_postings",
                 test_tier=TestTier.STATISTICAL,
                 severity=severity,
-                issue=f"Entry posted on {holiday_name} ({d.isoformat()}), amount: ${amt:,.2f}",
-                confidence=0.85,
+                issue=(
+                    f"Entry posted on {holiday_name} ({d.isoformat()}), amount: ${amt:,.2f}"
+                    + (" (most businesses are open on this holiday)" if commonly_worked else "")
+                ),
+                confidence=0.5 if commonly_worked else 0.85,
                 details={
                     "holiday": holiday_name,
                     "date": d.isoformat(),
                     "amount": amt,
+                    "commonly_worked_holiday": commonly_worked,
                 },
             )
         )
@@ -2122,7 +2231,7 @@ def test_holiday_postings(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.LOW,
-        description="Flags entries posted on US federal holidays (ISA 240 fraud risk indicator).",
+        description=_holiday_description(config),
         flagged_entries=flagged,
     )
 
@@ -2304,6 +2413,12 @@ def test_reciprocal_entries(
     )
 
 
+# Sprint 831: a split is HIGH only when it has at most this many pieces, each at
+# least this share of the threshold (Paciolus convention).
+_SPLIT_MAX_PIECES = 5
+_SPLIT_MIN_PIECE_SHARE = Decimal("0.10")
+
+
 def test_just_below_threshold(
     entries: list[JournalEntry],
     config: JETestingConfig,
@@ -2375,7 +2490,16 @@ def test_just_below_threshold(
         total = sum(e.abs_amount for e in day_entries)
         for threshold in config.approval_thresholds:
             if total > threshold and all(e.abs_amount < threshold for e in day_entries):
-                # Split detected: individual entries below threshold, total above
+                # Split detected: individual entries below threshold, total above.
+                # Sprint 831: severity follows the structuring pattern — a few
+                # pieces, each a meaningful part of the limit. A busy account's
+                # routine volume (fourteen $100-$1,500 cash entries in a day)
+                # meets the same arithmetic and stays flagged, at MEDIUM. The
+                # split heuristic and both cut-offs are Paciolus conventions.
+                looks_structured = len(day_entries) <= _SPLIT_MAX_PIECES and all(
+                    e.abs_amount >= Decimal(str(threshold)) * _SPLIT_MIN_PIECE_SHARE for e in day_entries
+                )
+                split_severity = Severity.HIGH if looks_structured else Severity.MEDIUM
                 for e in day_entries:
                     flagged.append(
                         FlaggedEntry(
@@ -2383,7 +2507,7 @@ def test_just_below_threshold(
                             test_name="Just-Below-Threshold",
                             test_key="just_below_threshold",
                             test_tier=TestTier.ADVANCED,
-                            severity=Severity.HIGH,
+                            severity=split_severity,
                             issue=f"Potential split: {len(day_entries)} entries to '{acct}' on {day} total ${total:,.2f} (>${threshold:,.0f} threshold)",
                             confidence=0.85,
                             details={
@@ -2618,6 +2742,9 @@ def test_description_length_anomaly(
     )
 
 
+_UNUSUAL_COMBO_HIGH_MIN_ENTRIES = 100  # Sprint 831: journal entries needed before a rare pairing can be HIGH
+
+
 def test_unusual_account_combinations(
     entries: list[JournalEntry],
     config: JETestingConfig,
@@ -2675,6 +2802,7 @@ def test_unusual_account_combinations(
 
     flagged: list[FlaggedEntry] = []
     flagged_rows: set[int] = set()
+    large_population = len(id_groups) >= _UNUSUAL_COMBO_HIGH_MIN_ENTRIES
 
     for pair, count in pair_counts.items():
         if count <= config.unusual_combo_max_frequency:
@@ -2682,7 +2810,10 @@ def test_unusual_account_combinations(
                 if e.row_number in flagged_rows:
                     continue
                 flagged_rows.add(e.row_number)
-                severity = Severity.HIGH if e.abs_amount > 10000 else Severity.MEDIUM
+                # Sprint 831: rarity only means something in a population large
+                # enough for pairings to repeat; below that every pairing is
+                # "rare", so large ones stay MEDIUM (Paciolus convention).
+                severity = Severity.HIGH if e.abs_amount > 10000 and large_population else Severity.MEDIUM
                 flagged.append(
                     FlaggedEntry(
                         entry=e,
@@ -2883,7 +3014,7 @@ def run_test_battery(
     results.append(test_backdated_entries(entries, config))
     results.append(test_suspicious_keywords(entries, config))
 
-    # T19 — Holiday Postings (ISA 240, Sprint 356)
+    # T19 — Holiday Postings (Sprint 356; Paciolus convention)
     results.append(test_holiday_postings(entries, config))
 
     # Tier 3 — Advanced / Fraud Indicators (T14-T18)
@@ -2896,8 +3027,16 @@ def run_test_battery(
     return results, benford_data
 
 
-_UNBALANCED_FLOOR = 11.0  # lowest Moderate score
-_UNBALANCED_FLOOR_HIGH = 26.0  # lowest Elevated score
+def _je_test_weight_severity(tr: TestResult) -> str:
+    """Severity used to weight a test in the composite average.
+
+    Sprint 831: a test that flags no entries is weighted as LOW. Benford's Law
+    reports HIGH test severity on a nonconforming distribution even when no
+    entry is flagged; weighting it HIGH enlarged the denominator only, so a
+    Benford failure *lowered* the score. The failure is scored by its own
+    floor below instead.
+    """
+    return tr.severity.value if tr.flagged_entries else Severity.LOW.value
 
 
 def calculate_composite_score(
@@ -2906,19 +3045,42 @@ def calculate_composite_score(
 ) -> CompositeScore:
     """Calculate the composite diagnostic score from test results.
 
-    Delegates to shared test aggregator (Sprint 152).
+    Delegates to shared test aggregator (Sprint 152), which applies the
+    HIGH-severity floors (Sprint 831). JE adds two structural floors.
+    The score is a Paciolus convention — see ``shared/test_aggregator.py``.
     """
-    result = _shared_calc_cs(test_results, total_entries)
+    result = _shared_calc_cs(test_results, total_entries, test_severity_accessor=_je_test_weight_severity)
+    score = result.score
+    basis = list(result.score_basis)
 
     # Sprint 829: a ledger whose entries do not balance is a structural failure,
     # but the flag-rate average diluted one unbalanced entry across 19 tests and
     # rated a GL with a $250K out-of-balance entry LOW. Unbalanced entries floor
     # the score: any at all → Moderate, any over $1,000 (HIGH) → Elevated.
-    score = result.score
     unbalanced = next((tr for tr in test_results if tr.test_key == "unbalanced_entries"), None)
     if unbalanced is not None and unbalanced.flagged_entries:
-        has_high = any(fe.severity == Severity.HIGH for fe in unbalanced.flagged_entries)
-        score = max(score, _UNBALANCED_FLOOR_HIGH if has_high else _UNBALANCED_FLOOR)
+        if any(fe.severity == Severity.HIGH for fe in unbalanced.flagged_entries):
+            score = apply_score_floor(
+                score,
+                FLOOR_ELEVATED,
+                "Raised to Elevated: at least one entry is out of balance by more than $1,000.",
+                basis,
+            )
+        else:
+            score = apply_score_floor(
+                score, FLOOR_MODERATE, "Raised to Moderate: at least one entry is out of balance.", basis
+            )
+
+    # Sprint 831: a nonconforming first-digit distribution (Nigrini 2012 MAD
+    # bands) is a population-level indicator that may flag no single entry.
+    benford = next((tr for tr in test_results if tr.test_key == "benford_law"), None)
+    if benford is not None and benford.severity == Severity.HIGH:
+        score = apply_score_floor(
+            score,
+            FLOOR_MODERATE,
+            "Raised to Moderate: the first-digit distribution does not conform to Benford's Law.",
+            basis,
+        )
 
     return CompositeScore(
         score=score,
@@ -2929,6 +3091,7 @@ def calculate_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=result.top_findings,
+        score_basis=basis,
     )
 
 

@@ -4,6 +4,23 @@
 
 ---
 
+## Averaging hid false positives; a floor surfaced them (Sprint 831, 2026-10-24)
+
+The composite score averaged per-test flag rates, so a test that flagged 100% of a
+clean ledger HIGH moved the score by a few points and nobody noticed. The first run
+of the new severity floors rated the "clean" calibration ledger **HIGH**: JE T15's
+split check called fourteen routine same-day cash entries a structured split, and
+T18 called every pairing in a 25-entry ledger "rare". Both had been HIGH-severity
+false positives for months; the average was absorbing them.
+
+**Pattern: before changing how a score aggregates, run the clean fixtures through
+old and new side by side and look at every rule that moves.** A more sensitive
+aggregation is also a detector for miscalibrated inputs. Fix the input rules
+(severity), not the aggregation, when the inputs are wrong — and keep detection
+unchanged so nothing that was found stops being found.
+
+---
+
 ## The guard, the test and the target were three different things (DEC review remediation, 2026-10-22)
 
 `guards/checkers/monetary_float.py` enforced the Phase XLV invariant — no `Float`

@@ -49,6 +49,8 @@ export interface BaseCompositeScore<TFinding = string> {
   total_flagged: number
   flags_by_severity: { high: number; medium: number; low: number }
   top_findings: TFinding[]
+  /** Sprint 831: reasons a severity floor raised the score (empty when none applied). */
+  score_basis?: string[]
 }
 
 /** Shared shape for data quality metrics (6/7 tools; AR has different row fields). */

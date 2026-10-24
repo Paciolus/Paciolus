@@ -23,6 +23,7 @@ export function PayrollScoreCard({ score }: PayrollScoreCardProps) {
       flag_rate={score.flag_rate}
       flags_by_severity={score.flags_by_severity}
       top_findings={findingStrings}
+      score_basis={score.score_basis}
       entity_label="employees"
       findings_renderer={(findings) => (
         <div className="space-y-1.5">

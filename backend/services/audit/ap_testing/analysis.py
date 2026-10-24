@@ -520,6 +520,7 @@ class APCompositeScore:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
         return {
@@ -531,6 +532,7 @@ class APCompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
 
 
@@ -1888,6 +1890,7 @@ def calculate_ap_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=result.top_findings,
+        score_basis=result.score_basis,
     )
 
 

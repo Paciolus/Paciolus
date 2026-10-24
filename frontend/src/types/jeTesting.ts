@@ -130,6 +130,38 @@ export const SAMPLING_CRITERIA_LABELS: Record<SamplingCriterion, string> = {
   user: 'User',
 }
 
+/**
+ * Sprint 831: the auditor's holiday calendar for this client, sent with a run.
+ * `exclude` names statutory holidays the client works; `closed_dates` adds
+ * client-specific closure days (YYYY-MM-DD).
+ */
+export interface HolidayCalendar {
+  exclude: string[]
+  closed_dates: string[]
+}
+
+/**
+ * US federal holidays (5 U.S.C. 6103), in calendar order. Must match
+ * `shared/holiday_calendar.us_federal_holiday_names()` in the backend
+ * (`tests/test_sprint_831_methodology.py` checks).
+ */
+export const US_FEDERAL_HOLIDAYS = [
+  "New Year's Day",
+  'Martin Luther King Jr. Day',
+  "Presidents' Day",
+  'Memorial Day',
+  'Juneteenth',
+  'Independence Day',
+  'Labor Day',
+  'Columbus Day',
+  'Veterans Day',
+  'Thanksgiving',
+  'Christmas Day',
+] as const
+
+/** Statutory holidays most businesses work; postings on them are flagged LOW. */
+export const COMMONLY_WORKED_HOLIDAYS: readonly string[] = ['Columbus Day', 'Veterans Day']
+
 export interface JETestingResult {
   composite_score: JECompositeScore
   test_results: JETestResult[]

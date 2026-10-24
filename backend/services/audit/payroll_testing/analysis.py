@@ -735,6 +735,7 @@ class PayrollCompositeScore:
     flag_rate: float = 0.0
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[dict] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
         return {
@@ -746,6 +747,7 @@ class PayrollCompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
 
 
@@ -1168,13 +1170,12 @@ def _test_round_salary_amounts(
     """PR-T3: Round Salary Amounts — $100K/$50K/$25K/$10K patterns."""
     flagged: list[FlaggedEmployee] = []
 
-    # Sort by amount descending for consistent flagging
+    # Sort by amount descending for consistent flagging. Sprint 831 (Sprint 819
+    # item 3): every round amount is counted; only the largest are kept for display.
     sorted_entries = sorted(entries, key=lambda e: abs(e.gross_pay), reverse=True)
+    total_flagged = 0
 
     for entry in sorted_entries:
-        if len(flagged) >= config.round_amount_max_flags:
-            break
-
         amount = abs(entry.gross_pay)
         if amount < config.round_amount_threshold:
             continue
@@ -1194,6 +1195,9 @@ def _test_round_salary_amounts(
         else:
             continue
 
+        total_flagged += 1
+        if len(flagged) >= config.round_amount_max_flags:
+            continue
         flagged.append(
             FlaggedEmployee(
                 entry=entry,
@@ -1212,9 +1216,9 @@ def _test_round_salary_amounts(
         test_name="Round Salary Amounts",
         test_key="PR-T3",
         test_tier=TestTier.STRUCTURAL.value,
-        entries_flagged=len(flagged),
+        entries_flagged=total_flagged,
         total_entries=total,
-        flag_rate=len(flagged) / total if total > 0 else 0.0,
+        flag_rate=total_flagged / total if total > 0 else 0.0,
         severity=Severity.MEDIUM.value,
         description="Flag round-dollar pay amounts ($100K, $50K, $25K, $10K multiples)",
         flagged_entries=flagged,
@@ -2120,6 +2124,7 @@ def calculate_payroll_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=top_findings,
+        score_basis=result.score_basis,
     )
 
 

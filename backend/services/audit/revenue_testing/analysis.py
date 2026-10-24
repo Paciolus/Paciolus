@@ -544,6 +544,7 @@ class RevenueCompositeScore:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
         return {
@@ -555,6 +556,7 @@ class RevenueCompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "score_basis": self.score_basis,
         }
 
 
@@ -953,17 +955,19 @@ def test_round_revenue_amounts(
                 )
                 break
 
-        if len(flagged) >= config.round_amount_max_flags:
-            break
-
+    # Sprint 831 (Sprint 819 item 3): count every round amount, then keep the
+    # largest — the same order as JE and AP. The loop used to stop at the cap in
+    # file order, so a large round entry late in the file was never seen.
     flagged.sort(key=lambda f: abs(f.entry.amount), reverse=True)
+    total_flagged = len(flagged)
+    flagged = flagged[: config.round_amount_max_flags]
 
-    flag_rate = len(flagged) / max(len(entries), 1)
+    flag_rate = total_flagged / max(len(entries), 1)
     return RevenueTestResult(
         test_name="Round Revenue Amounts",
         test_key="round_revenue_amounts",
         test_tier=TestTier.STRUCTURAL,
-        entries_flagged=len(flagged),
+        entries_flagged=total_flagged,
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.LOW,
@@ -2445,6 +2449,7 @@ def calculate_revenue_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=result.top_findings,
+        score_basis=result.score_basis,
     )
 
 

@@ -34,6 +34,8 @@ class CompositeScoreResponse(BaseModel):
     flag_rate: float
     flags_by_severity: dict[str, int]
     top_findings: list[str]
+    # Sprint 831: reasons a severity floor raised the score (Paciolus convention).
+    score_basis: list[str] = []
 
 
 class DataQualityResponse(BaseModel):
@@ -609,6 +611,8 @@ class ARCompositeScoreResponse(BaseModel):
     flags_by_severity: dict[str, int]
     top_findings: list[str]
     has_subledger: bool
+    # Sprint 831: reasons a severity floor raised the score (Paciolus convention).
+    score_basis: list[str] = []
 
 
 class ARDataQualityResponse(BaseModel):
@@ -780,6 +784,8 @@ class PayrollCompositeScoreResponse(BaseModel):
     flag_rate: float
     flags_by_severity: dict[str, int]
     top_findings: list[dict[str, Any]]
+    # Sprint 831: reasons a severity floor raised the score (Paciolus convention).
+    score_basis: list[str] = []
 
 
 class PayrollTestingResponse(BaseModel):

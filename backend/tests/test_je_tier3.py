@@ -47,6 +47,7 @@ from je_testing_engine import (
 # T14: RECIPROCAL ENTRIES (Sprint 69)
 # =============================================================================
 
+
 class TestReciprocalEntries:
     """Tests for test_reciprocal_entries()."""
 
@@ -54,12 +55,18 @@ class TestReciprocalEntries:
         """Debit and credit of same amount within days_window are flagged."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=5000,
-                posting_date="2025-01-17", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=5000,
+                posting_date="2025-01-17",
+                row_number=2,
             ),
         ]
         result = run_reciprocal_test(entries, JETestingConfig())
@@ -90,12 +97,18 @@ class TestReciprocalEntries:
         """Same-account reciprocal pair gets MEDIUM severity."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Cash", debit=0, credit=5000,
-                posting_date="2025-01-16", row_number=2,
+                account="Cash",
+                debit=0,
+                credit=5000,
+                posting_date="2025-01-16",
+                row_number=2,
             ),
         ]
         result = run_reciprocal_test(entries, JETestingConfig())
@@ -107,12 +120,18 @@ class TestReciprocalEntries:
         """Entries with different amounts should not match."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=3000,
-                posting_date="2025-01-17", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=3000,
+                posting_date="2025-01-17",
+                row_number=2,
             ),
         ]
         result = run_reciprocal_test(entries, JETestingConfig())
@@ -122,12 +141,18 @@ class TestReciprocalEntries:
         """Pairs outside the days_window should not be flagged."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-01", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-01",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=5000,
-                posting_date="2025-01-20", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=5000,
+                posting_date="2025-01-20",
+                row_number=2,
             ),
         ]
         # Default window is 7 days; 19 days apart should not flag
@@ -138,12 +163,18 @@ class TestReciprocalEntries:
         """Wider window should catch entries further apart."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-01", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-01",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=5000,
-                posting_date="2025-01-20", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=5000,
+                posting_date="2025-01-20",
+                row_number=2,
             ),
         ]
         config = JETestingConfig(reciprocal_days_window=30)
@@ -154,12 +185,18 @@ class TestReciprocalEntries:
         """Disabled config returns zero flags."""
         entries = [
             JournalEntry(
-                account="Cash", debit=5000, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=5000,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=5000,
-                posting_date="2025-01-15", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=5000,
+                posting_date="2025-01-15",
+                row_number=2,
             ),
         ]
         config = JETestingConfig(reciprocal_enabled=False)
@@ -171,12 +208,18 @@ class TestReciprocalEntries:
         """Amounts below reciprocal_min_amount are not checked."""
         entries = [
             JournalEntry(
-                account="Cash", debit=50, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=50,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=50,
-                posting_date="2025-01-15", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=50,
+                posting_date="2025-01-15",
+                row_number=2,
             ),
         ]
         # Default min_amount=1000, so $50 should be ignored
@@ -187,12 +230,18 @@ class TestReciprocalEntries:
         """Flagged entries should include matching details."""
         entries = [
             JournalEntry(
-                account="Cash", debit=10000, credit=0,
-                posting_date="2025-01-15", row_number=1,
+                account="Cash",
+                debit=10000,
+                credit=0,
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                account="Revenue", debit=0, credit=10000,
-                posting_date="2025-01-16", row_number=2,
+                account="Revenue",
+                debit=0,
+                credit=10000,
+                posting_date="2025-01-16",
+                row_number=2,
             ),
         ]
         result = run_reciprocal_test(entries, JETestingConfig())
@@ -205,6 +254,7 @@ class TestReciprocalEntries:
 # =============================================================================
 # T15: JUST-BELOW-THRESHOLD (Sprint 69)
 # =============================================================================
+
 
 class TestJustBelowThreshold:
     """Tests for test_just_below_threshold()."""
@@ -262,10 +312,16 @@ class TestJustBelowThreshold:
         """Multiple entries to same account on same day summing above threshold."""
         entries = [
             JournalEntry(
-                debit=3000, account="Advertising", posting_date="2025-01-15", row_number=1,
+                debit=3000,
+                account="Advertising",
+                posting_date="2025-01-15",
+                row_number=1,
             ),
             JournalEntry(
-                debit=3000, account="Advertising", posting_date="2025-01-15", row_number=2,
+                debit=3000,
+                account="Advertising",
+                posting_date="2025-01-15",
+                row_number=2,
             ),
         ]
         # Total = 6000 > 5000 threshold, individual entries < 5000
@@ -318,6 +374,7 @@ class TestJustBelowThreshold:
 # T16: ACCOUNT FREQUENCY ANOMALY (Sprint 69)
 # =============================================================================
 
+
 class TestAccountFrequencyAnomaly:
     """Tests for test_account_frequency_anomaly()."""
 
@@ -329,12 +386,14 @@ class TestAccountFrequencyAnomaly:
             month = month_idx + 1
             for i in range(count):
                 day = min(i + 1, 28)
-                entries.append(JournalEntry(
-                    account=account,
-                    debit=100 + i,
-                    posting_date=f"{year}-{month:02d}-{day:02d}",
-                    row_number=row,
-                ))
+                entries.append(
+                    JournalEntry(
+                        account=account,
+                        debit=100 + i,
+                        posting_date=f"{year}-{month:02d}-{day:02d}",
+                        row_number=row,
+                    )
+                )
                 row += 1
         return entries
 
@@ -407,6 +466,7 @@ class TestAccountFrequencyAnomaly:
 # T17: DESCRIPTION LENGTH ANOMALY (Sprint 69)
 # =============================================================================
 
+
 class TestDescriptionLengthAnomaly:
     """Tests for test_description_length_anomaly()."""
 
@@ -415,15 +475,23 @@ class TestDescriptionLengthAnomaly:
         entries = []
         # 10 entries with normal descriptions
         for i in range(10):
-            entries.append(JournalEntry(
-                account="Cash", debit=100, row_number=i + 1,
-                description=f"Regular payment for invoice {i + 1000}",
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash",
+                    debit=100,
+                    row_number=i + 1,
+                    description=f"Regular payment for invoice {i + 1000}",
+                )
+            )
         # 1 entry with blank description
-        entries.append(JournalEntry(
-            account="Cash", debit=5000, row_number=11,
-            description="",
-        ))
+        entries.append(
+            JournalEntry(
+                account="Cash",
+                debit=5000,
+                row_number=11,
+                description="",
+            )
+        )
         result = run_desc_length_test(entries, JETestingConfig())
         assert result.entries_flagged >= 1
         assert result.test_key == "description_length_anomaly"
@@ -435,10 +503,14 @@ class TestDescriptionLengthAnomaly:
         """Entries with consistent description lengths should not flag."""
         entries = []
         for i in range(10):
-            entries.append(JournalEntry(
-                account="Cash", debit=100, row_number=i + 1,
-                description=f"Monthly payment for service {i + 100}",
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash",
+                    debit=100,
+                    row_number=i + 1,
+                    description=f"Monthly payment for service {i + 100}",
+                )
+            )
         result = run_desc_length_test(entries, JETestingConfig())
         assert result.entries_flagged == 0
 
@@ -456,10 +528,14 @@ class TestDescriptionLengthAnomaly:
         """Disabled config returns zero flags."""
         entries = []
         for i in range(10):
-            entries.append(JournalEntry(
-                account="Cash", debit=100, row_number=i + 1,
-                description=f"Regular payment for invoice {i + 1000}",
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash",
+                    debit=100,
+                    row_number=i + 1,
+                    description=f"Regular payment for invoice {i + 1000}",
+                )
+            )
         entries.append(JournalEntry(account="Cash", debit=100, row_number=11, description=""))
         config = JETestingConfig(desc_length_enabled=False)
         result = run_desc_length_test(entries, config)
@@ -480,15 +556,23 @@ class TestDescriptionLengthAnomaly:
         entries = []
         # 10 entries with long descriptions (40+ chars each)
         for i in range(10):
-            entries.append(JournalEntry(
-                account="Accounts Payable", debit=100, row_number=i + 1,
-                description=f"Payment to vendor ABC Corporation for invoice number {i + 5000} dated January 2025",
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Accounts Payable",
+                    debit=100,
+                    row_number=i + 1,
+                    description=f"Payment to vendor ABC Corporation for invoice number {i + 5000} dated January 2025",
+                )
+            )
         # 1 entry with very short description
-        entries.append(JournalEntry(
-            account="Accounts Payable", debit=100, row_number=11,
-            description="x",
-        ))
+        entries.append(
+            JournalEntry(
+                account="Accounts Payable",
+                debit=100,
+                row_number=11,
+                description="x",
+            )
+        )
         result = run_desc_length_test(entries, JETestingConfig())
         # The very short description should be flagged
         short_flags = [f for f in result.flagged_entries if f.details["desc_length"] == 1]
@@ -498,10 +582,14 @@ class TestDescriptionLengthAnomaly:
         """Flagged entries should have mean_length in details."""
         entries = []
         for i in range(10):
-            entries.append(JournalEntry(
-                account="Cash", debit=100, row_number=i + 1,
-                description=f"Regular payment for invoice {i + 1000}",
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash",
+                    debit=100,
+                    row_number=i + 1,
+                    description=f"Regular payment for invoice {i + 1000}",
+                )
+            )
         entries.append(JournalEntry(account="Cash", debit=100, row_number=11, description=""))
         result = run_desc_length_test(entries, JETestingConfig())
         if result.entries_flagged > 0:
@@ -512,6 +600,7 @@ class TestDescriptionLengthAnomaly:
 # T18: UNUSUAL ACCOUNT COMBINATIONS (Sprint 69)
 # =============================================================================
 
+
 class TestUnusualAccountCombinations:
     """Tests for test_unusual_account_combinations()."""
 
@@ -519,12 +608,18 @@ class TestUnusualAccountCombinations:
         """Create a balanced journal entry group."""
         return [
             JournalEntry(
-                entry_id=entry_id, account=debit_account,
-                debit=amount, credit=0, row_number=row_start,
+                entry_id=entry_id,
+                account=debit_account,
+                debit=amount,
+                credit=0,
+                row_number=row_start,
             ),
             JournalEntry(
-                entry_id=entry_id, account=credit_account,
-                debit=0, credit=amount, row_number=row_start + 1,
+                entry_id=entry_id,
+                account=credit_account,
+                debit=0,
+                credit=amount,
+                row_number=row_start + 1,
             ),
         ]
 
@@ -588,28 +683,34 @@ class TestUnusualAccountCombinations:
         assert result.entries_flagged == 0
         assert "disabled" in result.description.lower()
 
-    def test_high_severity_for_large_amount(self):
-        """Rare combo with large amount gets HIGH severity."""
+    def _rare_large_combo(self, routine_entries: int):
         entries = []
         row = 1
-        for i in range(25):
+        for i in range(routine_entries):
             eid = f"JE{i + 1:04d}"
             entries.extend(self._make_je_group(eid, "Cash", "Revenue", 100, row))
             row += 2
         # Rare combo with > $10,000
         entries.extend(self._make_je_group("RARE001", "Suspense", "Equity", 50000, row))
+        return entries
 
+    def test_high_severity_for_large_amount(self):
+        """Rare combo with large amount gets HIGH severity in a population of 100+ entries."""
         config = JETestingConfig(unusual_combo_min_total_entries=10)
-        result = run_unusual_combo_test(entries, config)
+        result = run_unusual_combo_test(self._rare_large_combo(120), config)
         high_sev = [f for f in result.flagged_entries if f.severity == Severity.HIGH]
         assert len(high_sev) >= 1
 
+    def test_large_rare_combo_in_small_population_is_medium(self):
+        """Sprint 831: below 100 entries every pairing is rare, so a large one stays MEDIUM."""
+        config = JETestingConfig(unusual_combo_min_total_entries=10)
+        result = run_unusual_combo_test(self._rare_large_combo(25), config)
+        rare = [f for f in result.flagged_entries if f.entry.account == "Suspense"]
+        assert rare and all(f.severity == Severity.MEDIUM for f in rare)
+
     def test_no_entry_ids_returns_zero(self):
         """Entries without entry_id cannot be grouped, so no flags."""
-        entries = [
-            JournalEntry(account="Cash", debit=100, row_number=i)
-            for i in range(1, 30)
-        ]
+        entries = [JournalEntry(account="Cash", debit=100, row_number=i) for i in range(1, 30)]
         result = run_unusual_combo_test(entries, JETestingConfig())
         assert result.entries_flagged == 0
 
@@ -617,6 +718,7 @@ class TestUnusualAccountCombinations:
 # =============================================================================
 # HELPER: _amount_range_label (Sprint 69)
 # =============================================================================
+
 
 class TestAmountRangeLabel:
     """Tests for _amount_range_label() helper."""
@@ -649,6 +751,7 @@ class TestAmountRangeLabel:
 # =============================================================================
 # STRATIFIED SAMPLING: PREVIEW (Sprint 69)
 # =============================================================================
+
 
 class TestPreviewSamplingStrata:
     """Tests for preview_sampling_strata()."""
@@ -730,6 +833,7 @@ class TestPreviewSamplingStrata:
 # STRATIFIED SAMPLING: RUN (Sprint 69)
 # =============================================================================
 
+
 class TestRunStratifiedSampling:
     """Tests for run_stratified_sampling()."""
 
@@ -737,13 +841,15 @@ class TestRunStratifiedSampling:
         """Create N entries across 2 accounts."""
         entries = []
         for i in range(1, n + 1):
-            entries.append(JournalEntry(
-                account="Cash" if i % 2 == 0 else "Revenue",
-                debit=100 * i if i % 2 == 0 else 0,
-                credit=100 * i if i % 2 != 0 else 0,
-                posting_date=f"2025-{(i % 3) + 1:02d}-15",
-                row_number=i,
-            ))
+            entries.append(
+                JournalEntry(
+                    account="Cash" if i % 2 == 0 else "Revenue",
+                    debit=100 * i if i % 2 == 0 else 0,
+                    credit=100 * i if i % 2 != 0 else 0,
+                    posting_date=f"2025-{(i % 3) + 1:02d}-15",
+                    row_number=i,
+                )
+            )
         return entries
 
     def test_sample_rate(self):
@@ -829,6 +935,7 @@ class TestRunStratifiedSampling:
 # FULL TEST BATTERY WITH TIER 3 (Sprint 69)
 # =============================================================================
 
+
 class TestRunTestBatteryTier3:
     """Verify all 19 tests run in the battery with correct keys."""
 
@@ -876,9 +983,13 @@ class TestRunTestBatteryTier3:
             JournalEntry(entry_id="JE001", account="Revenue", posting_date="2025-01-15", credit=100, row_number=2),
         ]
         results, _ = run_test_battery(entries)
-        tier_3_keys = {"reciprocal_entries", "just_below_threshold",
-                       "account_frequency_anomaly", "description_length_anomaly",
-                       "unusual_account_combinations"}
+        tier_3_keys = {
+            "reciprocal_entries",
+            "just_below_threshold",
+            "account_frequency_anomaly",
+            "description_length_anomaly",
+            "unusual_account_combinations",
+        }
         for r in results:
             if r.test_key in tier_3_keys:
                 assert r.test_tier == TestTier.ADVANCED, f"{r.test_key} should be ADVANCED tier"
@@ -897,9 +1008,13 @@ class TestRunTestBatteryTier3:
         )
         results, _ = run_test_battery(entries, config)
         assert len(results) == 19  # All tests still present
-        tier_3_keys = {"reciprocal_entries", "just_below_threshold",
-                       "account_frequency_anomaly", "description_length_anomaly",
-                       "unusual_account_combinations"}
+        tier_3_keys = {
+            "reciprocal_entries",
+            "just_below_threshold",
+            "account_frequency_anomaly",
+            "description_length_anomaly",
+            "unusual_account_combinations",
+        }
         for r in results:
             if r.test_key in tier_3_keys:
                 assert r.entries_flagged == 0, f"{r.test_key} should have 0 flags when disabled"

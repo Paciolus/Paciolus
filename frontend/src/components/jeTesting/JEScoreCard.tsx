@@ -18,6 +18,7 @@ export function JEScoreCard({ score }: JEScoreCardProps) {
       flag_rate={score.flag_rate}
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
+      score_basis={score.score_basis}
       entity_label="journal entries"
     />
   )

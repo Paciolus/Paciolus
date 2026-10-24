@@ -521,7 +521,10 @@ class TestRoundAmounts:
         config = PayrollTestingConfig(round_amount_max_flags=2)
         entries = [PayrollEntry(gross_pay=100000.0, _row_index=i) for i in range(10)]
         result = _test_round_salary_amounts(entries, config)
-        assert result.entries_flagged == 2
+        # Sprint 831: every round amount is counted; the cap limits only the
+        # entries kept for display (same as JE and AP).
+        assert result.entries_flagged == 10
+        assert len(result.flagged_entries) == 2
 
     def test_test_key(self, sample_entries, default_config):
         result = _test_round_salary_amounts(sample_entries, default_config)

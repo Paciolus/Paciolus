@@ -34,6 +34,7 @@ jest.mock('@/components/jeTesting', () => ({
   BenfordChart: () => <div data-testid="benford-chart">Benford</div>,
   FlaggedEntryTable: () => <div data-testid="flagged-table">Flagged</div>,
   SamplingPanel: () => <div data-testid="sampling-panel">Sampling</div>,
+  HolidayCalendarPanel: () => <div data-testid="holiday-calendar-panel">Holiday calendar</div>,
 }))
 
 // Sprint 772a: page.tsx now imports BenfordChart via next/dynamic from

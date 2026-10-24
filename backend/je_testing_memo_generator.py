@@ -44,7 +44,10 @@ TEST_DESCRIPTIONS = {
     "benford_law": "Tests first-digit distribution against Benford's Law expected frequencies.",
     "weekend_postings": "Flags entries posted on Saturdays or Sundays, weighted by amount.",
     "month_end_clustering": "Detects unusual concentration of entries in last 3 days of month.",
-    "holiday_postings": "Flags entries posted on US federal holidays (ISA 240 journal entry fraud risk indicator).",
+    "holiday_postings": (
+        "Flags entries posted on US federal holidays (calendar per 5 U.S.C. 6103); Columbus Day and "
+        "Veterans Day are flagged at low severity. A Paciolus convention, not a test named by ISA 240."
+    ),
 }
 
 _JE_CONFIG = TestingMemoConfig(

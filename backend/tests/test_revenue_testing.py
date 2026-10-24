@@ -536,7 +536,17 @@ class TestRoundRevenueAmounts:
         entries = [RevenueEntry(amount=-50000, row_number=i) for i in range(1, 60)]
         config = RevenueTestingConfig(round_amount_threshold=10000, round_amount_max_flags=10)
         result = run_round_amounts_test(entries, config)
-        assert result.entries_flagged <= 10
+        # Sprint 831: all 59 are counted; the cap limits only the entries kept.
+        assert result.entries_flagged == 59
+        assert len(result.flagged_entries) == 10
+
+    def test_largest_round_amount_kept_past_the_cap(self):
+        """Sprint 831: a large round entry late in the file used to be dropped at the cap."""
+        entries = [RevenueEntry(amount=-10000, row_number=i) for i in range(1, 60)]
+        entries.append(RevenueEntry(amount=-500000, row_number=60))
+        config = RevenueTestingConfig(round_amount_threshold=10000, round_amount_max_flags=10)
+        result = run_round_amounts_test(entries, config)
+        assert result.flagged_entries[0].entry.row_number == 60
 
 
 class TestSignAnomalies:
