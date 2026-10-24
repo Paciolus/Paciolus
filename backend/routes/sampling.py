@@ -262,6 +262,7 @@ async def sampling_design(
             "statistical_sampling",
             True,
             None,
+            consumes_upload=True,
         )
 
         return result

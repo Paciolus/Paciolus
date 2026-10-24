@@ -158,7 +158,9 @@ def prepare_1099_candidates(
     # again — the new entry invisible until a manual reload. The write is one
     # INSERT plus a commit after an analysis that already ran in-process, so the
     # latency it buys back is not worth the race.
-    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "form_1099", True, None, None)
+    maybe_record_tool_run(
+        db, payload.engagement_id, current_user.id, "form_1099", True, None, None, consumes_upload=True
+    )
     return result.to_dict()
 
 

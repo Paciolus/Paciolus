@@ -192,7 +192,7 @@ async def audit_three_way_match(
 
             result = await asyncio.to_thread(_analyze)
 
-            maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True)
+            maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True, consumes_upload=True)
 
             return result.to_dict()  # type: ignore[no-any-return]
 

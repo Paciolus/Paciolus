@@ -224,6 +224,7 @@ async def audit_trial_balance(
                 tb_filename,
                 tb_record_count,
                 tb_summary,
+                consumes_upload=True,
             )
 
             return analysis_result  # type: ignore[return-value]

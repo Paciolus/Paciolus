@@ -1282,7 +1282,28 @@ sub-category* are 793b's table work, and they need the confirmed figures regardl
 ---
 
 ### Sprint 790: The monthly upload allowance is not enforced on any paid tier
-**Status:** PENDING.
+**Status:** COMPLETE 2026-10-24 — CEO decision 9. Summary first; the original analysis follows.
+
+- [x] One successful analysis run = one upload (a two-file run costs one; a 4xx, refused or failed
+      run costs nothing). `maybe_record_tool_run(..., consumes_upload=True)` increments on success,
+      passed only by the 13 functions that call `check_upload_limit` — all of them already reached the
+      recorder, so no route needed rewiring. The increment is one atomic `UPDATE ... SET n = n + 1`.
+- [x] Bulk upload consumes nothing (it analyses nothing); its per-file increment is removed.
+- [x] Alembic `e7a90c3d5b18` resets every subscription counter to 0 at deploy (single head).
+- [x] Symmetry guard (AST over `routes/`, `shared/`, `services/`): every limit-checking function
+      reaches an increment on success, only those use the flag, and a failed run never does.
+- [x] **Two lock-out bugs fixed on the way:** renewals never reset the counter (the hourly job only
+      saw rows already past period end; the Stripe renewal webhook moves it within seconds) — the
+      sync now zeroes the counter when the period start moves forward; and past-due/canceled
+      subscriptions would have stayed locked — the quota check now uses the subscription counter
+      only for active/trialing subscriptions and counts everyone else like Free.
+
+**Effect:** paid caps are now enforced for the first time — 100 runs/month on Solo, 500 on
+Professional.
+
+**Commit SHA:** recorded on merge.
+
+**Original analysis (2026-10-21):**
 **Priority:** **P1** — revenue-relevant and advertised. Every paid tier's headline quota is
 unenforced.
 **Source:** PR #182 review finding, verified 2026-10-21. It falsified a claim in Sprint 789.

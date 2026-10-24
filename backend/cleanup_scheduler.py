@@ -352,9 +352,10 @@ def reset_upload_quotas(db: Any) -> int:
     Binding the enum member through the ORM emits whatever representation the mapping
     actually uses, so the comparison cannot drift from the mapping again.
 
-    It is also the only place `uploads_used_current_period` is ever reset
-    (`shared/entitlement_checks.py` holds the only increment and the only read), so while
-    this was failing, any subscriber reaching their monthly cap would have stayed capped.
+    While this was failing, any subscriber reaching their monthly cap would have stayed
+    capped. (Sprint 790: it is no longer the only reset — `sync_subscription_from_stripe`
+    also zeroes the counter when a renewal advances the billing period, which this job
+    misses whenever the webhook lands before its next run.)
     """
     from sqlalchemy import String, cast, func, update
 

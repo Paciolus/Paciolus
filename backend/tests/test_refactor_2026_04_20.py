@@ -144,6 +144,7 @@ class TestHelpersReExports:
                 "filename",
                 "record_count",
                 "summary",
+                "consumes_upload",  # Sprint 790, keyword-only
             ],
         )
         assert_signature(

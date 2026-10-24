@@ -28,7 +28,7 @@ from auth import require_verified_user
 from database import get_db
 from models import User
 from shared import bulk_job_store
-from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit, increment_upload_count
+from shared.entitlement_checks import check_bulk_upload_access, check_upload_limit
 from shared.organization_schemas import BulkUploadStartResponse, BulkUploadStatusResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 from shared.upload_pipeline import validate_file_size
@@ -66,7 +66,9 @@ async def start_bulk_upload(
         file_bytes = await validate_file_size(f)
         validated_contents.append(file_bytes)
 
-    # Check upload quota for all files — signature is (user: User, db: Session)
+    # Check upload quota for all files — signature is (user: User, db: Session).
+    # Sprint 790: kept although this route consumes nothing (it runs no engine
+    # yet) — it is explicitly exempted in tests/test_sprint_790_upload_metering.py.
     for _ in files:
         check_upload_limit(user, db)
 
@@ -145,19 +147,14 @@ async def _process_bulk_files(
 
             content = fd["content"]
 
-            # Increment upload counter
-            try:
-                from database import SessionLocal
-
-                session = SessionLocal()
-                try:
-                    increment_upload_count(session, user_id)
-                finally:
-                    session.close()
-            except Exception as exc:
-                logger.warning(
-                    "Upload count increment failed for user %d in job %s: %s", user_id, job_id, type(exc).__name__
-                )
+            # Sprint 790: no upload is consumed here. This loop runs no engine:
+            # it marks each file "complete" with only its name and size (see
+            # below), so there is no analysis run to charge for. The previous
+            # per-file increment_upload_count charged allowance for nothing.
+            # When real analysis is wired in, meter it the way every other
+            # route does (maybe_record_tool_run(..., consumes_upload=True) on
+            # success) and drop the exemption in
+            # tests/test_sprint_790_upload_metering.py.
 
             # Mark as complete (actual analysis would be triggered here
             # via the same analysis functions used by the single-file endpoints)
