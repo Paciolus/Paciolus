@@ -1047,8 +1047,10 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
       admin_dashboard ×4, branding ×3, diagnostics ×3, prior_period ×3, …) → plain `def`.
       Offload the blocking part of `branding.py:102` (S3 upload), `billing.py:347` (Stripe
       retrieve + DB), `export_sharing.py` passcode verify (Argon2id).
-- [ ] Subscription row queried 3× per testing upload (`enforce_tool_access` →
+- [x] Subscription row queried 3× per testing upload (`enforce_tool_access` →
       `get_effective_entitlements`, then `check_upload_limit` twice incl. `entitlement_checks.py:111`) — load once per request.
+      *(Done 2026-10-24: `_user_subscription` keeps the row in the request session's `info`,
+      re-validated on each use — deleted, detached or re-pointed rows are re-queried. 1 query, was 3.)*
 - [ ] `billing/internal_metrics.py:601-663` per-day snapshot loop with per-user queries; cap the
       range in `routes/internal_metrics.py:129`; batch dunning lookups (`:365,384,402,538`,
       `dunning_engine.py:162,168`).
@@ -1072,10 +1074,13 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
       required `Python Dependency Audit (blocking)` job; that job's name is unchanged.)*
       `ci.yml` runs pip-audit twice (`pip-audit-blocking` `:660`, `pip-audit-advisory` `:690`), each
       installing the full `requirements.txt`: one job, two invocations of `scripts/pip_audit_gate.sh`.
-- [ ] Root clutter: `PHASE_III_QUICK_REFERENCE.txt`, `README_PHASE_III_DELIVERY.txt`,
+- [x] Root clutter: `PHASE_III_QUICK_REFERENCE.txt`, `README_PHASE_III_DELIVERY.txt`,
       `SECURITY_CHANGES.md`, `SECURITY_HARDENING_SUMMARY.md`, `COHESION_REMEDIATION.md`,
       `EXECUTIVE_SUMMARY_NONTECH.md`, root `MEMORY.md` — check each for live references, then move to
       `docs/` or `tasks/archive/`.
+      *(Done 2026-10-24: the two Phase III files → `tasks/archive/phase-iii/`; the four docs →
+      `docs/archive/` (code comments re-pointed). Root `MEMORY.md` stays — it is the deliberate
+      redirect stub that the historical references resolve through.)*
 
 **Commit SHA:** 0463165e (PR #210).
 

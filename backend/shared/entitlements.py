@@ -14,7 +14,7 @@ Used by entitlement_checks.py dependency functions to gate access.
 # CANONICAL TOOL COUNT: 18
 # This is the single source of truth for Paciolus tool count across all docs, copy,
 # and marketing surfaces. If tools are added or removed, update this comment and all
-# references identified in COHESION_REMEDIATION.md before merging.
+# references identified in docs/archive/COHESION_REMEDIATION.md before merging.
 
 from dataclasses import dataclass
 

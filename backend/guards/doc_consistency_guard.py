@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # Documents whose aggregate tool counts must match the registry (Sprint 784).
-# Deliberately excluded: COHESION_REMEDIATION.md, docs/archive/**, tasks/archive/**
+# Deliberately excluded: docs/archive/** (incl. COHESION_REMEDIATION.md), tasks/archive/**
 # and CLAUDE.md's era table — all historical records of the 12-tool era.
 TOOL_COUNT_DOCS: tuple[str, ...] = (
     "README.md",
