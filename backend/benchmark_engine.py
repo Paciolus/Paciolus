@@ -66,10 +66,11 @@ class IndustryBenchmark:
     """
     Industry benchmark for a specific ratio.
 
-    Contains percentile distribution from industry survey data.
+    Contains a percentile distribution (Paciolus reference values; see the
+    CURATED BENCHMARK DATA comment for provenance).
     Source attribution required for transparency and compliance.
 
-    IFRS/GAAP Note: Benchmarks are based on US GAAP reported figures.
+    IFRS/GAAP Note: Benchmarks are intended to reflect US GAAP reported figures.
     IFRS users should note potential differences in inventory valuation
     (LIFO not permitted under IFRS) and asset revaluation.
     """
@@ -91,7 +92,7 @@ class IndustryBenchmark:
     sample_size: int  # Number of companies in sample
 
     # Metadata
-    source: str  # e.g., "RMA Annual Statement Studies"
+    source: str  # e.g., "Paciolus reference values"
     last_updated: datetime = field(default_factory=lambda: datetime.now())
     notes: Optional[str] = None
 
@@ -431,9 +432,15 @@ def get_percentile_band(score: float) -> str:
 # CURATED BENCHMARK DATA
 # =============================================================================
 
-# Benchmark data curated from public sources (RMA-style distributions)
-# Source: Aggregated from SEC EDGAR filings and industry surveys
-# Note: These are illustrative benchmarks based on typical industry ranges
+# Paciolus reference values: illustrative percentile ranges for typical
+# industry ratios. Sprint 837: these figures were previously attributed to
+# "SEC EDGAR filings and industry surveys" / RMA Annual Statement Studies, but
+# their provenance cannot be verified, so no customer-facing text attributes
+# them to RMA or EDGAR. If the figures are ever rebuilt from a licensed or
+# public dataset, cite that dataset here and in BENCHMARK_SOURCE_ATTRIBUTION.
+
+
+BENCHMARK_SOURCE_ATTRIBUTION = "Paciolus reference values (illustrative industry ranges; not RMA or SEC EDGAR data)"
 
 
 def _create_benchmark(
@@ -447,7 +454,7 @@ def _create_benchmark(
     mean: float,
     std_dev: float,
     sample_size: int,
-    source: str = "Industry Survey Data 2025",
+    source: str = "Paciolus reference values",
     notes: Optional[str] = None,
 ) -> IndustryBenchmark:
     """Helper to create benchmark with common defaults."""
@@ -1142,7 +1149,7 @@ def get_benchmark_set(industry: Industry, fiscal_year: int = 2025) -> Optional[B
         industry=industry,
         fiscal_year=fiscal_year,
         benchmarks=benchmarks,
-        source_attribution="Aggregated from SEC EDGAR filings and industry surveys",
+        source_attribution=BENCHMARK_SOURCE_ATTRIBUTION,
         data_quality_score=round(data_quality, 2),
     )
 
@@ -1159,25 +1166,25 @@ def get_benchmark_sources() -> dict[str, Any]:
     Returns:
         Dictionary with source details for transparency.
     """
+    # Sprint 837: SEC EDGAR / RMA Annual Statement Studies were listed here as
+    # primary sources; the figures' provenance is unverified, so they are
+    # described as what they are.
     return {
         "primary_sources": [
             {
-                "name": "SEC EDGAR",
-                "description": "Public company filings (10-K, 10-Q)",
-                "url": "https://www.sec.gov/edgar",
-                "data_type": "Audited financial statements",
-                "update_frequency": "Quarterly",
-            },
-            {
-                "name": "RMA Annual Statement Studies",
-                "description": "Industry benchmark standard",
+                "name": "Paciolus reference values",
+                "description": "Illustrative percentile ranges for typical industry ratios, compiled by Paciolus",
                 "data_type": "Percentile distributions",
-                "note": "Reference methodology",
+                "note": (
+                    "Not drawn from RMA Annual Statement Studies or SEC EDGAR; provenance not "
+                    "independently verified. Use for orientation only."
+                ),
             },
         ],
         "coverage": {"industries": len(INDUSTRY_BENCHMARKS), "ratios_per_industry": 8, "fiscal_year": 2025},
         "disclaimer": (
-            "Benchmark data represents aggregate industry statistics from public sources. "
+            "Benchmark figures are Paciolus reference values (illustrative industry ranges), "
+            "not statistics from a published industry study. "
             "Actual company performance may vary based on size, region, and business model. "
             "Professional judgment should always be applied when interpreting comparisons."
         ),

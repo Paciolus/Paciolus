@@ -120,3 +120,35 @@ class TestForm1099TierGate:
             assert response.headers["content-type"].startswith("text/csv")
         finally:
             app.dependency_overrides.clear()
+
+
+class TestSprint837ThresholdTransparency:
+    """Sprint 837: the API and the CSV carry the year's thresholds, notices and
+    the payees below the year's threshold."""
+
+    @pytest.mark.asyncio
+    async def test_2026_response_and_csv_carry_below_threshold_payees_and_notices(self, professional_user, db_session):
+        payload = _valid_payload()
+        payload["tax_year"] = 2026
+        payload["payments"][0]["amount"] = "1500.00"
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                analyzed = await client.post("/audit/form-1099", json=payload)
+                exported = await client.post("/audit/form-1099/export.csv", json=payload)
+            assert analyzed.status_code == 200
+            body = analyzed.json()
+            assert body["candidates"] == []
+            assert [p["vendor_id"] for p in body["below_threshold_payees"]] == ["V001"]
+            assert body["notices"]
+            assert body["thresholds"]["figures_from_tax_year"] == 2026
+
+            assert exported.status_code == 200
+            text = exported.text
+            assert "Below the 2026 reporting threshold" in text
+            assert "V001" in text
+            assert "Notices" in text
+            assert "Thresholds applied for tax year 2026" in text
+            assert "IRS Instructions for Forms 1099-MISC" in text
+        finally:
+            app.dependency_overrides.clear()

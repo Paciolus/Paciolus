@@ -448,7 +448,7 @@ export const DEMO_BENCHMARKS: BenchmarkComparisonResponse = {
   ],
   overall_score: 72,
   overall_health: 'mid_range',
-  source_attribution: 'Demo data based on manufacturing industry benchmarks (RMA, SEC EDGAR)',
+  source_attribution: 'Demo data based on Paciolus reference values for manufacturing',
   generated_at: '2025-12-31T00:00:00Z',
-  disclaimer: 'This is sample demo data for illustration purposes only. Actual benchmark comparisons use aggregated industry data from RMA Annual Statement Studies and SEC EDGAR filings.',
+  disclaimer: 'This is sample demo data for illustration purposes only. Benchmark comparisons use Paciolus reference values (illustrative industry ranges), not statistics from a published industry study.',
 }

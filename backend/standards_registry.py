@@ -57,7 +57,7 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="PCAOB",
         code="AS 2310",
         title="The Confirmation Process",
-        usage=("bank reconciliation memo", "AR aging memo"),
+        usage=("AR aging memo", "bank reconciliation memo — named as a separate procedure, not what the tool does"),
     ),
     Standard(
         body="PCAOB",
@@ -146,9 +146,14 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="ISA",
         code="ISA 501",
         title="Audit Evidence — Specific Considerations for Selected Items",
-        usage=("inventory memo",),
+        usage=("inventory memo — attendance at counting named as an additional procedure", "sampling memo"),
     ),
-    Standard(body="ISA", code="ISA 505", title="External Confirmations", usage=("bank reconciliation memo",)),
+    Standard(
+        body="ISA",
+        code="ISA 505",
+        title="External Confirmations",
+        usage=("bank reconciliation memo — named as a separate procedure, not what the tool does",),
+    ),
     Standard(
         body="ISA",
         code="ISA 520",
@@ -419,7 +424,7 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="Nigrini",
         code="Nigrini 2012",
         title="Benford's Law: Applications for Forensic Accounting",
-        usage=("JE testing — Benford minimum-N=300 rationale",),
+        usage=("Benford MAD conformity bands; informs the Paciolus minimum population",),
     ),
     Standard(
         body="Statistics",

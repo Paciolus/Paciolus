@@ -18,7 +18,9 @@ ZERO-STORAGE COMPLIANCE:
 Audit Standards References:
 - ISA 240: Auditor's Responsibilities Relating to Fraud
 - ISA 500: Audit Evidence
-- PCAOB AS 2401: Consideration of Fraud (ghost employee indicators)
+- PCAOB AS 2401: Consideration of Fraud (fraud-risk framing only; the
+  ghost-employee indicators tested here are Paciolus conventions, not a
+  list set out in AS 2401)
 """
 
 import re
@@ -978,10 +980,10 @@ def _test_duplicate_employee_names(
 
     The test is tight — only the first three identified above are
     traditional "duplicate employee" fraud indicators; without PR-T12
-    the payroll engine had a gap an auditor would have spotted. ACFE
-    2024 Report to the Nations identifies ghost-employee schemes as
-    26% of payroll-fraud cases; detecting shared names across IDs is
-    the first screen auditors run.
+    the payroll engine had a gap an auditor would have spotted. The ACFE
+    Report to the Nations discusses ghost-employee schemes as a recurring
+    payroll-fraud pattern; detecting shared names across IDs is a common
+    first screen. (Sprint 837: an unverified percentage was removed.)
     """
     flagged: list[FlaggedEmployee] = []
 
@@ -1049,10 +1051,11 @@ def _test_gross_to_net_reconciliation(
     """PR-T13: Gross-to-Net Reconciliation.
 
     Sprint 682: flags payroll rows where gross_pay − deductions ≠ net_pay.
-    AICPA Employee Benefit Plan Audit Guide Ch. 5 names this as a first-
-    line integrity check — if the three columns don't reconcile, at least
-    one is wrong (data-entry error, misallocated withholding, or
-    fabricated net pay).
+    An arithmetic integrity check (Paciolus convention) — if the three
+    columns don't reconcile, at least one is wrong (data-entry error,
+    misallocated withholding, or fabricated net pay). Sprint 837 removed a
+    citation to the AICPA Employee Benefit Plan guide, which addresses
+    benefit-plan audits, not an employer's payroll register.
 
     Skips rows where any of the three values is zero (can't reconcile
     what isn't reported) and uses a $0.01 tolerance for float rounding.
@@ -1107,7 +1110,7 @@ def _test_gross_to_net_reconciliation(
         severity=Severity.HIGH.value,
         description=(
             "Flag rows where gross_pay − deductions ≠ net_pay (±$0.01). "
-            "AICPA EBP Audit Guide Ch. 5 — first-line payroll integrity check."
+            "An arithmetic integrity check (Paciolus convention)."
         ),
         flagged_entries=flagged,
     )
@@ -2357,7 +2360,7 @@ ENGINE_CONTRACT = EngineInputContract(
             description=(
                 "Sprint 701: PR-T12 Duplicate Employee Names — distinct "
                 "employee_ids sharing the same employee_name indicate a "
-                "ghost-employee scheme (ACFE 2024 — 26% of payroll fraud)."
+                "possible ghost-employee scheme."
             ),
             emits_fields=frozenset({"entries_flagged", "flagged_entries"}),
         ),

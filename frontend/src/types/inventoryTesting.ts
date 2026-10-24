@@ -2,7 +2,7 @@
  * Inventory Testing Types (Sprint 119)
  *
  * TypeScript interfaces matching the backend InvTestingResult.to_dict() shape.
- * IAS 2: Inventories / ISA 501: Specific Considerations / ISA 540: Accounting Estimates.
+ * IAS 2: Inventories / ISA 540: Accounting Estimates.
  */
 
 import {

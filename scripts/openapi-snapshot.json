@@ -29167,7 +29167,7 @@
     },
     "/audit/inventory-testing": {
       "post": {
-        "description": "Run automated inventory register testing.\n\nIAS 2/ASC 330: Inventory assertions.\nISA 501: Audit Evidence — Inventory.\nISA 540: Auditing accounting estimates (NRV indicators).",
+        "description": "Run automated inventory register testing.\n\nIAS 2/ASC 330: Inventory assertions.\nISA 540: Auditing accounting estimates (NRV indicators).",
         "operationId": "audit_inventory_audit_inventory_testing_post",
         "requestBody": {
           "content": {

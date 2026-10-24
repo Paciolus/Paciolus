@@ -50,7 +50,7 @@ _PAYROLL_CONFIG = TestingMemoConfig(
     test_descriptions=PAYROLL_TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the payroll register "
-        "in accordance with professional auditing standards "
+        "with reference to professional auditing standards "
         "(ISA 240: Auditor's Responsibilities Relating to Fraud, "
         "ISA 500: Audit Evidence, PCAOB AS 2401: Consideration of Fraud):"
     ),

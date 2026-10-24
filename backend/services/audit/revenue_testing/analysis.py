@@ -788,7 +788,8 @@ def test_large_manual_entries(
 ) -> RevenueTestResult:
     """RT-01: Large Manual Revenue Entries.
 
-    Flags manual entries exceeding the performance materiality threshold.
+    Flags manual entries at or above config.large_entry_threshold — a fixed
+    $50,000 Paciolus default, not performance materiality (Sprint 837).
     If no entry_type column, all entries above threshold are flagged as LOW.
     """
     flagged: list[FlaggedRevenue] = []
@@ -831,7 +832,11 @@ def test_large_manual_entries(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
-        description="Flags manual revenue entries exceeding performance materiality threshold (ISA 240 fraud risk).",
+        description=(
+            f"Flags manual revenue entries of ${config.large_entry_threshold:,.0f} or more "
+            "(a fixed Paciolus default, not performance materiality). Revenue is a presumed "
+            "fraud risk under ISA 240."
+        ),
         flagged_entries=flagged,
     )
 
@@ -1815,21 +1820,17 @@ def test_contract_validity(
     entries: list[RevenueEntry],
     config: RevenueTestingConfig,
 ) -> RevenueTestResult:
-    """RT-17: Contract Validity (ASC 606 Step 1).
+    """RT-17: Contract data completeness, informed by ASC 606 Step 1.
 
-    Sprint 683 — ASC 606 Step 1 requires a *valid contract* before
-    revenue can be recognised. An entry is a contract-validity red
-    flag when:
+    Sprint 683 — ASC 606 Step 1 requires a contract before revenue can be
+    recognised. This test cannot evaluate whether a contract is valid; it
+    checks only that the contract-related fields an entry carries are
+    complete (Sprint 837 relabel). An entry is flagged when:
 
-      * ``customer_id`` is blank on an entry that claims revenue
-        recognition (without an identified counterparty, there is no
-        contract per ASC 606-10-25-1).
-      * ``contract_id`` is referenced but ``contract_inception_date``
-        is earlier than the recognition date implies (recognition
-        before the contract exists).
-      * ``performance_obligation_id`` is blank on an entry that
-        nevertheless has a ``recognition_method`` (recognising revenue
-        without an identified obligation — ASC 606-10-25-14).
+      * ``contract_id`` is present but ``performance_obligation_id`` is blank.
+      * ``recognition_method`` is present but ``contract_id`` is blank.
+      * ``recognition_method`` is point-in-time but
+        ``obligation_satisfaction_date`` is blank.
 
     Skipped when contract-aware columns aren't detected. The contract
     detection fields (``contract_id``, ``performance_obligation_id``,
@@ -1844,7 +1845,7 @@ def test_contract_validity(
     has_contract_data = any(e.contract_id or e.performance_obligation_id or e.recognition_method for e in entries)
     if not has_contract_data:
         return RevenueTestResult(
-            test_name="Contract Validity (ASC 606 Step 1)",
+            test_name="Contract Data Completeness (ASC 606 Step 1)",
             test_key="contract_validity",
             test_tier=TestTier.ADVANCED,
             entries_flagged=0,
@@ -1899,7 +1900,7 @@ def test_contract_validity(
         flagged.append(
             FlaggedRevenue(
                 entry=e,
-                test_name="Contract Validity (ASC 606 Step 1)",
+                test_name="Contract Data Completeness (ASC 606 Step 1)",
                 test_key="contract_validity",
                 test_tier=TestTier.ADVANCED,
                 severity=severity,
@@ -1916,7 +1917,7 @@ def test_contract_validity(
 
     flag_rate = len(flagged) / max(len(entries), 1)
     return RevenueTestResult(
-        test_name="Contract Validity (ASC 606 Step 1)",
+        test_name="Contract Data Completeness (ASC 606 Step 1)",
         test_key="contract_validity",
         test_tier=TestTier.ADVANCED,
         entries_flagged=len(flagged),
@@ -1924,9 +1925,10 @@ def test_contract_validity(
         flag_rate=flag_rate,
         severity=Severity.HIGH if flagged else Severity.LOW,
         description=(
-            "Flags entries that violate ASC 606 Step 1 (contract validity): "
-            "contract without performance obligation, recognition without "
-            "contract, or point-in-time recognition without satisfaction date."
+            "Contract data completeness check informed by ASC 606 Step 1: flags a "
+            "contract without a performance obligation, a recognition method without a "
+            "contract, or point-in-time recognition without a satisfaction date. "
+            "It checks for missing fields; it does not evaluate contract validity."
         ),
         flagged_entries=flagged,
     )
@@ -2225,7 +2227,8 @@ def test_modification_treatment_mismatch(
                         severity=Severity.HIGH,
                         issue=(
                             f"Contract {contract_id} has inconsistent modification treatment: "
-                            f"{', '.join(sorted(mod_types))} — risk indicator for ASC 606-10-25-13 non-compliance"
+                            f"{', '.join(sorted(mod_types))} — may warrant review; ASC 606 can require "
+                            "different treatments for different modifications"
                         ),
                         confidence=round(min(base_confidence, 1.0), 2),
                         details={
@@ -2269,7 +2272,10 @@ def test_modification_treatment_mismatch(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
-        description="Flags inconsistent contract modification treatment (ASC 606-10-25-13).",
+        description=(
+            "Flags contracts recording more than one modification treatment; ASC 606 can "
+            "require different treatments for different modifications, so a flag may warrant review."
+        ),
         flagged_entries=flagged,
     )
 
@@ -2332,8 +2338,8 @@ def test_allocation_inconsistency(
                         severity=Severity.HIGH,
                         issue=(
                             f"Contract {contract_id} uses {len(allocation_bases)} allocation bases "
-                            f"({', '.join(sorted(allocation_bases))}) — risk indicator for inconsistent "
-                            f"SSP allocation (ASC 606-10-32-33)"
+                            f"({', '.join(sorted(allocation_bases))}) — may warrant review; ASC 606 "
+                            f"permits different SSP methods for different obligations"
                         ),
                         confidence=round(min(base_confidence, 1.0), 2),
                         details={
@@ -2377,7 +2383,10 @@ def test_allocation_inconsistency(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
-        description="Flags inconsistent SSP allocation bases within a contract (ASC 606-10-32-33).",
+        description=(
+            "Flags contracts recording more than one allocation basis; ASC 606 permits different "
+            "SSP methods for different obligations, so a flag may warrant review."
+        ),
         flagged_entries=flagged,
     )
 

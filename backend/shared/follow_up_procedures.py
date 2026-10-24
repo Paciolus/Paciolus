@@ -191,7 +191,7 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     ),
     # AR Aging
     "ar_sign_anomalies": "Investigate credit balances in AR for overpayments, misclassifications, or needed reclassification.",
-    "missing_allowance": "Evaluate the need for an allowance for doubtful accounts per IFRS 9 / ASC 326.",
+    "missing_allowance": "Determine how expected credit losses are measured and recognised under IFRS 9 / ASC 326, and where they are recorded if no allowance account is present.",
     "past_due_concentration": "Review past-due accounts for collection activity and assess recoverability.",
     "customer_concentration": "Evaluate credit risk concentration; consider expanded confirmation procedures.",
     "credit_limit_breaches": "Review customers exceeding credit limits for continued creditworthiness and collection outlook.",
@@ -320,7 +320,7 @@ FOLLOW_UP_PROCEDURES: dict[str, str] = {
     ),
     "interbank_transfers": (
         "Investigate same-day matching debit/credit pairs above $10,000 as potential check "
-        "kiting indicators per ISA 240 (A40). Obtain management explanation and verify "
+        "kiting indicators (a fraud risk considered under ISA 240). Obtain management explanation and verify "
         "the business purpose of each transfer. Confirm that both sides of the transfer "
         "are properly recorded in the correct period."
     ),

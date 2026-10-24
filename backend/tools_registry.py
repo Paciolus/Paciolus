@@ -61,14 +61,17 @@ TOOLS: Final[tuple[Tool, ...]] = (
         standards=("ISA 520",),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
-        summary="Side-by-side variance analysis across up to three periods with reclassification detection.",
+        summary="Side-by-side variance analysis across up to three periods.",
     ),
     Tool(
         slug="bank_reconciliation",
         display_name="Bank Reconciliation",
         category="Core Analysis",
         test_count=None,
-        standards=("ISA 505", "ISA 500"),
+        # Sprint 837: ISA 505 removed. The tool reconciles the client's own bank and
+        # ledger records (ISA 500); a bank confirmation (ISA 505 / AS 2310) is a
+        # separate procedure the auditor may perform.
+        standards=("ISA 500",),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
         summary="Match bank statements against book records to surface reconciling items and unexplained discrepancies.",
@@ -149,7 +152,8 @@ TOOLS: Final[tuple[Tool, ...]] = (
         display_name="Inventory Testing",
         category="Testing Suite",
         test_count=10,
-        standards=("ISA 501", "IAS 2", "ASC 330"),
+        # Sprint 837: ISA 501 removed — no test involves attending a physical count.
+        standards=("ISA 500", "IAS 2", "ASC 330"),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
         summary="Valuation anomalies, LCM/NRV, obsolescence indicators, and cutoff issues across inventory records.",
@@ -163,7 +167,7 @@ TOOLS: Final[tuple[Tool, ...]] = (
         standards=("ISA 530", "AS 2315", "AICPA Audit Sampling Guide Table A-1"),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
-        summary="MUS + classical variables + attribute sampling per ISA 530 with full projection + evaluation workflow.",
+        summary="Monetary unit sampling (Stringer bound) and simple random sampling per ISA 530, with stratification, projection and evaluation.",
     ),
     # ── Advanced — Promoted in 689b–g (6) ───────────────
     Tool(
@@ -194,7 +198,7 @@ TOOLS: Final[tuple[Tool, ...]] = (
         standards=("IRC §6051", "Form W-2", "Form W-3", "Form 941"),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
-        summary="Reconcile payroll YTD to draft W-2s and Form 941 quarterlies before year-end filing.",
+        summary="Reconcile payroll YTD to draft W-2s, and Form 941 quarterlies to payroll YTD, before year-end filing.",
     ),
     Tool(
         slug="form_1099",
@@ -221,7 +225,9 @@ TOOLS: Final[tuple[Tool, ...]] = (
         display_name="Cash Flow Projector",
         category="Advanced",
         test_count=None,
-        standards=("ASC 230",),
+        # Sprint 837: ASC 230 removed — it governs historical cash flow statements,
+        # not forecasts. No standard is cited for the projection itself.
+        standards=(),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
         summary="Project 90-day cash position across base / stress / best scenarios with liquidity-breach flagging.",

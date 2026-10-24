@@ -1,4 +1,10 @@
-"""Sprint 634 — Form 1099 Preparation engine tests."""
+"""Sprint 634 — Form 1099 Preparation engine tests.
+
+Sprint 837: the original tests ran as tax year 2026 while asserting the $600
+rules. For 2026 the 1099-NEC / 1099-MISC threshold is $2,000, so those tests
+pinned the stale figure; they now run as 2025, the last year the $600 rules
+apply. The 2026+ behaviour is covered by TestSprint837ThresholdsByYear.
+"""
 
 from decimal import Decimal
 
@@ -15,6 +21,7 @@ from form_1099_engine import (
     VendorPayment,
     VendorRecord,
     prepare_1099s,
+    thresholds_for_year,
 )
 
 
@@ -56,7 +63,7 @@ def _payment(
 class TestThresholds:
     def test_nec_at_600_fires(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[_payment(amount="600")],
         )
@@ -67,7 +74,7 @@ class TestThresholds:
 
     def test_nec_below_600_does_not_fire(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[_payment(amount="599.99")],
         )
@@ -76,7 +83,7 @@ class TestThresholds:
 
     def test_int_threshold_ten_dollars(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[_payment(amount="10", category=PaymentCategory.INTEREST)],
         )
@@ -88,7 +95,7 @@ class TestThresholds:
 class TestExemptions:
     def test_corporation_not_reported(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(entity=EntityType.CORPORATION)],
             payments=[_payment(amount="5000")],
         )
@@ -97,7 +104,7 @@ class TestExemptions:
 
     def test_corporation_still_reported_for_legal(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(entity=EntityType.CORPORATION)],
             payments=[_payment(amount="5000", category=PaymentCategory.LEGAL)],
         )
@@ -107,7 +114,7 @@ class TestExemptions:
 
     def test_corporation_still_reported_for_medical(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(entity=EntityType.CORPORATION)],
             payments=[_payment(amount="5000", category=PaymentCategory.MEDICAL)],
         )
@@ -116,7 +123,7 @@ class TestExemptions:
 
     def test_credit_card_excluded(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[
                 _payment(amount="5000", method=PaymentMethod.CREDIT_CARD),
@@ -129,7 +136,7 @@ class TestExemptions:
 
     def test_paypal_excluded(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[_payment(amount="5000", method=PaymentMethod.PAYPAL)],
         )
@@ -140,7 +147,7 @@ class TestExemptions:
 class TestAggregation:
     def test_multiple_payments_aggregated_per_form(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[
                 _payment(amount="300"),
@@ -155,7 +162,7 @@ class TestAggregation:
 
     def test_boxes_split_by_category(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[
                 # Sprint 826 (F6): rents must reach $600 on their own — this test
@@ -176,7 +183,7 @@ class TestAggregation:
 
     def test_different_form_types_are_separate_candidates(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[
                 _payment(amount="700"),  # NEC
@@ -191,7 +198,7 @@ class TestAggregation:
 class TestDataQuality:
     def test_missing_tin_flags_for_w9(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(tin=None)],
             payments=[_payment(amount="1000")],
         )
@@ -201,7 +208,7 @@ class TestDataQuality:
 
     def test_invalid_tin_format_flags_for_w9(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(tin="123")],  # too short
             payments=[_payment(amount="1000")],
         )
@@ -211,7 +218,7 @@ class TestDataQuality:
 
     def test_missing_address_flagged_on_quality_report(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor(address="", state="")],
             payments=[_payment(amount="1000")],
         )
@@ -224,7 +231,7 @@ class TestDataQuality:
 class TestSummary:
     def test_summary_aggregates_totals_and_counts(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[
                 _vendor(vendor_id="V1", name="Vendor A"),
                 # Distinct TIN: with the shared default these are one payee
@@ -255,19 +262,20 @@ class TestInputValidation:
 class TestSerialisation:
     def test_to_dict_roundtrip(self):
         cfg = Form1099Config(
-            tax_year=2026,
+            tax_year=2025,
             vendors=[_vendor()],
             payments=[_payment(amount="1000")],
         )
         result = prepare_1099s(cfg)
         d = result.to_dict()
-        assert d["tax_year"] == 2026
+        assert d["tax_year"] == 2025
         assert isinstance(d["candidates"], list)
         assert "summary" in d
 
 
 class TestThresholdConstants:
-    def test_thresholds_match_irs_standards(self):
+    def test_pre_2026_thresholds_match_irs_standards(self):
+        """Sprint 837: FORM_THRESHOLDS holds the figures for tax years through 2025."""
         assert FORM_THRESHOLDS[FormType.NEC] == Decimal("600")
         assert FORM_THRESHOLDS[FormType.MISC] == Decimal("600")
         assert FORM_THRESHOLDS[FormType.INT] == Decimal("10")
@@ -358,3 +366,127 @@ class TestSprint826:
         )
         (candidate,) = prepare_1099s(cfg).candidates
         assert (candidate.form_type, candidate.box_amounts[0].box) == ("1099-MISC", 10)
+
+
+class TestSprint837ThresholdsByYear:
+    """Sprint 837: 1099 thresholds are keyed by tax year.
+
+    The engine applied $600 to every year. Secondary sources report that the
+    One Big Beautiful Bill Act (2025) raised the 1099-NEC / 1099-MISC threshold
+    to $2,000 for payments made after December 31, 2025. Each test here fails on
+    the pre-837 engine.
+    """
+
+    def test_2026_nec_payee_at_1500_is_not_a_candidate_but_is_listed_below_threshold(self):
+        result = prepare_1099s(Form1099Config(tax_year=2026, vendors=[_vendor()], payments=[_payment(amount="1500")]))
+        assert result.candidates == []
+        (payee,) = result.below_threshold_payees
+        assert payee.vendor_id == "V1"
+        assert payee.form_type == "1099-NEC"
+        assert payee.total == Decimal("1500.00")
+        assert "below the 2026 reporting threshold" in payee.reason.lower()
+        assert "not required, shown for review" in payee.reason
+        assert result.summary["below_threshold_count"] == 1
+        d = result.to_dict()
+        assert d["below_threshold_payees"][0]["total"] == "1500.00"
+
+    def test_2025_nec_payee_at_1500_is_a_candidate(self):
+        result = prepare_1099s(Form1099Config(tax_year=2025, vendors=[_vendor()], payments=[_payment(amount="1500")]))
+        (candidate,) = result.candidates
+        assert candidate.form_type == "1099-NEC"
+        assert result.below_threshold_payees == []
+        assert result.notices == []
+
+    def test_2026_nec_at_2000_is_a_candidate(self):
+        result = prepare_1099s(Form1099Config(tax_year=2026, vendors=[_vendor()], payments=[_payment(amount="2000")]))
+        assert len(result.candidates) == 1
+
+    def test_2026_below_600_is_neither_candidate_nor_listed(self):
+        result = prepare_1099s(Form1099Config(tax_year=2026, vendors=[_vendor()], payments=[_payment(amount="599.99")]))
+        assert result.candidates == []
+        assert result.below_threshold_payees == []
+
+    def test_2027_uses_2000_with_a_notice_that_the_indexed_figure_is_not_in_paciolus(self):
+        result = prepare_1099s(
+            Form1099Config(
+                tax_year=2027,
+                vendors=[_vendor(), _vendor(vendor_id="V2", tin="98-7654321")],
+                payments=[_payment(amount="1999.99"), _payment(vendor_id="V2", amount="2000")],
+            )
+        )
+        assert [c.vendor_id for c in result.candidates] == ["V2"]
+        assert [b.vendor_id for b in result.below_threshold_payees] == ["V1"]
+        assert any("inflation-adjusted" in n and "2027" in n and "not in Paciolus" in n for n in result.notices)
+        d = result.to_dict()
+        assert d["thresholds"]["tax_year"] == 2027
+        assert d["thresholds"]["figures_from_tax_year"] == 2026
+        assert d["notices"] == result.notices
+
+    @pytest.mark.parametrize("year", [2025, 2026, 2027])
+    def test_royalties_stay_at_ten_dollars(self, year):
+        result = prepare_1099s(
+            Form1099Config(
+                tax_year=year,
+                vendors=[_vendor()],
+                payments=[_payment(amount="10", category=PaymentCategory.ROYALTIES)],
+            )
+        )
+        (candidate,) = result.candidates
+        assert (candidate.form_type, candidate.box_amounts[0].box) == ("1099-MISC", 2)
+
+    def test_2026_interest_stays_at_ten_dollars(self):
+        result = prepare_1099s(
+            Form1099Config(
+                tax_year=2026,
+                vendors=[_vendor()],
+                payments=[_payment(amount="10", category=PaymentCategory.INTEREST)],
+            )
+        )
+        assert [c.form_type for c in result.candidates] == ["1099-INT"]
+
+    def test_2026_rents_at_1500_are_listed_below_threshold(self):
+        result = prepare_1099s(
+            Form1099Config(
+                tax_year=2026,
+                vendors=[_vendor()],
+                payments=[_payment(amount="1500", category=PaymentCategory.RENTS)],
+            )
+        )
+        assert result.candidates == []
+        (payee,) = result.below_threshold_payees
+        assert payee.form_type == "1099-MISC"
+        assert "box 1" in payee.reason
+
+    def test_2026_attorney_gross_proceeds_keep_600_and_are_marked_for_confirmation(self):
+        result = prepare_1099s(
+            Form1099Config(
+                tax_year=2026,
+                vendors=[_vendor(entity=EntityType.CORPORATION)],
+                payments=[_payment(amount="600", category=PaymentCategory.LEGAL)],
+            )
+        )
+        (candidate,) = result.candidates
+        assert candidate.box_amounts[0].box == 10
+        box10 = next(i for i in result.thresholds.items if i.form_type == FormType.MISC and i.box == 10)
+        assert box10.amount == Decimal("600")
+        assert box10.needs_confirmation is True
+
+    def test_result_carries_thresholds_and_basis(self):
+        d = prepare_1099s(Form1099Config(tax_year=2026, vendors=[_vendor()], payments=[])).to_dict()
+        nec = next(i for i in d["thresholds"]["items"] if i["form_type"] == "1099-NEC")
+        assert nec["amount"] == "2000.00"
+        assert "One Big Beautiful Bill Act" in nec["basis"]
+        assert "IRS Instructions for Forms 1099-MISC" in d["thresholds"]["confirm_against"]
+        assert "2026" in d["thresholds"]["confirm_against"]
+        assert d["notices"], "2026 runs explain the threshold change"
+
+    @pytest.mark.parametrize(
+        ("year", "table_year", "nec"),
+        [(2000, 2025, "600"), (2025, 2025, "600"), (2026, 2026, "2000"), (2031, 2026, "2000")],
+    )
+    def test_thresholds_for_year(self, year, table_year, nec):
+        schedule = thresholds_for_year(year)
+        assert schedule.table_year == table_year
+        assert schedule.form_threshold(FormType.NEC) == Decimal(nec)
+        assert schedule.form_threshold(FormType.INT) == Decimal("10")
+        assert schedule.box_threshold(FormType.MISC, 2) == Decimal("10")

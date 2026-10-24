@@ -42,7 +42,10 @@ TEST_DESCRIPTIONS = {
     "round_dollar_amounts": "Flags entries with suspiciously round dollar amounts ($10K+).",
     "unusual_amounts": "Uses z-score analysis to identify statistically unusual amounts per account.",
     "benford_law": "Tests first-digit distribution against Benford's Law expected frequencies.",
-    "weekend_postings": "Flags entries posted on Saturdays or Sundays, weighted by amount.",
+    "weekend_postings": (
+        "Flags entries posted on Saturdays or Sundays, weighted by amount. "
+        "A Paciolus convention, not a test named by ISA 240."
+    ),
     # Sprint 831: month_end_clustering and holiday_postings are deliberately absent.
     # Their descriptions depend on the run (the auditor's holiday calendar, whether
     # the client-baseline comparison ran), so the memo prints the result's own
@@ -59,7 +62,7 @@ _JE_CONFIG = TestingMemoConfig(
     test_descriptions=TEST_DESCRIPTIONS,
     methodology_intro=(
         "The following automated tests were applied to the General Ledger extract "
-        "in accordance with professional auditing standards "
+        "with reference to professional auditing standards "
         "(PCAOB AS 2401: Consideration of Fraud in a Financial Statement Audit, "
         "ISA 240: The Auditor's Responsibilities Relating to Fraud):"
     ),

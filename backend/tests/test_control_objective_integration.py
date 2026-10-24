@@ -777,20 +777,23 @@ class TestIFRSBenchmarkComparability:
     the system must surface comparability metadata via framework_note fields.
 
     Verifies:
-    - Benchmark data is GAAP-sourced (SEC EDGAR / RMA)
+    - Benchmark source metadata is present and does not claim an unverified source
     - BenchmarkComparison has framework_note field
     - Percentile calculation is deterministic at known midpoints
     - Cross-framework comparison produces valid results (no crashes)
     - framework_note infrastructure exists in comparison & multi-period schemas
     """
 
-    def test_benchmark_source_is_gaap(self):
-        """Benchmark source attribution must reference GAAP/SEC sources."""
+    def test_benchmark_source_is_disclosed_without_unverified_attribution(self):
+        """Sprint 837: the old test pinned "SEC EDGAR" as a source, but the figures'
+        provenance is unverified, so the attribution was removed. The source is
+        still disclosed, as Paciolus reference values."""
         from benchmark_engine import get_benchmark_sources
 
         sources = get_benchmark_sources()
         source_names = [s["name"] for s in sources["primary_sources"]]
-        assert "SEC EDGAR" in source_names, "GAAP source attribution missing"
+        assert source_names == ["Paciolus reference values"]
+        assert "SEC EDGAR" not in source_names
 
     def test_benchmark_comparison_has_framework_note_field(self):
         """BenchmarkComparison dataclass must include framework_note."""

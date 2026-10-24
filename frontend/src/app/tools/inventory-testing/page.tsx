@@ -15,7 +15,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
 /**
  * Inventory Testing — Tool 11 (Sprint 119)
  *
- * IAS 2 / ISA 501 / ISA 540: Inventory existence, completeness, and valuation.
+ * IAS 2 / ISA 500 / ISA 540: inventory register anomaly indicators (no count attendance — ISA 501 not cited).
  * Upload an inventory register for automated testing — 9-test battery
  * for inventory anomaly indicators across structural, statistical, and advanced tiers.
  */
@@ -60,14 +60,14 @@ export default function InventoryTestingPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">IAS 2 / ISA 501 Inventory Analysis</span>
+            <span className="text-theme-success-text text-sm font-sans font-medium">IAS 2 / ISA 500 Inventory Analysis</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Inventory Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload an inventory register for automated testing &mdash; 9-test battery
-            for inventory anomaly indicators per IAS 2 and ISA 501.
+            Upload an inventory register for automated testing &mdash; 10-test battery
+            for inventory anomaly indicators per IAS 2.
           </p>
         </div>
 
@@ -210,13 +210,13 @@ export default function InventoryTestingPage() {
                 <DisclaimerBox>
                   This automated inventory testing
                   tool provides analytical procedures to assist professional auditors in evaluating inventory register
-                  anomaly indicators per <Citation code="IAS 2" />, <Citation code="ISA 501" />,
-                  and <Citation code="ISA 540" />.
+                  anomaly indicators per <Citation code="IAS 2" /> and <Citation code="ISA 540" />. It analyses
+                  register data only and does not replace attendance at a physical inventory count.
                   Results are not NRV adequacy conclusions or obsolescence determinations and should be interpreted
                   in the context of the specific engagement. They are not a substitute for professional judgment or
                   sufficient audit evidence per <Citation code="ISA 500" />.
                 </DisclaimerBox>
-                <CitationFooter standards={['IAS 2', 'ISA 501', 'ISA 540', 'ISA 500']} />
+                <CitationFooter standards={['IAS 2', 'ISA 540', 'ISA 500']} />
               </div>
             )}
           </ToolStatePresence>

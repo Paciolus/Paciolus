@@ -143,7 +143,7 @@ export default function BankRecPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-sage-50 border border-sage-200 mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-sage-700 text-sm font-sans font-medium">ISA 505 External Confirmations</span>
+            <span className="text-sage-700 text-sm font-sans font-medium">ISA 500 Audit Evidence</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Bank Statement Reconciliation
@@ -300,10 +300,11 @@ export default function BankRecPage() {
                   This automated bank reconciliation
                   tool assists professional auditors by matching bank statement transactions against general ledger entries.
                   Results should be reviewed in the context of the specific engagement. Column auto-detection may require
-                  manual verification for non-standard file formats. Outstanding items should be investigated
-                  per <Citation code="ISA 500" /> / <Citation code="ISA 505" /> requirements.
+                  manual verification for non-standard file formats. The tool reconciles the client&apos;s own bank
+                  and ledger records (<Citation code="ISA 500" />); it is not a bank confirmation. Confirming balances
+                  directly with the bank (<Citation code="ISA 505" />) is a separate procedure the auditor may perform.
                 </DisclaimerBox>
-                <CitationFooter standards={['ISA 500', 'ISA 505']} />
+                <CitationFooter standards={['ISA 500']} />
               </div>
             )}
           </ToolStatePresence>

@@ -171,8 +171,9 @@ def zscore_to_severity(z: float) -> Severity:
     these thresholds may suppress audit-relevant outliers and supplement
     z-score analysis with manual review of the top N items by absolute value.
 
-    Source: Adapted from Nigrini (2012), Benford's Law, ch. 7 —
-    z-score thresholds for financial audit populations.
+    Source: Paciolus convention (Sprint 837). No authority sets these
+    z-score bands; an earlier attribution to Nigrini (2012) ch. 7 could not
+    be confirmed and was removed.
     """
     if z > 5:
         return Severity.HIGH

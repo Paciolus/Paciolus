@@ -351,6 +351,41 @@
 > Sprints 812–831 archived to `tasks/archive/sprints-812-831-details.md`.
 > Sprints 790–835 archived to `tasks/archive/sprints-790-835-details.md`.
 
+### Sprint 837: Citation corrections; 1099 thresholds by tax year
+**Status:** COMPLETE 2026-10-24 — found by the Sprint 835 catalog; practitioner confirmation items below.
+**Priority:** P1 — customer-visible text cited standards for things they do not say.
+
+- [x] **About 40 citation corrections**, each to the strength the source supports and without
+      unconfirmed paragraph numbers. Highlights: weekend/after-hours/holiday tests labelled Paciolus
+      conventions (ISA 240 / AS 2401 do not name them); Benford's 300-entry minimum is ours (Nigrini's
+      MAD bands stay attributed); unverifiable statistics removed from customer text (ACFE "26%" and
+      "~19%", "BLS 2023 ~17%"); an "AICPA Audit Guide for Receivables §5.11" reference removed;
+      "allowance required under IFRS 9 / ASC 326" corrected (the standards require ECL measurement, not
+      a named account); bank rec and three-way match no longer presented as ISA 505 / AS 2310
+      confirmations (they reconcile client records, ISA 500); ISA 501 no longer cited for cut-off or for
+      inventory tests that involve no count; ISA 570 "¶16" references removed; SoD no longer "required
+      for SOC 1"; ASC 230 no longer cited for a forecast; sampling no longer claims classical-variables
+      and attribute methods; multi-period no longer claims reclassification detection; W-2 941
+      comparison described as what the code does (payroll YTD); benchmark figures no longer attributed
+      to RMA / SEC EDGAR; revenue RT-01/06/07/14/15/16/17 text made to match the code (RT-17 renamed
+      "Contract Data Completeness"). Seven memo intros now say "with reference to" rather than "in
+      accordance with" professional auditing standards.
+- [x] **1099 thresholds by year** (`form_1099_engine.thresholds_for_year`): through 2025 NEC and MISC
+      boxes $600; **2026 NEC and MISC boxes 1/3/6 $2,000** (2025 legislation, per secondary sources —
+      confirm against the IRS instructions); box 10 attorney proceeds kept at $600 (unclear whether the
+      change reaches it; the lower figure cannot miss a filing); royalties and interest $10. 2027+ uses
+      the 2026 figures with a notice that the indexed figure must be confirmed. Payees from $600 up to
+      the year's threshold are listed as "not required, shown for review" (API, CSV, results view) and
+      the result states every threshold applied and its basis.
+
+**For a practitioner to confirm:** the 2026 1099 figures and their statutory basis, box 10, the ASC 606
+paragraph numbers that were kept (606-10-25-12, -25-13, -25-30), and the benchmark sample sizes still
+returned by the benchmarks API (unverifiable; not changed).
+
+**Commit SHA:** recorded on merge.
+
+---
+
 ### Sprint 836: Saved testing thresholds are never applied
 **Status:** PENDING — found during Sprint 831.
 **Priority:** P1 — a customer who changes a threshold in the tool settings drawer sees no effect.

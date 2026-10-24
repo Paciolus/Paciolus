@@ -99,10 +99,11 @@ class JETestingConfig:
     unusual_amount_min_entries: int = 5  # Min entries per account for stats
 
     # T6: Benford's Law
-    # Sprint 686: lowered from 500 → 300 to align with Nigrini (2012) which
-    # specifies ≥300 entries for first-digit Benford analysis. 500 was
-    # overly conservative and caused legitimate populations to skip Benford.
-    benford_min_entries: int = 300  # Min entries for Benford analysis (Nigrini 2012)
+    # Sprint 686: lowered from 500 → 300. 300 is a Paciolus minimum, informed
+    # by Nigrini's (2012) guidance that Benford analysis needs a sufficiently
+    # large population; Nigrini does not set this exact figure (Sprint 837).
+    # The MAD conformity bands themselves are Nigrini's (shared/benford.py).
+    benford_min_entries: int = 300  # Paciolus minimum population for Benford analysis
     benford_min_magnitude_range: int = 2  # Min orders of magnitude ($10→$1,000+)
     benford_min_amount: float = 1.0  # Exclude sub-dollar entries
 
@@ -1348,6 +1349,10 @@ def test_weekend_postings(
 ) -> TestResult:
     """T7: Flag entries posted on Saturday/Sunday.
 
+    ISA 240 and AS 2401 discuss entries made at unusual times as a
+    characteristic that may warrant attention; they do not name weekend
+    postings, so this test and its amount weighting are a Paciolus convention.
+
     Weights by amount: large weekend entries get higher severity.
     Configurable via config.weekend_posting_enabled.
     """
@@ -1407,7 +1412,10 @@ def test_weekend_postings(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.LOW,
-        description="Flags entries posted on Saturday or Sunday, weighted by amount.",
+        description=(
+            "Flags entries posted on Saturday or Sunday, weighted by amount. A Paciolus convention, "
+            "not a test named by ISA 240 or AS 2401."
+        ),
         flagged_entries=flagged,
     )
 
@@ -1674,8 +1682,10 @@ def test_single_user_high_volume(
 ) -> TestResult:
     """T9: Flag users who posted a disproportionate share of entries.
 
-    Opt-in: requires posted_by column data. Helps identify segregation-of-duties
-    risks per PCAOB AS 2201 / ISA 315.
+    Opt-in: requires posted_by column data. A concentration of postings in one
+    user may point to segregation-of-duties questions; the share threshold
+    (config.single_user_volume_pct) is a Paciolus convention, not a figure set
+    by any auditing standard (Sprint 837).
     """
     entries_with_user = [e for e in entries if e.posted_by]
     if not entries_with_user:
@@ -1749,7 +1759,9 @@ def test_after_hours_postings(
     """T10: Flag entries posted outside business hours.
 
     Opt-in: requires timestamp data (not just date). Entries with date-only
-    fields are skipped. Business hours default to 06:00-18:00.
+    fields are skipped. Business hours default to 06:00-18:00. ISA 240 and
+    AS 2401 do not name after-hours postings; the test and its default hours
+    are a Paciolus convention.
     """
     if not config.after_hours_enabled:
         return TestResult(
@@ -1836,7 +1848,10 @@ def test_after_hours_postings(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.MEDIUM,
-        description=f"Flags entries posted outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00.",
+        description=(
+            f"Flags entries posted outside {config.after_hours_end:02d}:00-{config.after_hours_start:02d}:00. "
+            "A Paciolus convention, not a test named by ISA 240 or AS 2401."
+        ),
         flagged_entries=flagged,
     )
 

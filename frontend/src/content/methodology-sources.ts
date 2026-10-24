@@ -627,7 +627,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         note: 'ASC 606 / IFRS 15 require the transaction price to be allocated on relative standalone selling prices. They allow different estimation methods for different obligations in the same contract, so more than one basis is not in itself inconsistent. The severities and the 50% fill-rate cut-off are Paciolus choices.',
       },
       {
-        test: 'RT-17 Contract Validity',
+        test: 'RT-17 Contract Data Completeness',
         rule: 'Runs when any entry has contract data. Checks three things on each entry: a contract ID with no performance-obligation ID; a recognition method with no contract ID; point-in-time recognition with no obligation-satisfaction date. HIGH when two or more apply, MEDIUM when one does.',
         kind: 'convention',
         sources: ['ASC 606', 'IFRS 15'],
@@ -1292,7 +1292,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'convention',
         sources: [],
         configurable: false,
-        note: 'All three triggers are Paciolus defaults. The engine header cites ISA 501, which covers inventory, litigation and segment information rather than period-end cut-off generally, so it is not listed here.',
+        note: 'All three triggers are Paciolus defaults. Cut-off is an assertion considered under ISA 315; the engine does not cite ISA 501.',
       },
     ],
   },
@@ -1679,19 +1679,19 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
     rules: [
       {
         test: '1099-NEC threshold',
-        rule: 'Nonemployee compensation (including attorney fees) of $600 or more per payee in the tax year produces a 1099-NEC candidate.',
+        rule: 'Nonemployee compensation (including attorney fees) per payee in the tax year at or above the threshold for the year produces a 1099-NEC candidate: $600 through tax year 2025, $2,000 for 2026. Payees between $600 and the threshold are listed separately as not required, for review.',
         kind: 'requirement',
         sources: ['IRC §6041', 'IRC §6041A'],
         configurable: false,
-        note: 'The $600 threshold applies to payments made through 2025. Legislation enacted in 2025 raises the threshold to $2,000 for payments made after 2025; confirm against the current IRS instructions. The tool currently applies $600 for every tax year, so a 2026 run can list payees below the new threshold.',
+        note: 'The 2026 figure reflects 2025 legislation as reported by secondary sources; confirm against the IRS instructions for the year. From 2027 the threshold is inflation-indexed and Paciolus applies the 2026 figure with a notice to confirm (an indexed threshold cannot be lower, so no required filing is missed).',
       },
       {
         test: '1099-MISC rents, medical, other income',
-        rule: 'A 1099-MISC is due when any one box reaches its own threshold: rents (box 1), other income (box 3), medical and health care payments (box 6) at $600 each. Boxes are not added together.',
+        rule: 'A 1099-MISC is due when any one box reaches its own threshold: rents (box 1), other income (box 3), medical and health care payments (box 6) at $600 each through tax year 2025 and $2,000 each for 2026. Boxes are not added together.',
         kind: 'requirement',
         sources: ['IRC §6041'],
         configurable: false,
-        note: 'The same 2025 change to $2,000 for payments after 2025 applies to these boxes (confirm against the current IRS instructions); the tool does not yet reflect it.',
+        note: 'Same basis and confirmation note as the 1099-NEC threshold.',
       },
       {
         test: '1099-MISC royalties',
@@ -1706,6 +1706,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'requirement',
         sources: ['IRC §6045(f)'],
         configurable: false,
+        note: 'Kept at $600 for 2026 because it is unclear whether the 2025 change reaches this box; the lower figure cannot miss a required filing. Confirm against the IRS instructions.',
       },
       {
         test: '1099-INT threshold',
