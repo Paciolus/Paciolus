@@ -626,7 +626,11 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
    "Source File" vs "Source" as a parameter (no wording change).
 6. [x] `tests/test_memo_boundary_phrasing.py:101` matches only `*_memo_generator.py`, so
    accrual/expense/flux/population-profile `*_memo.py` are never scanned. Widen the glob.
-7. [ ] `tests/test_citation_consistency.py` never scans backend PDF producers. Add them; register
+7. [x] *(Done 2026-10-23: memo/report producers scanned; the scanner now reads the `AU-C § 330`
+   spelling, which surfaced AU-C 320 and 330 too; 10 codes registered, every citation checked
+   accurate first. The anomaly summary's table keeps its literal titles — reading the registry's
+   would change rendered wording — but every code in it is now guarded.)*
+   `tests/test_citation_consistency.py` never scans backend PDF producers. Add them; register
    the unregistered codes cited in customer PDFs (AS 1305, AS 1105, AS 2810, AU-C 320/330/520/570,
    IFRS 9, ASC 275, ASC 450, 14 ASC codes in the FASB YAML). `anomaly_summary_generator.py:109-115`
    hard-codes its list — read the registry. No wording changes.
