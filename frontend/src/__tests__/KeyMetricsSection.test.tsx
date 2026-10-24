@@ -56,6 +56,35 @@ describe('KeyMetricsSection', () => {
     })
   })
 
+  describe('equity basis disclosure (Sprint 832)', () => {
+    it('discloses unclosed current-period earnings included in equity', () => {
+      render(
+        <KeyMetricsSection
+          analytics={{ ...sampleAnalytics, equity_includes_current_earnings: 100000, effective_equity: 600000 }}
+        />
+      )
+      const note = screen.getByTestId('equity-basis-note')
+      expect(note).toHaveTextContent(/Equity includes \$100,000\.00 of unclosed current-period earnings/)
+      expect(note).toHaveTextContent(/ASC 505 \/ IAS 1/)
+    })
+
+    it('shows a loss as a negative amount', () => {
+      render(
+        <KeyMetricsSection analytics={{ ...sampleAnalytics, equity_includes_current_earnings: -100000 }} />
+      )
+      expect(screen.getByTestId('equity-basis-note')).toHaveTextContent('-$100,000.00')
+    })
+
+    it('says nothing on a closed trial balance or an older payload', () => {
+      const { rerender } = render(
+        <KeyMetricsSection analytics={{ ...sampleAnalytics, equity_includes_current_earnings: 0 }} />
+      )
+      expect(screen.queryByTestId('equity-basis-note')).not.toBeInTheDocument()
+      rerender(<KeyMetricsSection analytics={sampleAnalytics} />)
+      expect(screen.queryByTestId('equity-basis-note')).not.toBeInTheDocument()
+    })
+  })
+
   describe('variance badge', () => {
     it('shows variance active badge when previous data exists', () => {
       render(<KeyMetricsSection analytics={sampleAnalytics} />)

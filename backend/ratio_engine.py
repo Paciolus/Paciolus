@@ -24,7 +24,7 @@ from enum import Enum
 from typing import Any, Optional
 
 from security_utils import log_secure_operation
-from shared.monetary import quantize_monetary
+from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 
 # =============================================================================
 # Threshold Constants
@@ -272,6 +272,96 @@ class CategoryTotals:
         )
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Equity basis for ratios (Sprint 832 — CEO-approved methodology change)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Basis (general accounting principle): closing entries transfer the period's
+# net income (revenue less expenses) to retained earnings. Until they are
+# posted, a trial balance still carries that profit or loss in its revenue and
+# expense accounts, so the equity accounts alone exclude it. A balance sheet
+# prepared at the same date presents equity *including* the period's result
+# (equity presentation: FASB ASC 505, Equity; IAS 1, Presentation of Financial
+# Statements). Every equity-based ratio is therefore computed on equity plus
+# any current-period earnings that have not yet been closed.
+#
+# `CategoryTotals.total_equity` keeps its meaning — the sum of the equity
+# accounts as they stand — because it is also a public API input and is
+# persisted on diagnostic summaries. The adjustment is derived here, at ratio
+# time, and `audit.classification.validate_balance_sheet_equation` uses the
+# same function, so the accounting-equation check and the ratios cannot
+# disagree about what equity is.
+#
+# PACIOLUS CONVENTION (idempotency): the totals carry no flag saying whether
+# the books are closed, so the rule infers it:
+#   1. Current-period earnings = total_revenue − total_expenses, the same sign
+#      convention as `validate_balance_sheet_equation` (both totals are carried
+#      as positive natural-balance amounts by `extract_category_totals`). On a
+#      closed trial balance both are zero, so the adjustment is zero.
+#   2. If the totals already satisfy Assets = Liabilities + Equity *without*
+#      the earnings (within BALANCE_TOLERANCE), the earnings are already inside
+#      equity — e.g. a caller supplied closed balance-sheet equity alongside
+#      income-statement figures — and the adjustment is zero. Adding them again
+#      would double count.
+#   3. Otherwise the earnings are treated as unclosed and added. This is the
+#      shape a trial balance produces: an unclosed TB satisfies
+#      A = L + E + (R − X), and one with unclassified accounts satisfies
+#      neither identity, in which case the TB reading (unclosed) is assumed.
+
+
+def unclosed_earnings_adjustment(
+    total_assets: Decimal | float,
+    total_liabilities: Decimal | float,
+    total_equity: Decimal | float,
+    current_period_earnings: Decimal | float,
+) -> Decimal:
+    """Current-period earnings not yet closed into equity (see the block above).
+
+    Scalar form so surfaces that do not hold a ``CategoryTotals`` (the
+    financial-statements PDF) apply the identical rule.
+    """
+    earnings = Decimal(str(current_period_earnings))
+    if earnings == 0:
+        return Decimal("0")
+    gap_without_earnings = Decimal(str(total_assets)) - Decimal(str(total_liabilities)) - Decimal(str(total_equity))
+    if abs(gap_without_earnings) < BALANCE_TOLERANCE:
+        # Already closed into equity (Paciolus convention, rule 2).
+        return Decimal("0")
+    return earnings
+
+
+def unclosed_current_period_earnings(totals: CategoryTotals) -> Decimal:
+    """Revenue less expenses still open on the TB, i.e. not yet in equity."""
+    return unclosed_earnings_adjustment(
+        totals.total_assets,
+        totals.total_liabilities,
+        totals.total_equity,
+        totals.total_revenue - totals.total_expenses,
+    )
+
+
+def effective_equity(totals: CategoryTotals) -> Decimal:
+    """Equity on a balance-sheet basis: equity accounts + unclosed earnings."""
+    return totals.total_equity + unclosed_current_period_earnings(totals)
+
+
+def equity_basis_disclosure(adjustment: Decimal | float) -> Optional[str]:
+    """One-line disclosure shown wherever equity-based ratios are shown.
+
+    ``None`` when there is nothing to disclose (closed books). The frontend
+    renders the same sentence in ``KeyMetricsSection``.
+    """
+    amount = Decimal(str(adjustment))
+    if amount == 0:
+        return None
+    sign = "-" if amount < 0 else ""
+    return (
+        f"Equity includes {sign}${abs(amount):,.2f} of unclosed current-period earnings "
+        "(revenue less expenses not yet closed to retained earnings); equity-based ratios "
+        "use equity on the basis a balance sheet presents it (ASC 505 / IAS 1)."
+    )
+
+
 @dataclass
 class DupontDecomposition:
     """Three-component DuPont decomposition of Return on Equity."""
@@ -319,9 +409,28 @@ class RatioEngine:
     ):
         self.totals = category_totals
         self.prior_totals = prior_period_totals
+        # Sprint 832: every equity-based ratio (debt-to-equity, return on
+        # equity, equity ratio, DuPont equity multiplier) reads these two
+        # attributes, never `totals.total_equity` directly. See
+        # `unclosed_earnings_adjustment` for the basis and the convention.
+        self.unclosed_earnings = unclosed_current_period_earnings(category_totals)
+        self.equity = category_totals.total_equity + self.unclosed_earnings
         log_secure_operation(
             "ratio_engine_init", f"Initializing ratio calculations with totals: {category_totals.to_dict()}"
         )
+
+    def _average_effective_equity(self) -> tuple[Decimal, bool]:
+        """``_average_balance`` for equity, on the effective-equity basis.
+
+        Both ends of the average carry their own unclosed earnings: an
+        unclosed prior-period TB is adjusted the same way, a closed one is not.
+        """
+        if self.prior_totals is None:
+            return self.equity, False
+        beginning = effective_equity(self.prior_totals)
+        if beginning == 0:
+            return self.equity, False
+        return (beginning + self.equity) / 2, True
 
     def _average_balance(self, field_name: str) -> tuple[Decimal, bool]:
         """Return ``(denominator, used_average)`` for a balance-sheet field.
@@ -445,8 +554,11 @@ class RatioEngine:
         - Asset revaluations (IFRS only) increase equity, reducing this ratio
         - Industry norms vary significantly (utilities vs tech)
         - Threshold: Generally, ratio <= 2.0 is considered manageable
+
+        Sprint 832: Total Equity is effective equity — the equity accounts plus
+        unclosed current-period earnings (``self.equity``).
         """
-        if self.totals.total_equity == 0:
+        if self.equity == 0:
             return RatioResult(
                 name="Debt-to-Equity",
                 value=None,
@@ -468,9 +580,9 @@ class RatioEngine:
         # Liabilities exceeding assets is a going-concern indicator under
         # ISA 570. `return_on_equity` and `interest_coverage` already guard the
         # sign; this ratio and `equity_ratio` did not.
-        ratio = self.totals.total_liabilities / self.totals.total_equity
+        ratio = self.totals.total_liabilities / self.equity
 
-        if self.totals.total_equity < 0:
+        if self.equity < 0:
             return RatioResult(
                 # `float(...)` unlike the neighbouring calls below, which pass a
                 # Decimal into a field declared `float | None`. That mismatch is
@@ -875,8 +987,12 @@ class RatioEngine:
         - Preferred stock classification affects equity composition
         - Treasury stock treatment is consistent (contra-equity)
         - Threshold: Generally >= 15% indicates strong shareholder returns
+
+        Sprint 832: the denominator is effective equity (equity accounts plus
+        unclosed current-period earnings); on an unclosed TB the equity
+        accounts alone exclude the very earnings in the numerator.
         """
-        if self.totals.total_equity == 0:
+        if self.equity == 0:
             return RatioResult(
                 name="Return on Equity",
                 value=None,
@@ -890,9 +1006,9 @@ class RatioEngine:
         net_income = self.totals.total_revenue - self.totals.total_expenses
         # Sprint 681: prefer average equity when prior period available.
         # Negative-equity edge case handled below by checking the sign
-        # of ``self.totals.total_equity`` (technical insolvency); using
+        # of ending effective equity (technical insolvency); using
         # the average doesn't change that qualitative flag.
-        equity_denom, used_average_equity = self._average_balance("total_equity")
+        equity_denom, used_average_equity = self._average_effective_equity()
         if equity_denom == 0:
             return RatioResult(
                 name="Return on Equity",
@@ -905,7 +1021,7 @@ class RatioEngine:
         roe = (net_income / equity_denom) * 100
 
         # Handle negative equity case (technical insolvency)
-        if self.totals.total_equity < 0:
+        if self.equity < 0:
             # With negative equity, a positive ROE actually means losses
             if roe > 0:
                 return RatioResult(
@@ -1200,6 +1316,8 @@ class RatioEngine:
         Higher ratio indicates greater financial stability and lower reliance on debt.
 
         Thresholds: Strong >=0.5, Moderate >=0.3, Low <0.3
+
+        Sprint 832: Total Equity is effective equity (``self.equity``).
         """
         if self.totals.total_assets == 0:
             return RatioResult(
@@ -1211,14 +1329,14 @@ class RatioEngine:
                 threshold_status="neutral",
             )
 
-        ratio = self.totals.total_equity / self.totals.total_assets
+        ratio = self.equity / self.totals.total_assets
 
         # Sprint 806 (finding A-6): the threshold ladder below is sign-correct
         # for negative equity — a negative ratio does land in `below_threshold` —
         # but "high reliance on debt financing" materially understates it. A
         # negative equity ratio means liabilities exceed assets, which is a
         # different statement about the entity, and a going-concern indicator.
-        if self.totals.total_equity < 0:
+        if self.equity < 0:
             return RatioResult(
                 name="Equity Ratio",
                 value=float(round(ratio, 2)),  # see the note in calculate_debt_to_equity
@@ -1446,16 +1564,20 @@ class RatioEngine:
         - Asset Turnover = Revenue / Total Assets
         - Equity Multiplier = Total Assets / Total Equity
 
+        Sprint 832: Total Equity is effective equity (``self.equity``), the
+        same basis as debt-to-equity, ROE and the equity ratio; the prior
+        period's multiplier uses that period's own effective equity.
+
         Returns None if any denominator is zero.
         """
-        if self.totals.total_revenue == 0 or self.totals.total_assets == 0 or self.totals.total_equity == 0:
+        if self.totals.total_revenue == 0 or self.totals.total_assets == 0 or self.equity == 0:
             return None
 
         net_income = self.totals.total_revenue - self.totals.total_expenses
 
         net_profit_margin = net_income / self.totals.total_revenue
         asset_turnover = self.totals.total_revenue / self.totals.total_assets
-        equity_multiplier = self.totals.total_assets / self.totals.total_equity
+        equity_multiplier = self.totals.total_assets / self.equity
         decomposed_roe = net_profit_margin * asset_turnover * equity_multiplier
 
         # Verify the decomposition against ROE computed directly.
@@ -1488,20 +1610,19 @@ class RatioEngine:
         # that ratio and is reported separately.
         import math
 
-        ending_basis_roe = net_income / self.totals.total_equity
+        ending_basis_roe = net_income / self.equity
         verification_matches = math.isclose(float(decomposed_roe), float(ending_basis_roe), rel_tol=1e-9, abs_tol=1e-12)
 
         # Calculate prior period deltas if previous_totals provided
         prior_period_deltas: Optional[dict[str, float]] = None
+        prev_equity = effective_equity(previous_totals) if previous_totals is not None else Decimal("0")
         if previous_totals is not None and (
-            previous_totals.total_revenue != 0
-            and previous_totals.total_assets != 0
-            and previous_totals.total_equity != 0
+            previous_totals.total_revenue != 0 and previous_totals.total_assets != 0 and prev_equity != 0
         ):
             prev_net_income = previous_totals.total_revenue - previous_totals.total_expenses
             prev_npm = prev_net_income / previous_totals.total_revenue
             prev_at = previous_totals.total_revenue / previous_totals.total_assets
-            prev_em = previous_totals.total_assets / previous_totals.total_equity
+            prev_em = previous_totals.total_assets / prev_equity
             prev_roe = prev_npm * prev_at * prev_em
 
             prior_period_deltas = {
@@ -1583,7 +1704,9 @@ class CommonSizeAnalyzer:
             "total_liabilities_pct": float(round((self.totals.total_liabilities / base) * 100, 1)),
             "current_liabilities_pct": float(round((self.totals.current_liabilities / base) * 100, 1)),
             "accounts_payable_pct": float(round((self.totals.accounts_payable / base) * 100, 1)),
-            "total_equity_pct": float(round((self.totals.total_equity / base) * 100, 1)),
+            # Sprint 832: effective equity, so this equals the equity ratio × 100
+            # and liabilities % + equity % sums to 100 on an unclosed TB.
+            "total_equity_pct": float(round((effective_equity(self.totals) / base) * 100, 1)),
         }
 
     def income_statement_percentages(self) -> dict[str, float]:
@@ -2729,4 +2852,12 @@ def calculate_analytics(
         "variances": variances,
         "dupont": dupont.to_dict() if dupont else None,
         "has_previous_data": previous_totals is not None,
+        # Sprint 832: the equity basis every equity-based ratio above used.
+        # `category_totals.total_equity` stays the equity accounts as they
+        # stand; `effective_equity` = that + `equity_includes_current_earnings`
+        # (0.0 on closed books). `equity_basis_note` is the disclosure text,
+        # None when there is nothing to disclose.
+        "equity_includes_current_earnings": float(quantize_monetary(ratio_engine.unclosed_earnings)),
+        "effective_equity": float(quantize_monetary(ratio_engine.equity)),
+        "equity_basis_note": equity_basis_disclosure(ratio_engine.unclosed_earnings),
     }

@@ -191,6 +191,10 @@ export interface Analytics {
     return_on_assets?: RatioData;
     return_on_equity?: RatioData;
   };
+  /** Sprint 832: unclosed current-period earnings added to equity for equity-based ratios (0 when closed). */
+  equity_includes_current_earnings?: number;
+  /** Sprint 832: equity accounts + equity_includes_current_earnings. */
+  effective_equity?: number;
   variances: Record<string, VarianceData>;
   has_previous_data: boolean;
   category_totals: CategoryTotals;
