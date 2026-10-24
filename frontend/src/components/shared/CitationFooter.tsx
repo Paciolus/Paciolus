@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { getCitation } from '@/lib/citations'
 
 interface CitationFooterProps {
@@ -56,6 +57,15 @@ export function CitationFooter({ standards }: CitationFooterProps) {
           </li>
         ))}
       </ul>
+      {/* Sprint 835: Paciolus cites authorities; it is not one. */}
+      <p className="mt-4 font-sans text-[11px] text-content-tertiary">
+        Paciolus is not a standard-setter. Standards are cited so you can read the source; thresholds that no standard
+        sets are Paciolus conventions.{' '}
+        <Link href="/sources" className="text-sage-600 hover:text-sage-700 underline">
+          See where each rule comes from
+        </Link>
+        .
+      </p>
     </div>
   )
 }

@@ -47,6 +47,9 @@ SCANNED_GLOBS: tuple[str, ...] = (
     # the coverage is a single registry row.
     "frontend/src/app/tools/**/*.tsx",
     "frontend/src/content/standards-specimen.ts",
+    # The methodology catalog tells a client which authority each test rule
+    # comes from; every code it names must be registered.
+    "frontend/src/content/methodology-sources.ts",
     "frontend/src/components/marketing/**/*.tsx",
     "docs/07-user-facing/USER_GUIDE.md",
     "CLAUDE.md",
