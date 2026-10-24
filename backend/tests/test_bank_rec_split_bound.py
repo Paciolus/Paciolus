@@ -62,13 +62,15 @@ class TestPerformanceBound:
             box["matches"] = match_transactions(bank, ledger, BankRecConfig())
             box["elapsed"] = time.perf_counter() - start
 
-        # Daemon thread so the pre-Sprint-830 engine (hours at this size)
+        # Daemon thread so the pre-Sprint-833 engine (hours at this size)
         # fails the test instead of hanging the suite.
         worker = threading.Thread(target=_run, daemon=True)
         worker.start()
         worker.join(timeout=20)
+        # The bound guards against the unbounded search (hours), not a speed
+        # target: ~1.3s locally, but 5.8s on a CI runner under coverage
+        # instrumentation, which failed an earlier 5s assertion (PR #228).
         assert not worker.is_alive(), "split-match pass did not finish within 20s"
-        assert box["elapsed"] < 5.0
 
         matches = box["matches"]
         # Nothing was cleared by the bound: all rows remain open items.
