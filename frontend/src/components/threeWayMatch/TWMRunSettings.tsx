@@ -67,12 +67,26 @@ export function twmBaseline(saved?: Partial<ThreeWayMatchConfig> | null): ThreeW
   return base
 }
 
-export function computeTWMRunOverrides(edits: TWMRunEdits, baseline: ThreeWayMatchConfig): ValidatedTWMRunSettings {
+/**
+ * Per-run values to send. A value the user entered is always sent, even when
+ * it equals the baseline, so what the panel shows is what runs (PR #230
+ * review). With `sendAll` (saved settings could not be loaded), every
+ * displayed value is sent, so the backend cannot silently apply a saved value
+ * the panel never showed.
+ */
+export function computeTWMRunOverrides(
+  edits: TWMRunEdits,
+  baseline: ThreeWayMatchConfig,
+  options: { sendAll?: boolean } = {},
+): ValidatedTWMRunSettings {
   const overrides: TWMRunOverrides = {}
   const errors: Partial<Record<NumericKey, string>> = {}
   for (const field of TWM_RUN_FIELDS) {
     const raw = edits[field.key]
-    if (raw === undefined) continue
+    if (raw === undefined) {
+      if (options.sendAll) overrides[field.key] = baseline[field.key]
+      continue
+    }
     if (raw.trim() === '') {
       errors[field.key] = `Enter a value for ${field.label.toLowerCase()}, or reset to use the saved value.`
       continue
@@ -89,12 +103,12 @@ export function computeTWMRunOverrides(edits: TWMRunEdits, baseline: ThreeWayMat
       continue
     }
     const engineValue = field.scale === 1 ? parsed.value : Number((parsed.value / field.scale).toFixed(6))
-    if (Math.abs(engineValue - baseline[field.key]) > 1e-9) {
-      overrides[field.key] = engineValue
-    }
+    overrides[field.key] = engineValue
   }
-  if (edits.enable_fuzzy_matching !== undefined && edits.enable_fuzzy_matching !== baseline.enable_fuzzy_matching) {
+  if (edits.enable_fuzzy_matching !== undefined) {
     overrides.enable_fuzzy_matching = edits.enable_fuzzy_matching
+  } else if (options.sendAll) {
+    overrides.enable_fuzzy_matching = baseline.enable_fuzzy_matching
   }
   return { overrides, errors, valid: Object.keys(errors).length === 0 }
 }

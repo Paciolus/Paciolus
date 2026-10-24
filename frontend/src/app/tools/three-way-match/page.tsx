@@ -29,11 +29,19 @@ import { useThreeWayMatch } from '@/hooks/useThreeWayMatch'
 export default function ThreeWayMatchPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   // Sprint 839: per-run tolerances, prefilled from saved settings (Sprint 836).
-  const { practiceSettings, fetchPracticeSettings } = useSettings()
+  const { practiceSettings, isLoading: settingsLoading, error: settingsError, fetchPracticeSettings } = useSettings()
   const savedTwm = practiceSettings?.three_way_match_config ?? null
   const baseline = useMemo(() => twmBaseline(savedTwm), [savedTwm])
   const [runEdits, setRunEdits] = useState<TWMRunEdits>({})
-  const validatedRun = useMemo(() => computeTWMRunOverrides(runEdits, baseline), [runEdits, baseline])
+  // PR #230 review: until saved settings load, the panel would show defaults
+  // while the backend applied saved values. Wait for them; if they cannot be
+  // loaded, send every displayed value so the panel and the run agree.
+  const settingsFailed = Boolean(settingsError) && practiceSettings === null
+  const settingsReady = practiceSettings !== null || settingsFailed
+  const validatedRun = useMemo(
+    () => computeTWMRunOverrides(runEdits, baseline, { sendAll: settingsFailed }),
+    [runEdits, baseline, settingsFailed],
+  )
   const { status, result, error, runMatch, reset } = useThreeWayMatch(validatedRun.overrides)
   useCanvasAccentSync(status)
   const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
@@ -47,13 +55,14 @@ export default function ThreeWayMatchPage() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
 
   const isVerified = user?.is_verified !== false
-  const canRun = poFile && invoiceFile && receiptFile && status !== 'loading' && validatedRun.valid
+  const canRun =
+    poFile && invoiceFile && receiptFile && status !== 'loading' && validatedRun.valid && settingsReady && !settingsLoading
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleRunMatch = useCallback(async () => {
-    if (!poFile || !invoiceFile || !receiptFile || !validatedRun.valid) return
+    if (!poFile || !invoiceFile || !receiptFile || !validatedRun.valid || !settingsReady) return
     await runMatch(poFile, invoiceFile, receiptFile)
-  }, [poFile, invoiceFile, receiptFile, runMatch, validatedRun.valid])
+  }, [poFile, invoiceFile, receiptFile, runMatch, validatedRun.valid, settingsReady])
 
   // The drawer saves through its own settings instance; refresh the prefill
   // when it closes so the run settings show the newly saved values.
@@ -163,6 +172,16 @@ export default function ThreeWayMatchPage() {
                   onEditsChange={setRunEdits}
                   validated={validatedRun}
                 />
+                {!settingsReady && (
+                  <p className="mt-2 font-sans text-xs text-content-tertiary" role="status">
+                    Loading your saved settings…
+                  </p>
+                )}
+                {settingsFailed && (
+                  <p className="mt-2 font-sans text-xs text-clay-600" role="status">
+                    Your saved settings could not be loaded, so every value shown above will be sent for this run.
+                  </p>
+                )}
 
                 {/* Run Match Button */}
                 <div className="flex items-center justify-center gap-4 mt-6">

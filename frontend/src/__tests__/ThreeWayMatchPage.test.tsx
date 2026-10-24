@@ -25,7 +25,7 @@ jest.mock('@/hooks/useThreeWayMatch', () => ({
 }))
 
 jest.mock('@/hooks/useSettings', () => ({
-  useSettings: jest.fn(() => ({ practiceSettings: null, fetchPracticeSettings: jest.fn() })),
+  useSettings: jest.fn(() => ({ practiceSettings: {}, isLoading: false, error: null, fetchPracticeSettings: jest.fn() })),
 }))
 
 jest.mock('@/hooks/useTestingExport', () => ({
@@ -188,6 +188,23 @@ describe('ThreeWayMatchPage', () => {
       fireEvent.change(screen.getByLabelText('Date window'), { target: { value: '500' } })
       expect(screen.getByText('Date window must be between 0 and 365.')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Run Match' })).toBeDisabled()
+    })
+
+    it('blocks the run until saved settings have loaded (PR #230 review)', () => {
+      mockUseSettings.mockReturnValue({ practiceSettings: null, isLoading: true, error: null, fetchPracticeSettings: jest.fn() })
+      render(<ThreeWayMatchPage />)
+      expect(screen.getByText('Loading your saved settings…')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Run Match' })).toBeDisabled()
+    })
+
+    it('sends every displayed value when saved settings could not be loaded', () => {
+      mockUseSettings.mockReturnValue({ practiceSettings: null, isLoading: false, error: 'Failed to fetch settings', fetchPracticeSettings: jest.fn() })
+      render(<ThreeWayMatchPage />)
+      expect(screen.getByText(/could not be loaded, so every value shown above will be sent/)).toBeInTheDocument()
+      const sent = mockUseTWM.mock.calls.at(-1)?.[0] as Record<string, unknown>
+      expect(sent.date_window_days).toBe(30)
+      expect(sent.enable_fuzzy_matching).toBe(true)
+      expect(Object.keys(sent)).toHaveLength(7)
     })
 
     it('reset returns to the prefilled values', () => {

@@ -83,10 +83,16 @@ describe('three-way match', () => {
     expect(fd.has('amount_tolerance')).toBe(false)
   })
 
-  it('does not send a field typed back to the prefilled value', () => {
+  it('sends a value the user entered even when it equals the prefill (PR #230 review)', () => {
     const saved = twmBaseline({ ...DEFAULT_THREE_WAY_MATCH_CONFIG, price_variance_threshold: 0.1 })
     const { overrides } = computeTWMRunOverrides({ price_variance_threshold: '10', amount_tolerance: '0.01' }, saved)
-    expect(overrides).toEqual({})
+    expect(overrides).toEqual({ price_variance_threshold: 0.1, amount_tolerance: 0.01 })
+  })
+
+  it('sends every displayed value when asked to (saved settings unavailable)', () => {
+    const { overrides } = computeTWMRunOverrides({}, twmBaseline(null), { sendAll: true })
+    expect(Object.keys(overrides)).toHaveLength(7)
+    expect(overrides.date_window_days).toBe(DEFAULT_THREE_WAY_MATCH_CONFIG.date_window_days)
   })
 
   it('compares against saved settings, so a change back to the engine default is sent', () => {
