@@ -501,6 +501,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -573,6 +619,38 @@
                 "type": "null"
               }
             ]
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -4898,6 +4976,20 @@
                 "type": "null"
               }
             ]
+          },
+          "suggested_journal_entries": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SuggestedJournalEntryResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Journal Entries"
           },
           "summary": {
             "$ref": "#/components/schemas/ReconciliationSummaryResponse"
@@ -14711,6 +14803,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -14815,6 +14953,38 @@
               }
             ],
             "title": "Sampling Result"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -17748,6 +17918,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -17824,6 +18040,38 @@
           "filename": {
             "title": "Filename",
             "type": "string"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -22945,6 +23193,46 @@
         "title": "SessionListResponse",
         "type": "object"
       },
+      "SettingIgnoredInput": {
+        "description": "A saved testing setting the run did not apply (Sprint 836).",
+        "properties": {
+          "key": {
+            "maxLength": 100,
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "reason"
+        ],
+        "title": "SettingIgnoredInput",
+        "type": "object"
+      },
+      "SettingIgnoredResponse": {
+        "description": "A saved testing setting that was not applied, and why (Sprint 836).",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "reason"
+        ],
+        "title": "SettingIgnoredResponse",
+        "type": "object"
+      },
       "SheetInfo": {
         "properties": {
           "column_count": {
@@ -23239,7 +23527,7 @@
         "type": "object"
       },
       "StatutoryLimitOverrides": {
-        "description": "Per-request overrides for the statutory limits (Sprint 793a).\n\nThe engine has carried a field for each of these since Sprint 636, and that\nsprint's record states the thresholds are \"caller-overridable via\n`W2ReconciliationConfig`\" — true in the engine and, until now, unreachable\nthrough the API. A practitioner who knew the correct figure for their filing\nyear had no way to supply it.\n\nThey matter because the engine holds **one fixed set** of limits and applies\nit to any ``tax_year`` from 2000 to 2099 without selecting by year; the\nPR #184 review also disputes which year the current set belongs to. Until\nSprint 793 lands a year-keyed table with practitioner-confirmed figures,\nthis is the escape hatch. Every field is optional and omitting it keeps the\nengine default, so the request shape is unchanged for existing callers.\n\nDecimal strings rather than floats, matching every other monetary field on\nthis route.",
+        "description": "Per-request overrides for the statutory limits (Sprint 793a).\n\nThe engine has carried a field for each of these since Sprint 636, and that\nsprint's record states the thresholds are \"caller-overridable via\n`W2ReconciliationConfig`\" — true in the engine and, until now, unreachable\nthrough the API. A practitioner who knew the correct figure for their filing\nyear had no way to supply it.\n\nSince Sprint 811 the engine selects limits from a year-keyed table and\nrefuses a year it has no table for (only 2025 today). For a tabulated year\nan omitted field keeps that year's figure; for any other year all eleven\nrequired fields must be supplied or the run is refused. The three catch-up\nfields (Sprint 826) are optional -- a check whose figure is missing is\nreported in ``checks_not_run`` rather than skipped silently. (Sprint 838:\nthis docstring previously described the pre-811 single fixed set.)\n\nDecimal strings rather than floats, matching every other monetary field on\nthis route.",
         "properties": {
           "additional_medicare_rate": {
             "anyOf": [
@@ -23671,6 +23959,59 @@
           "message"
         ],
         "title": "SuccessResponse",
+        "type": "object"
+      },
+      "SuggestedJournalEntryResponse": {
+        "description": "Sprint 639 / 838: a proposed JE for an unmatched bank-only item.\n\nThe engine classifies the bank description and proposes a generic\ndebit / credit pair; it books nothing -- the practitioner reviews,\nmaps to the client's chart of accounts, and posts.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "bank_txn": {
+            "$ref": "#/components/schemas/TransactionResponse"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "credit_account": {
+            "title": "Credit Account",
+            "type": "string"
+          },
+          "debit_account": {
+            "title": "Debit Account",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "bank_fee",
+              "interest_income",
+              "interest_expense",
+              "nsf_charge",
+              "wire_fee",
+              "service_charge",
+              "overdraft",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bank_txn",
+          "kind",
+          "debit_account",
+          "credit_account",
+          "amount",
+          "description",
+          "confidence"
+        ],
+        "title": "SuggestedJournalEntryResponse",
         "type": "object"
       },
       "SumScheduleAggregate": {
@@ -24312,6 +24653,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -24469,6 +24856,38 @@
               "$ref": "#/components/schemas/ThreeWayMatchItemResponse"
             },
             "title": "Partial Matches",
+            "type": "array"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
             "type": "array"
           },
           "summary": {
@@ -26415,7 +26834,7 @@
                 "type": "null"
               }
             ],
-            "description": "Override the statutory limits for this run. The engine applies one fixed set to every tax year; supply the figures for your filing year to correct the wage-base and over-limit findings. Omitted fields keep the engine default."
+            "description": "Override the statutory limits for this run. Limits are selected by tax year; a year with no table is refused unless all eleven required limits are supplied. For a tabulated year, omitted fields keep that year's figure. Catch-up limits are optional; a check whose limit is missing is reported in checks_not_run."
           },
           "tax_year": {
             "maximum": 2099.0,

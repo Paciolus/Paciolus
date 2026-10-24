@@ -118,9 +118,25 @@ export interface SplitSearchDisclosure {
   note: string
 }
 
+/**
+ * Sprint 838: a proposed JE for an unmatched bank-only item (engine since
+ * Sprint 639; returned by the API since Sprint 838). Generic accounts --
+ * the practitioner maps and posts. No UI renders these yet.
+ */
+export interface SuggestedJournalEntry {
+  bank_txn: BankTransactionData
+  kind: 'bank_fee' | 'interest_income' | 'interest_expense' | 'nsf_charge' | 'wire_fee' | 'service_charge' | 'overdraft' | 'other'
+  debit_account: string
+  credit_account: string
+  amount: number
+  description: string
+  confidence: number
+}
+
 export interface BankRecResult {
   summary: ReconciliationSummaryData
   bank_column_detection: BankColumnDetectionData
   ledger_column_detection: BankColumnDetectionData
   split_search?: SplitSearchDisclosure | null
+  suggested_journal_entries?: SuggestedJournalEntry[] | null
 }

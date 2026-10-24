@@ -1,6 +1,8 @@
 /**
- * Testing config field definitions for practice settings page.
+ * Testing config field definitions for the practice settings page and the
+ * per-tool settings drawer.
  * Sprint 519 Phase 4: Extracted from page.tsx to reduce page LOC.
+ * Sprint 836: every key is the engine config field name the backend applies.
  */
 
 export const JE_THRESHOLDS = [
@@ -40,16 +42,16 @@ export const PAYROLL_THRESHOLDS = [
   { key: 'round_amount_threshold', label: 'Round Amount Minimum', description: 'Only flag salary amounts above this', prefix: '$' },
   { key: 'unusual_pay_stddev', label: 'Unusual Pay Sensitivity', description: 'Standard deviations from department mean', step: 0.5, min: 1, max: 5 },
   { key: 'benford_min_entries', label: 'Benford Minimum Entries', description: 'Minimum entries for Benford analysis', integer: true, fallback: 500, min: 100, max: 5000, step: 100 },
-  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'Indicators needed to flag as ghost', integer: true, fallback: 2, min: 1, max: 4 },
+  { key: 'ghost_min_indicators', label: 'Ghost Employee Min Indicators', description: 'Indicators needed to flag as ghost', integer: true, fallback: 1, min: 1, max: 4 },
 ]
 
 export const PAYROLL_TOGGLES = [
-  { key: 'check_gap_enabled', label: 'Check Number Gaps' },
+  { key: 'check_number_gap_enabled', label: 'Check Number Gaps' },
   { key: 'frequency_enabled', label: 'Pay Frequency Anomalies' },
-  { key: 'benford_enabled', label: "Benford's Law Analysis" },
-  { key: 'ghost_enabled', label: 'Ghost Employee Indicators' },
-  { key: 'duplicate_bank_enabled', label: 'Duplicate Bank/Address' },
-  { key: 'duplicate_tax_enabled', label: 'Duplicate Tax IDs' },
+  { key: 'enable_benford', label: "Benford's Law Analysis" },
+  { key: 'enable_ghost', label: 'Ghost Employee Indicators' },
+  { key: 'enable_duplicates', label: 'Duplicate Bank/Address' },
+  { key: 'enable_tax_id_duplicates', label: 'Duplicate Tax IDs' },
 ]
 
 export const TWM_THRESHOLDS = [

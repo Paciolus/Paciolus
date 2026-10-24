@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -220,6 +220,9 @@ export default function ThreeWayMatchPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Sprint 836: saved settings that changed a threshold, or were not applied */}
+                <SavedSettingsNotice tool="three_way_match" applied={result.settings_applied} ignored={result.settings_ignored} />
 
                 {/* Evidence Summary */}
                 <ProofSummaryBar proof={extractTWMProof(result)} />

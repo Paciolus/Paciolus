@@ -5,6 +5,7 @@
  */
 
 import type { Severity } from './shared'
+import type { SavedSettingsDisclosure } from './testingShared'
 
 // =============================================================================
 // ENUMS & CONSTANTS
@@ -176,7 +177,7 @@ export interface ColumnDetectionData {
 // TOP-LEVEL RESULT
 // =============================================================================
 
-export interface ThreeWayMatchResult {
+export interface ThreeWayMatchResult extends SavedSettingsDisclosure {
   full_matches: ThreeWayMatchData[]
   partial_matches: ThreeWayMatchData[]
   unmatched_pos: UnmatchedDocumentData[]

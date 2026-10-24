@@ -78,6 +78,7 @@ async def run_single_file_testing(
     error_key: str,
     run_engine: Callable,
     extract_accounts: Optional[Callable[[dict], list[str]]] = None,
+    result_extras: Optional[dict[str, Any]] = None,
 ) -> dict:
     """Run a single-file testing endpoint with standard boilerplate.
 
@@ -94,6 +95,8 @@ async def run_single_file_testing(
         error_key: Key for error sanitization context.
         run_engine: Callback(rows, column_names, column_mapping_dict, filename) -> result.
         extract_accounts: Optional callback to extract flagged account names from result dict.
+        result_extras: Optional fields merged into the returned result (Sprint 836:
+            ``settings_applied`` / ``settings_ignored``).
     """
     # Sprint 367: Entitlement check — verify tool access before processing
     enforce_tool_access(current_user, tool_name, db)
@@ -134,7 +137,10 @@ async def run_single_file_testing(
                 consumes_upload=True,
             )
 
-            return dict(result_dict)
+            response = dict(result_dict)
+            if result_extras:
+                response.update(result_extras)
+            return response
 
         except (ValueError, KeyError, TypeError, ArithmeticError) as e:
             # Sprint 814: the Sprint 713 treatment, which only ever reached

@@ -10,6 +10,7 @@ import {
   TESTING_SEVERITY_COLORS,
 } from './testingShared'
 import type {
+  SavedSettingsDisclosure,
   TestingRiskTier,
   TestingTestTier,
   TestingSeverity,
@@ -69,7 +70,7 @@ export interface APColumnDetection {
   detection_notes: string[]
 }
 
-export interface APTestingResult {
+export interface APTestingResult extends SavedSettingsDisclosure {
   composite_score: APCompositeScore
   test_results: APTestResult[]
   data_quality: APDataQuality

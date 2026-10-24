@@ -818,14 +818,26 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 - Over-contributions to HSAs and retirement plans
 - Quarterly 941 totals that do not agree to the payroll year-to-date totals
 
-> **Check the statutory limits before relying on the cap and over-limit findings.** The engine
-> holds **one fixed set** of limits — Social Security wage base, HSA self-only and family,
-> 401(k) and SIMPLE elective deferrals — and applies them to whatever `tax_year` you supply,
-> anywhere from 2000 to 2099. It does not select limits by year, and the API exposes no way to
-> override them. Treat every wage-base and over-limit finding as "check this against the figures
-> for your tax year" rather than as a conclusion. Tracked as **Sprint 793**; the wage
-> comparisons and the 941 reconciliation are unaffected, since those compare your own numbers to
-> each other.
+> **Statutory limits are selected by tax year — and only 2025 is tabulated today.** The engine
+> keeps one table of limits per tax year (Social Security wage base and rates, Additional Medicare
+> threshold, HSA self-only and family, 401(k) elective deferral and catch-ups, SIMPLE IRA) and
+> applies the table for the `tax_year` you supply. It **does not substitute another year's
+> figures**: for a year it has no table for (currently any year other than 2025), the run is
+> refused unless you supply all eleven required limits yourself through the API's per-request
+> `statutory_limits` override. For 2025 you may override individual figures; anything you omit
+> comes from the 2025 table. The result states which basis was used ("Statutory limits applied:
+> tax year 2025" or "supplied by the caller for this run"). The 2025 figures have not yet been
+> independently re-confirmed by a practitioner (tracked as Sprint 793b), so check them against
+> your filing year before relying on a wage-base or over-limit finding. The wage comparisons and
+> the 941 reconciliation are unaffected, since those compare your own numbers to each other.
+>
+> **Catch-up limits are optional, and a check that cannot run says so.** The HSA age-55 catch-up
+> and the SIMPLE IRA age 50+ and age 60–63 catch-ups run only when the year's table (2025 has
+> them) or your override supplies the figure, and only for employees whose age is in the data.
+> When the figure or the age is missing, the result's **Checks Not Run** section names the check,
+> the reason, and the employees affected, and any amount above the base limit is reported as over
+> the base limit — not as an excess contribution. The CSV export carries the same section. The
+> per-request override is available through the API only; the web form does not yet offer it.
 
 ### 17.3 Reading the Output
 
@@ -845,7 +857,8 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 
 ### 17.4 Exporting
 
-- **Reconciliation (CSV)** — employee discrepancies and 941 mismatches.
+- **Reconciliation (CSV)** — employee discrepancies, 941 mismatches, W-3 totals, and (when any
+  check could not run) the Checks Not Run section.
 
 A PDF memo for this tool is not yet available.
 

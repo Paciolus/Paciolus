@@ -68,6 +68,21 @@ REVENUE_TEST_DESCRIPTIONS = {
     "contra_revenue_anomalies": (
         "Flags elevated returns/allowances relative to gross revenue, a fraud risk indicator."
     ),
+    # Sprint 838: RT-09b and RT-17 (Sprint 683) shipped without memo descriptions.
+    "prior_period_timing": (
+        "Flags revenue entries recorded within a configurable window (Paciolus default 3 days) "
+        "of the period-start date, where revenue belonging to the prior period may have been "
+        "booked late. Distinct from the period-end cut-off test; skipped when the period "
+        "boundaries cannot be determined."
+    ),
+    "contract_validity": (
+        "Contract data completeness check informed by ASC 606 Step 1. Flags an entry that "
+        "carries a contract ID without a performance obligation ID, a recognition method "
+        "without a contract ID, or point-in-time recognition without an obligation "
+        "satisfaction date. It checks only that these fields are populated; it does not "
+        "evaluate whether a contract exists or is valid. Skipped when no contract-aware "
+        "columns are detected."
+    ),
     # Contract-aware tests (ASC 606 / IFRS 15 — Sprint 352)
     "recognition_before_satisfaction": (
         "Flags entries where available contract data suggests a performance "

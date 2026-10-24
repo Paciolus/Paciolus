@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel, HolidayCalendarPanel } from '@/components/jeTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
 import { ChartSkeleton } from '@/components/shared/skeletons'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -60,6 +60,9 @@ export default function JournalEntryTestingPage() {
     column_detection: result.column_detection ?? null,
     multi_currency_warning: result.multi_currency_warning ?? null,
     benford_result: result.benford_result ?? null,
+    // Sprint 836: the memo states which thresholds differed from the defaults.
+    settings_applied: result.settings_applied ?? null,
+    settings_ignored: result.settings_ignored ?? null,
     filename: selectedFile?.name || 'je_testing',
   } : null
 
@@ -226,6 +229,9 @@ export default function JournalEntryTestingPage() {
                 </p>
               </div>
             )}
+
+            {/* Sprint 836: saved settings that changed a threshold, or were not applied */}
+            <SavedSettingsNotice tool="je" applied={result.settings_applied} ignored={result.settings_ignored} />
 
             {/* Evidence Summary */}
             <ProofSummaryBar proof={extractJEProof(result)} />

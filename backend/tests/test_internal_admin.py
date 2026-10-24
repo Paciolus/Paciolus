@@ -731,3 +731,40 @@ class TestRequireSuperadmin:
         db_session.add(user)
         db_session.flush()
         assert user.is_superadmin is True
+
+
+# =============================================================================
+# Sprint 838: admin views show the window-aware upload count
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestUploadCountIsWindowAware:
+    """Since Sprint 790 a count from a closed monthly window reads as 0 for the
+    quota; the admin list and detail showed the raw counter instead."""
+
+    async def _fetch(self, org_id: int, email: str) -> tuple[int, int]:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            listing = await client.get(f"/internal/admin/customers/?search={email}")
+            detail = await client.get(f"/internal/admin/customers/{org_id}")
+        assert listing.status_code == 200 and detail.status_code == 200
+        [item] = [i for i in listing.json()["items"] if i["owner_email"] == email]
+        return item["uploads_this_period"], detail.json()["subscription"]["uploads_used_current_period"]
+
+    @pytest.mark.asyncio
+    async def test_closed_window_count_reads_as_zero(self, override_superadmin, customer_with_org, db_session):
+        sub = customer_with_org["sub"]
+        sub.uploads_window_start = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=60)
+        db_session.flush()
+        listed, detailed = await self._fetch(customer_with_org["org"].id, "customer_owner@firm.com")
+        assert (listed, detailed) == (0, 0)
+
+    @pytest.mark.asyncio
+    async def test_open_window_count_is_shown(self, override_superadmin, customer_with_org, db_session):
+        from shared.entitlement_checks import upload_window_start
+
+        sub = customer_with_org["sub"]
+        sub.uploads_window_start = upload_window_start(sub)
+        db_session.flush()
+        listed, detailed = await self._fetch(customer_with_org["org"].id, "customer_owner@firm.com")
+        assert (listed, detailed) == (15, 15)

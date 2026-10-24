@@ -51,6 +51,7 @@ import {
   AP_PRESET_LABELS,
   AP_PRESET_DESCRIPTIONS,
   DEFAULT_PAYROLL_TESTING_CONFIG,
+  normalizePayrollTestingConfig,
   PAYROLL_TESTING_PRESETS,
   PAYROLL_PRESET_LABELS,
   PAYROLL_PRESET_DESCRIPTIONS,
@@ -135,7 +136,11 @@ export default function PracticeSettingsPage() {
         setApTestingPreset('custom')
       }
       if (practiceSettings.payroll_testing_config) {
-        setPayrollTestingConfig({ ...DEFAULT_PAYROLL_TESTING_CONFIG, ...practiceSettings.payroll_testing_config })
+        // Sprint 836: map legacy payroll key names to the engine's.
+        setPayrollTestingConfig({
+          ...DEFAULT_PAYROLL_TESTING_CONFIG,
+          ...normalizePayrollTestingConfig(practiceSettings.payroll_testing_config as unknown as Record<string, unknown>),
+        })
         setPayrollTestingPreset('custom')
       }
       if (practiceSettings.three_way_match_config) {

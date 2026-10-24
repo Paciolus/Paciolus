@@ -7,7 +7,7 @@ All 18 export input models live here; routes/export.py re-exports them for backw
 
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # --- Workpaper Metadata Base ---
 
@@ -120,7 +120,25 @@ class FinancialStatementsInput(BaseModel):
 # --- Testing CSV Models ---
 
 
-class JETestingExportInput(WorkpaperMetadata):
+class SettingIgnoredInput(BaseModel):
+    """A saved testing setting the run did not apply (Sprint 836)."""
+
+    key: str = Field(max_length=100)
+    reason: str = Field(max_length=300)
+
+
+class SavedSettingsDisclosure(BaseModel):
+    """Sprint 836: saved-settings transparency echoed back from the tool result.
+
+    ``settings_applied`` lists thresholds that differed from the Paciolus
+    defaults for this run; the memo's methodology section states them.
+    """
+
+    settings_applied: Optional[dict[str, bool | int | float | list[float]]] = Field(default=None, max_length=100)
+    settings_ignored: Optional[list[SettingIgnoredInput]] = Field(default=None, max_length=100)
+
+
+class JETestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for JE testing exports."""
 
     composite_score: dict
@@ -132,7 +150,7 @@ class JETestingExportInput(WorkpaperMetadata):
     filename: str = "je_testing"
 
 
-class APTestingExportInput(WorkpaperMetadata):
+class APTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for AP testing exports."""
 
     composite_score: dict
@@ -142,7 +160,7 @@ class APTestingExportInput(WorkpaperMetadata):
     filename: str = "ap_testing"
 
 
-class PayrollTestingExportInput(WorkpaperMetadata):
+class PayrollTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for payroll testing exports."""
 
     composite_score: dict
@@ -152,7 +170,7 @@ class PayrollTestingExportInput(WorkpaperMetadata):
     filename: str = "payroll_testing"
 
 
-class ThreeWayMatchExportInput(WorkpaperMetadata):
+class ThreeWayMatchExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for three-way match exports."""
 
     summary: dict

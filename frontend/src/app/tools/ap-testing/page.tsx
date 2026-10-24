@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter, UpgradeGate } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useAPTesting } from '@/hooks/useAPTesting'
@@ -33,6 +33,9 @@ export default function APTestingPage() {
     test_results: result.test_results,
     data_quality: result.data_quality,
     column_detection: result.column_detection,
+    // Sprint 836: the memo states which thresholds differed from the defaults.
+    settings_applied: result.settings_applied ?? null,
+    settings_ignored: result.settings_ignored ?? null,
     filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'ap_testing',
   } : null
 
@@ -197,6 +200,9 @@ export default function APTestingPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Sprint 836: saved settings that changed a threshold, or were not applied */}
+            <SavedSettingsNotice tool="ap" applied={result.settings_applied} ignored={result.settings_ignored} />
 
             {/* Evidence Summary */}
             <ProofSummaryBar proof={extractAPProof(result)} />

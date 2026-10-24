@@ -1,6 +1,7 @@
 """
 Paciolus API — AP Testing Routes
 """
+
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
@@ -12,6 +13,7 @@ from database import get_db
 from models import User
 from shared.account_extractors import extract_ap_accounts
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.saved_testing_config import AP_SPEC, load_saved_testing_config
 from shared.testing_response_schemas import APTestingResponse
 from shared.testing_route import run_single_file_testing
 
@@ -30,14 +32,25 @@ async def audit_ap_payments(
     db: Session = Depends(get_db),
 ) -> dict[str, object]:
     """Run automated AP payment testing on an accounts payable extract."""
+    # Sprint 836: the user's saved thresholds, reported back on the result.
+    saved = load_saved_testing_config(current_user, AP_SPEC)
     return await run_single_file_testing(
-        file=file, column_mapping=column_mapping,
-        engagement_id=engagement_id, current_user=current_user, db=db,
+        file=file,
+        column_mapping=column_mapping,
+        engagement_id=engagement_id,
+        current_user=current_user,
+        db=db,
         background_tasks=background_tasks,
-        tool_name="ap_testing", mapping_key="ap_testing",
-        log_label="AP", error_key="ap_testing_error",
+        tool_name="ap_testing",
+        mapping_key="ap_testing",
+        log_label="AP",
+        error_key="ap_testing_error",
         run_engine=lambda rows, cols, mapping, fn: run_ap_testing(
-            rows=rows, column_names=cols, config=None, column_mapping=mapping,
+            rows=rows,
+            column_names=cols,
+            config=saved.config,
+            column_mapping=mapping,
         ),
         extract_accounts=extract_ap_accounts,
+        result_extras=saved.result_fields(),
     )

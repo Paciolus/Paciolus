@@ -448,3 +448,44 @@ class TestSprint826CatchUpLimits:
             assert "'=E001" in response.text  # formula trigger neutralised
         finally:
             app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 838 — every caller-supplied cell in the W-2 CSV is formula-safe
+# ---------------------------------------------------------------------------
+@pytest.mark.usefixtures("bypass_csrf")
+class TestSprint838CsvFormulaInjection:
+    @pytest.mark.asyncio
+    async def test_discrepancy_rows_neutralise_employee_id_and_name(self, professional_user, db_session):
+        import csv as _csv
+        import io as _io
+
+        _override(professional_user, db_session)
+        try:
+            # 2026 HSA self-only over-contribution -> an employee discrepancy row.
+            payload = _hsa_55_payload(2026, "9999")
+            payload["employees"][0]["employee_id"] = "=HYPERLINK(1)"
+            payload["employees"][0]["employee_name"] = "+cmd|' /C calc'!A0"
+            payload["statutory_limits"] = {**_OLD_STYLE_2026_OVERRIDE, "hsa_catchup_55": "1000"}
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation/export.csv", json=payload)
+            assert response.status_code == 200, response.text
+            rows = list(_csv.reader(_io.StringIO(response.text)))
+            header_idx = rows.index(
+                ["Employee ID", "Employee Name", "Kind", "Severity", "Expected", "Actual", "Difference", "Message"]
+            )
+            discrepancy_rows = []
+            for row in rows[header_idx + 1 :]:
+                if not row:
+                    break
+                discrepancy_rows.append(row)
+            assert discrepancy_rows, "fixture must produce at least one discrepancy row"
+            for row in discrepancy_rows:
+                assert row[0] == "'=HYPERLINK(1)"
+                assert row[1] == "'+cmd|' /C calc'!A0"
+            # No user-text cell anywhere in the file begins with a live trigger.
+            for row in rows:
+                for cell in row:
+                    assert not cell.startswith(("=", "+", "@")), cell
+        finally:
+            app.dependency_overrides.clear()

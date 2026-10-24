@@ -386,17 +386,62 @@ returned by the benchmarks API (unverifiable; not changed).
 
 ---
 
-### Sprint 836: Saved testing thresholds are never applied
-**Status:** PENDING — found during Sprint 831.
-**Priority:** P1 — a customer who changes a threshold in the tool settings drawer sees no effect.
+### Sprint 836: Saved testing thresholds are applied, and disclosed
+**Status:** COMPLETE 2026-10-24 — found during Sprint 831.
+**Priority:** P1 — a customer who changed a threshold in the tool settings drawer saw no effect.
 
-The settings drawer (`frontend/src/components/shared/ToolSettingsDrawer.tsx`) saves JE / AP / Payroll /
-Three-Way Match thresholds and toggles to `practice_settings` (`je_testing_config` etc.), but the upload
-routes run the engines with `config=None` (e.g. `routes/je_testing.py` before Sprint 831). Nothing reads
-the saved values. Scope: load the user's saved config in each route, validate it against the engine's
-config dataclass (refuse unknown keys rather than ignore them), merge it with per-run inputs such as
-Sprint 831's holiday calendar, and report the thresholds actually used in the result so the memo can
-state them.
+- [x] `shared/saved_testing_config.py` builds each engine's config from the saved practice settings:
+      known fields only, type- and range-checked (finite, non-negative, 0–1 shares, 0–23 hours); anything
+      else is reported in `settings_ignored` and never fails a run.
+- [x] Wired into JE (per-run holiday calendar stays on top), AP, Payroll and Three-Way Match (a value
+      supplied for the run replaces the saved one, and says so).
+- [x] Transparency: each result reports `settings_applied` (only values that differ from the engine
+      default) and `settings_ignored`; a notice on all four results views; memos gain a "Thresholds from
+      saved settings" table (setting, this run, Paciolus default).
+- [x] **Settings-screen drift fixed:** JE `benford_min_entries` defaulted to 500 in the frontend vs 300
+      in the engine (a saved hidden 500 is reported as ignored, not applied); **five Payroll toggles were
+      saved under names the engine never read** (`check_gap_enabled`, `benford_enabled`, `ghost_enabled`,
+      `duplicate_bank_enabled`, `duplicate_tax_enabled`) — renamed to the engine names, old names still
+      accepted; Payroll `ghost_min_indicators` default 2 vs engine 1 aligned. Tests now fail if the
+      frontend defaults drift from the engine again.
+- [x] `methodology-sources.ts`: 33 rules marked configurable.
+
+**Effect to know:** old saved values now take effect, and are disclosed on every result (e.g. an old
+Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
+
+**Commit SHA:** recorded on merge.
+
+---
+
+### Sprint 838: Loose ends from the methodology sweep
+**Status:** COMPLETE 2026-10-24.
+
+- [x] Bank-rec CSV now includes split matches (a section grouped per bank item, each bank amount counted
+      once), marks bank-only items whose split search was capped, and escapes every user cell. The export
+      route had also been discarding `ledger_txns` / `split_search_limited` from the browser's JSON.
+- [x] `BankRecResponse` declares `suggested_journal_entries`, which FastAPI had been dropping.
+- [x] W-2 CSV escapes employee IDs, names and messages against spreadsheet-formula injection.
+- [x] Memo descriptions added for AP-T14, RT-09b and RT-17; a test now fails if any engine test ships
+      without a memo description.
+- [x] USER_GUIDE §17 callout rewritten for per-year statutory limits and the catch-up "check not run" notice.
+- [x] Admin customer views show the window-aware upload count (Sprint 790) instead of the raw counter.
+
+**Commit SHA:** recorded on merge.
+
+---
+
+### Sprint 839: API inputs with no path from the app
+**Status:** PENDING — found in Sprint 838.
+**Priority:** P1 for W-2 (a 2026 reconciliation cannot be run from the app); P2 otherwise.
+
+- [ ] **W-2:** the `statutory_limits` override is API-only, and only 2025 has a built-in table, so the web
+      form refuses every other tax year. Depends on Sprint 793b (practitioner-confirmed 2026 figures); until
+      then, either an override form or a clear in-app message that only 2025 is supported.
+- [ ] **Bank rec:** `materiality` / `performance_materiality` and `bank_column_mapping` /
+      `ledger_column_mapping` are accepted (and honoured) but never sent by `useBankReconciliation.ts`.
+- [ ] **Three-Way Match:** the seven per-run overrides are never sent (Sprint 836 made five reachable via
+      saved settings; `quantity_tolerance` only via presets; `fuzzy_composite_threshold` is missing from the
+      frontend config type); `po/invoice/receipt_column_mapping` are parsed by the route and then ignored.
 
 **Commit SHA:** TBD.
 

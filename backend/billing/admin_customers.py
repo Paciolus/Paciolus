@@ -20,6 +20,7 @@ from billing.price_config import (
 )
 from models import ActivityLog, DiagnosticSummary, RefreshToken, User
 from organization_model import Organization, OrganizationMember
+from shared.entitlement_checks import uploads_used_this_period
 from shared.filenames import escape_like_wildcards
 from subscription_model import (
     BillingEvent,
@@ -166,8 +167,10 @@ def _build_customer_summary(db: Session, user: User) -> dict:
     if user.organization_id:
         org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
-    # Upload count this period
-    uploads = sub.uploads_used_current_period if sub else 0
+    # Upload count this period. Sprint 838: the window-aware figure the quota
+    # compares against (Sprint 790) -- the raw counter keeps a closed window's
+    # count until the next upload resets it, so it over-stated usage.
+    uploads = uploads_used_this_period(db, user.id)
 
     # Total reports
     total_reports = (
@@ -252,7 +255,8 @@ def get_customer_detail(db: Session, org_id: int) -> dict | None:
             "seat_count": sub.seat_count or 1,
             "additional_seats": sub.additional_seats or 0,
             "total_seats": sub.total_seats,
-            "uploads_used_current_period": sub.uploads_used_current_period or 0,
+            # Sprint 838: window-aware, as in the list view (not the raw counter).
+            "uploads_used_current_period": uploads_used_this_period(db, owner.id),
             "cancel_at_period_end": sub.cancel_at_period_end,
             "current_period_start": sub.current_period_start.isoformat() if sub.current_period_start else None,
             "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,

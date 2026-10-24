@@ -159,12 +159,28 @@ def export_csv_bank_rec(
                     reference=lt.get("reference"),
                     row_number=lt.get("row_number", 0),
                 )
+            # Sprint 838: split matches carry their ledger pieces in
+            # ``ledger_txns`` and open bank items carry ``split_search_limited``;
+            # both were dropped here, so the CSV could not show either.
+            ledger_txns = [
+                LedgerTransaction(
+                    date=lt.get("date"),
+                    description=lt.get("description", ""),
+                    amount=lt.get("amount", 0.0),
+                    reference=lt.get("reference"),
+                    row_number=lt.get("row_number", 0),
+                )
+                for lt in (m.get("ledger_txns") or [])
+                if isinstance(lt, dict)
+            ]
             match_objects.append(
                 ReconciliationMatch(
                     bank_txn=bank_txn,
                     ledger_txn=ledger_txn,
                     match_type=MatchType(m.get("match_type", "matched")),
                     match_confidence=m.get("match_confidence", 0.0),
+                    ledger_txns=ledger_txns,
+                    split_search_limited=bool(m.get("split_search_limited")),
                 )
             )
 
