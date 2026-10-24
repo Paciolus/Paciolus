@@ -343,27 +343,27 @@ class TestNonFiniteDecimalsAreRejected:
 
 
 def test_every_promoted_route_guards_non_finite_decimals():
-    """All five routes carry their own `_to_decimal`; all five had the hole.
+    """The routes used to carry nine copies of `_to_decimal`, all of which once
+    had the non-finite hole, and this test scanned each copy for the fix.
 
-    A new route copying the old three-line helper would reintroduce it, and
-    nothing else in the suite would notice — the failure is a 500 on an input
-    no existing test sends.
+    Sprint 819 replaced the copies with one shared helper, so the guard is now
+    structural: no route may define its own decimal parser again, and the shared
+    one must reject every non-finite spelling.
     """
     import pathlib
 
-    routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
-    unguarded: list[str] = []
-    checked = 0
-    for path in sorted(routes_dir.glob("*.py")):
-        src = path.read_text(encoding="utf-8")
-        if "def _to_decimal(" not in src:
-            continue
-        checked += 1
-        if "is_finite()" not in src:
-            unguarded.append(path.name)
+    import pytest
+    from fastapi import HTTPException
 
-    assert checked > 0, "no route defines _to_decimal — this check now covers nothing"
-    assert unguarded == [], (
-        "These routes parse decimals without rejecting NaN/Infinity, so a syntactically "
-        f"valid non-finite value reaches the engine and surfaces as a 500: {unguarded}"
-    )
+    from shared.request_decimal import parse_request_decimal
+
+    routes_dir = pathlib.Path(__file__).resolve().parent.parent / "routes"
+    local_copies = [
+        path.name for path in sorted(routes_dir.glob("*.py")) if "def _to_decimal(" in path.read_text(encoding="utf-8")
+    ]
+    assert local_copies == [], f"routes defining their own decimal parser again: {local_copies}"
+
+    for bad in ("NaN", "sNaN", "Infinity", "-Infinity", "not a number"):
+        with pytest.raises(HTTPException) as exc_info:
+            parse_request_decimal("amount", bad)
+        assert exc_info.value.status_code == 400, bad

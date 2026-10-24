@@ -881,7 +881,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 5. [ ] Default `apply_column_overrides` driven by a class-level column list (JE `:2857`, AP `:1996`
    hand-written); keep Payroll's suffix-less keys (API contract). Finish `AuditEngineBase`
    adoption for FA, Revenue, AR (feeds the Refactor Intake item).
-6. [ ] `_to_decimal` copied verbatim into 9 route files → one `shared/` helper; a `run_json_tool(...)`
+6. [x] *(`_to_decimal` half done 2026-10-23: nine byte-identical copies → `shared/request_decimal.py`;
+   the guard that scanned each copy for the finiteness fix now forbids new copies and checks the
+   shared helper. `run_json_tool` not done.)* `_to_decimal` copied verbatim into 9 route files → one `shared/` helper; a `run_json_tool(...)`
    wrapper for the 6 promoted-tool routes' enforce → quota → record sequence.
 7. [ ] ~20 export endpoints hand-roll `StreamingResponse`/`Content-Disposition` (list in the review:
    `engagements_exports.py`, `loan_amortization.py`, `bank_reconciliation.py:193`,

@@ -12,7 +12,6 @@ import csv
 import io
 import logging
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -27,6 +26,7 @@ from lease_accounting_engine import (
 )
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.request_decimal import parse_request_decimal as _to_decimal
 
 logger = logging.getLogger(__name__)
 
@@ -72,25 +72,6 @@ class LeaseAccountingResponse(BaseModel):
 # =============================================================================
 # Helpers
 # =============================================================================
-
-
-def _to_decimal(field_name: str, raw: str) -> Decimal:
-    """Parse a decimal string, rejecting anything the engines cannot arithmetic on.
-
-    PR #189 review: the finiteness check is the load-bearing half. ``Decimal``
-    accepts ``"NaN"``, ``"sNaN"``, ``"Infinity"`` and ``"-Infinity"`` without
-    raising, so a syntactically valid non-finite value used to pass straight
-    through to the engine and blow up on the first comparison or quantisation —
-    an uncaught ``InvalidOperation``, surfacing as a 500 where this function's
-    whole purpose is to produce a 400.
-    """
-    try:
-        value = Decimal(raw)
-    except (InvalidOperation, ValueError, TypeError):
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
-    if not value.is_finite():
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
-    return value
 
 
 def _build_config(payload: LeaseAccountingRequest) -> LeaseConfig:

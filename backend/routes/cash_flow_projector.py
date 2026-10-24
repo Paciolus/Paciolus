@@ -13,7 +13,6 @@ import csv
 import io
 import logging
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -33,6 +32,7 @@ from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access
 from shared.tool_run_recorder import maybe_record_tool_run
 
@@ -65,25 +65,6 @@ class CashFlowProjectionRequest(BaseModel):
     min_safe_cash: Optional[str] = Field(default=None, max_length=24)
     # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
     engagement_id: Optional[int] = Field(None, description="Optional engagement to link this run to")
-
-
-def _to_decimal(field_name: str, raw: str) -> Decimal:
-    """Parse a decimal string, rejecting anything the engines cannot arithmetic on.
-
-    PR #189 review: the finiteness check is the load-bearing half. ``Decimal``
-    accepts ``"NaN"``, ``"sNaN"``, ``"Infinity"`` and ``"-Infinity"`` without
-    raising, so a syntactically valid non-finite value used to pass straight
-    through to the engine and blow up on the first comparison or quantisation —
-    an uncaught ``InvalidOperation``, surfacing as a 500 where this function's
-    whole purpose is to produce a 400.
-    """
-    try:
-        value = Decimal(raw)
-    except (InvalidOperation, ValueError, TypeError):
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
-    if not value.is_finite():
-        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
-    return value
 
 
 def _to_aging(payload: AgingBucketsRequest) -> AgingBuckets:
