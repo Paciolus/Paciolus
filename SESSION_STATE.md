@@ -4,35 +4,21 @@ _Updated at the end of every Claude Code session. Overwrite the previous state �
 
 ## START HERE — what the next session should pick up
 
-**1. Land the open PRs one at a time.** Branch protection requires up-to-date branches
-(`strict: true`), linear history and **resolved review conversations** — an automated Codex
-reviewer comments on every PR, and a green PR stays `BLOCKED` until its threads are resolved.
-Each merge makes the rest `BEHIND`, so: `gh pr update-branch N --rebase`, wait for CI, merge.
+**1. The PR queue is empty.** Every PR from the 2026-10-23 session is merged: #201–#218 (Sprints
+812–829). The one exception is #197 (786b frontend dev-type majors), from an earlier session, which still has two open bot threads.
+Branch protection requires up-to-date branches (`strict: true`), linear history and **resolved
+review conversations**. An automated Codex reviewer comments on every PR, and a green PR stays
+`BLOCKED` until its threads are resolved. Merge serially: `gh pr update-branch N --rebase`, wait
+for CI, merge. Updating every PR at once starves the runners.
 
-Merged this session: #201 (812), #202 (813/814/816), #203 (815), #204 (818), #205 (823/824),
-#206 (826/827). Open, all independent of each other and based on `main`:
+**2. Production.** Render's live deploy is `106c5782` (#218). Every merge this session was
+confirmed live by deploy SHA (Render workspace `tea-d6ie7bngi27c738fa2ag`, service
+`srv-d6ie9l56ubrc73c7eq2g`; pass `workspaceId` explicitly to the Render MCP). Sprint 812's fix is
+verified by the public `GET /export-sharing/{token}` probe returning 404 instead of 500.
 
-| PR | Content |
-|----|---------|
-| #207 | 817 dead-code sweep + this file |
-| #208 | oatmeal-700 → AA shades; lint exemption removed |
-| #209 | 819 item 9 — secrets resolved through the secrets chain |
-| #210 | 822 — one pip-audit job |
-| #211 | 820 — Terms/Privacy as server components |
-| #212 | 813 item 7 — citation guard scans memo PDFs |
-| #213 | 826 F4 attorney fees + 827 C4 |
-| #214 | 826 W6/W7/W10 |
-| #215 | 826 B5 |
-| #197 | 786b frontend dev-type majors (previous session; two open bot threads) |
-
-#208 edits `ToolShowcase.tsx`, which #207 deletes — keep the deletion. #213 and #214 touch the
-same todo/report lines — trivial conflict for whichever lands second.
-
-**2. Production.** Sprint 812 (19 rate-limited org/admin/branding/sharing/bulk routes 500'd on
-every call) is **live and verified**: the public `GET /export-sharing/{token}` probe flipped
-500 → 404 three minutes after merge. #202 (memo PDFs, upload routes, engine correctness) and
-#204 (pricing) also merged; Vercel deployed #202's frontend. **The Render deploy of #202 was
-not verified** — the Render MCP needs a workspace selected, which is the CEO's call.
+**Discovery round 2 (Sprint 829)** ran the eleven original tools against realistic input and
+fixed about 40 wrong-output findings. The register is `reports/sprint-829-discovery-round2-2026-10-23.md`.
+Four methodology calls came out of it and are listed at the top of `tasks/ceo-actions.md`.
 
 **3. Decisions this session surfaced** (each blocks only its own item):
 - **Sprint 790** — reset paid-tier upload counters at deploy, or enforce from next period?
@@ -80,7 +66,7 @@ code.
 
 ## Verification
 
-**Backend tests:** **9,437 passed / 0 failed** — full suite on the Sprint 824 branch, 13.6 min locally.
+**Backend tests:** **9585 passed / 0 failed** — full suite on the Sprint 829 branch, 12.3 min locally.
 **Frontend tests:** **2114 passed / 0 failed**, 211 suites. `npm run build` clean.
 
 ## Environment notes
