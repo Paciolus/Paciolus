@@ -157,20 +157,10 @@ def statutory_limits_for_year(tax_year: int) -> StatutoryLimits:
 
 _DEFAULTS = STATUTORY_LIMITS_BY_YEAR[DEFAULT_STATUTORY_YEAR]
 
-# Module-level aliases. Retained because `W2ReconciliationConfig` uses them as
-# dataclass field defaults and tests import them by name; they now resolve
-# through the year-keyed table rather than being the only copy of the figures.
+# The default year's wage base, which tests use to build matching W-2 drafts.
+# Sprint 817: the other ten aliases were unreferenced — the config's field
+# defaults now resolve through the year-keyed table, not these names.
 DEFAULT_SS_WAGE_BASE = _DEFAULTS.ss_wage_base
-DEFAULT_SS_RATE = _DEFAULTS.ss_rate
-DEFAULT_MEDICARE_RATE = _DEFAULTS.medicare_rate
-DEFAULT_ADDITIONAL_MEDICARE_RATE = _DEFAULTS.additional_medicare_rate
-DEFAULT_ADDITIONAL_MEDICARE_THRESHOLD = _DEFAULTS.additional_medicare_threshold
-DEFAULT_HSA_SELF_ONLY = _DEFAULTS.hsa_self_only
-DEFAULT_HSA_FAMILY = _DEFAULTS.hsa_family
-DEFAULT_401K_ELECTIVE_LIMIT = _DEFAULTS.limit_401k_elective
-DEFAULT_401K_CATCHUP_50 = _DEFAULTS.limit_401k_catchup_50
-DEFAULT_401K_CATCHUP_60_63 = _DEFAULTS.limit_401k_catchup_60_63
-DEFAULT_SIMPLE_IRA_LIMIT = _DEFAULTS.limit_simple_ira
 
 # Tolerance for rounding-only differences — $1.00 per line per side.
 DEFAULT_TOLERANCE = Decimal("1.00")

@@ -44,8 +44,6 @@ from typing import Optional
 NEAR_ZERO = 1e-10
 
 # Thresholds
-CURRENT_RATIO_THRESHOLD = 1.0  # Kept for backward compat; consumers using the
-# consolidated working-capital-deficit test should not rely on it directly.
 LEVERAGE_THRESHOLD = 3.0
 REVENUE_DECLINE_THRESHOLD = 0.10  # 10% decline triggers indicator
 

@@ -136,8 +136,6 @@ STANDARD_ADJUSTMENTS: tuple[StandardAdjustment, ...] = (
     ),
 )
 
-STANDARD_ADJUSTMENTS_BY_CODE: dict[str, StandardAdjustment] = {s.code: s for s in STANDARD_ADJUSTMENTS}
-
 
 class BookToTaxInputError(ValueError):
     """Raised for invalid book-to-tax inputs."""

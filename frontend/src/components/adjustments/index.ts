@@ -6,4 +6,3 @@
 
 export { AdjustmentEntryForm } from './AdjustmentEntryForm'
 export { AdjustmentList } from './AdjustmentList'
-export { AdjustmentSection } from './AdjustmentSection'

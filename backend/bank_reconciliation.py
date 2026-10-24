@@ -1495,10 +1495,6 @@ def compute_bank_rec_diagnostic_score(
     }
 
 
-# Backward-compatible alias
-compute_bank_rec_risk_score = compute_bank_rec_diagnostic_score
-
-
 # =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================

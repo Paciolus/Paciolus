@@ -6,5 +6,4 @@
  */
 
 export { ProfileDropdown } from './ProfileDropdown'
-export { ProtectedRoute } from './ProtectedRoute'
 export { VerificationBanner } from './VerificationBanner'

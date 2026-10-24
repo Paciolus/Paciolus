@@ -8,17 +8,6 @@
 export { useClients } from './useClients';
 export { useSettings } from './useSettings';
 export { useActivityHistory } from './useActivityHistory';
-export { useTrends, type TrendMetric } from './useTrends';
-export { useIndustryRatios } from './useIndustryRatios';
-export {
-  useRollingWindow,
-  type MomentumType,
-  type RollingAverage,
-  type MomentumIndicator,
-  type RollingWindowMetric,
-  type RollingWindowAnalysis,
-  type RollingWindowResponse,
-} from './useRollingWindow';
 export {
   useFormValidation,
   commonValidators,
@@ -49,14 +38,6 @@ export {
   type BenchmarkSourceInfo,
   type BenchmarkSourcesResponse,
 } from './useBenchmarks';
-export {
-  usePriorPeriod,
-  type UsePriorPeriodReturn,
-} from './usePriorPeriod';
-export {
-  useAdjustments,
-  type UseAdjustmentsReturn,
-} from './useAdjustments';
 export {
   useVerification,
   type UseVerificationReturn,

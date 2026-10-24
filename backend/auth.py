@@ -229,29 +229,11 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 # =============================================================================
 
 
-def get_current_user(
-    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
-) -> Optional[User]:
-    """
-    FastAPI dependency to get the current authenticated user.
-
-    Returns User if authenticated, None if not authenticated.
-    Use this for routes that support both authenticated and anonymous access.
-    Token resolved from Bearer header (API clients) or HttpOnly cookie (browser).
-    """
-    if token is None:
-        return None
-
-    token_data = decode_access_token(token)
-    if token_data is None or token_data.user_id is None:
-        return None
-
-    user = db.query(User).filter(User.id == token_data.user_id).first()
-
-    if user is None or not user.is_active:
-        return None
-
-    return user
+# Sprint 817: an optional-auth `get_current_user` lived here, unreferenced. It
+# did not check the token's pwd_at claim against password_changed_at, so any
+# route adopting it would have accepted tokens revoked by a password change.
+# Removed rather than left as a trap; write optional auth on top of
+# `require_current_user`'s checks if a route ever needs it.
 
 
 def require_current_user(

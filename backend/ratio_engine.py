@@ -2364,26 +2364,6 @@ def create_period_snapshot(
     )
 
 
-def calculate_dupont_decomposition(
-    current: CategoryTotals,
-    previous: Optional[CategoryTotals] = None,
-) -> Optional[DupontDecomposition]:
-    """
-    Standalone DuPont decomposition function.
-
-    Convenience wrapper around RatioEngine.calculate_dupont().
-
-    Args:
-        current: Current period CategoryTotals
-        previous: Optional previous period CategoryTotals for delta calculation
-
-    Returns:
-        DupontDecomposition or None if required data is missing
-    """
-    engine = RatioEngine(current)
-    return engine.calculate_dupont(previous_totals=previous)
-
-
 # Keywords for identifying current vs non-current assets
 CURRENT_ASSET_KEYWORDS = [
     "cash",
