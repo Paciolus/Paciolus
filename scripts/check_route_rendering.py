@@ -51,6 +51,30 @@ DYNAMIC = "ƒ"
 STATIC = "○"
 
 
+# Output types that carry no HTML and therefore no nonce. A bounded set rather
+# than "any dot": a page route such as `/terms.html` or `/docs/v1.0` is still
+# HTML under the CSP proxy and must render dynamically (PR #197 review).
+_ASSET_EXTENSIONS = frozenset(
+    {
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "svg",
+        "ico",
+        "webp",
+        "avif",
+        "xml",
+        "txt",
+        "json",
+        "webmanifest",
+        "js",
+        "css",
+        "map",
+    }
+)
+
+
 def is_asset(path: str) -> bool:
     """True when the route is a file rather than a page.
 
@@ -58,7 +82,7 @@ def is_asset(path: str) -> bool:
     being prerendered is correct for them.
     """
     last = path.rstrip("/").rsplit("/", 1)[-1]
-    return "." in last
+    return "." in last and last.rsplit(".", 1)[1].lower() in _ASSET_EXTENSIONS
 
 
 def parse_routes(text: str) -> list[tuple[str, str]]:

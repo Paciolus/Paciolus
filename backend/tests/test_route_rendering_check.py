@@ -114,6 +114,9 @@ def test_the_legend_is_not_mistaken_for_a_route():
         ("/tools/trial-balance", False),
         ("/api/telemetry", False),
         ("/_not-found", False),
+        # Dotted page routes are still HTML (PR #197 review).
+        ("/terms.html", False),
+        ("/docs/v1.0", False),
     ],
 )
 def test_asset_detection_is_derived_from_the_path(path, expected):
