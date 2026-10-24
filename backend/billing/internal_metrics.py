@@ -594,15 +594,92 @@ def compute_revenue_history(
     if start_date is None:
         start_date = now - timedelta(days=90)
 
+    if end_date < start_date:
+        raise ValueError("end_date is before start_date.")
+
     # Generate date points based on granularity
     points = _generate_date_points(start_date, end_date, granularity)
+    # Sprint 821: the range was unbounded — a daily series from 2000 was ~9,000
+    # points, each running several queries plus one per cancelled user.
+    if len(points) > MAX_HISTORY_POINTS:
+        raise ValueError(
+            f"Range produces {len(points)} {granularity} points; the maximum is {MAX_HISTORY_POINTS}. "
+            "Narrow the range or use a coarser granularity."
+        )
 
-    results = []
-    for point_date in points:
-        snapshot = _compute_snapshot_at(db, point_date)
-        results.append(snapshot)
+    # Sprint 821: load once, evaluate every point in memory (was per point).
+    history = _load_revenue_history_inputs(db)
+    return [_snapshot_from_inputs(history, point_date) for point_date in points]
 
-    return results
+
+MAX_HISTORY_POINTS = 400
+
+
+def _load_revenue_history_inputs(db: Session) -> dict:
+    """Everything ``_snapshot_from_inputs`` needs, in three queries."""
+    subs = db.query(Subscription).filter(Subscription.tier != "free").all()
+    cancel_types = [BillingEventType.SUBSCRIPTION_CANCELED, BillingEventType.SUBSCRIPTION_CHURNED]
+    first_cancel: dict[int, datetime] = {
+        user_id: canceled_at
+        for user_id, canceled_at in (
+            db.query(BillingEvent.user_id, func.min(BillingEvent.created_at))
+            .filter(BillingEvent.event_type.in_(cancel_types))
+            .group_by(BillingEvent.user_id)
+            .all()
+        )
+        if canceled_at is not None
+    }
+    reactivations: dict[int, list[datetime]] = {}
+    if first_cancel:
+        rows = (
+            db.query(BillingEvent.user_id, BillingEvent.created_at)
+            .filter(
+                BillingEvent.user_id.in_(list(first_cancel)),
+                BillingEvent.event_type.in_([BillingEventType.SUBSCRIPTION_CREATED, BillingEventType.TRIAL_CONVERTED]),
+            )
+            .all()
+        )
+        for user_id, created_at in rows:
+            reactivations.setdefault(user_id, []).append(created_at)
+    return {"subs": subs, "first_cancel": first_cancel, "reactivations": reactivations}
+
+
+def _as_utc(dt: datetime) -> datetime:
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+
+def _snapshot_from_inputs(history: dict, point_date: datetime) -> dict:
+    """Revenue as of ``point_date``: subscriptions created by then, less users
+    whose first cancellation came before it with no re-subscription since.
+    An approximation reconstructed from billing events."""
+    point = _as_utc(point_date)
+    canceled_before: set[int] = set()
+    for user_id, canceled_at in history["first_cancel"].items():
+        canceled = _as_utc(canceled_at)
+        if canceled <= point and not any(
+            canceled < _as_utc(r) <= point for r in history["reactivations"].get(user_id, [])
+        ):
+            canceled_before.add(user_id)
+
+    mrr = 0.0
+    active_count = 0
+    trialing_count = 0
+    for sub in history["subs"]:
+        if sub.created_at is None or _as_utc(sub.created_at) > point or sub.user_id in canceled_before:
+            continue
+        mrr += _subscription_monthly_revenue(sub)
+        active_count += 1
+        if sub.status == SubscriptionStatus.TRIALING:
+            trialing_count += 1
+
+    mrr = round(mrr, 2)
+    return {
+        "date": point_date.strftime("%Y-%m-%d"),
+        "mrr": mrr,
+        "arr": round(mrr * 12, 2),
+        "active_subscribers": active_count,
+        "trialing": trialing_count,
+    }
 
 
 def _generate_date_points(start: datetime, end: datetime, granularity: str) -> list[datetime]:
@@ -626,80 +703,3 @@ def _generate_date_points(start: datetime, end: datetime, granularity: str) -> l
         points.append(end.replace(hour=0, minute=0, second=0, microsecond=0))
 
     return points
-
-
-def _compute_snapshot_at(db: Session, point_date: datetime) -> dict:
-    """Compute a revenue snapshot as of a specific date.
-
-    Uses subscription created_at/updated_at and status to reconstruct
-    point-in-time state. This is an approximation — subscriptions that
-    existed at point_date are those created before it and not yet canceled
-    (or canceled after it).
-    """
-    # Subscriptions that were active at the point in time:
-    # Created before the point AND (still active OR canceled after the point)
-    active_subs = (
-        db.query(Subscription)
-        .filter(
-            Subscription.created_at <= point_date,
-            Subscription.tier != "free",
-        )
-        .all()
-    )
-
-    # Filter: exclude subs that were canceled before point_date
-    # We check billing events for cancellation timestamps
-    cancel_events = (
-        db.query(BillingEvent.user_id, func.min(BillingEvent.created_at).label("canceled_at"))
-        .filter(
-            BillingEvent.event_type.in_(
-                [BillingEventType.SUBSCRIPTION_CANCELED, BillingEventType.SUBSCRIPTION_CHURNED]
-            ),
-        )
-        .group_by(BillingEvent.user_id)
-        .all()
-    )
-    canceled_before: set[int] = set()
-    for user_id, canceled_at in cancel_events:
-        if canceled_at and canceled_at <= point_date:
-            # Check if reactivated after cancellation
-            reactivated = (
-                db.query(func.count(BillingEvent.id))
-                .filter(
-                    BillingEvent.user_id == user_id,
-                    BillingEvent.event_type.in_(
-                        [BillingEventType.SUBSCRIPTION_CREATED, BillingEventType.TRIAL_CONVERTED]
-                    ),
-                    BillingEvent.created_at > canceled_at,
-                    BillingEvent.created_at <= point_date,
-                )
-                .scalar()
-                or 0
-            )
-            if reactivated == 0:
-                canceled_before.add(user_id)
-
-    mrr = 0.0
-    active_count = 0
-    trialing_count = 0
-
-    for sub in active_subs:
-        if sub.user_id in canceled_before:
-            continue
-
-        sub_mrr = _subscription_monthly_revenue(sub)
-        mrr += sub_mrr
-        active_count += 1
-
-        if sub.status == SubscriptionStatus.TRIALING:
-            trialing_count += 1
-
-    mrr = round(mrr, 2)
-
-    return {
-        "date": point_date.strftime("%Y-%m-%d"),
-        "mrr": mrr,
-        "arr": round(mrr * 12, 2),
-        "active_subscribers": active_count,
-        "trialing": trialing_count,
-    }

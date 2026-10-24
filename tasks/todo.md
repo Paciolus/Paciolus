@@ -1054,9 +1054,11 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
       `get_effective_entitlements`, then `check_upload_limit` twice incl. `entitlement_checks.py:111`) — load once per request.
       *(Done 2026-10-24: `_user_subscription` keeps the row in the request session's `info`,
       re-validated on each use — deleted, detached or re-pointed rows are re-queried. 1 query, was 3.)*
-- [ ] `billing/internal_metrics.py:601-663` per-day snapshot loop with per-user queries; cap the
+- [x] `billing/internal_metrics.py:601-663` per-day snapshot loop with per-user queries; cap the
       range in `routes/internal_metrics.py:129`; batch dunning lookups (`:365,384,402,538`,
-      `dunning_engine.py:162,168`).
+      `dunning_engine.py:162,168`). *(History part done 2026-10-24: three queries total, points
+      evaluated in memory, 400-point cap and end-before-start → 400. The old per-point function
+      also crashed comparing SQLite's naive timestamps with aware dates. Dunning batching open.)*
 - [ ] One Alembic migration dropping the 26 `primary_key=True, index=True` duplicate indexes and
       the single-column indexes covered by composites (`ToolActivity.user_id`, `TeamActivityLog.organization_id`).
       Mind Sprint 741c/797 chain-vs-ORM guards.

@@ -952,3 +952,58 @@ class TestRevenueHistoryEndpoint:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/revenue/history?start_date=not-a-date")
             assert response.status_code == 400
+
+
+class TestRevenueHistoryPreloaded:
+    """Sprint 821: history is computed from one preload, not queries per point."""
+
+    def _scenario(self, db_session):
+        users = []
+        for i in range(3):
+            u = User(
+                email=f"hist821_{i}@test.com", hashed_password="x", tier=UserTier.SOLO, is_active=True, is_verified=True
+            )
+            db_session.add(u)
+            users.append(u)
+        db_session.flush()
+        for days, u in zip((80, 60, 40), users):
+            db_session.add(
+                Subscription(
+                    user_id=u.id,
+                    tier="solo",
+                    status=SubscriptionStatus.ACTIVE,
+                    billing_interval=BillingInterval.MONTHLY,
+                    seat_count=1,
+                    additional_seats=0,
+                    created_at=datetime.now(UTC) - timedelta(days=days),
+                )
+            )
+        db_session.flush()
+        # user 1 cancels 30 days ago; user 2 cancels 20 days ago and comes back 10 days ago
+        _create_billing_event(db_session, BillingEventType.SUBSCRIPTION_CANCELED, user_id=users[1].id, days_ago=30)
+        _create_billing_event(db_session, BillingEventType.SUBSCRIPTION_CANCELED, user_id=users[2].id, days_ago=20)
+        _create_billing_event(db_session, BillingEventType.SUBSCRIPTION_CREATED, user_id=users[2].id, days_ago=10)
+
+    def test_cancellations_and_reactivations_are_replayed(self, db_session):
+        from billing.internal_metrics import compute_revenue_history
+
+        self._scenario(db_session)
+        by_date = {p["date"]: p["active_subscribers"] for p in compute_revenue_history(db_session, granularity="daily")}
+        today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        # user 0 from -80d; user 1 -60d..-30d; user 2 -40d..-20d, back at -10d
+        expected = {70: 1, 50: 2, 35: 3, 25: 2, 15: 1, 5: 2}
+        for days_ago, active in expected.items():
+            assert by_date[(today - timedelta(days=days_ago)).strftime("%Y-%m-%d")] == active, days_ago
+
+    def test_the_range_is_bounded(self, db_session):
+        from billing.internal_metrics import compute_revenue_history
+
+        with pytest.raises(ValueError, match="maximum is 400"):
+            compute_revenue_history(db_session, granularity="daily", start_date=datetime(2000, 1, 1, tzinfo=UTC))
+        with pytest.raises(ValueError, match="before start_date"):
+            compute_revenue_history(
+                db_session,
+                granularity="daily",
+                start_date=datetime(2026, 2, 1, tzinfo=UTC),
+                end_date=datetime(2026, 1, 1, tzinfo=UTC),
+            )
