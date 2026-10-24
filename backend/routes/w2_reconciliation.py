@@ -94,12 +94,13 @@ class StatutoryLimitOverrides(BaseModel):
     through the API. A practitioner who knew the correct figure for their filing
     year had no way to supply it.
 
-    They matter because the engine holds **one fixed set** of limits and applies
-    it to any ``tax_year`` from 2000 to 2099 without selecting by year; the
-    PR #184 review also disputes which year the current set belongs to. Until
-    Sprint 793 lands a year-keyed table with practitioner-confirmed figures,
-    this is the escape hatch. Every field is optional and omitting it keeps the
-    engine default, so the request shape is unchanged for existing callers.
+    Since Sprint 811 the engine selects limits from a year-keyed table and
+    refuses a year it has no table for (only 2025 today). For a tabulated year
+    an omitted field keeps that year's figure; for any other year all eleven
+    required fields must be supplied or the run is refused. The three catch-up
+    fields (Sprint 826) are optional -- a check whose figure is missing is
+    reported in ``checks_not_run`` rather than skipped silently. (Sprint 838:
+    this docstring previously described the pre-811 single fixed set.)
 
     Decimal strings rather than floats, matching every other monetary field on
     this route.
@@ -143,9 +144,10 @@ class W2ReconciliationRequest(BaseModel):
     statutory_limits: Optional[StatutoryLimitOverrides] = Field(
         default=None,
         description=(
-            "Override the statutory limits for this run. The engine applies one fixed set to "
-            "every tax year; supply the figures for your filing year to correct the wage-base "
-            "and over-limit findings. Omitted fields keep the engine default."
+            "Override the statutory limits for this run. Limits are selected by tax year; a "
+            "year with no table is refused unless all eleven required limits are supplied. For "
+            "a tabulated year, omitted fields keep that year's figure. Catch-up limits are "
+            "optional; a check whose limit is missing is reported in checks_not_run."
         ),
     )
     # Sprint 787b: optional engagement link so a run lands in the workpaper trail.
@@ -296,17 +298,21 @@ def export_reconciliation_csv(
             "Message",
         ]
     )
+    # Sprint 838: employee IDs and names are caller-supplied, and messages
+    # interpolate them -- every text cell is neutralised against formula
+    # injection (CWE-1236), not just the "Checks Not Run" IDs. Amounts are
+    # engine-computed Decimals and stay numeric (a leading "-" is a sign).
     for d in result.employee_discrepancies:
         writer.writerow(
             [
-                d.employee_id,
-                d.employee_name,
+                sanitize_csv_value(d.employee_id),
+                sanitize_csv_value(d.employee_name),
                 d.kind.value,
                 d.severity.value,
                 str(d.expected),
                 str(d.actual),
                 str(d.difference),
-                d.message,
+                sanitize_csv_value(d.message),
             ]
         )
 
@@ -322,7 +328,7 @@ def export_reconciliation_csv(
                 str(m.expected),
                 str(m.actual),
                 str(m.difference),
-                m.message,
+                sanitize_csv_value(m.message),
             ]
         )
 
@@ -347,7 +353,7 @@ def export_reconciliation_csv(
             # Employee IDs are caller-supplied: neutralise a leading formula
             # trigger (CWE-1236) before they reach a spreadsheet.
             employee_ids = " ".join(sanitize_csv_value(i) for i in notice["employee_ids"])
-            writer.writerow([notice["check"], notice["reason"], employee_ids, notice["message"]])
+            writer.writerow([notice["check"], notice["reason"], employee_ids, sanitize_csv_value(notice["message"])])
 
     buffer.seek(0)
     return StreamingResponse(

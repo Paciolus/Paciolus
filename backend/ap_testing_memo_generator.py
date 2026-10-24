@@ -38,6 +38,14 @@ AP_TEST_DESCRIPTIONS = {
         "before drawing conclusions."
     ),
     "suspicious_descriptions": "Flags payments with descriptions containing fraud indicator keywords.",
+    # Sprint 838: AP-T14 (Sprint 682) shipped without a memo description.
+    "invoice_without_po": (
+        "Flags payments at or above the round-amount threshold (the AP-T04 setting; Paciolus "
+        "default $10,000) that carry no PO Number. Payments without PO linkage are a screen "
+        "for billing-scheme risk, which the ACFE 2024 Report to the Nations discusses as a "
+        "common occupational fraud scheme; a flag is not evidence of fraud. Skipped when no "
+        "PO Number column is detected."
+    ),
 }
 
 _AP_CONFIG = TestingMemoConfig(

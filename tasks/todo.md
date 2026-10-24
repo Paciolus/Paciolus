@@ -413,6 +413,40 @@ Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
 
 ---
 
+### Sprint 838: Loose ends from the methodology sweep
+**Status:** COMPLETE 2026-10-24.
+
+- [x] Bank-rec CSV now includes split matches (a section grouped per bank item, each bank amount counted
+      once), marks bank-only items whose split search was capped, and escapes every user cell. The export
+      route had also been discarding `ledger_txns` / `split_search_limited` from the browser's JSON.
+- [x] `BankRecResponse` declares `suggested_journal_entries`, which FastAPI had been dropping.
+- [x] W-2 CSV escapes employee IDs, names and messages against spreadsheet-formula injection.
+- [x] Memo descriptions added for AP-T14, RT-09b and RT-17; a test now fails if any engine test ships
+      without a memo description.
+- [x] USER_GUIDE §17 callout rewritten for per-year statutory limits and the catch-up "check not run" notice.
+- [x] Admin customer views show the window-aware upload count (Sprint 790) instead of the raw counter.
+
+**Commit SHA:** recorded on merge.
+
+---
+
+### Sprint 839: API inputs with no path from the app
+**Status:** PENDING — found in Sprint 838.
+**Priority:** P1 for W-2 (a 2026 reconciliation cannot be run from the app); P2 otherwise.
+
+- [ ] **W-2:** the `statutory_limits` override is API-only, and only 2025 has a built-in table, so the web
+      form refuses every other tax year. Depends on Sprint 793b (practitioner-confirmed 2026 figures); until
+      then, either an override form or a clear in-app message that only 2025 is supported.
+- [ ] **Bank rec:** `materiality` / `performance_materiality` and `bank_column_mapping` /
+      `ledger_column_mapping` are accepted (and honoured) but never sent by `useBankReconciliation.ts`.
+- [ ] **Three-Way Match:** the seven per-run overrides are never sent (Sprint 836 made five reachable via
+      saved settings; `quantity_tolerance` only via presets; `fuzzy_composite_threshold` is missing from the
+      frontend config type); `po/invoice/receipt_column_mapping` are parsed by the route and then ignored.
+
+**Commit SHA:** TBD.
+
+---
+
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
 **Status:** PARTIAL — marketing and user-guide copy corrected 2026-10-24; the Terms of Service §5.3 and the Privacy Policy wait for counsel (proposed text below).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.

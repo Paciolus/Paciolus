@@ -1054,8 +1054,15 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
 def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     """Export reconciliation results as CSV string.
 
-    Sections: MATCHED ITEMS, OUTSTANDING DEPOSITS (BANK ONLY),
+    Sections: MATCHED ITEMS, SPLIT MATCHES, OUTSTANDING DEPOSITS (BANK ONLY),
     OUTSTANDING CHECKS (LEDGER ONLY), SUMMARY.
+
+    Sprint 838: split matches (one bank line cleared by 2-4 ledger lines)
+    appeared in no section, and the Sprint 833 ``split_search_limited`` flag
+    on open bank items was not carried, so the export under-reported what
+    cleared and over-stated how exhaustively the open items were searched.
+    Every caller-supplied text cell (dates included) goes through
+    ``sanitize_csv_value`` (CWE-1236).
     """
     output = StringIO()
     writer = csv.writer(output)
@@ -1082,11 +1089,11 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
         ledger = m.ledger_txn
         writer.writerow(
             [
-                bank.date if bank else "",
+                sanitize_csv_value(bank.date) if bank else "",
                 sanitize_csv_value(bank.description) if bank else "",
                 f"{bank.amount:.2f}" if bank else "",
                 sanitize_csv_value(bank.reference) if bank else "",
-                ledger.date if ledger else "",
+                sanitize_csv_value(ledger.date) if ledger else "",
                 sanitize_csv_value(ledger.description) if ledger else "",
                 f"{ledger.amount:.2f}" if ledger else "",
                 sanitize_csv_value(ledger.reference) if ledger else "",
@@ -1096,26 +1103,77 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 
     writer.writerow([])
 
-    # Section 2: Outstanding Deposits (Bank Only)
-    writer.writerow(["OUTSTANDING DEPOSITS (BANK ONLY)"])
-    writer.writerow(["Date", "Description", "Amount", "Reference"])
+    # Section 2: Split Matches (Sprint 838). One group per bank line: the bank
+    # columns are filled on the group's first row only, so summing the Bank
+    # Amount column counts each bank line once; every ledger piece gets a row.
+    writer.writerow(["SPLIT MATCHES (ONE BANK ITEM TO MULTIPLE LEDGER ITEMS)"])
+    writer.writerow(
+        [
+            "Split Group",
+            "Bank Date",
+            "Bank Description",
+            "Bank Amount",
+            "Bank Reference",
+            "Ledger Date",
+            "Ledger Description",
+            "Ledger Amount",
+            "Ledger Reference",
+            "Confidence",
+        ]
+    )
 
-    bank_only = [m for m in summary.matches if m.match_type == MatchType.BANK_ONLY]
-    for m in bank_only:
-        txn = m.bank_txn
-        if txn:
+    splits = [m for m in summary.matches if m.match_type == MatchType.SPLIT]
+    for group_no, m in enumerate(splits, start=1):
+        bank = m.bank_txn
+        pieces = list(m.ledger_txns) or ([m.ledger_txn] if m.ledger_txn else [])
+        bank_cells = [
+            sanitize_csv_value(bank.date) if bank else "",
+            sanitize_csv_value(bank.description) if bank else "",
+            f"{bank.amount:.2f}" if bank else "",
+            sanitize_csv_value(bank.reference) if bank else "",
+        ]
+        if not pieces:
+            writer.writerow([group_no, *bank_cells, "", "", "", "", f"{m.match_confidence:.2f}"])
+            continue
+        for idx, ledger in enumerate(pieces):
             writer.writerow(
                 [
-                    txn.date or "",
-                    sanitize_csv_value(txn.description),
-                    f"{txn.amount:.2f}",
-                    sanitize_csv_value(txn.reference or ""),
+                    group_no,
+                    *(bank_cells if idx == 0 else ["", "", "", ""]),
+                    sanitize_csv_value(ledger.date),
+                    sanitize_csv_value(ledger.description),
+                    f"{ledger.amount:.2f}",
+                    sanitize_csv_value(ledger.reference),
+                    f"{m.match_confidence:.2f}" if idx == 0 else "",
                 ]
             )
 
     writer.writerow([])
 
-    # Section 3: Outstanding Checks (Ledger Only)
+    # Section 3: Outstanding Deposits (Bank Only)
+    writer.writerow(["OUTSTANDING DEPOSITS (BANK ONLY)"])
+    writer.writerow(["Date", "Description", "Amount", "Reference", "Split Search"])
+
+    bank_only = [m for m in summary.matches if m.match_type == MatchType.BANK_ONLY]
+    limited_count = 0
+    for m in bank_only:
+        txn = m.bank_txn
+        if txn:
+            if m.split_search_limited:
+                limited_count += 1
+            writer.writerow(
+                [
+                    sanitize_csv_value(txn.date),
+                    sanitize_csv_value(txn.description),
+                    f"{txn.amount:.2f}",
+                    sanitize_csv_value(txn.reference or ""),
+                    SPLIT_SEARCH_LIMITED_CSV_NOTE if m.split_search_limited else "",
+                ]
+            )
+
+    writer.writerow([])
+
+    # Section 4: Outstanding Checks (Ledger Only)
     writer.writerow(["OUTSTANDING CHECKS (LEDGER ONLY)"])
     writer.writerow(["Date", "Description", "Amount", "Reference"])
 
@@ -1125,7 +1183,7 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
         if ledger_txn:
             writer.writerow(
                 [
-                    ledger_txn.date or "",
+                    sanitize_csv_value(ledger_txn.date),
                     sanitize_csv_value(ledger_txn.description),
                     f"{ledger_txn.amount:.2f}",
                     sanitize_csv_value(ledger_txn.reference or ""),
@@ -1134,11 +1192,13 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
 
     writer.writerow([])
 
-    # Section 4: Summary
+    # Section 5: Summary
     writer.writerow(["SUMMARY"])
     writer.writerow(["Matched Items", summary.matched_count])
+    writer.writerow(["Split Matches (included in Matched Items)", len(splits)])
     writer.writerow(["Matched Amount", f"{summary.matched_amount:.2f}"])
     writer.writerow(["Bank Only Items", summary.bank_only_count])
+    writer.writerow(["Bank Only Items Not Searched Exhaustively for Splits", limited_count])
     writer.writerow(["Bank Only Amount", f"{summary.bank_only_amount:.2f}"])
     writer.writerow(["Ledger Only Items", summary.ledger_only_count])
     writer.writerow(["Ledger Only Amount", f"{summary.ledger_only_amount:.2f}"])
@@ -1147,6 +1207,13 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     writer.writerow(["Total Ledger", f"{summary.total_ledger:.2f}"])
 
     return output.getvalue()
+
+
+# Sprint 838: per-row note on a BANK_ONLY item whose split-match candidate
+# pool exceeded the cap (Sprint 833) -- mirrors the UI badge wording intent.
+SPLIT_SEARCH_LIMITED_CSV_NOTE = (
+    "Limited - candidate pool exceeded the split-search cap; a split may exist that was not found"
+)
 
 
 # =============================================================================

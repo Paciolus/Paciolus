@@ -365,7 +365,32 @@ class TestAPTestDescriptions:
             assert len(desc) > 20, f"Description too short for {key}"
 
     def test_total_description_count(self):
-        assert len(AP_TEST_DESCRIPTIONS) == 13
+        assert len(AP_TEST_DESCRIPTIONS) == 14
+
+    def test_every_battery_test_has_a_description(self):
+        """Sprint 838: AP-T14 shipped without one; derive the keys from the engine."""
+        from decimal import Decimal
+
+        from services.audit.ap_testing.analysis import APPayment, run_ap_test_battery
+
+        payments = [
+            APPayment(
+                vendor_name="Acme", amount=Decimal("12000"), invoice_number="1", payment_date="2026-03-02", row_number=1
+            ),
+            APPayment(
+                vendor_name="Beta", amount=Decimal("300"), invoice_number="2", payment_date="2026-03-03", row_number=2
+            ),
+        ]
+        keys = {r.test_key for r in run_ap_test_battery(payments, has_po_column=True)}
+        assert "invoice_without_po" in keys
+        missing = keys - set(AP_TEST_DESCRIPTIONS)
+        assert not missing, f"Tests with no memo description: {sorted(missing)}"
+
+    def test_invoice_without_po_description_matches_engine(self):
+        desc = AP_TEST_DESCRIPTIONS["invoice_without_po"]
+        assert "PO Number" in desc and "ACFE 2024" in desc
+        assert "$10,000" in desc  # APTestingConfig.round_amount_threshold default
+        assert "%" not in desc  # Sprint 837: no unverified ACFE statistics
 
 
 # =============================================================================

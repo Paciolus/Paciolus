@@ -411,7 +411,46 @@ class TestRevenueTestDescriptions:
             assert len(desc) > 20, f"Description too short for {key}"
 
     def test_total_description_count(self):
-        assert len(REVENUE_TEST_DESCRIPTIONS) == 16
+        assert len(REVENUE_TEST_DESCRIPTIONS) == 18
+
+    def test_every_battery_test_has_a_description(self):
+        """Sprint 838: RT-09b and RT-17 shipped without one; derive keys from the engine."""
+        from decimal import Decimal
+
+        from services.audit.revenue_testing.analysis import RevenueEntry, run_revenue_test_battery
+
+        entries = [
+            RevenueEntry(
+                date="2026-03-01",
+                amount=Decimal("-1000"),
+                account_name="Sales",
+                row_number=1,
+                contract_id="C1",
+                recognition_method="point-in-time",
+            ),
+            RevenueEntry(
+                date="2026-03-31",
+                amount=Decimal("-2500"),
+                account_name="Sales",
+                row_number=2,
+                contract_id="C2",
+                performance_obligation_id="PO2",
+                recognition_method="over-time",
+            ),
+        ]
+        keys = {r.test_key for r in run_revenue_test_battery(entries)}
+        assert {"prior_period_timing", "contract_validity"} <= keys
+        missing = keys - set(REVENUE_TEST_DESCRIPTIONS)
+        assert not missing, f"Tests with no memo description: {sorted(missing)}"
+
+    def test_rt17_description_claims_completeness_not_validity(self):
+        desc = REVENUE_TEST_DESCRIPTIONS["contract_validity"]
+        assert "completeness" in desc and "informed by ASC 606 Step 1" in desc
+        assert "does not evaluate whether a contract exists or is valid" in desc
+
+    def test_rt09b_description_is_period_start(self):
+        desc = REVENUE_TEST_DESCRIPTIONS["prior_period_timing"]
+        assert "period-start" in desc and "3 days" in desc
 
 
 # =============================================================================

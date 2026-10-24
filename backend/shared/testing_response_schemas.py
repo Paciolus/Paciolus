@@ -354,6 +354,32 @@ class SplitSearchDisclosureResponse(BaseModel):
     note: str
 
 
+class SuggestedJournalEntryResponse(BaseModel):
+    """Sprint 639 / 838: a proposed JE for an unmatched bank-only item.
+
+    The engine classifies the bank description and proposes a generic
+    debit / credit pair; it books nothing -- the practitioner reviews,
+    maps to the client's chart of accounts, and posts.
+    """
+
+    bank_txn: TransactionResponse
+    kind: Literal[
+        "bank_fee",
+        "interest_income",
+        "interest_expense",
+        "nsf_charge",
+        "wire_fee",
+        "service_charge",
+        "overdraft",
+        "other",
+    ]
+    debit_account: str
+    credit_account: str
+    amount: float
+    description: str
+    confidence: float
+
+
 class BankRecResponse(BaseModel):
     """Complete bank reconciliation response."""
 
@@ -369,6 +395,9 @@ class BankRecResponse(BaseModel):
     # "default".  Decimal values are stringified to preserve precision.
     active_thresholds: Optional[dict] = None
     split_search: Optional[SplitSearchDisclosureResponse] = None
+    # Sprint 838: the engine has produced these since Sprint 639, but the
+    # field was undeclared, so FastAPI's response_model dropped them.
+    suggested_journal_entries: Optional[list[SuggestedJournalEntryResponse]] = None
 
 
 # ═══════════════════════════════════════════════════════════════
