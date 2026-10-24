@@ -418,8 +418,11 @@ def build_saved_settings_disclosure(
     practice setting that differed from the engine default on this run;
     ``result["settings_ignored"]`` lists saved keys that were not applied.
     When the result carries neither field (an older client) nothing is drawn;
-    when it carries an empty ``settings_applied`` the memo says every
-    threshold was a Paciolus default.
+    when it carries an empty ``settings_applied`` the memo says only that no
+    threshold differed from the defaults through these settings — never that
+    every threshold was a default, since the memo cannot see every input
+    (PR #229 review). Three-Way Match reports its effective non-default
+    thresholds, per-run values included.
     """
     applied = result.get("settings_applied")
     ignored = result.get("settings_ignored") or []
@@ -428,11 +431,12 @@ def build_saved_settings_disclosure(
     applied = applied or {}
     defaults = defaults or {}
 
-    story.append(Paragraph("<b>Thresholds from saved settings</b>", styles["MemoBody"]))
+    story.append(Paragraph("<b>Thresholds that differed from the Paciolus defaults</b>", styles["MemoBody"]))
     if not applied:
         story.append(
             Paragraph(
-                "Every threshold used on this run was the Paciolus default; no saved setting changed it.",
+                "No saved setting (or per-run tolerance, where the tool accepts one) changed a threshold from the "
+                "Paciolus default for this run.",
                 styles["MemoBodySmall"],
             )
         )
@@ -441,8 +445,8 @@ def build_saved_settings_disclosure(
         noun = "threshold" if count == 1 else "thresholds"
         story.append(
             Paragraph(
-                f"The preparer's saved settings changed {count} {noun} from the Paciolus defaults for this run. "
-                "Results above and below reflect these values, not the defaults.",
+                f"{count} {noun} differed from the Paciolus defaults on this run, from the preparer's saved settings "
+                "or a value supplied for the run. Results above and below reflect these values, not the defaults.",
                 styles["MemoBodySmall"],
             )
         )

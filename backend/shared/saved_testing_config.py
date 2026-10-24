@@ -77,6 +77,10 @@ class SavedConfigSpec:
     # Field -> value an earlier settings form saved as a hidden default the
     # user never saw or chose. Not applied; reported instead.
     legacy_defaults: dict[str, Any] = field(default_factory=dict)
+    # Fields that must be strictly greater than zero (the engine divides by
+    # them, or zero makes the test meaningless). PR #229 review: a saved
+    # single_user_volume_pct of 0 raised ZeroDivisionError and failed the run.
+    positive: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -120,6 +124,7 @@ JE_SPEC = SavedConfigSpec(
     # every JE save, though the field was never shown and the engine default
     # is 300 (Sprint 686). Applying it would quietly shrink Benford coverage.
     legacy_defaults={"benford_min_entries": 500},
+    positive=frozenset({"single_user_volume_pct", "threshold_proximity_pct", "suspicious_keyword_threshold"}),
 )
 
 AP_SPEC = SavedConfigSpec(
@@ -274,6 +279,8 @@ def apply_saved_config(base: T, saved: Optional[dict[str, Any]], spec: SavedConf
             continue
         lo, hi = spec.bounds.get(name, (0.0, math.inf))
         coerced, reason = _validate(value, hints.get(name), lo, hi)
+        if reason is None and name in spec.positive and coerced == 0:
+            reason = "must be greater than 0"
         if reason is not None:
             ignored.append({"key": key, "reason": f"Value {_preview(value)} {reason}."})
             continue
@@ -282,6 +289,22 @@ def apply_saved_config(base: T, saved: Optional[dict[str, Any]], spec: SavedConf
     config = dataclasses.replace(base, **overrides)  # type: ignore[type-var]
     applied = {k: v for k, v in overrides.items() if v != getattr(default, k)}
     return SavedConfigOutcome(config=config, overrides=overrides, applied=applied, ignored=ignored)
+
+
+def effective_non_defaults(config: Any, spec: SavedConfigSpec) -> dict[str, Any]:
+    """Every field of ``config`` that differs from the engine default, whatever set it.
+
+    PR #229 review: for tools that also take per-run values (Three-Way Match),
+    ``settings_applied`` must describe the configuration the run actually used,
+    not only the saved overrides; otherwise a per-run tolerance went unreported
+    and the memo called every threshold a default.
+    """
+    default = spec.config_cls()
+    return {
+        f.name: getattr(config, f.name)
+        for f in dataclasses.fields(config)
+        if f.name not in spec.per_run_only and getattr(config, f.name) != getattr(default, f.name)
+    }
 
 
 def _preview(value: Any) -> str:

@@ -27,7 +27,7 @@ describe('SavedSettingsNotice', () => {
         applied={{ round_amount_threshold: 50000, single_user_volume_pct: 0.15, weekend_posting_enabled: false }}
       />,
     )
-    expect(screen.getByText('Your saved settings changed 3 thresholds from Paciolus defaults')).toBeInTheDocument()
+    expect(screen.getByText('3 thresholds differed from Paciolus defaults on this run')).toBeInTheDocument()
     expect(screen.getByText('$50,000')).toBeInTheDocument()
     expect(screen.getByText('$10,000')).toBeInTheDocument()
     expect(screen.getByText('15%')).toBeInTheDocument()
@@ -37,7 +37,7 @@ describe('SavedSettingsNotice', () => {
 
   it('uses the singular for one change', () => {
     render(<SavedSettingsNotice tool="three_way_match" applied={{ date_window_days: 60 }} />)
-    expect(screen.getByText('Your saved settings changed 1 threshold from Paciolus defaults')).toBeInTheDocument()
+    expect(screen.getByText('1 threshold differed from Paciolus defaults on this run')).toBeInTheDocument()
     expect(screen.getByText('60 d')).toBeInTheDocument()
   })
 

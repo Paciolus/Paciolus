@@ -87,7 +87,7 @@ export function SavedSettingsNotice({ tool, applied, ignored, className = 'mb-6'
       {count > 0 && (
         <div className="bg-surface-card border border-theme border-l-4 border-l-sage-500 rounded-xl p-4" role="status">
           <h3 className="font-serif text-sm text-content-primary">
-            Your saved settings changed {count} {count === 1 ? 'threshold' : 'thresholds'} from Paciolus defaults
+            {count} {count === 1 ? 'threshold' : 'thresholds'} differed from Paciolus defaults on this run
           </h3>
           <ul className="mt-2 space-y-1">
             {appliedEntries.map(([key, value]) => {

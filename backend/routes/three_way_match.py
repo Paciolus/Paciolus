@@ -22,6 +22,7 @@ from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.saved_testing_config import (
     TWM_CONFIG_BOUNDS,
     TWM_SPEC,
+    effective_non_defaults,
     load_saved_testing_config,
     supersede_with_run_overrides,
 )
@@ -214,6 +215,9 @@ async def audit_three_way_match(
 
             response: dict[str, Any] = result.to_dict()
             response.update(saved.result_fields())
+            # PR #229 review: report the thresholds the run actually used,
+            # per-run values included, not only the saved overrides.
+            response["settings_applied"] = effective_non_defaults(config, TWM_SPEC)
             return response
 
         except HTTPException:

@@ -336,10 +336,31 @@ class TestRoutesHonourSavedSettings:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["config"]["date_window_days"] == 10
-        assert body["settings_applied"] == {}
+        # PR #229 review: settings_applied reports the thresholds the run used,
+        # per-run values included.
+        assert body["settings_applied"] == {"date_window_days": 10}
         assert body["settings_ignored"] == [
             {"key": "date_window_days", "reason": "Replaced by the value supplied for this run."}
         ]
+
+    @pytest.mark.asyncio
+    async def test_twm_per_run_value_without_saved_settings_is_reported(self, override_auth_verified):
+        """PR #229 review: a per-run tolerance with no saved settings went unreported."""
+        response = await _post("/audit/three-way-match", _twm_files(), data={"date_window_days": "10"})
+        assert response.status_code == 200, response.text
+        assert response.json()["settings_applied"] == {"date_window_days": 10}
+
+    @pytest.mark.asyncio
+    async def test_je_zero_single_user_threshold_is_ignored_not_fatal(self, override_auth_verified, db_session):
+        """PR #229 review: a saved 0 divided by zero in T9 and failed the run."""
+        _save(override_auth_verified, db_session, "je_testing_config", {"single_user_volume_pct": 0})
+        response = await _post("/audit/journal-entries", {"file": ("gl.csv", _gl_csv(), "text/csv")})
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert "single_user_volume_pct" not in body["settings_applied"]
+        assert any(
+            i["key"] == "single_user_volume_pct" and "greater than 0" in i["reason"] for i in body["settings_ignored"]
+        )
 
 
 # ─── frontend defaults agree with the engine ─────────────────────────────
@@ -420,7 +441,7 @@ class TestMemoDisclosure:
         result["settings_applied"] = {"round_amount_threshold": 50000.0, "weekend_posting_enabled": False}
         result["settings_ignored"] = [{"key": "retired_threshold", "reason": "Not a setting this tool recognises."}]
         text = _pdf_text(generate_je_testing_memo(result))
-        assert "changed 2 thresholds from the Paciolus defaults" in text
+        assert "2 thresholds differed from the Paciolus defaults" in text
         assert "Round amount threshold 50,000 10,000" in text
         assert "Weekend posting enabled Disabled Enabled" in text
         assert "retired_threshold: Not a setting this tool recognises." in text
@@ -431,16 +452,17 @@ class TestMemoDisclosure:
 
         result = _make_ap_result()
         result["settings_applied"] = {}
-        assert "Every threshold used on this run was the Paciolus default" in _pdf_text(
-            generate_ap_testing_memo(result)
-        )
+        text = _pdf_text(generate_ap_testing_memo(result))
+        # PR #229 review: the memo no longer claims every threshold was a default.
+        assert "changed a threshold from the Paciolus default for this run" in " ".join(text.split())
+        assert "Every threshold used on this run" not in text
 
     def test_memo_without_the_fields_is_unchanged(self):
         from payroll_testing_memo_generator import generate_payroll_testing_memo
         from tests.test_payroll_testing_memo import _make_payroll_result
 
         text = _pdf_text(generate_payroll_testing_memo(_make_payroll_result()))
-        assert "Thresholds from saved settings" not in text
+        assert "Thresholds that differed from the Paciolus defaults" not in text
 
     def test_twm_memo_lists_changed_tolerances(self):
         from tests.test_twm_memo import _make_twm_result
@@ -449,7 +471,7 @@ class TestMemoDisclosure:
         result = _make_twm_result()
         result["settings_applied"] = {"date_window_days": 60}
         text = _pdf_text(generate_three_way_match_memo(result))
-        assert "changed 1 threshold from the Paciolus defaults" in text
+        assert "1 threshold differed from the Paciolus defaults" in text
         assert "Date window days 60 30" in text
 
     @pytest.mark.asyncio
