@@ -1196,8 +1196,6 @@ def _test_round_salary_amounts(
             continue
 
         total_flagged += 1
-        if len(flagged) >= config.round_amount_max_flags:
-            continue
         flagged.append(
             FlaggedEmployee(
                 entry=entry,
@@ -1210,6 +1208,11 @@ def _test_round_salary_amounts(
                 details={"amount": float(amount)},
             )
         )
+
+    # Most severe first, then largest, so the severity floors (which read only
+    # the kept flags) never lose a HIGH match to a larger LOW one (PR #225 review).
+    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[Severity(f.severity)], abs(f.entry.gross_pay)), reverse=True)
+    flagged = flagged[: config.round_amount_max_flags]
 
     total = len(entries)
     return PayrollTestResult(

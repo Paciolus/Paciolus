@@ -31,6 +31,7 @@ from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_pars
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
+    SEVERITY_WEIGHTS,
     RiskTier,
     Severity,
     TestTier,
@@ -956,9 +957,10 @@ def test_round_revenue_amounts(
                 break
 
     # Sprint 831 (Sprint 819 item 3): count every round amount, then keep the
-    # largest — the same order as JE and AP. The loop used to stop at the cap in
+    # most severe, then the largest — the same order as JE and AP (the severity
+    # floors read only the kept flags). The loop used to stop at the cap in
     # file order, so a large round entry late in the file was never seen.
-    flagged.sort(key=lambda f: abs(f.entry.amount), reverse=True)
+    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
     total_flagged = len(flagged)
     flagged = flagged[: config.round_amount_max_flags]
 

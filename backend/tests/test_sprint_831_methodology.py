@@ -207,3 +207,17 @@ class TestMonthEnd:
         entries = _month(2025, 1, 100, 30, 1000) + _month(2025, 2, 100, 30, 2000)
         result = je.test_month_end_clustering(entries, JETestingConfig())
         assert "Client-baseline comparison not run" in result.description
+
+
+# ─── PR #225 review: the cap keeps the most severe round amounts ─────────
+
+
+def test_round_amount_cap_keeps_high_before_a_larger_low():
+    # $990,000 is a multiple of $10,000 only (LOW); $100,000 is HIGH. With room
+    # for one flag, keeping by amount alone dropped the HIGH one, and the
+    # severity floors (which read only kept flags) never saw it.
+    entries = [_entry(1, "2025-03-03", 990_000), _entry(2, "2025-03-04", 100_000)]
+    result = je.test_round_amounts(entries, JETestingConfig(round_amount_max_flags=1))
+    assert result.entries_flagged == 2
+    assert [f.entry.row_number for f in result.flagged_entries] == [2]
+    assert result.flagged_entries[0].severity == Severity.HIGH

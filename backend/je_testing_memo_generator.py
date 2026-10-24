@@ -43,11 +43,10 @@ TEST_DESCRIPTIONS = {
     "unusual_amounts": "Uses z-score analysis to identify statistically unusual amounts per account.",
     "benford_law": "Tests first-digit distribution against Benford's Law expected frequencies.",
     "weekend_postings": "Flags entries posted on Saturdays or Sundays, weighted by amount.",
-    "month_end_clustering": "Detects unusual concentration of entries in last 3 days of month.",
-    "holiday_postings": (
-        "Flags entries posted on US federal holidays (calendar per 5 U.S.C. 6103); Columbus Day and "
-        "Veterans Day are flagged at low severity. A Paciolus convention, not a test named by ISA 240."
-    ),
+    # Sprint 831: month_end_clustering and holiday_postings are deliberately absent.
+    # Their descriptions depend on the run (the auditor's holiday calendar, whether
+    # the client-baseline comparison ran), so the memo prints the result's own
+    # description instead of a fixed one.
 }
 
 _JE_CONFIG = TestingMemoConfig(

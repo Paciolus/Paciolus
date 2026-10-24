@@ -64,7 +64,8 @@ from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 # =============================================================================
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
-from shared.testing_enums import (  # noqa: E402
+from shared.testing_enums import (
+    SEVERITY_WEIGHTS,  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
@@ -1129,9 +1130,12 @@ def test_round_amounts(
                 break  # Only flag the largest pattern match
 
     # Sprint 829: count every round amount, then keep the largest for display.
+    # Sprint 831 (PR #225 review): most severe first, then largest, so a large
+    # LOW match can never push a HIGH one out of the kept list (the severity
+    # floors read only the kept flags).
     # The loop used to stop at the cap in file order, so a $500K round entry
     # after fifty $10K ones was never seen and the count stopped at 50.
-    flagged.sort(key=lambda f: f.entry.abs_amount, reverse=True)
+    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], f.entry.abs_amount), reverse=True)
     total_flagged = len(flagged)
     flagged = flagged[: config.round_amount_max_flags]
 
