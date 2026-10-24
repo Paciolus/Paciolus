@@ -167,6 +167,18 @@ class SamplingResultResponse(BaseModel):
     parameters: dict[str, Any]
 
 
+class SettingIgnoredResponse(BaseModel):
+    """A saved testing setting that was not applied, and why (Sprint 836)."""
+
+    key: str
+    reason: str
+
+
+# Sprint 836: saved practice-settings thresholds that differ from the engine
+# default (field -> value), and saved keys that were not applied.
+SettingsAppliedValue = bool | int | float | list[float]
+
+
 class JETestingResponse(BaseModel):
     """Complete journal entry testing response.
 
@@ -182,6 +194,8 @@ class JETestingResponse(BaseModel):
     column_detection: Optional[GLColumnDetectionResponse] = None
     benford_result: Optional[BenfordAnalysisResponse] = None
     sampling_result: Optional[dict[str, Any]] = None
+    settings_applied: dict[str, SettingsAppliedValue] = {}
+    settings_ignored: list[SettingIgnoredResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -266,6 +280,8 @@ class APTestingResponse(BaseModel):
     test_results: list[APTestResultResponse]
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[APColumnDetectionResponse] = None
+    settings_applied: dict[str, SettingsAppliedValue] = {}
+    settings_ignored: list[SettingIgnoredResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -568,6 +584,8 @@ class ThreeWayMatchResponse(BaseModel):
     data_quality: ThreeWayMatchDataQualityResponse
     column_detection: TWMColumnDetectionResponse
     config: ThreeWayMatchConfigResponse
+    settings_applied: dict[str, SettingsAppliedValue] = {}
+    settings_ignored: list[SettingIgnoredResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -819,6 +837,8 @@ class PayrollTestingResponse(BaseModel):
     data_quality: Optional[DataQualityResponse] = None
     column_detection: Optional[PayrollColumnDetectionResponse] = None
     filename: str
+    settings_applied: dict[str, SettingsAppliedValue] = {}
+    settings_ignored: list[SettingIgnoredResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════

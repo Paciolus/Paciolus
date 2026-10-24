@@ -3,6 +3,7 @@ Paciolus API — Three-Way Match Routes
 """
 
 import asyncio
+import dataclasses
 import logging
 from typing import Any, Optional
 
@@ -18,6 +19,12 @@ from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 from shared.helpers import parse_json_mapping
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.saved_testing_config import (
+    TWM_CONFIG_BOUNDS,
+    TWM_SPEC,
+    load_saved_testing_config,
+    supersede_with_run_overrides,
+)
 from shared.testing_response_schemas import ThreeWayMatchResponse
 from shared.tool_run_recorder import maybe_record_tool_run
 from shared.upload_pipeline import (
@@ -46,15 +53,9 @@ router = APIRouter(tags=["three_way_match"])
 # Accept validated tolerance overrides from request.  Bounds are defensive:
 # they reject nonsensical or weaponised inputs (e.g. negative tolerances,
 # >100% variance thresholds, or date windows measured in years) that would
-# otherwise silently produce degenerate match results.
-_TWM_CONFIG_BOUNDS: dict[str, tuple[float, float]] = {
-    "amount_tolerance": (0.0, 10_000.0),  # up to $10K absolute
-    "quantity_tolerance": (0.0, 10_000.0),  # up to 10K units
-    "date_window_days": (0.0, 365.0),  # up to 1 year
-    "fuzzy_vendor_threshold": (0.0, 1.0),
-    "price_variance_threshold": (0.0, 1.0),  # 0–100%
-    "fuzzy_composite_threshold": (0.0, 1.0),
-}
+# otherwise silently produce degenerate match results.  Sprint 836: the same
+# bounds govern saved practice settings, so they live with that helper.
+_TWM_CONFIG_BOUNDS: dict[str, tuple[float, float]] = TWM_CONFIG_BOUNDS
 
 
 def _build_twm_config(
@@ -66,11 +67,13 @@ def _build_twm_config(
     price_variance_threshold: Optional[float],
     enable_fuzzy_matching: Optional[bool],
     fuzzy_composite_threshold: Optional[float],
+    base: Optional[ThreeWayMatchConfig] = None,
 ) -> ThreeWayMatchConfig:
     """Build a validated ThreeWayMatchConfig from optional override params.
 
-    Any ``None`` override falls back to the dataclass default so existing
-    clients (which supply no overrides) are bit-for-bit unchanged.
+    Any ``None`` override falls back to ``base`` (Sprint 836: the user's saved
+    settings) or, without one, the dataclass default, so existing clients
+    (which supply no overrides) are bit-for-bit unchanged.
     Out-of-bounds numeric overrides raise HTTP 400.
     """
     overrides: dict[str, Any] = {
@@ -96,7 +99,7 @@ def _build_twm_config(
                 detail=(f"Three-way match config override out of range: {key}={value} must be within [{lo}, {hi}]."),
             )
         supplied[key] = int(value) if key == "date_window_days" else float(value)
-    return ThreeWayMatchConfig(**supplied)
+    return dataclasses.replace(base if base is not None else ThreeWayMatchConfig(), **supplied)
 
 
 @router.post("/audit/three-way-match", response_model=ThreeWayMatchResponse)
@@ -137,6 +140,20 @@ async def audit_three_way_match(
     _ = parse_json_mapping(invoice_column_mapping, "twm_invoice")
     _ = parse_json_mapping(receipt_column_mapping, "twm_receipt")
 
+    # Sprint 836: start from the user's saved settings; a value supplied for
+    # this run replaces the saved one (and the result says so).
+    saved = load_saved_testing_config(current_user, TWM_SPEC)
+    run_overrides = {
+        "amount_tolerance": amount_tolerance,
+        "quantity_tolerance": quantity_tolerance,
+        "date_window_days": date_window_days,
+        "fuzzy_vendor_threshold": fuzzy_vendor_threshold,
+        "price_variance_threshold": price_variance_threshold,
+        "enable_fuzzy_matching": enable_fuzzy_matching,
+        "fuzzy_composite_threshold": fuzzy_composite_threshold,
+    }
+    supersede_with_run_overrides(saved, {k for k, v in run_overrides.items() if v is not None})
+
     # Build the config before file I/O so bounds-check errors short-circuit
     # without having to read / parse the uploads.
     config = _build_twm_config(
@@ -147,6 +164,7 @@ async def audit_three_way_match(
         price_variance_threshold=price_variance_threshold,
         enable_fuzzy_matching=enable_fuzzy_matching,
         fuzzy_composite_threshold=fuzzy_composite_threshold,
+        base=saved.config,
     )
 
     log_secure_operation(
@@ -194,7 +212,9 @@ async def audit_three_way_match(
 
             maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True, consumes_upload=True)
 
-            return result.to_dict()  # type: ignore[no-any-return]
+            response: dict[str, Any] = result.to_dict()
+            response.update(saved.result_fields())
+            return response
 
         except HTTPException:
             # Preserve 400 bounds-check errors raised upstream of the thread.

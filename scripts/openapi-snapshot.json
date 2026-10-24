@@ -501,6 +501,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -573,6 +619,38 @@
                 "type": "null"
               }
             ]
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -14711,6 +14789,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -14815,6 +14939,38 @@
               }
             ],
             "title": "Sampling Result"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -17748,6 +17904,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -17824,6 +18026,38 @@
           "filename": {
             "title": "Filename",
             "type": "string"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
+            "type": "array"
           },
           "test_results": {
             "items": {
@@ -22945,6 +23179,46 @@
         "title": "SessionListResponse",
         "type": "object"
       },
+      "SettingIgnoredInput": {
+        "description": "A saved testing setting the run did not apply (Sprint 836).",
+        "properties": {
+          "key": {
+            "maxLength": 100,
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 300,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "reason"
+        ],
+        "title": "SettingIgnoredInput",
+        "type": "object"
+      },
+      "SettingIgnoredResponse": {
+        "description": "A saved testing setting that was not applied, and why (Sprint 836).",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "reason"
+        ],
+        "title": "SettingIgnoredResponse",
+        "type": "object"
+      },
       "SheetInfo": {
         "properties": {
           "column_count": {
@@ -24312,6 +24586,52 @@
             ],
             "title": "Reviewed By"
           },
+          "settings_applied": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    }
+                  ]
+                },
+                "maxProperties": 100,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Applied"
+          },
+          "settings_ignored": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SettingIgnoredInput"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Ignored"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -24469,6 +24789,38 @@
               "$ref": "#/components/schemas/ThreeWayMatchItemResponse"
             },
             "title": "Partial Matches",
+            "type": "array"
+          },
+          "settings_applied": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Settings Applied",
+            "type": "object"
+          },
+          "settings_ignored": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SettingIgnoredResponse"
+            },
+            "title": "Settings Ignored",
             "type": "array"
           },
           "summary": {

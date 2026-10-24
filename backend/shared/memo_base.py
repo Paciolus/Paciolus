@@ -384,6 +384,116 @@ def build_methodology_section(
     story.append(Spacer(1, 8))
 
 
+def _format_setting_value(value: Any) -> str:
+    """Render one saved-setting value for the memo (Sprint 836)."""
+    if isinstance(value, bool):
+        return "Enabled" if value else "Disabled"
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_format_setting_value(v) for v in value) or "(none)"
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        if isinstance(value, int):
+            return f"{value:,}"
+        if abs(value) >= 1000:
+            return f"{value:,.2f}"
+        return f"{value:g}"
+    return str(value)
+
+
+def _setting_label(key: str) -> str:
+    return key.replace("_", " ").strip().capitalize()
+
+
+def build_saved_settings_disclosure(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    result: dict[str, Any],
+    defaults: Optional[dict[str, Any]] = None,
+) -> None:
+    """State which thresholds differed from the Paciolus defaults (Sprint 836).
+
+    ``result["settings_applied"]`` maps engine field -> value for every saved
+    practice setting that differed from the engine default on this run;
+    ``result["settings_ignored"]`` lists saved keys that were not applied.
+    When the result carries neither field (an older client) nothing is drawn;
+    when it carries an empty ``settings_applied`` the memo says every
+    threshold was a Paciolus default.
+    """
+    applied = result.get("settings_applied")
+    ignored = result.get("settings_ignored") or []
+    if applied is None and not ignored:
+        return
+    applied = applied or {}
+    defaults = defaults or {}
+
+    story.append(Paragraph("<b>Thresholds from saved settings</b>", styles["MemoBody"]))
+    if not applied:
+        story.append(
+            Paragraph(
+                "Every threshold used on this run was the Paciolus default; no saved setting changed it.",
+                styles["MemoBodySmall"],
+            )
+        )
+    else:
+        count = len(applied)
+        noun = "threshold" if count == 1 else "thresholds"
+        story.append(
+            Paragraph(
+                f"The preparer's saved settings changed {count} {noun} from the Paciolus defaults for this run. "
+                "Results above and below reflect these values, not the defaults.",
+                styles["MemoBodySmall"],
+            )
+        )
+        rows: list[list[Any]] = [["Setting", "This run", "Paciolus default"]]
+        for key in sorted(applied):
+            default_text = _format_setting_value(defaults[key]) if key in defaults else "—"
+            rows.append(
+                [
+                    Paragraph(xml_escape(_setting_label(str(key))), styles["MemoTableCell"]),
+                    Paragraph(xml_escape(_format_setting_value(applied[key])), styles["MemoTableCell"]),
+                    Paragraph(xml_escape(default_text), styles["MemoTableCell"]),
+                ]
+            )
+        table = Table(rows, colWidths=[2.9 * inch, 1.9 * inch, 1.8 * inch], repeatRows=1)
+        table.setStyle(
+            TableStyle(
+                [
+                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("LEFTPADDING", (0, 0), (0, -1), 0),
+                ]
+            )
+        )
+        story.append(table)
+    if ignored:
+        count = len(ignored)
+        noun = "setting was" if count == 1 else "settings were"
+        story.append(
+            Paragraph(
+                f"{count} saved {noun} not applied:",
+                styles["MemoBodySmall"],
+            )
+        )
+        for item in ignored:
+            key = str(item.get("key", "")) if isinstance(item, dict) else str(item)
+            reason = str(item.get("reason", "")) if isinstance(item, dict) else ""
+            story.append(
+                Paragraph(
+                    f"<i>{xml_escape(key)}</i>: {xml_escape(reason)}",
+                    styles["MemoBodySmall"],
+                )
+            )
+    story.append(Spacer(1, 8))
+
+
 def build_results_summary_section(
     story: list,
     styles: dict,

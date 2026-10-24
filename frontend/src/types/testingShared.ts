@@ -84,3 +84,24 @@ export const TESTING_SEVERITY_COLORS: Record<TestingSeverity, string> = {
   low: 'text-content-secondary',
   informational: 'text-content-tertiary',
 }
+
+// ─── Saved Settings Disclosure (Sprint 836) ────────────────────────────────────
+
+/** A saved testing threshold value as the backend applied it. */
+export type SavedSettingValue = number | boolean | number[]
+
+/** A saved setting the run did not apply, and why. */
+export interface SavedSettingIgnored {
+  key: string
+  reason: string
+}
+
+/**
+ * JE / AP / Payroll / Three-Way Match results report which saved practice
+ * settings changed a threshold from the Paciolus default, and which saved
+ * keys were not applied.
+ */
+export interface SavedSettingsDisclosure {
+  settings_applied?: Record<string, SavedSettingValue>
+  settings_ignored?: SavedSettingIgnored[]
+}

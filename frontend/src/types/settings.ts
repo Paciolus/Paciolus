@@ -214,7 +214,9 @@ export const DEFAULT_JE_TESTING_CONFIG: JETestingConfig = {
   round_amount_max_flags: 50,
   unusual_amount_stddev: 3.0,
   unusual_amount_min_entries: 5,
-  benford_min_entries: 500,
+  // Sprint 836: matches the engine (JETestingConfig, Sprint 686). Was 500,
+  // which every JE save quietly sent to the backend.
+  benford_min_entries: 300,
   weekend_posting_enabled: true,
   weekend_large_amount_threshold: 10000,
   month_end_days: 3,
@@ -338,26 +340,50 @@ export const AP_PRESET_DESCRIPTIONS: Record<APTestingPreset, string> = {
 export type PayrollTestingPreset = 'conservative' | 'standard' | 'permissive' | 'custom';
 
 export interface PayrollTestingConfig {
+  // Sprint 836: key names are the engine's PayrollTestingConfig field names.
   // PR-T3: Round Salary Amounts
   round_amount_threshold: number;
   // PR-T5: Check Number Gaps
-  check_gap_enabled: boolean;
+  check_number_gap_enabled: boolean;
   // PR-T6: Unusual Pay Amounts
   unusual_pay_stddev: number;
   // PR-T7: Pay Frequency Anomalies
   frequency_enabled: boolean;
   frequency_deviation_threshold: number;
   // PR-T8: Benford's Law
-  benford_enabled: boolean;
+  enable_benford: boolean;
   benford_min_entries: number;
   // PR-T9: Ghost Employee Indicators
-  ghost_enabled: boolean;
+  enable_ghost: boolean;
   ghost_min_indicators: number;
   // PR-T10: Duplicate Bank/Address
-  duplicate_bank_enabled: boolean;
+  enable_duplicates: boolean;
   address_similarity_threshold: number;
   // PR-T11: Duplicate Tax IDs
-  duplicate_tax_enabled: boolean;
+  enable_tax_id_duplicates: boolean;
+}
+
+/**
+ * Sprint 836: payroll toggles were saved under names the engine never read.
+ * Map them to the engine names so a re-save keeps the user's choice.
+ */
+const LEGACY_PAYROLL_KEYS: Record<string, keyof PayrollTestingConfig> = {
+  check_gap_enabled: 'check_number_gap_enabled',
+  benford_enabled: 'enable_benford',
+  ghost_enabled: 'enable_ghost',
+  duplicate_bank_enabled: 'enable_duplicates',
+  duplicate_tax_enabled: 'enable_tax_id_duplicates',
+};
+
+export function normalizePayrollTestingConfig(saved: Record<string, unknown>): Partial<PayrollTestingConfig> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(saved)) {
+    if (!(key in LEGACY_PAYROLL_KEYS)) out[key] = value;
+  }
+  for (const [legacy, current] of Object.entries(LEGACY_PAYROLL_KEYS)) {
+    if (legacy in saved && !(current in saved)) out[current] = saved[legacy];
+  }
+  return out as Partial<PayrollTestingConfig>;
 }
 
 export const PAYROLL_TESTING_PRESETS: Record<Exclude<PayrollTestingPreset, 'custom'>, Partial<PayrollTestingConfig>> = {
@@ -373,7 +399,7 @@ export const PAYROLL_TESTING_PRESETS: Record<Exclude<PayrollTestingPreset, 'cust
     round_amount_threshold: 10000,
     unusual_pay_stddev: 3.0,
     benford_min_entries: 500,
-    ghost_min_indicators: 2,
+    ghost_min_indicators: 1,
     address_similarity_threshold: 0.90,
     frequency_deviation_threshold: 0.50,
   },
@@ -389,17 +415,18 @@ export const PAYROLL_TESTING_PRESETS: Record<Exclude<PayrollTestingPreset, 'cust
 
 export const DEFAULT_PAYROLL_TESTING_CONFIG: PayrollTestingConfig = {
   round_amount_threshold: 10000,
-  check_gap_enabled: true,
+  check_number_gap_enabled: true,
   unusual_pay_stddev: 3.0,
   frequency_enabled: true,
   frequency_deviation_threshold: 0.50,
-  benford_enabled: true,
+  enable_benford: true,
   benford_min_entries: 500,
-  ghost_enabled: true,
-  ghost_min_indicators: 2,
-  duplicate_bank_enabled: true,
+  enable_ghost: true,
+  // Sprint 836: matches the engine (PayrollTestingConfig). Was 2.
+  ghost_min_indicators: 1,
+  enable_duplicates: true,
   address_similarity_threshold: 0.90,
-  duplicate_tax_enabled: true,
+  enable_tax_id_duplicates: true,
 };
 
 export const PAYROLL_PRESET_LABELS: Record<PayrollTestingPreset, string> = {

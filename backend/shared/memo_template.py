@@ -35,6 +35,7 @@ from shared.memo_base import (
     build_methodology_section,
     build_proof_summary_section,
     build_results_summary_section,
+    build_saved_settings_disclosure,
     build_scope_section,
     build_workpaper_signoff,
     create_memo_styles,
@@ -46,6 +47,7 @@ from shared.report_chrome import (
     find_logo,
     make_branded_page_footer,
 )
+from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -266,6 +268,11 @@ def generate_testing_memo(
         test_results,
         config.test_descriptions,
         config.methodology_intro,
+    )
+
+    # 3b-pre. Sprint 836: thresholds that differed from the Paciolus defaults.
+    build_saved_settings_disclosure(
+        story, styles, doc.width, result, defaults=engine_defaults_for_domain(config.tool_domain)
     )
 
     # 3a. METHODOLOGY STATEMENT (interpretive context)

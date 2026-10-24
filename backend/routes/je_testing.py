@@ -34,6 +34,7 @@ from shared.helpers import (
 )
 from shared.holiday_calendar import us_federal_holiday_names
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.saved_testing_config import JE_SPEC, load_saved_testing_config
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
 from shared.testing_route import run_single_file_testing
 from shared.upload_pipeline import (
@@ -111,7 +112,10 @@ async def audit_journal_entries(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Run automated journal entry testing on a General Ledger extract."""
-    config = _parse_holiday_calendar(holiday_calendar)
+    # Sprint 836: saved practice settings, with the per-run holiday calendar
+    # as the base (saved settings cannot touch the calendar fields).
+    saved = load_saved_testing_config(current_user, JE_SPEC, _parse_holiday_calendar(holiday_calendar))
+    config = saved.config
     return await run_single_file_testing(
         file=file,
         column_mapping=column_mapping,
@@ -130,6 +134,7 @@ async def audit_journal_entries(
             column_mapping=mapping,
         ),
         extract_accounts=extract_je_accounts,
+        result_extras=saved.result_fields(),
     )
 
 

@@ -38,7 +38,11 @@ export interface MethodologyRule {
   kind: SourceKind
   /** Codes from backend/standards_registry.py. For a `convention`, empty or the standard that frames it. */
   sources: string[]
-  /** True when a user can change the threshold for a run in the app today. */
+  /**
+   * True when a user can change the threshold for a run in the app today:
+   * per run, or (Sprint 836) through the tool's saved settings, which the
+   * engine now applies and the results and memo disclose.
+   */
   configurable?: boolean
   /** Which numbers are Paciolus defaults, and any caveat about the citation. */
   note?: string
@@ -85,7 +89,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Considers lines of $10,000 or more and flags those that are exact multiples of $100,000 (HIGH), $50,000 (MEDIUM) or $10,000 (LOW). Every round line is counted; the 50 largest are listed.',
         kind: 'guidance',
         sources: ['ISA 240', 'AS 2401'],
-        configurable: false,
+        configurable: true,
         note: 'Both standards list entries containing round numbers or consistent ending numbers among the characteristics of inappropriate journal entries. The $10,000 floor, the three multiples, their severities and the 50-row display cap are Paciolus defaults.',
       },
       {
@@ -93,7 +97,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'For each account with at least 5 non-zero lines, measures each line against the mean and standard deviation of the account\'s other lines and flags lines more than 3 standard deviations above. Severity: HIGH above 5 standard deviations, MEDIUM above 4, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 3 / 4 / 5 standard-deviation cut-offs and the 5-line minimum are Paciolus defaults. A code comment describes the 4 / 5 severity bands as adapted from Nigrini (2012); Paciolus does not present them as a published threshold.',
       },
       {
@@ -109,7 +113,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags lines dated on a Saturday or Sunday (posting date, or entry date when there is no posting date). Severity: HIGH at $10,000 or more, MEDIUM at $2,000 or more, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'ISA 240 and AS 2401 require journal entries to be tested for fraud; posting on a weekend is a Paciolus selection criterion, not a characteristic either standard lists. The $2,000 / $10,000 bands are Paciolus defaults.',
       },
       {
@@ -133,7 +137,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'When a posted-by column is present, flags users who posted more than 25% of all lines that carry a user. HIGH above 50%, otherwise MEDIUM. Up to 20 of each such user\'s largest lines are listed.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 25% / 50% shares and the 20-line cap are Paciolus defaults. A code comment frames this as a segregation-of-duties signal; neither ISA 240 nor AS 2401 sets a concentration threshold. (Those standards instead list entries by individuals who do not usually post journal entries.)',
       },
       {
@@ -141,7 +145,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'When timestamps are present, flags lines posted before 06:00 or at/after 18:00. Severity: HIGH above $10,000, MEDIUM above $1,000, otherwise LOW. Skipped when the file has no real time data (for example every timestamp is midnight).',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Business hours of 06:00-18:00 and the $1,000 / $10,000 bands are Paciolus defaults; after-hours posting is a Paciolus selection criterion.',
       },
       {
@@ -149,7 +153,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Splits entry IDs into a series prefix and trailing number and flags any entry whose number is 2 or more above the previous number in its series (at least one number missing). Severity: HIGH when more than 100 apart, MEDIUM when more than 10 apart, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Gap-size bands are Paciolus defaults. Gaps can have ordinary causes (voided or cancelled entries) and need follow-up rather than a conclusion.',
       },
       {
@@ -157,7 +161,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'When both a posting date and an entry date are present, flags lines where they differ by 30 days or more. Severity: HIGH above 90 days, MEDIUM above 30 days, LOW at exactly 30.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 30- and 90-day thresholds are Paciolus defaults.',
       },
       {
@@ -165,7 +169,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Scores each description against a weighted keyword list (for example manual adjustment, override, reversal, dummy, related party, loan to officer) and flags matches with a weight of 0.60 or more. HIGH when the weight is 0.85 or more and the amount exceeds $10,000; MEDIUM when the weight is 0.70 or more or the amount exceeds $5,000; otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The keyword list, weights, 0.60 threshold and amount bands are Paciolus defaults.',
       },
       {
@@ -259,7 +263,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Sorts numeric check numbers and flags each jump of 2 or more (one or more missing numbers). Severity: gap over 100 HIGH, over 10 MEDIUM, otherwise LOW. Runs only when a check-number column is present.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Minimum gap of 2 and the 10/100 severity bands are Paciolus defaults.',
       },
       {
@@ -267,7 +271,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags payments of $10,000 or more that are exact multiples of $100K (HIGH), $50K (HIGH), $25K (MEDIUM) or $10K (LOW); only the largest matching multiple counts. All round payments are counted; the 50 largest are listed.',
         kind: 'convention',
         sources: ['ISA 240', 'AS 2401'],
-        configurable: false,
+        configurable: true,
         note: 'ISA 240 and AS 2401 list round numbers as a characteristic of inappropriate journal entries; applying it to vendor payments is a Paciolus extension. The $10K floor, the multiples and the 50-item display cap are Paciolus defaults.',
       },
       {
@@ -275,7 +279,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags payments dated before their invoice date. Severity: more than 30 days early HIGH, more than 7 days MEDIUM, otherwise LOW. Runs only when both dates are present.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 7- and 30-day bands are Paciolus defaults.',
       },
       {
@@ -283,7 +287,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags pairs of payments to the same vendor for the same amount (within $0.01) on different dates no more than 30 days apart. HIGH if the amount exceeds $10,000, otherwise MEDIUM. Fixed-amount recurring series (3 or more payments of one amount, each at least 25 days apart, e.g. rent) are excluded.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 30-day window, $0.01 tolerance, $10K severity line and the 3-payment / 25-day recurring-series rule are Paciolus defaults.',
       },
       {
@@ -291,7 +295,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags every payment whose invoice number appears under two or more different vendors. Always HIGH severity.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Paciolus test design; may also reflect ordinary data-entry error.',
       },
       {
@@ -299,7 +303,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'For vendors with at least 5 payments, measures each payment against the vendor\'s other payments (leave-one-out z-score) and flags those 3.0 or more standard deviations away. Severity: z over 5 HIGH, over 4 MEDIUM, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 5-payment minimum, the 3.0 cut-off and the 4/5 severity bands are Paciolus defaults. A code comment attributes the severity bands to Nigrini (2012); that attribution has not been verified, so they are shown as a Paciolus convention.',
       },
       {
@@ -307,7 +311,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags payments dated Saturday or Sunday. HIGH if $10,000 or more, otherwise MEDIUM.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The $10K severity line is a Paciolus default. Standards do not list weekend payment dates as a red flag; electronic payments are often settled on any day.',
       },
       {
@@ -315,7 +319,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags vendors receiving 5 or more payments on a single day. HIGH at 10 or more, otherwise MEDIUM.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 5- and 10-payment thresholds are Paciolus defaults.',
       },
       {
@@ -323,7 +327,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Compares every pair of distinct vendor names and flags pairs with a text-similarity ratio (Python SequenceMatcher) of 0.85 or more, as possible ghost vendors or deliberate misspellings. HIGH if the two vendors were paid more than $50,000 combined, otherwise MEDIUM.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 0.85 similarity cut-off and $50K severity line are Paciolus defaults.',
       },
       {
@@ -331,7 +335,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags payments within 5% below $5K, $10K, $25K, $50K or $100K (HIGH for the $50K and $100K thresholds, otherwise MEDIUM), and same-vendor same-day payments that are each below a threshold but together exceed it (HIGH).',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The approval thresholds and the 5% band are Paciolus defaults, not the client\'s own authorization limits. Confirm against the client\'s AP authorization matrix before drawing conclusions.',
       },
       {
@@ -339,7 +343,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Scans payment descriptions against a weighted keyword list (e.g. petty cash, void reissue, manual check, override, rush, one-time vendor) and flags matches weighted 0.60 or more. Severity: weight 0.85 or more and amount over $10,000 HIGH; weight 0.75 or more MEDIUM; otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The keyword list, weights, 0.60 cut-off and severity rules are Paciolus defaults.',
       },
       {
@@ -385,7 +389,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags gross pay of $10,000 or more that is an exact multiple of $100K (HIGH), $50K (HIGH), $25K (MEDIUM) or $10K (LOW). Lists at most the 50 largest.',
         kind: 'convention',
         sources: ['ISA 240', 'AS 2401'],
-        configurable: false,
+        configurable: true,
         note: 'ISA 240 and AS 2401 list round numbers as a characteristic of inappropriate journal entries; applying it to pay amounts is a Paciolus extension. The $10K floor, the multiples and the 50-item cap are Paciolus defaults.',
       },
       {
@@ -401,7 +405,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Sorts numeric payroll check numbers and flags each jump of 2 or more. Severity: jump over 10 HIGH, over 5 MEDIUM, otherwise LOW. Runs only when a check-number column is present.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The minimum jump of 2 and the 5/10 severity bands are Paciolus defaults (tighter than the AP check-gap bands).',
       },
       {
@@ -409,7 +413,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Within each department (minimum 5 positive gross-pay entries), flags gross pay 3.0 or more standard deviations from the department mean, in either direction. Severity: z over 5 HIGH, over 4 MEDIUM, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 5-entry minimum, 3.0 cut-off and 4/5 severity bands are Paciolus defaults. The mean and standard deviation include the entry being tested.',
       },
       {
@@ -417,7 +421,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Takes the most common interval between pay dates (1-60 days) as the expected cadence, and for employees with 3 or more pay dates flags intervals more than 50% shorter or longer than it. An employee who is regularly paid on a longer cycle of their own (e.g. monthly in a biweekly population) is measured against that cycle. Shorter intervals: MEDIUM if under 30% of the cadence, else LOW; longer intervals LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 50% tolerance, 30% line and 3-entry minimum are Paciolus defaults.',
       },
       {
@@ -425,7 +429,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Compares the first-digit distribution of gross pay ($1 or more) with Benford\'s expected distribution using mean absolute deviation (MAD): under 0.006 conforming, under 0.012 acceptable, under 0.015 marginally acceptable, otherwise nonconforming. Requires at least 500 amounts spanning at least 2 orders of magnitude. When marginal or nonconforming, entries in the over-represented digits are flagged.',
         kind: 'published-method',
         sources: ['Nigrini 2012'],
-        configurable: false,
+        configurable: true,
         note: 'The MAD conformity bands come from Nigrini (2012). The 500-entry minimum (JE testing uses 300), the 2-order-of-magnitude pre-check and the flag severities are Paciolus defaults. Pay is often clustered by pay grade, so a Benford result on a payroll register is weaker evidence than on a general ledger.',
       },
       {
@@ -433,7 +437,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Counts indicators per employee: no department on any entry; a single pay entry (only when the register covers several pay dates and fewer than half of employees were paid once); pay only in the first and/or last month of the period. With an HR master file it adds: absent from the HR master, paid after the HR termination date, and address matching an executive\'s. One indicator is MEDIUM, two or more HIGH.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The indicator set, the 1-indicator minimum and the severity rule are Paciolus defaults. The code cites ISA 240 / AS 2401 for ghost-employee indicators, but neither standard lists them.',
       },
       {
@@ -441,7 +445,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags entries whose bank account is shared by two or more employee names (exact match, HIGH), and pairs of employees whose addresses have a text-similarity ratio of 0.90 or more (MEDIUM). Runs only when a bank-account or address column is present.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 0.90 address-similarity cut-off and severities are Paciolus defaults. Family members can legitimately share an address.',
       },
       {
@@ -449,7 +453,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags every entry whose tax ID is shared by two or more employee names. Always HIGH severity. Runs only when a tax-ID column is present.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Paciolus test design.',
       },
       {
@@ -975,15 +979,15 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'For POs left unmatched, scores candidate invoices on vendor name similarity (40%), amount closeness (30%) and date proximity between order and invoice date (30%). Scores candidate receipts on vendor similarity (50%) and quantity closeness (50%). A candidate needs vendor similarity of at least 0.85 and a combined score of at least 0.70. An invoice with no receipt is recorded as a partial match.',
         kind: 'convention',
         sources: [],
-        configurable: false,
-        note: 'The weights, the 0.85 vendor-similarity cut-off (SequenceMatcher ratio) and the 0.70 composite cut-off are Paciolus defaults. The API accepts overrides for these settings. The app does not send them today, so the defaults apply.',
+        configurable: true,
+        note: 'The weights, the 0.85 vendor-similarity cut-off (SequenceMatcher ratio) and the 0.70 composite cut-off are Paciolus defaults. The vendor-similarity cut-off can be changed in the tool\'s saved settings; the weights and the composite cut-off cannot be changed in the app.',
       },
       {
         test: 'Amount variance (PO vs invoice)',
         rule: 'Flags a difference between PO total and invoice total above $0.01. Severity by percentage of the PO total: HIGH above 10%, MEDIUM above 5%, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The $0.01 tolerance and the 5% and 10% bands are Paciolus defaults.',
       },
       {
@@ -991,7 +995,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags any difference between ordered and received quantity (tolerance 0). Severity by percentage of the ordered quantity: HIGH above 10%, MEDIUM above 5%, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Exact-quantity matching and the 5% and 10% bands are Paciolus defaults.',
       },
       {
@@ -999,7 +1003,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags any difference between invoiced and received quantity. Billing for more than was received is HIGH when the difference is above 5%, otherwise MEDIUM. Billing for less (a partial invoice) is MEDIUM above 10%, otherwise LOW.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'Over-billing is graded more severely than under-billing because paying for goods not received is the payment risk this match is designed to catch. The bands are Paciolus defaults.',
       },
       {
@@ -1007,7 +1011,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags a unit-price difference above 5% of the PO unit price. HIGH above 10%, otherwise MEDIUM.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 5% threshold and 10% band are Paciolus defaults.',
       },
       {
@@ -1015,7 +1019,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         rule: 'Flags a receipt dated more than 30 days from the PO expected delivery date. HIGH above 60 days, MEDIUM above 30 days.',
         kind: 'convention',
         sources: [],
-        configurable: false,
+        configurable: true,
         note: 'The 30-day window and 60-day band are Paciolus defaults.',
       },
       {

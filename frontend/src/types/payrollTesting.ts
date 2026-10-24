@@ -10,6 +10,7 @@ import {
   TESTING_SEVERITY_COLORS,
 } from './testingShared'
 import type {
+  SavedSettingsDisclosure,
   TestingRiskTier,
   TestingTestTier,
   TestingSeverity,
@@ -89,7 +90,7 @@ export interface PayrollColumnDetection {
   detection_notes: string[]
 }
 
-export interface PayrollTestingResult {
+export interface PayrollTestingResult extends SavedSettingsDisclosure {
   composite_score: PayrollCompositeScore
   test_results: PayrollTestResult[]
   data_quality: PayrollDataQuality

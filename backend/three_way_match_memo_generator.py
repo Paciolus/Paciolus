@@ -44,6 +44,7 @@ from shared.memo_base import (
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
+    build_saved_settings_disclosure,
     build_workpaper_signoff,
     create_memo_styles,
 )
@@ -54,6 +55,7 @@ from shared.report_chrome import (
     find_logo,
 )
 from shared.report_styles import ledger_table_style
+from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -919,6 +921,11 @@ def generate_three_way_match_memo(
     # ---- II. METHODOLOGY ----
     if test_results:
         _build_methodology_table(story, styles, doc.width, test_results)
+
+    # Sprint 836: tolerances that differed from the Paciolus defaults.
+    build_saved_settings_disclosure(
+        story, styles, doc.width, twm_result, defaults=engine_defaults_for_domain("three_way_match")
+    )
 
     # Methodology statement (interpretive context)
     build_methodology_statement(

@@ -43,6 +43,7 @@ jest.mock('@/components/shared', () => ({
   UpgradeGate: ({ children }: any) => <>{children}</>,
   CitationFooter: () => <div data-testid="citation-footer">Citations</div>,
   ToolSettingsDrawer: () => null,
+  SavedSettingsNotice: () => null,
 }))
 jest.mock('@/components/shared/proof', () => ({
   ProofSummaryBar: () => <div data-testid="proof-summary-bar">Proof</div>,

@@ -10,6 +10,7 @@ import {
   TESTING_SEVERITY_COLORS,
 } from './testingShared'
 import type {
+  SavedSettingsDisclosure,
   TestingRiskTier,
   TestingTestTier,
   TestingSeverity,
@@ -162,7 +163,7 @@ export const US_FEDERAL_HOLIDAYS = [
 /** Statutory holidays most businesses work; postings on them are flagged LOW. */
 export const COMMONLY_WORKED_HOLIDAYS: readonly string[] = ['Columbus Day', 'Veterans Day']
 
-export interface JETestingResult {
+export interface JETestingResult extends SavedSettingsDisclosure {
   composite_score: JECompositeScore
   test_results: JETestResult[]
   data_quality: GLDataQuality
