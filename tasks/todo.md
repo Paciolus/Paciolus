@@ -460,9 +460,29 @@ reproductions, actual vs expected values and code locations, is in the report.
 
 
 ### Sprint 825: Sampling methodology decisions (S3, S6)
-**Status:** PENDING — needs a practitioner's choice of method. See the Sprint 823 report.
+**Status:** COMPLETE 2026-10-24 — CEO decision 5 (conservative reading); practitioner confirmation items below.
 
-**Commit SHA:** TBD.
+- [x] **S3 — a clean sample still has an upper limit.** MUS already reported basic precision
+      (zero-error confidence factor x sampling interval, AICPA Audit Sampling Guide). The random path
+      now does too: BP = population value x CF(0) / n, with n = items actually evaluated. That
+      substitution of average dollars per item for the interval is a Paciolus convention, chosen
+      because it matches how the tool sizes a random sample (n = BV x CF / TM): a clean sample of the
+      designed size passes, a smaller one fails. Worked case in the tests: $1M population, TM $50K,
+      95% — clean n=20 gives $150,000 (fail; the old code said $0, pass), clean n=60 gives $50,000.
+- [x] **S6 — understatements bounded separately, never netted.** Each direction gets its own upper
+      limit (BP + projected + incremental) and the conclusion fails if either exceeds tolerable
+      misstatement. Existing response fields keep their names and now mean the overstatement side;
+      `understatement_*` fields added. Understatement taintings are not capped at 100% (Paciolus
+      convention, the conservative reading).
+- [x] Memo prints both limits, a calculation section per direction and the source of each formula.
+
+**For a practitioner to confirm:** the random-method basic precision formula and the retained
+CF/sqrt(n) allowance; uncapped understatement taintings; stratified random evaluation is still not
+modelled. **One way the result can be lower than before:** with mixed errors under MUS, the
+overstatement limit alone can be below the old figure, which wrongly counted understatements as
+overstatements — the two-sided test is the AICPA approach the CEO chose.
+
+**Commit SHA:** recorded on merge.
 
 ---
 

@@ -8,7 +8,9 @@ ISA 530 / PCAOB AS 2315 compliant statistical sampling:
 - Simple random selection via Fisher-Yates with secrets
 - Basic 2-tier stratification (high-value 100% + remainder MUS)
 - Stringer bound evaluation (basic precision + projected + incremental)
-- Pass/Fail conclusion (UEL vs tolerable misstatement)
+- Overstatements and understatements bounded separately, never netted (Sprint 825)
+- Basic precision reported for a zero-error sample on both methods (Sprint 825)
+- Pass/Fail conclusion (each direction's UEL vs tolerable misstatement)
 
 Zero-Storage: All data ephemeral — processed in-memory, never persisted.
 """
@@ -120,8 +122,14 @@ class SampleError:
     item_id: str
     recorded_amount: float
     audited_amount: float
-    misstatement: float
-    tainting: float  # misstatement / recorded_amount (capped at 1.0 for overstatements)
+    misstatement: float  # recorded - audited: > 0 overstatement, < 0 understatement
+    # |misstatement| / |recorded_amount|. Capped at 1.0 for overstatements (an
+    # item cannot be overstated by more than its recorded amount); NOT capped
+    # for understatements (Sprint 825, S6) — an item recorded at $1,000 and
+    # audited at $3,000 is understated by 200%, and capping it at 100% would
+    # understate the upper limit. Paciolus convention, chosen as the
+    # conservative reading; not prescribed by the standard.
+    tainting: float
 
 
 @dataclass
@@ -159,19 +167,35 @@ class SampleEvaluationResult:
     sample_size: int
     sample_value: float
     errors_found: int
-    total_misstatement: float
+    total_misstatement: float  # signed sum of known misstatements (factual, not an evaluation input)
+    # Sprint 825 (S6): projected_misstatement, basic_precision,
+    # incremental_allowance, upper_error_limit and taintings_ranked are the
+    # OVERSTATEMENT evaluation (basic precision applies to both directions).
+    # Their names predate the split and are kept for API compatibility.
     projected_misstatement: float
     basic_precision: float
     incremental_allowance: float
     upper_error_limit: float
-    conclusion: str  # "pass" or "fail"
+    conclusion: str  # "pass" or "fail" — fails if EITHER direction's bound exceeds TM
     conclusion_detail: str
     errors: list[SampleError]
-    taintings_ranked: list[float]  # Sorted desc for Stringer bound
+    taintings_ranked: list[float]  # overstatement taintings, sorted desc for the Stringer bound
     # Missing audited amount tracking (FIX-2A)
     skipped_missing_audited: int = 0
     evaluated_count: int = 0
     missing_audited_warning: Optional[str] = None
+    # Sprint 825 (S6): overstatements and understatements are evaluated
+    # separately, each with its own upper limit, and are never netted against
+    # each other (AICPA Audit Sampling Guide, MUS evaluation).
+    overstatement_errors_found: int = 0
+    understatement_errors_found: int = 0
+    total_overstatement: float = 0.0  # positive magnitude
+    total_understatement: float = 0.0  # positive magnitude
+    understatement_projected_misstatement: float = 0.0
+    understatement_basic_precision: float = 0.0
+    understatement_incremental_allowance: float = 0.0
+    understatement_upper_error_limit: float = 0.0
+    understatement_taintings_ranked: list[float] = field(default_factory=list)
 
 
 @dataclass
@@ -430,6 +454,119 @@ def apply_stratification(
     return high_value, remainder
 
 
+def _split_by_direction(errors: list[SampleError]) -> tuple[list[SampleError], list[SampleError]]:
+    """Separate overstatements (recorded > audited) from understatements.
+
+    Sprint 825 (S6). The AICPA Audit Sampling Guide evaluates the two directions
+    separately, each with its own upper limit; they are never netted. Before
+    this, the tainting was ``abs(misstatement) / recorded``, so an understatement
+    was scored as an overstatement of the same size.
+    """
+    over = [e for e in errors if e.misstatement > 0]
+    under = [e for e in errors if e.misstatement < 0]
+    return over, under
+
+
+def _stringer_side(
+    side_errors: list[SampleError],
+    sampling_interval: float,
+    increments: list[float],
+) -> tuple[float, float, list[float]]:
+    """Projected misstatement and incremental allowance for ONE direction.
+
+    Returns ``(projected, incremental_allowance, taintings_ranked)``. Basic
+    precision is added by the caller — it is the same for both directions.
+
+    The arithmetic is the Stringer bound as applied in the AICPA Audit Sampling
+    Guide; the guide computes the understatement limit the same way as the
+    overstatement limit, using the understatement taintings.
+    """
+    # Sprint 824: an item whose recorded amount is at or above the sampling
+    # interval is selected with certainty — it is examined, not sampled. Its
+    # actual misstatement enters the projection as-is, with no tainting
+    # projection and no sampling-risk allowance (AICPA Audit Sampling Guide).
+    # Projecting it as tainting x interval understated a $50,000 error on a
+    # $250,000 item at a $70,000 interval as $14,000 — enough to turn a "fail"
+    # into a "pass".
+    sampled = [e for e in side_errors if abs(e.recorded_amount) < sampling_interval]
+    top_stratum = [e for e in side_errors if abs(e.recorded_amount) >= sampling_interval]
+
+    # Rank taintings from largest to smallest (Stringer method)
+    taintings_ranked = sorted((e.tainting for e in sampled), reverse=True)
+
+    top_stratum_misstatement = math.fsum(abs(e.misstatement) for e in top_stratum)
+    projected = math.fsum(t * sampling_interval for t in taintings_ranked) + top_stratum_misstatement
+
+    # Incremental allowance.
+    #
+    # Sprint 805 (A-1): `increments` holds the first differences of the Poisson
+    # reliability-factor series, derived in the figure registry. The `- 1.0`
+    # stays, and it is not cosmetic: the projected-misstatement term above
+    # already contributes `tainting x interval` per misstatement, so the
+    # allowance contributes only the excess. The identity that pins it is that a
+    # fully-tainted sample must satisfy `UEL = interval x RF(k)`:
+    #
+    #   BP        = interval x RF(0)
+    #   projected = k x interval
+    #   allowance = interval x sum(dRF_i - 1) = interval x (RF(k) - RF(0) - k)
+    #   total     = interval x RF(k)                                  (exactly)
+    #
+    # What *is* gone is the `max(..., 0.0)` clamp. With the correct series every
+    # increment exceeds 1.0 (they approach it from above as the rank grows), so
+    # the clamp can never bind — it existed only to stop the mistabulated
+    # literals from subtracting, and in doing so it was the mechanism by which
+    # the 5th and every later misstatement contributed *exactly zero* allowance,
+    # since every shipped literal from rank 5 onward was <= 1.00.
+    incremental_allowance = 0.0
+    for i, tainting in enumerate(taintings_ranked):
+        if i < len(increments):
+            increment = increments[i]
+        else:
+            # Beyond the published series, hold the smallest published increment.
+            # The increments decrease monotonically toward 1.0, so this is the
+            # conservative choice available without extrapolating a published table.
+            increment = increments[-1] if increments else 1.0
+        incremental_allowance += tainting * sampling_interval * (increment - 1.0)
+
+    return projected, incremental_allowance, taintings_ranked
+
+
+def _two_sided_conclusion(
+    over_uel: float,
+    under_uel: float,
+    tolerable_misstatement: float,
+    confidence_level: float,
+) -> tuple[str, str]:
+    """Pass only if NEITHER direction's upper limit exceeds tolerable misstatement.
+
+    Sprint 825 (S6). Each direction is compared with tolerable misstatement on
+    its own; the bounds are never netted (AICPA Audit Sampling Guide). Comparing
+    the upper limit with tolerable misstatement is how sampling risk is
+    evaluated under ISA 530 / PCAOB AS 2315.
+    """
+    tm = tolerable_misstatement
+    bounds = (
+        f"The upper misstatement limit is ${over_uel:,.2f} for overstatements and "
+        f"${under_uel:,.2f} for understatements, against tolerable misstatement of "
+        f"${tm:,.2f} at the {confidence_level:.0%} confidence level. "
+        "Overstatements and understatements are evaluated separately and are not "
+        "netted against each other (AICPA Audit Sampling Guide). "
+    )
+    exceeded = [label for label, uel in (("overstatement", over_uel), ("understatement", under_uel)) if uel > tm]
+    if not exceeded:
+        return "pass", (
+            bounds + "Neither upper limit exceeds tolerable misstatement. The auditor should "
+            "evaluate this result in the context of other audit evidence obtained and the "
+            "overall engagement risk assessment before concluding on the population."
+        )
+    which = " and ".join(exceeded)
+    return "fail", (
+        bounds + f"The {which} upper limit exceeds tolerable misstatement. The auditor should "
+        "consider expanding the sample, performing alternative procedures, or evaluating "
+        "the implications for the overall audit approach."
+    )
+
+
 def evaluate_mus_sample_stringer(
     errors: list[SampleError],
     sampling_interval: float,
@@ -457,66 +594,40 @@ def evaluate_mus_sample_stringer(
     the auditor-facing "dollar coverage" of the test. Previously
     ``sample_value`` was only the sum of error items' recorded amounts,
     which under-stated coverage for any sample with < 100% error rate.
+
+    Sprint 825 (S6): overstatements and understatements are evaluated
+    separately, each with its own upper limit, and never netted (AICPA Audit
+    Sampling Guide). Both limits include basic precision. The existing
+    ``projected_misstatement`` / ``incremental_allowance`` /
+    ``upper_error_limit`` / ``taintings_ranked`` fields carry the overstatement
+    side; the ``understatement_*`` fields carry the other. The conclusion fails
+    if either limit exceeds tolerable misstatement.
+
+    Sprint 825 (S3): basic precision is reported even when no misstatement is
+    found — it is the sampling-risk allowance of a clean sample (AICPA Audit
+    Sampling Guide, basic precision with zero misstatements = zero-error
+    confidence factor x sampling interval). This path already did so.
     """
     confidence_factor = get_confidence_factor(confidence_level)
     incremental_factors = _get_incremental_factors(confidence_level)
 
-    # Basic precision (even with zero errors)
+    # Basic precision (even with zero errors). AICPA Audit Sampling Guide:
+    # confidence factor for zero misstatements x sampling interval. Applies to
+    # each direction's upper limit.
     basic_precision = sampling_interval * confidence_factor
 
-    # Sprint 824: an item whose recorded amount is at or above the sampling
-    # interval is selected with certainty — it is examined, not sampled. Its
-    # actual misstatement enters the projection as-is, with no tainting
-    # projection and no sampling-risk allowance (AICPA Audit Sampling Guide).
-    # Projecting it as tainting x interval understated a $50,000 error on a
-    # $250,000 item at a $70,000 interval as $14,000 — enough to turn a "fail"
-    # into a "pass".
-    sampled_errors = [e for e in errors if abs(e.recorded_amount) < sampling_interval]
-    top_stratum_errors = [e for e in errors if abs(e.recorded_amount) >= sampling_interval]
-
+    over_errors, under_errors = _split_by_direction(errors)
     total_misstatement = math.fsum(e.misstatement for e in errors)
 
-    # Rank taintings from largest to smallest (Stringer method)
-    taintings_ranked = sorted((e.tainting for e in sampled_errors), reverse=True)
+    projected_misstatement, incremental_allowance, taintings_ranked = _stringer_side(
+        over_errors, sampling_interval, incremental_factors
+    )
+    under_projected, under_incremental, under_taintings = _stringer_side(
+        under_errors, sampling_interval, incremental_factors
+    )
 
-    # Projected misstatement: sampled errors projected over the interval, plus
-    # the top stratum's actual misstatement.
-    top_stratum_misstatement = math.fsum(abs(e.misstatement) for e in top_stratum_errors)
-    projected_misstatement = math.fsum(t * sampling_interval for t in taintings_ranked) + top_stratum_misstatement
-
-    # Incremental allowance.
-    #
-    # Sprint 805 (A-1): `incremental_factors` now holds the first differences of
-    # the Poisson reliability-factor series, derived in the figure registry. The
-    # `- 1.0` stays, and it is not cosmetic: the projected-misstatement term
-    # above already contributes `tainting x interval` per misstatement, so the
-    # allowance contributes only the excess. The identity that pins it is that a
-    # fully-tainted sample must satisfy `UEL = interval x RF(k)`:
-    #
-    #   BP        = interval x RF(0)
-    #   projected = k x interval
-    #   allowance = interval x sum(dRF_i - 1) = interval x (RF(k) - RF(0) - k)
-    #   total     = interval x RF(k)                                  (exactly)
-    #
-    # What *is* gone is the `max(..., 0.0)` clamp. With the correct series every
-    # increment exceeds 1.0 (they approach it from above as the rank grows), so
-    # the clamp can never bind — it existed only to stop the mistabulated
-    # literals from subtracting, and in doing so it was the mechanism by which
-    # the 5th and every later misstatement contributed *exactly zero* allowance,
-    # since every shipped literal from rank 5 onward was <= 1.00.
-    incremental_allowance = 0.0
-    for i, tainting in enumerate(taintings_ranked):
-        if i < len(incremental_factors):
-            increment = incremental_factors[i]
-        else:
-            # Beyond the published series, hold the smallest published increment.
-            # The increments decrease monotonically toward 1.0, so this is the
-            # conservative choice available without extrapolating a published table.
-            increment = incremental_factors[-1] if incremental_factors else 1.0
-        incremental_allowance += tainting * sampling_interval * (increment - 1.0)
-
-    # Upper Error Limit
     upper_error_limit = basic_precision + projected_misstatement + incremental_allowance
+    under_upper_error_limit = basic_precision + under_projected + under_incremental
 
     # Sample value — Sprint 684: prefer the full selected-sample sum when
     # supplied. Sprint 824: ``evaluate_sample`` now passes the evaluated
@@ -529,25 +640,9 @@ def evaluate_mus_sample_stringer(
     else:
         sample_value = math.fsum(e.recorded_amount for e in errors) if errors else 0.0
 
-    # Conclusion
-    if upper_error_limit <= tolerable_misstatement:
-        conclusion = "pass"
-        conclusion_detail = (
-            f"The upper error limit (${upper_error_limit:,.2f}) does not exceed "
-            f"tolerable misstatement (${tolerable_misstatement:,.2f}) at the "
-            f"{confidence_level:.0%} confidence level. The auditor should evaluate "
-            "this result in the context of other audit evidence obtained and the "
-            "overall engagement risk assessment before concluding on the population."
-        )
-    else:
-        conclusion = "fail"
-        conclusion_detail = (
-            f"The upper error limit (${upper_error_limit:,.2f}) exceeds "
-            f"tolerable misstatement (${tolerable_misstatement:,.2f}) at the "
-            f"{confidence_level:.0%} confidence level. The auditor should consider "
-            "expanding the sample, performing alternative procedures, or evaluating "
-            "the implications for the overall audit approach."
-        )
+    conclusion, conclusion_detail = _two_sided_conclusion(
+        upper_error_limit, under_upper_error_limit, tolerable_misstatement, confidence_level
+    )
 
     return SampleEvaluationResult(
         method="mus",
@@ -567,6 +662,15 @@ def evaluate_mus_sample_stringer(
         conclusion_detail=conclusion_detail,
         errors=errors,
         taintings_ranked=taintings_ranked,
+        overstatement_errors_found=len(over_errors),
+        understatement_errors_found=len(under_errors),
+        total_overstatement=math.fsum(e.misstatement for e in over_errors),
+        total_understatement=math.fsum(-e.misstatement for e in under_errors),
+        understatement_projected_misstatement=under_projected,
+        understatement_basic_precision=basic_precision,
+        understatement_incremental_allowance=under_incremental,
+        understatement_upper_error_limit=under_upper_error_limit,
+        understatement_taintings_ranked=under_taintings,
     )
 
 
@@ -849,9 +953,15 @@ def _parse_evaluation_errors(
         if abs(misstatement) < 0.005:  # Tolerance for rounding
             continue
 
-        # Tainting = misstatement / recorded (capped at 1.0 for 100% overstatement)
+        # Tainting = |misstatement| / |recorded|. Capped at 1.0 for overstatements
+        # only (an item cannot be overstated by more than its recorded amount).
+        # Sprint 825 (S6): understatement taintings are not capped — capping a
+        # 200% understatement at 100% would understate its upper limit.
+        # Paciolus convention (the conservative reading); not prescribed by the
+        # standard. Direction is carried by the sign of `misstatement`.
         if abs(recorded) > 0:
-            tainting = float(min(abs(misstatement) / abs(recorded), Decimal("1")))
+            ratio = abs(misstatement) / abs(recorded)
+            tainting = float(min(ratio, Decimal("1")) if misstatement > 0 else ratio)
         else:
             tainting = 1.0
 
@@ -871,6 +981,129 @@ def _parse_evaluation_errors(
     return errors, evaluated_count, skipped_missing_audited, float(evaluated_recorded_total)
 
 
+def _evaluate_random_sample(
+    *,
+    errors: list[SampleError],
+    config: SamplingConfig,
+    population_value: float,
+    sample_size: int,
+    evaluated_count: int,
+    evaluated_value: float,
+    skipped_missing_audited: int,
+    missing_audited_warning: Optional[str],
+) -> SampleEvaluationResult:
+    """Evaluate a simple-random (non-MUS) sample, one direction at a time.
+
+    For each direction d (overstatement, understatement):
+
+        n         = min(sample_size, evaluated_count)
+        BP        = population_value x CF(0) / n                       (S3)
+        projected = (sum of |misstatement| in direction d / sample value)
+                    x population_value                       (ratio estimate)
+        allowance = projected x CF(0) / sqrt(n)
+        UEL_d     = BP + projected + allowance
+
+    and the conclusion fails if either UEL_d exceeds tolerable misstatement.
+
+    Provenance of each term (read before changing any of them):
+
+    * **Basic precision (Sprint 825, S3).** ISA 530 / PCAOB AS 2315 require the
+      auditor to consider sampling risk when evaluating a sample, and a sample
+      with no misstatements still carries it. Before Sprint 825 this path
+      computed precision as ``projected x CF/sqrt(n)``, which is 0 when nothing
+      is found, so a clean sample of 5 read exactly like a clean sample of 200:
+      UEL $0, "pass". The AICPA Audit Sampling Guide's basic precision for a
+      monetary-unit sample with zero misstatements is the zero-error confidence
+      factor x the sampling interval. A simple random sample has no sampling
+      interval, so Paciolus uses the average dollars per sampled item,
+      ``population_value / n``, in its place. **That substitution is a Paciolus
+      convention, not prescribed by the standard.** It was chosen because it is
+      consistent with how this tool *designs* a random sample: the size comes
+      from the same formula, ``n = BV x CF / TM``, so a clean sample of at
+      least the designed size passes and a smaller clean sample fails. The
+      tool must never report more assurance than the data supports.
+    * **n = min(sample_size, evaluated_count).** Items whose audited amount was
+      missing or unreadable were not assessed and give no assurance. Paciolus
+      convention (the conservative reading).
+    * **Ratio projection.** Misstatement rate of the evaluated sample's dollars,
+      applied to the population (Sprint 824 fixed its denominator).
+    * **Allowance ``projected x CF/sqrt(n)``.** Retained from the engine's
+      pre-Sprint-825 evaluation, which reported it as "basic precision". It is a
+      Paciolus convention, not a formula prescribed by the standard; it is kept
+      (and now reported as ``incremental_allowance``) so that no sample with
+      misstatements reports a lower upper limit than before.
+    * **Two directions (Sprint 825, S6).** Overstatements and understatements are
+      projected and bounded separately and never netted; previously the ratio
+      used ``abs(sum of misstatements)``, so a $1,000 overstatement and a $1,000
+      understatement projected to $0. Separate evaluation follows the AICPA
+      Audit Sampling Guide's treatment of the two directions.
+    """
+    confidence_factor = get_confidence_factor(config.confidence_level)
+
+    over_errors, under_errors = _split_by_direction(errors)
+    total_misstatement = math.fsum(e.misstatement for e in errors)
+    total_over = math.fsum(e.misstatement for e in over_errors)
+    total_under = math.fsum(-e.misstatement for e in under_errors)
+
+    # Sprint 824: the ratio estimate's denominator is the whole evaluated
+    # sample, not the error rows. One $1,000 error on an $8,372 item in a
+    # $1.03M sample projected to $597,198 instead of ~$4,868.
+    sample_value = evaluated_value
+
+    n_effective = min(sample_size, evaluated_count) if evaluated_count > 0 else sample_size
+    if n_effective <= 0:
+        raise ValueError("Sample size must be positive to evaluate a random sample.")
+
+    basic_precision = population_value * confidence_factor / n_effective
+
+    def _side(total: float) -> tuple[float, float]:
+        projected = total / sample_value * population_value if sample_value > 0 else 0.0
+        allowance = projected * (confidence_factor / math.sqrt(n_effective))
+        return projected, allowance
+
+    over_projected, over_allowance = _side(total_over)
+    under_projected, under_allowance = _side(total_under)
+
+    over_uel = basic_precision + over_projected + over_allowance
+    under_uel = basic_precision + under_projected + under_allowance
+
+    conclusion, conclusion_detail = _two_sided_conclusion(
+        over_uel, under_uel, config.tolerable_misstatement, config.confidence_level
+    )
+
+    return SampleEvaluationResult(
+        method="random",
+        confidence_level=config.confidence_level,
+        tolerable_misstatement=config.tolerable_misstatement,
+        expected_misstatement=config.expected_misstatement,
+        population_value=population_value,
+        sample_size=sample_size,
+        sample_value=sample_value,
+        errors_found=len(errors),
+        total_misstatement=total_misstatement,
+        projected_misstatement=over_projected,
+        basic_precision=basic_precision,
+        incremental_allowance=over_allowance,
+        upper_error_limit=over_uel,
+        conclusion=conclusion,
+        conclusion_detail=conclusion_detail,
+        errors=errors,
+        taintings_ranked=sorted((e.tainting for e in over_errors), reverse=True),
+        skipped_missing_audited=skipped_missing_audited,
+        evaluated_count=evaluated_count,
+        missing_audited_warning=missing_audited_warning,
+        overstatement_errors_found=len(over_errors),
+        understatement_errors_found=len(under_errors),
+        total_overstatement=total_over,
+        total_understatement=total_under,
+        understatement_projected_misstatement=under_projected,
+        understatement_basic_precision=basic_precision,
+        understatement_incremental_allowance=under_allowance,
+        understatement_upper_error_limit=under_uel,
+        understatement_taintings_ranked=sorted((e.tainting for e in under_errors), reverse=True),
+    )
+
+
 def evaluate_sample(
     file_bytes: bytes,
     filename: str,
@@ -884,8 +1117,9 @@ def evaluate_sample(
 
     1. Parse completed sample file (with audited amounts)
     2. Identify misstatements (recorded - audited)
-    3. Calculate Stringer bound (MUS) or simple projection (random)
-    4. Determine Pass/Fail vs tolerable misstatement
+    3. Calculate Stringer bound (MUS) or ratio projection (random), separately
+       for overstatements and understatements
+    4. Determine Pass/Fail: fail if either direction's bound exceeds TM
     """
     column_names, rows = parse_uploaded_file(file_bytes, filename)
     errors, evaluated_count, skipped_missing_audited, evaluated_value = _parse_evaluation_errors(
@@ -945,72 +1179,14 @@ def evaluate_sample(
         return result
 
     elif config.method == "random":
-        # Simple ratio projection for random sampling
-        confidence_factor = get_confidence_factor(config.confidence_level)
-
-        total_misstatement = math.fsum(e.misstatement for e in errors)
-        # Sprint 824: the ratio estimate's denominator is the whole evaluated
-        # sample, not the error rows — one $1,000 error on an $8,372 item in a
-        # $1.03M sample projected to $597,198 instead of ~$4,868.
-        sample_value = evaluated_value
-
-        # Ratio projection: projected = (total_misstatement / sample_value) * population_value
-        if sample_value > 0:
-            projected_misstatement = abs(total_misstatement) / sample_value * population_value
-        else:
-            projected_misstatement = 0.0
-
-        # Basic precision for random = projected * (confidence_factor / sqrt(n))
-        if sample_size > 0:
-            basic_precision = projected_misstatement * (confidence_factor / math.sqrt(sample_size))
-        else:
-            basic_precision = 0.0
-
-        upper_error_limit = projected_misstatement + basic_precision
-
-        if upper_error_limit <= config.tolerable_misstatement:
-            conclusion = "pass"
-            conclusion_detail = (
-                f"The projected misstatement plus precision "
-                f"(${upper_error_limit:,.2f}) does not exceed "
-                f"tolerable misstatement (${config.tolerable_misstatement:,.2f}). "
-                "The auditor should evaluate this result in the context of other "
-                "audit evidence obtained and the overall engagement risk assessment "
-                "before concluding on the population."
-            )
-        else:
-            conclusion = "fail"
-            conclusion_detail = (
-                f"The projected misstatement plus precision "
-                f"(${upper_error_limit:,.2f}) exceeds "
-                f"tolerable misstatement (${config.tolerable_misstatement:,.2f}). "
-                "The auditor should consider expanding the sample, performing "
-                "alternative procedures, or evaluating the implications for the "
-                "overall audit approach."
-            )
-
-        taintings = sorted([e.tainting for e in errors], reverse=True)
-
-        return SampleEvaluationResult(
-            method="random",
-            confidence_level=config.confidence_level,
-            tolerable_misstatement=config.tolerable_misstatement,
-            expected_misstatement=config.expected_misstatement,
+        return _evaluate_random_sample(
+            errors=errors,
+            config=config,
             population_value=population_value,
             sample_size=sample_size,
-            sample_value=sample_value,
-            errors_found=len(errors),
-            total_misstatement=total_misstatement,
-            projected_misstatement=projected_misstatement,
-            basic_precision=basic_precision,
-            incremental_allowance=0.0,
-            upper_error_limit=upper_error_limit,
-            conclusion=conclusion,
-            conclusion_detail=conclusion_detail,
-            errors=errors,
-            taintings_ranked=taintings,
-            skipped_missing_audited=skipped_missing_audited,
             evaluated_count=evaluated_count,
+            evaluated_value=evaluated_value,
+            skipped_missing_audited=skipped_missing_audited,
             missing_audited_warning=missing_audited_warning,
         )
 

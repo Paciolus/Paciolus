@@ -1139,6 +1139,11 @@ class SamplingEvaluationResponse(BaseModel):
     sample_value: float
     errors_found: int
     total_misstatement: float
+    # Sprint 825 (S6): these four, and taintings_ranked, are the OVERSTATEMENT
+    # evaluation. Overstatements and understatements are bounded separately and
+    # never netted (AICPA Audit Sampling Guide); the understatement side is in
+    # the understatement_* fields below. `conclusion` is "fail" if either
+    # side's upper limit exceeds tolerable misstatement.
     projected_misstatement: float
     basic_precision: float
     incremental_allowance: float
@@ -1147,3 +1152,12 @@ class SamplingEvaluationResponse(BaseModel):
     conclusion_detail: str
     errors: list[SamplingErrorResponse]
     taintings_ranked: list[float]
+    overstatement_errors_found: int = 0
+    understatement_errors_found: int = 0
+    total_overstatement: float = 0.0
+    total_understatement: float = 0.0
+    understatement_projected_misstatement: float = 0.0
+    understatement_basic_precision: float = 0.0
+    understatement_incremental_allowance: float = 0.0
+    understatement_upper_error_limit: float = 0.0
+    understatement_taintings_ranked: list[float] = []

@@ -87,6 +87,28 @@ _FIGURE_SOURCE: str = (
 # citation. Both the values and the confidence level now come from the engine's
 # own accessor, so the memo cannot disagree with the computation it documents.
 
+
+def _has_understatement_bound(evaluation_result: dict[str, Any]) -> bool:
+    """Sprint 825 (S6): whether the result carries the separate understatement bound.
+
+    Results from before Sprint 825 (or an older client's export payload) do not,
+    and the memo then keeps its single-bound layout rather than printing $0.
+    """
+    return evaluation_result.get("understatement_upper_error_limit") is not None
+
+
+def _misstatement_direction(err: dict[str, Any]) -> str:
+    """'over' when recorded > audited, 'under' when recorded < audited."""
+    misstatement = err.get("misstatement")
+    if misstatement is None:
+        misstatement = (err.get("recorded_amount", 0) or 0) - (err.get("audited_amount", 0) or 0)
+    if misstatement > 0:
+        return "over"
+    if misstatement < 0:
+        return "under"
+    return "none"
+
+
 # Error nature options for practitioners
 ERROR_NATURE_OPTIONS: list[str] = [
     "Pricing error",
@@ -350,7 +372,32 @@ def _build_evaluation_next_steps(
         directions.add(d)
 
     # Intro text (ISA 530-compliant — no "population accepted" language per §14)
-    if conclusion == "pass":
+    if _has_understatement_bound(evaluation_result):
+        # Sprint 825 (S6): two bounds, each compared with TM; never netted.
+        under_uel = evaluation_result.get("understatement_upper_error_limit") or 0
+        sides = (
+            f"The overstatement upper error limit of ${uel:,.2f} "
+            f"{'does not exceed' if uel <= tm else 'exceeds'} the tolerable misstatement of "
+            f"${tm:,.2f}, and the understatement upper error limit of ${under_uel:,.2f} "
+            f"{'does not exceed' if under_uel <= tm else 'exceeds'} it, at the "
+            f"{conf_level:.0%} confidence level (the two directions are evaluated separately "
+            "and not netted, per the AICPA Audit Sampling Guide). "
+        )
+        if conclusion == "pass":
+            intro = (
+                "Sampling evaluation is complete. " + sides + "The auditor should evaluate this "
+                "result in the context of other audit evidence obtained and the overall "
+                "engagement risk assessment before concluding on the population (ISA 530.14). "
+                "The following actions are required to close out the sampling workpaper:"
+            )
+        else:
+            intro = (
+                "Sampling evaluation is complete. " + sides + "The auditor should consider "
+                "expanding the sample, performing alternative procedures, or evaluating the "
+                "implications for the overall audit approach (ISA 530.17). If expanding, the "
+                "following actions apply to errors already identified:"
+            )
+    elif conclusion == "pass":
         intro = (
             f"Sampling evaluation is complete. The upper error limit of ${uel:,.2f} does not exceed "
             f"the tolerable misstatement of ${tm:,.2f} at the "
@@ -796,28 +843,56 @@ def _generate_sampling_memo(
         story.append(Paragraph(f"{section_num}. Evaluation Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
+        # Sprint 825 (S6): when the understatement bound is present, label the
+        # legacy fields as the overstatement side and print both. Absent (an
+        # older client), keep the legacy labels rather than printing a $0 bound.
+        has_under = _has_understatement_bound(evaluation_result)
+        side = " — Overstatements" if has_under else ""
+
         eval_lines = [
             create_leader_dots("Sample Size", str(evaluation_result.get("sample_size", 0))),
             create_leader_dots("Errors Found", str(evaluation_result.get("errors_found", 0))),
             create_leader_dots("Total Misstatement", f"${evaluation_result.get('total_misstatement', 0):,.2f}"),
-            create_leader_dots("Projected Misstatement", f"${evaluation_result.get('projected_misstatement', 0):,.2f}"),
+            create_leader_dots(
+                f"Projected Misstatement{side}", f"${evaluation_result.get('projected_misstatement', 0):,.2f}"
+            ),
             create_leader_dots("Basic Precision", f"${evaluation_result.get('basic_precision', 0):,.2f}"),
         ]
 
         if evaluation_result.get("incremental_allowance", 0) > 0:
             eval_lines.append(
                 create_leader_dots(
-                    "Incremental Allowance",
+                    f"Incremental Allowance{side}",
                     f"${evaluation_result.get('incremental_allowance', 0):,.2f}",
                 )
             )
 
         eval_lines.append(
             create_leader_dots(
-                "Upper Error Limit (UEL)",
+                f"Upper Error Limit (UEL){side}",
                 f"${evaluation_result.get('upper_error_limit', 0):,.2f}",
             )
         )
+        if has_under:
+            eval_lines.append(
+                create_leader_dots(
+                    "Projected Misstatement — Understatements",
+                    f"${evaluation_result.get('understatement_projected_misstatement') or 0:,.2f}",
+                )
+            )
+            if (evaluation_result.get("understatement_incremental_allowance") or 0) > 0:
+                eval_lines.append(
+                    create_leader_dots(
+                        "Incremental Allowance — Understatements",
+                        f"${evaluation_result.get('understatement_incremental_allowance') or 0:,.2f}",
+                    )
+                )
+            eval_lines.append(
+                create_leader_dots(
+                    "Upper Error Limit (UEL) — Understatements",
+                    f"${evaluation_result.get('understatement_upper_error_limit') or 0:,.2f}",
+                )
+            )
         eval_lines.append(
             create_leader_dots(
                 "Tolerable Misstatement",
@@ -827,6 +902,16 @@ def _generate_sampling_memo(
 
         for line in eval_lines:
             story.append(Paragraph(line, styles["MemoLeader"]))
+        if has_under:
+            story.append(
+                Paragraph(
+                    "<i>Overstatements and understatements are evaluated separately, each with its "
+                    "own upper error limit, and are not netted against each other (AICPA Audit "
+                    "Sampling Guide). Basic precision applies to both. The conclusion is a fail if "
+                    "either limit exceeds tolerable misstatement.</i>",
+                    styles["MemoBodySmall"],
+                )
+            )
         story.append(Spacer(1, 8))
 
         # ─── BUG-05: Error Details Table (with Nature + Direction) ──
@@ -1011,14 +1096,27 @@ def _generate_sampling_memo(
             "selection with a cryptographically secure random start (Python secrets module). "
             "Sample evaluation uses the Stringer bound method, which calculates the "
             "upper error limit as: Basic Precision + Projected Misstatement + "
-            "Incremental Allowance for sampling risk."
+            "Incremental Allowance for sampling risk. Basic precision (the zero-misstatement "
+            "confidence factor multiplied by the sampling interval) is included even when no "
+            "misstatement is found (AICPA Audit Sampling Guide). Overstatements and "
+            "understatements are evaluated separately, each with its own upper error limit, "
+            "and are not netted (AICPA Audit Sampling Guide). Understatement taintings are not "
+            "capped at 100%; that is a Paciolus convention, not prescribed by the standard."
         )
     else:
         methodology_text = (
             "Simple random sampling was applied using Fisher-Yates shuffle with "
             "cryptographically secure random number generation (Python secrets module). "
             "Sample evaluation uses ratio estimation to project the sample misstatement "
-            "rate to the population, with precision adjustment based on the confidence level."
+            "rate to the population, separately for overstatements and understatements, which "
+            "are not netted. ISA 530 and PCAOB AS 2315 require sampling risk to be considered "
+            "even when no misstatement is found, so each upper error limit includes basic "
+            "precision of Population Value × zero-misstatement confidence factor ÷ "
+            "sample size. That formula adapts the AICPA Audit Sampling Guide's monetary-unit "
+            "basic precision (confidence factor × sampling interval) by using the average "
+            "value per sampled item as the interval; the adaptation, and the additional "
+            "allowance of Projected Misstatement × confidence factor ÷ √n for "
+            "misstatements found, are Paciolus conventions, not prescribed by the standard."
         )
 
     story.append(Paragraph(methodology_text, styles["MemoBody"]))
@@ -1061,7 +1159,14 @@ def _generate_sampling_memo(
 
         # ─── BUG-04: PASS/FAIL Visual Conclusion Block ──────────
         is_pass = conclusion == "pass"
-        _build_pass_fail_block(story, styles, doc_width, is_pass, uel, tm, conf_level, errors_found)
+        under_uel = (
+            evaluation_result.get("understatement_upper_error_limit")
+            if _has_understatement_bound(evaluation_result)
+            else None
+        )
+        _build_pass_fail_block(
+            story, styles, doc_width, is_pass, uel, tm, conf_level, errors_found, under_uel=under_uel
+        )
         story.append(Spacer(1, 8))
 
         if is_pass:
@@ -1296,20 +1401,36 @@ def _build_pass_fail_block(
     tm: float,
     confidence_level: float,
     errors_found: int,
+    under_uel: Optional[float] = None,
 ) -> None:
-    """BUG-04: Render a prominent PASS/FAIL visual conclusion block."""
+    """BUG-04: Render a prominent PASS/FAIL visual conclusion block.
+
+    Sprint 825 (S6): with ``under_uel`` supplied, both directions' limits are
+    shown, each against TM. The comparison operator is computed per side
+    (``<=`` passes, matching the engine) rather than inferred from the overall
+    conclusion, which may be driven by the other side.
+    """
+
+    def _cmp(value: float) -> str:
+        return "\u2264" if value <= tm else "&gt;"
+
     if is_pass:
         symbol = "\u2713"  # checkmark
         label = "PASS"
-        comparison = f"UEL ${uel:,.2f}  <  TM ${tm:,.2f}"
         border_color = ClassicalColors.SAGE
         text_color = ClassicalColors.SAGE
     else:
         symbol = "\u2717"  # X mark
         label = "FAIL"
-        comparison = f"UEL ${uel:,.2f}  \u2265  TM ${tm:,.2f}"
         border_color = ClassicalColors.CLAY
         text_color = ClassicalColors.CLAY
+    if under_uel is None:
+        comparison = f"UEL ${uel:,.2f}  {_cmp(uel)}  TM ${tm:,.2f}"
+    else:
+        comparison = (
+            f"Overstatement UEL ${uel:,.2f}  {_cmp(uel)}  TM ${tm:,.2f}<br/>"
+            f"Understatement UEL ${under_uel:,.2f}  {_cmp(under_uel)}  TM ${tm:,.2f}"
+        )
 
     conclusion_line = f"SAMPLING CONCLUSION:  {symbol} {label}"
     detail_line = f"Confidence: {confidence_level:.0%}   |   Errors: {errors_found}"
@@ -1423,16 +1544,33 @@ def _build_error_summary(
 
     # Largest single error
     if largest_error:
-        largest_pct = largest_amount / total_misstatement * 100 if total_misstatement > 0 else 0
+        # Sprint 825 (S6): share of the gross (absolute) misstatement, so an
+        # understatement does not shrink the denominator by netting.
+        gross_misstatement = sum(abs(e.get("misstatement", 0) or 0) for e in errors)
+        largest_pct = largest_amount / gross_misstatement * 100 if gross_misstatement > 0 else 0
         summary_lines.append(
             create_leader_dots(
                 "Largest single error",
-                f"{largest_error.get('item_id', '')}  ${largest_amount:,.2f}  ({largest_pct:.1f}% of total misstatement)",
+                f"{largest_error.get('item_id', '')}  ${largest_amount:,.2f}  "
+                f"({largest_pct:.1f}% of gross misstatement)",
             )
         )
 
     # Projected vs expected
-    summary_lines.append(create_leader_dots("Projected misstatement", f"${projected:,.2f}"))
+    has_under = _has_understatement_bound(evaluation_result)
+    summary_lines.append(
+        create_leader_dots(
+            "Projected misstatement (overstatements)" if has_under else "Projected misstatement",
+            f"${projected:,.2f}",
+        )
+    )
+    if has_under:
+        summary_lines.append(
+            create_leader_dots(
+                "Projected misstatement (understatements)",
+                f"${evaluation_result.get('understatement_projected_misstatement') or 0:,.2f}",
+            )
+        )
     if expected > 0:
         diff = projected - expected
         direction_word = "above" if diff > 0 else "below"
@@ -1444,7 +1582,10 @@ def _build_error_summary(
             )
         )
 
-    # UEL headroom
+    # UEL headroom. Sprint 825 (S6): measured against the larger of the two
+    # directions' limits — the one that governs the conclusion.
+    if _has_understatement_bound(evaluation_result):
+        uel = max(uel, evaluation_result.get("understatement_upper_error_limit") or 0)
     if tm > 0:
         headroom = tm - uel
         headroom_pct = uel / tm * 100
@@ -1474,45 +1615,87 @@ def _build_uel_derivation(
     evaluation_result: dict[str, Any],
     design_result: Optional[dict[str, Any]],
 ) -> None:
-    """BUG-03: UEL derivation block showing Stringer bound computation."""
+    """BUG-03: UEL derivation block showing the upper-error-limit computation.
+
+    Sprint 825: derives each direction's limit separately when the result
+    carries the understatement bound (S6), and shows the random method's basic
+    precision formula, which is non-zero for a clean sample (S3).
+    """
     errors = evaluation_result.get("errors", [])
     # Sprint 805 (A-1): the engagement's own confidence level. This block used to
     # print factors from a hardcoded 95% table no matter what the engagement had
     # selected.
     confidence_level = evaluation_result.get("confidence_level", 0.95) or 0.95
     bp = evaluation_result.get("basic_precision", 0)
-    projected = evaluation_result.get("projected_misstatement", 0)
-    incremental = evaluation_result.get("incremental_allowance", 0)
-    uel = evaluation_result.get("upper_error_limit", 0)
     tm = evaluation_result.get("tolerable_misstatement", 0)
+    is_random = evaluation_result.get("method", "mus") == "random"
+    has_under = _has_understatement_bound(evaluation_result)
 
-    # Get sampling interval
+    # Get sampling interval (MUS only — a simple random sample has none)
     si = 0.0
-    if design_result:
-        si = design_result.get("sampling_interval", 0) or 0
-    if si == 0:
-        si = evaluation_result.get("sampling_interval", 0) or 0
+    if not is_random:
+        if design_result:
+            si = design_result.get("sampling_interval", 0) or 0
+        if si == 0:
+            si = evaluation_result.get("sampling_interval", 0) or 0
 
     conf_factor = 3.0
     if design_result:
-        conf_factor = design_result.get("confidence_factor", 3.0)
+        conf_factor = design_result.get("confidence_factor", 3.0) or 3.0
 
-    story.append(Paragraph("<b>UEL Derivation (Stringer Bound Method)</b>", styles["MemoBody"]))
+    method_label = "Ratio Estimation" if is_random else "Stringer Bound Method"
+    story.append(Paragraph(f"<b>UEL Derivation ({method_label})</b>", styles["MemoBody"]))
     story.append(Spacer(1, 4))
 
-    # 1. Basic Precision
+    # 1. Basic Precision — shared by both directions
     story.append(Paragraph("<b>1. Basic Precision</b>", styles["MemoBody"]))
-    if si > 0:
+    if is_random:
+        population_value = evaluation_result.get("population_value", 0) or 0
+        n = evaluation_result.get("sample_size", 0) or 0
+        evaluated = evaluation_result.get("evaluated_count", 0) or 0
+        if evaluated and n:
+            n = min(n, evaluated)
+        story.append(
+            Paragraph(
+                "Formula: Population Value × Confidence Factor at 0 errors ÷ Sample Size",
+                styles["MemoBody"],
+            )
+        )
+        # Print the arithmetic only when it reproduces the engine's figure: the
+        # engine uses min(sample size, items actually evaluated), and an export
+        # payload may not carry the evaluated count.
+        if population_value > 0 and n > 0 and abs(population_value * conf_factor / n - bp) < 0.01:
+            story.append(
+                Paragraph(
+                    f"Computation: ${population_value:,.2f} × {conf_factor:.4f} ÷ {n} = ${bp:,.2f}",
+                    styles["MemoBody"],
+                )
+            )
+        else:
+            story.append(Paragraph(f"Basic Precision = ${bp:,.2f}", styles["MemoBody"]))
+        story.append(
+            Paragraph(
+                "<i>Sampling risk remains when no misstatement is found (ISA 530; PCAOB AS 2315), "
+                "so a clean sample still carries an upper error limit, and a smaller clean sample "
+                "carries a larger one. The AICPA Audit Sampling Guide's basic precision for a "
+                "monetary-unit sample is the zero-misstatement confidence factor multiplied by the "
+                "sampling interval; a simple random sample has no interval, so the average value "
+                "per sampled item stands in for it. That adaptation is a Paciolus convention, not "
+                "prescribed by the standard.</i>",
+                styles["MemoBodySmall"],
+            )
+        )
+    elif si > 0:
         bp_computed = si * conf_factor
         story.append(
             Paragraph(
-                "Formula: Sampling Interval \u00d7 Confidence Factor at 0 errors",
+                "Formula: Sampling Interval × Confidence Factor at 0 errors",
                 styles["MemoBody"],
             )
         )
         story.append(
             Paragraph(
-                f"Computation: ${si:,.2f} \u00d7 {conf_factor:.4f} = ${bp_computed:,.2f}",
+                f"Computation: ${si:,.2f} × {conf_factor:.4f} = ${bp_computed:,.2f}",
                 styles["MemoBody"],
             )
         )
@@ -1520,115 +1703,212 @@ def _build_uel_derivation(
             Paragraph(
                 "<i>Basic Precision represents the minimum precision achievable with "
                 "this sample even if no errors are found. It equals the confidence "
-                "factor multiplied by one sampling interval.</i>",
+                "factor multiplied by one sampling interval (AICPA Audit Sampling Guide).</i>",
                 styles["MemoBodySmall"],
             )
         )
     else:
         story.append(Paragraph(f"Basic Precision = ${bp:,.2f}", styles["MemoBody"]))
-    story.append(Spacer(1, 6))
-
-    # 2. Projected Misstatement
-    story.append(Paragraph("<b>2. Projected Misstatement</b>", styles["MemoBody"]))
-    if errors and si > 0:
-        # Sort by tainting desc (Stringer method)
-        sorted_errors = sorted(errors, key=lambda e: e.get("tainting", 0), reverse=True)
-        projected_sum = 0.0
-        for i, err in enumerate(sorted_errors, 1):
-            tainting = err.get("tainting", 0)
-            item_id = err.get("item_id", f"Error {i}")
-            proj_amount = tainting * si
-            projected_sum += proj_amount
-            story.append(
-                Paragraph(
-                    f"Error {i} ({item_id}, tainting {tainting:.1%}): "
-                    f"{tainting:.4f} \u00d7 ${si:,.2f} = ${proj_amount:,.2f}",
-                    styles["MemoBody"],
-                )
-            )
+    if has_under:
         story.append(
             Paragraph(
-                f"Total Projected Misstatement: ${projected_sum:,.2f}",
-                styles["MemoBody"],
+                "<i>Basic precision enters both the overstatement and the understatement limit.</i>",
+                styles["MemoBodySmall"],
             )
         )
-    else:
-        story.append(Paragraph(f"Projected Misstatement = ${projected:,.2f}", styles["MemoBody"]))
     story.append(Spacer(1, 6))
 
-    # 3. Incremental Allowance
-    if incremental > 0:
-        story.append(Paragraph("<b>3. Incremental Allowance</b>", styles["MemoBody"]))
-        if errors and si > 0:
+    # One block per direction. A result without the understatement bound (from
+    # before Sprint 825) is derived as a single block over all errors, as it was
+    # computed.
+    if has_under:
+        sides = [
+            (
+                "Overstatements",
+                [e for e in errors if _misstatement_direction(e) == "over"],
+                evaluation_result.get("projected_misstatement", 0) or 0,
+                evaluation_result.get("incremental_allowance", 0) or 0,
+                evaluation_result.get("upper_error_limit", 0) or 0,
+            ),
+            (
+                "Understatements",
+                [e for e in errors if _misstatement_direction(e) == "under"],
+                evaluation_result.get("understatement_projected_misstatement") or 0,
+                evaluation_result.get("understatement_incremental_allowance") or 0,
+                evaluation_result.get("understatement_upper_error_limit") or 0,
+            ),
+        ]
+    else:
+        sides = [
+            (
+                "",
+                list(errors),
+                evaluation_result.get("projected_misstatement", 0) or 0,
+                evaluation_result.get("incremental_allowance", 0) or 0,
+                evaluation_result.get("upper_error_limit", 0) or 0,
+            )
+        ]
+
+    step = 2
+    for label, side_errors, projected, incremental, uel in sides:
+        suffix = f" — {label}" if label else ""
+
+        # Projected Misstatement
+        story.append(Paragraph(f"<b>{step}. Projected Misstatement{suffix}</b>", styles["MemoBody"]))
+        step += 1
+        if is_random and side_errors:
+            total = sum(abs(e.get("misstatement", 0) or 0) for e in side_errors)
+            sample_value = evaluation_result.get("sample_value", 0) or 0
+            population_value = evaluation_result.get("population_value", 0) or 0
             story.append(
                 Paragraph(
-                    "Formula: \u03a3 (tainting \u00d7 sampling interval \u00d7 (incremental factor \u2212 1.0))",
+                    "Formula: Σ |misstatement| ÷ Sample Value × Population Value",
                     styles["MemoBody"],
                 )
             )
-            story.append(
-                Paragraph(
-                    f"<i>Per the Poisson reliability-factor series at "
-                    f"{confidence_level:.0%} confidence, each successive error contributes a "
-                    f"smaller incremental allowance, reflecting the diminishing marginal "
-                    f"impact on the upper error limit. The factors are the first differences "
-                    f"of that series, per {_FIGURE_SOURCE}).</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-            sorted_errors = sorted(errors, key=lambda e: e.get("tainting", 0), reverse=True)
-            inc_sum = 0.0
-            # Sprint 805: the engagement's own confidence level, and the engine's
-            # own increments — not a hardcoded 95% table.
-            factors = _get_incremental_factors(confidence_level)
-            for i, err in enumerate(sorted_errors):
-                tainting = err.get("tainting", 0)
-                item_id = err.get("item_id", f"Error {i + 1}")
-                factor = factors[i] if i < len(factors) else factors[-1]
-                inc_amount = tainting * si * max(factor - 1.0, 0.0)
-                inc_sum += inc_amount
+            if sample_value > 0:
                 story.append(
                     Paragraph(
-                        f"Error {i + 1} ({item_id}): factor {factor:.2f} \u2212 1.0 = {factor - 1.0:.2f}; "
-                        f"{tainting:.4f} \u00d7 ${si:,.2f} \u00d7 {factor - 1.0:.2f} = ${inc_amount:,.2f}",
+                        f"Computation: ${total:,.2f} ÷ ${sample_value:,.2f} × "
+                        f"${population_value:,.2f} = ${projected:,.2f}",
                         styles["MemoBody"],
                     )
                 )
-            story.append(Paragraph(f"Total Incremental Allowance: ${inc_sum:,.2f}", styles["MemoBody"]))
+        elif side_errors and si > 0:
+            # Sort by tainting desc (Stringer method)
+            sorted_errors = sorted(side_errors, key=lambda e: e.get("tainting", 0), reverse=True)
+            projected_sum = 0.0
+            for i, err in enumerate(sorted_errors, 1):
+                tainting = err.get("tainting", 0)
+                item_id = err.get("item_id", f"Error {i}")
+                if abs(err.get("recorded_amount", 0) or 0) >= si:
+                    # Sprint 824: examined with certainty, not sampled — its
+                    # actual misstatement enters as-is.
+                    proj_amount = abs(err.get("misstatement", 0) or 0)
+                    story.append(
+                        Paragraph(
+                            f"Error {i} ({item_id}, recorded amount at or above the interval, "
+                            f"examined rather than sampled): actual misstatement ${proj_amount:,.2f}",
+                            styles["MemoBody"],
+                        )
+                    )
+                else:
+                    proj_amount = tainting * si
+                    story.append(
+                        Paragraph(
+                            f"Error {i} ({item_id}, tainting {tainting:.1%}): "
+                            f"{tainting:.4f} × ${si:,.2f} = ${proj_amount:,.2f}",
+                            styles["MemoBody"],
+                        )
+                    )
+                projected_sum += proj_amount
+            story.append(
+                Paragraph(
+                    f"Total Projected Misstatement{suffix}: ${projected_sum:,.2f}",
+                    styles["MemoBody"],
+                )
+            )
         else:
-            story.append(Paragraph(f"Incremental Allowance = ${incremental:,.2f}", styles["MemoBody"]))
+            story.append(Paragraph(f"Projected Misstatement = ${projected:,.2f}", styles["MemoBody"]))
         story.append(Spacer(1, 6))
 
-    # 4. Upper Error Limit
-    step_num = "4" if incremental > 0 else "3"
-    story.append(Paragraph(f"<b>{step_num}. Upper Error Limit</b>", styles["MemoBody"]))
-    if incremental > 0:
-        formula = "UEL = Basic Precision + Projected Misstatement + Incremental Allowance"
-        computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} + ${incremental:,.2f} = ${uel:,.2f}"
-    else:
-        formula = "UEL = Basic Precision + Projected Misstatement"
-        computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} = ${uel:,.2f}"
-    story.append(Paragraph(formula, styles["MemoBody"]))
-    story.append(Paragraph(computation, styles["MemoBody"]))
+        # Incremental Allowance
+        if incremental > 0:
+            story.append(Paragraph(f"<b>{step}. Incremental Allowance{suffix}</b>", styles["MemoBody"]))
+            step += 1
+            if is_random:
+                story.append(
+                    Paragraph(
+                        "Formula: Projected Misstatement × Confidence Factor ÷ √(Sample Size)",
+                        styles["MemoBody"],
+                    )
+                )
+                story.append(
+                    Paragraph(
+                        f"Incremental Allowance = ${incremental:,.2f}. <i>This allowance for "
+                        "misstatements found is a Paciolus convention, not prescribed by the "
+                        "standard.</i>",
+                        styles["MemoBody"],
+                    )
+                )
+            elif side_errors and si > 0:
+                story.append(
+                    Paragraph(
+                        "Formula: Σ (tainting × sampling interval × (incremental factor − 1.0))",
+                        styles["MemoBody"],
+                    )
+                )
+                story.append(
+                    Paragraph(
+                        f"<i>Per the Poisson reliability-factor series at "
+                        f"{confidence_level:.0%} confidence, each successive error contributes a "
+                        f"smaller incremental allowance, reflecting the diminishing marginal "
+                        f"impact on the upper error limit. The factors are the first differences "
+                        f"of that series, per {_FIGURE_SOURCE}).</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+                sampled = [e for e in side_errors if abs(e.get("recorded_amount", 0) or 0) < si]
+                sorted_errors = sorted(sampled, key=lambda e: e.get("tainting", 0), reverse=True)
+                inc_sum = 0.0
+                # Sprint 805: the engagement's own confidence level, and the engine's
+                # own increments — not a hardcoded 95% table.
+                factors = _get_incremental_factors(confidence_level)
+                for i, err in enumerate(sorted_errors):
+                    tainting = err.get("tainting", 0)
+                    item_id = err.get("item_id", f"Error {i + 1}")
+                    factor = factors[i] if i < len(factors) else factors[-1]
+                    inc_amount = tainting * si * max(factor - 1.0, 0.0)
+                    inc_sum += inc_amount
+                    story.append(
+                        Paragraph(
+                            f"Error {i + 1} ({item_id}): factor {factor:.2f} − 1.0 = {factor - 1.0:.2f}; "
+                            f"{tainting:.4f} × ${si:,.2f} × {factor - 1.0:.2f} = ${inc_amount:,.2f}",
+                            styles["MemoBody"],
+                        )
+                    )
+                story.append(Paragraph(f"Total Incremental Allowance{suffix}: ${inc_sum:,.2f}", styles["MemoBody"]))
+            else:
+                story.append(Paragraph(f"Incremental Allowance = ${incremental:,.2f}", styles["MemoBody"]))
+            story.append(Spacer(1, 6))
 
-    # PASS/FAIL inline
-    if uel <= tm:
+        # Upper Error Limit
+        story.append(Paragraph(f"<b>{step}. Upper Error Limit{suffix}</b>", styles["MemoBody"]))
+        step += 1
+        if incremental > 0:
+            formula = "UEL = Basic Precision + Projected Misstatement + Incremental Allowance"
+            computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} + ${incremental:,.2f} = ${uel:,.2f}"
+        else:
+            formula = "UEL = Basic Precision + Projected Misstatement"
+            computation = f"UEL = ${bp:,.2f} + ${projected:,.2f} = ${uel:,.2f}"
+        story.append(Paragraph(formula, styles["MemoBody"]))
+        story.append(Paragraph(computation, styles["MemoBody"]))
+
+        within = uel <= tm
+        if label:
+            verdict = "within tolerable misstatement" if within else "exceeds tolerable misstatement"
+        else:
+            verdict = "PASS" if within else "FAIL"
+        color = ClassicalColors.SAGE if within else ClassicalColors.CLAY
+        operator = "≤" if within else "&gt;"
         story.append(
             Paragraph(
-                f'<font color="{ClassicalColors.SAGE.hexval()}">'
-                f"UEL (${uel:,.2f}) &lt; TM (${tm:,.2f}) \u2192 PASS</font>",
+                f'<font color="{color.hexval()}">UEL (${uel:,.2f}) {operator} TM (${tm:,.2f}) → {verdict}</font>',
                 styles["MemoBody"],
             )
         )
-    else:
+        story.append(Spacer(1, 8))
+
+    if has_under:
         story.append(
             Paragraph(
-                f'<font color="{ClassicalColors.CLAY.hexval()}">'
-                f"UEL (${uel:,.2f}) \u2265 TM (${tm:,.2f}) \u2192 FAIL</font>",
-                styles["MemoBody"],
+                "<i>The conclusion is a fail if either direction's upper error limit exceeds "
+                "tolerable misstatement. The two directions are not netted (AICPA Audit "
+                "Sampling Guide).</i>",
+                styles["MemoBodySmall"],
             )
         )
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 4))
 
 
 # ═══════════════════════════════════════════════════════════════

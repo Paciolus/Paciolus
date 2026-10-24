@@ -863,3 +863,164 @@ class TestSprint824Evaluation:
         evaluated an empty sample and concluded "pass"."""
         with pytest.raises(ValueError, match="No sample item could be evaluated"):
             self._evaluate("item_id,recorded_amount,audited_amount\nA,50000,see note\n", method=method)
+
+
+class TestSprint825Methodology:
+    """Sprint 825 — CEO methodology decision on findings S3 and S6
+    (reports/sprint-823-discovery-2026-10-23.md): the tool must never report
+    more assurance than the data supports."""
+
+    @staticmethod
+    def _csv(rows: list[tuple]) -> bytes:
+        """rows: (recorded, audited); audited may be '' for an unassessed item."""
+        lines = ["item_id,recorded_amount,audited_amount"]
+        lines += [f"R{i},{rec},{aud}" for i, (rec, aud) in enumerate(rows, 1)]
+        return "\n".join(lines).encode()
+
+    def _random(self, rows, *, sample_size, tm=50_000, population_value=1_000_000):
+        config = SamplingConfig(method="random", confidence_level=0.95, tolerable_misstatement=tm)
+        return evaluate_sample(self._csv(rows), "s.csv", config, population_value, sample_size)
+
+    # ── S3: zero-error samples ──────────────────────────────────
+
+    def test_s3_small_clean_random_sample_fails(self):
+        """S3. Population $1,000,000, TM $50,000, 95% (zero-error confidence
+        factor 3.00), 20 items tested, no misstatements.
+
+        Basic precision = population x CF / n = 1,000,000 x 3.00 / 20 = $150,000.
+        UEL = $150,000 > TM $50,000 -> fail.
+
+        Before Sprint 825: precision = projected x CF / sqrt(n) = 0 x ... = $0,
+        so the result was UEL $0, "pass"."""
+        result = self._random([(1_000, 1_000)] * 20, sample_size=20)
+        assert result.errors_found == 0
+        assert result.basic_precision == pytest.approx(150_000)
+        assert result.upper_error_limit == pytest.approx(150_000)
+        assert result.understatement_upper_error_limit == pytest.approx(150_000)
+        assert result.conclusion == "fail"
+
+    def test_s3_clean_sample_of_the_designed_size_passes(self):
+        """S3. The same engagement's designed random sample size is
+        n = BV x CF / TM = 1,000,000 x 3.00 / 50,000 = 60. A clean sample of
+        60 gives basic precision 1,000,000 x 3.00 / 60 = $50,000 = TM -> pass
+        (the engine passes at UEL <= TM)."""
+        n, _, _ = calculate_mus_sample_size(0.95, 50_000, 0, 1_000_000)
+        assert n == 60
+        result = self._random([(1_000, 1_000)] * 60, sample_size=60)
+        assert result.basic_precision == pytest.approx(50_000)
+        assert result.conclusion == "pass"
+
+    def test_s3_a_clean_sample_of_5_does_not_read_like_one_of_200(self):
+        five = self._random([(1_000, 1_000)] * 5, sample_size=5)
+        two_hundred = self._random([(1_000, 1_000)] * 200, sample_size=200)
+        # 1,000,000 x 3 / 5 and 1,000,000 x 3 / 200
+        assert five.upper_error_limit == pytest.approx(600_000)
+        assert two_hundred.upper_error_limit == pytest.approx(15_000)
+
+    def test_s3_unassessed_items_give_no_assurance(self):
+        """Paciolus convention: n = min(sample size, items evaluated). 60
+        selected, 40 unassessed -> n = 20 -> 1,000,000 x 3 / 20 = $150,000."""
+        rows = [(1_000, 1_000)] * 20 + [(1_000, "")] * 40
+        result = self._random(rows, sample_size=60)
+        assert result.evaluated_count == 20
+        assert result.basic_precision == pytest.approx(150_000)
+        assert result.conclusion == "fail"
+
+    def test_s3_mus_zero_error_basic_precision_on_both_sides(self):
+        """MUS already reported basic precision for a clean sample (AICPA Audit
+        Sampling Guide: CF(0) x interval = 3.00 x 10,000 = $30,000); it now
+        appears in both directions' limits."""
+        result = evaluate_mus_sample_stringer([], 10_000, 0.95, 50_000, 600_000, 60)
+        assert result.upper_error_limit == pytest.approx(30_000)
+        assert result.understatement_upper_error_limit == pytest.approx(30_000)
+
+    # ── S6: understatements ─────────────────────────────────────
+
+    def test_s6_random_understatement_is_not_netted_against_overstatement(self):
+        """S6. 10 items, $100,000 sample value, population $1,000,000, 95%.
+        One $1,000 overstatement and one $1,000 understatement.
+
+        Per direction:
+          BP        = 1,000,000 x 3.00 / 10            = $300,000.00
+          projected = 1,000 / 100,000 x 1,000,000      =  $10,000.00
+          allowance = 10,000 x 3.00 / sqrt(10)         =   $9,486.83
+          UEL       = 300,000 + 10,000 + 9,486.83      = $319,486.83  > TM $315,000 -> fail
+
+        Before Sprint 825 the ratio used abs(1,000 - 1,000) = 0: projected $0,
+        UEL $0, "pass"."""
+        rows = [(10_000, 9_000), (10_000, 11_000)] + [(10_000, 10_000)] * 8
+        result = self._random(rows, sample_size=10, tm=315_000)
+        assert result.total_misstatement == pytest.approx(0)
+        assert result.total_overstatement == pytest.approx(1_000)
+        assert result.total_understatement == pytest.approx(1_000)
+        assert result.projected_misstatement == pytest.approx(10_000)
+        assert result.understatement_projected_misstatement == pytest.approx(10_000)
+        assert result.upper_error_limit == pytest.approx(319_486.83, abs=0.01)
+        assert result.understatement_upper_error_limit == pytest.approx(319_486.83, abs=0.01)
+        assert result.conclusion == "fail"
+
+    def test_s6_mus_understatement_has_its_own_uncapped_bound_and_can_fail(self):
+        """S6. Interval $10,000, TM $50,000, 95%. One item recorded $1,000,
+        audited $3,000: understated by $2,000, tainting 200% (not capped).
+
+        Understatement UEL = BP 30,000 + projected 2.0 x 10,000 (20,000)
+                             + allowance 2.0 x 10,000 x (1.75 - 1) (15,000) = $65,000 -> fail.
+        Overstatement UEL  = BP 30,000 (no overstatements).
+
+        Before Sprint 825 the item was scored as a 100% *overstatement*:
+        30,000 + 10,000 + 7,500 = $47,500, "pass"."""
+        rows = [(1_000, 3_000)] + [(500, 500)] * 19
+        config = SamplingConfig(method="mus", confidence_level=0.95, tolerable_misstatement=50_000)
+        result = evaluate_sample(self._csv(rows), "s.csv", config, 600_000, 20, sampling_interval=10_000)
+        assert result.errors[0].tainting == pytest.approx(2.0)
+        assert result.taintings_ranked == []
+        assert result.understatement_taintings_ranked == [pytest.approx(2.0)]
+        assert result.upper_error_limit == pytest.approx(30_000)
+        assert result.understatement_upper_error_limit == pytest.approx(65_000)
+        assert result.conclusion == "fail"
+        assert "understatement upper limit exceeds" in result.conclusion_detail
+
+    def test_s6_mus_directions_are_ranked_and_bounded_separately(self):
+        """One 50% overstatement and one 50% understatement at a $10,000
+        interval: each side is 30,000 + 5,000 + 3,750 = $38,750. Before Sprint
+        825 both entered one ranking: 30,000 + 10,000 + 3,750 + 2,750 = $46,500."""
+        errors = [
+            SampleError(1, "O", 5_000, 2_500, 2_500, 0.5),
+            SampleError(2, "U", 5_000, 7_500, -2_500, 0.5),
+        ]
+        result = evaluate_mus_sample_stringer(errors, 10_000, 0.95, 50_000, 600_000, 60)
+        assert result.taintings_ranked == [0.5]
+        assert result.understatement_taintings_ranked == [0.5]
+        assert result.upper_error_limit == pytest.approx(38_750)
+        assert result.understatement_upper_error_limit == pytest.approx(38_750)
+        assert (result.overstatement_errors_found, result.understatement_errors_found) == (1, 1)
+        assert result.conclusion == "pass"
+
+    def test_s6_top_stratum_understatement_stays_on_its_own_side(self):
+        """A $250,000 item audited at $300,000 (interval $70,000) adds its
+        actual $50,000 to the understatement limit only: 210,000 + 50,000."""
+        errors = [SampleError(1, "BIG", 250_000, 300_000, -50_000, 0.2)]
+        result = evaluate_mus_sample_stringer(errors, 70_000, 0.95, 250_000, 5_000_000, 72)
+        assert result.upper_error_limit == pytest.approx(210_000)
+        assert result.understatement_upper_error_limit == pytest.approx(260_000)
+        assert result.conclusion == "fail"
+
+    def test_s6_overstatement_tainting_is_still_capped(self):
+        rows = [(1_000, -500)] + [(500, 500)] * 4
+        config = SamplingConfig(method="mus", confidence_level=0.95, tolerable_misstatement=50_000)
+        result = evaluate_sample(self._csv(rows), "s.csv", config, 600_000, 5, sampling_interval=10_000)
+        assert result.errors[0].tainting == pytest.approx(1.0)
+
+    def test_route_serialises_both_bounds_through_the_response_model(self):
+        """The new fields reach the API response; the legacy fields keep their
+        meaning (the overstatement side)."""
+        from routes.sampling import _run_evaluation
+        from shared.testing_response_schemas import SamplingEvaluationResponse
+
+        rows = [(10_000, 9_000), (10_000, 11_000)] + [(10_000, 10_000)] * 8
+        payload = _run_evaluation(self._csv(rows), "s.csv", "random", 0.95, 315_000, 0, 1_000_000, 10, None, None)
+        resp = SamplingEvaluationResponse(**payload)
+        assert resp.upper_error_limit == pytest.approx(319_486.83, abs=0.01)
+        assert resp.understatement_upper_error_limit == pytest.approx(319_486.83, abs=0.01)
+        assert resp.understatement_errors_found == 1
+        assert resp.conclusion == "fail"
