@@ -63,6 +63,15 @@ interface Analytics {
   dupont?: DupontData | null
   /** Sprint 829: accounts with no category, left out of every ratio. */
   excluded_accounts?: { count: number; total_abs_balance: number } | null
+  /**
+   * Sprint 832: unclosed current-period earnings (revenue less expenses not yet
+   * closed to retained earnings) that the backend added to equity for every
+   * equity-based ratio — Debt-to-Equity, Equity Ratio, ROE, DuPont equity
+   * multiplier. 0 on a closed trial balance. Absent on older payloads.
+   */
+  equity_includes_current_earnings?: number
+  /** Sprint 832: equity accounts + `equity_includes_current_earnings`. */
+  effective_equity?: number
   variances: Record<string, VarianceData>
   has_previous_data: boolean
   category_totals: {
@@ -125,6 +134,13 @@ const formatDupont = (key: string, value: number): string => {
   return `${value.toFixed(4)}x`
 }
 
+/** Signed currency for the equity-basis disclosure (e.g. "-$100,000.00"). */
+const formatSignedCurrency = (value: number): string =>
+  `${value < 0 ? '-' : ''}$${Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+
 const DUPONT_COMPONENTS = [
   { key: 'net_profit_margin', label: 'Net Profit Margin', formula: 'Net Income / Revenue' },
   { key: 'asset_turnover', label: 'Asset Turnover', formula: 'Revenue / Total Assets' },
@@ -137,6 +153,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
 }: KeyMetricsSectionProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showDupont, setShowDupont] = useState(false)
+  const unclosedEarnings = analytics.equity_includes_current_earnings ?? 0
 
   // Check if we have any calculable ratios
   const hasCalculableRatios = Object.values(analytics.ratios).some(r => r?.is_calculable)
@@ -223,6 +240,25 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
               />
             ))}
           </motion.div>
+
+          {/* Sprint 832: equity-basis disclosure. Closing entries move net
+              income to retained earnings; until then the equity accounts
+              exclude it, so the backend adds it to equity for every
+              equity-based ratio. Same sentence as the PDF/Excel exports. */}
+          {unclosedEarnings !== 0 && (
+            <p
+              data-testid="equity-basis-note"
+              className="mt-3 font-sans text-xs text-obsidian-600 dark:text-oatmeal-400"
+            >
+              Equity includes{' '}
+              <span className="font-mono text-obsidian-800 dark:text-oatmeal-200">
+                {formatSignedCurrency(unclosedEarnings)}
+              </span>{' '}
+              of unclosed current-period earnings (revenue less expenses not yet closed to
+              retained earnings); equity-based ratios use equity on the basis a balance sheet
+              presents it (ASC 505 / IAS 1).
+            </p>
+          )}
 
           {/* Advanced Ratios Collapsible Section */}
           {hasAdvancedRatios && (

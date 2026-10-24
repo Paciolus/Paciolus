@@ -171,6 +171,16 @@ def _run_evaluation(
         "skipped_missing_audited": result.skipped_missing_audited,
         "evaluated_count": result.evaluated_count,
         "missing_audited_warning": result.missing_audited_warning,
+        # Sprint 825 (S6): understatement side, evaluated separately.
+        "overstatement_errors_found": result.overstatement_errors_found,
+        "understatement_errors_found": result.understatement_errors_found,
+        "total_overstatement": round(result.total_overstatement, 2),
+        "total_understatement": round(result.total_understatement, 2),
+        "understatement_projected_misstatement": round(result.understatement_projected_misstatement, 2),
+        "understatement_basic_precision": round(result.understatement_basic_precision, 2),
+        "understatement_incremental_allowance": round(result.understatement_incremental_allowance, 2),
+        "understatement_upper_error_limit": round(result.understatement_upper_error_limit, 2),
+        "understatement_taintings_ranked": [round(t, 4) for t in result.understatement_taintings_ranked],
     }
 
 
@@ -252,6 +262,7 @@ async def sampling_design(
             "statistical_sampling",
             True,
             None,
+            consumes_upload=True,
         )
 
         return result

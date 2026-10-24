@@ -738,10 +738,15 @@ class TestSprint681AverageBalance:
         assert "prior-period" in result.interpretation
 
     def test_roe_uses_average_when_prior_supplied(self):
+        # Sprint 832: `total_assets` added so the totals read as closed books
+        # (A = L + E, the 150K already inside the 800K equity). Without it the
+        # equity-basis convention treats the 150K as unclosed earnings and adds
+        # it to equity; this test is about the averaging, not the equity basis.
         current = CategoryTotals(
             total_revenue=500000.0,
             total_expenses=350000.0,
             total_equity=800_000.0,
+            total_assets=800_000.0,
         )
         prior = CategoryTotals(total_equity=600_000.0)
         # Net Income = 150K. Average equity = 700K. ROE = 21.4%
@@ -753,10 +758,12 @@ class TestSprint681AverageBalance:
     def test_roe_partial_prior_falls_back(self):
         """If prior_totals is supplied but prior equity is 0 / missing,
         fall back to ending equity (matches the 'no prior' path)."""
+        # Sprint 832: closed-books fixture (total_assets added) — see above.
         current = CategoryTotals(
             total_revenue=500000.0,
             total_expenses=350000.0,
             total_equity=800_000.0,
+            total_assets=800_000.0,
         )
         prior = CategoryTotals()  # all zeros
         engine = RatioEngine(current, prior_period_totals=prior)
@@ -903,7 +910,11 @@ class TestReturnOnEquity:
 
     def test_roe_strong(self):
         """Test ROE at strong threshold."""
+        # Sprint 832: total_assets = total_equity makes these closed books
+        # (earnings already in equity), so the threshold under test is reached
+        # on the stated equity. The ladder tests below do the same.
         totals = CategoryTotals(
+            total_assets=500000.0,
             total_equity=500000.0,
             total_revenue=400000.0,
             total_expenses=325000.0,  # Net Income = 75,000 -> 15% ROE
@@ -919,6 +930,7 @@ class TestReturnOnEquity:
     def test_roe_adequate(self):
         """Test ROE at adequate threshold."""
         totals = CategoryTotals(
+            total_assets=500000.0,  # Sprint 832: closed books, see test_roe_strong
             total_equity=500000.0,
             total_revenue=400000.0,
             total_expenses=350000.0,  # Net Income = 50,000 -> 10% ROE
@@ -933,6 +945,7 @@ class TestReturnOnEquity:
     def test_roe_below_average(self):
         """Test ROE when returns are below average."""
         totals = CategoryTotals(
+            total_assets=500000.0,  # Sprint 832: closed books, see test_roe_strong
             total_equity=500000.0,
             total_revenue=400000.0,
             total_expenses=380000.0,  # Net Income = 20,000 -> 4% ROE
@@ -947,6 +960,7 @@ class TestReturnOnEquity:
     def test_roe_negative(self):
         """Test ROE when company is generating losses."""
         totals = CategoryTotals(
+            total_assets=500000.0,  # Sprint 832: closed books, see test_roe_strong
             total_equity=500000.0,
             total_revenue=400000.0,
             total_expenses=500000.0,  # Net Loss = -100,000 -> -20% ROE
@@ -1594,6 +1608,8 @@ class TestSprint806NegativeEquity:
         assert result.value is not None
         assert result.value > 0
         assert "negative equity" not in result.interpretation.lower()
+
+
 # DuPont decomposition — Sprint 798
 # =============================================================================
 
@@ -1641,9 +1657,16 @@ class TestDupontIsReachable:
     def test_decomposition_is_none_when_a_denominator_is_zero(self):
         """`USER_GUIDE.md` promises it "when revenue, total assets and total
         equity are all non-zero". Each of the three, individually."""
-        for field in ("total_revenue", "total_assets", "total_equity"):
+        for field in ("total_revenue", "total_assets"):
             payload = calculate_analytics(self._totals(**{field: 0.0}))
             assert payload["dupont"] is None, f"{field}=0 should suppress the decomposition"
+        # Sprint 832: the equity denominator is effective equity (equity
+        # accounts + unclosed current-period earnings), so "equity is zero"
+        # means *that* is zero. Zeroing the equity accounts alone no longer
+        # does it — the 637,500 of unclosed earnings is still equity.
+        payload = calculate_analytics(self._totals(total_equity=-(4_250_000.0 - 3_612_500.0)))
+        assert payload["effective_equity"] == 0.0
+        assert payload["dupont"] is None, "effective equity = 0 should suppress the decomposition"
 
     def test_prior_period_deltas_appear_only_with_prior_data(self):
         without = calculate_analytics(self._totals())

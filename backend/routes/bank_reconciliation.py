@@ -109,7 +109,7 @@ async def audit_bank_reconciliation(
 
             result = await asyncio.to_thread(_analyze)
 
-            maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True)
+            maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True, consumes_upload=True)
 
             return result.to_dict()  # type: ignore[no-any-return]
 

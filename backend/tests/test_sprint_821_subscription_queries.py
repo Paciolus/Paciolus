@@ -39,6 +39,7 @@ def _subscribed_user(make_user, db_session, uploads_used=0):
             status=SubscriptionStatus.ACTIVE,
             billing_interval=BillingInterval.MONTHLY,
             uploads_used_current_period=uploads_used,
+            **_current_window(),
         )
     )
     db_session.flush()
@@ -76,3 +77,19 @@ def test_increment_updates_the_same_row_the_limit_check_reads(make_user, db_sess
     user = _subscribed_user(make_user, db_session, uploads_used=3)
     increment_upload_count(db_session, user.id)
     assert _user_subscription(db_session, user.id).uploads_used_current_period == 4
+
+
+def _current_window() -> dict:
+    """Subscription kwargs placing a seeded counter in the current monthly window.
+
+    Sprint 790 (PR #227 review): a count is only read while
+    ``uploads_window_start`` is the current window; a NULL window reads as 0.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    start = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
+    return {
+        "current_period_start": start,
+        "current_period_end": start + timedelta(days=30),
+        "uploads_window_start": start,
+    }

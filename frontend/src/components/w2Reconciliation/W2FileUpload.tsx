@@ -117,6 +117,7 @@ export function W2FileUpload({ onAnalyze, onExport, loading }: W2FileUploadProps
           <p className="text-xs font-sans text-content-tertiary mt-2">
             Columns: employee_id, employee_name, federal_wages, federal_withholding, ss_wages,
             ss_tax_withheld, medicare_wages, medicare_tax_withheld, plus optional HSA / 401(k) / SIMPLE IRA.
+            Include an age column (age at year end) so catch-up limits can be assessed.
             {parsed.employees.length > 0 && (
               <span className="text-sage-700 font-medium"> &middot; {parsed.employees.length} employees.</span>
             )}

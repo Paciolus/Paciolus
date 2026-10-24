@@ -4791,6 +4791,18 @@
             ],
             "title": "Source Document Title"
           },
+          "split_search": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Search"
+          },
           "summary": {
             "additionalProperties": true,
             "title": "Summary",
@@ -4876,6 +4888,16 @@
               }
             ],
             "title": "Rec Tests"
+          },
+          "split_search": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitSearchDisclosureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "summary": {
             "$ref": "#/components/schemas/ReconciliationSummaryResponse"
@@ -20461,6 +20483,20 @@
               }
             ]
           },
+          "ledger_txns": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Txns"
+          },
           "match_confidence": {
             "title": "Match Confidence",
             "type": "number"
@@ -20469,10 +20505,22 @@
             "enum": [
               "matched",
               "bank_only",
-              "ledger_only"
+              "ledger_only",
+              "split"
             ],
             "title": "Match Type",
             "type": "string"
+          },
+          "split_search_limited": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Search Limited"
           }
         },
         "required": [
@@ -22241,6 +22289,83 @@
             "title": "Total Misstatement",
             "type": "number"
           },
+          "total_overstatement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Overstatement"
+          },
+          "total_understatement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Understatement"
+          },
+          "understatement_basic_precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Understatement Basic Precision"
+          },
+          "understatement_errors_found": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Understatement Errors Found"
+          },
+          "understatement_incremental_allowance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Understatement Incremental Allowance"
+          },
+          "understatement_projected_misstatement": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Understatement Projected Misstatement"
+          },
+          "understatement_upper_error_limit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Understatement Upper Error Limit"
+          },
           "upper_error_limit": {
             "default": 0.0,
             "title": "Upper Error Limit",
@@ -22311,6 +22436,11 @@
             "title": "Method",
             "type": "string"
           },
+          "overstatement_errors_found": {
+            "default": 0,
+            "title": "Overstatement Errors Found",
+            "type": "integer"
+          },
           "population_value": {
             "title": "Population Value",
             "type": "number"
@@ -22340,6 +22470,49 @@
           },
           "total_misstatement": {
             "title": "Total Misstatement",
+            "type": "number"
+          },
+          "total_overstatement": {
+            "default": 0.0,
+            "title": "Total Overstatement",
+            "type": "number"
+          },
+          "total_understatement": {
+            "default": 0.0,
+            "title": "Total Understatement",
+            "type": "number"
+          },
+          "understatement_basic_precision": {
+            "default": 0.0,
+            "title": "Understatement Basic Precision",
+            "type": "number"
+          },
+          "understatement_errors_found": {
+            "default": 0,
+            "title": "Understatement Errors Found",
+            "type": "integer"
+          },
+          "understatement_incremental_allowance": {
+            "default": 0.0,
+            "title": "Understatement Incremental Allowance",
+            "type": "number"
+          },
+          "understatement_projected_misstatement": {
+            "default": 0.0,
+            "title": "Understatement Projected Misstatement",
+            "type": "number"
+          },
+          "understatement_taintings_ranked": {
+            "default": [],
+            "items": {
+              "type": "number"
+            },
+            "title": "Understatement Taintings Ranked",
+            "type": "array"
+          },
+          "understatement_upper_error_limit": {
+            "default": 0.0,
+            "title": "Understatement Upper Error Limit",
             "type": "number"
           },
           "upper_error_limit": {
@@ -23031,6 +23204,40 @@
         "title": "SodAnalysisResponse",
         "type": "object"
       },
+      "SplitSearchDisclosureResponse": {
+        "description": "Sprint 833: bounds the split-match search ran under (Paciolus convention).",
+        "properties": {
+          "date_window_days": {
+            "title": "Date Window Days",
+            "type": "integer"
+          },
+          "limited_count": {
+            "title": "Limited Count",
+            "type": "integer"
+          },
+          "max_candidates": {
+            "title": "Max Candidates",
+            "type": "integer"
+          },
+          "max_set_size": {
+            "title": "Max Set Size",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date_window_days",
+          "max_candidates",
+          "max_set_size",
+          "limited_count",
+          "note"
+        ],
+        "title": "SplitSearchDisclosureResponse",
+        "type": "object"
+      },
       "StatutoryLimitOverrides": {
         "description": "Per-request overrides for the statutory limits (Sprint 793a).\n\nThe engine has carried a field for each of these since Sprint 636, and that\nsprint's record states the thresholds are \"caller-overridable via\n`W2ReconciliationConfig`\" — true in the engine and, until now, unreachable\nthrough the API. A practitioner who knew the correct figure for their filing\nyear had no way to supply it.\n\nThey matter because the engine holds **one fixed set** of limits and applies\nit to any ``tax_year`` from 2000 to 2099 without selecting by year; the\nPR #184 review also disputes which year the current set belongs to. Until\nSprint 793 lands a year-keyed table with practitioner-confirmed figures,\nthis is the escape hatch. Every field is optional and omitting it keeps the\nengine default, so the request shape is unchanged for existing callers.\n\nDecimal strings rather than floats, matching every other monetary field on\nthis route.",
         "properties": {
@@ -23057,6 +23264,19 @@
               }
             ],
             "title": "Additional Medicare Threshold"
+          },
+          "hsa_catchup_55": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "HSA age-55 catch-up, IRC §223(b)(3)(B) ($1,000, not indexed).",
+            "title": "Hsa Catchup 55"
           },
           "hsa_family_limit": {
             "anyOf": [
@@ -23117,6 +23337,32 @@
               }
             ],
             "title": "Limit 401K Elective"
+          },
+          "limit_simple_catchup_50": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "SIMPLE IRA age 50+ catch-up, IRC §414(v)(2)(B)(ii).",
+            "title": "Limit Simple Catchup 50"
+          },
+          "limit_simple_catchup_60_63": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "SIMPLE IRA age 60-63 catch-up, IRC §414(v)(2)(E)(ii) (tax years 2025 onward).",
+            "title": "Limit Simple Catchup 60 63"
           },
           "limit_simple_ira": {
             "anyOf": [

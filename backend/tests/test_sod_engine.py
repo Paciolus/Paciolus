@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from sod_engine import (
     DEFAULT_SOD_RULES,
+    HIGH_CONFLICT_TIER_REASON,
     RolePermission,
     SodRule,
     SodSeverity,
@@ -198,10 +199,97 @@ class TestAggregation:
         result = analyze_segregation_of_duties(users, roles)
         assert result.users_evaluated == 2
         assert result.users_with_conflicts == 1
-        # u1 has only JE-01 (one conflict, score 3, but moderate tier — score
-        # threshold for high is 6)
+        # u1 has only JE-01 (one HIGH conflict, score 3). Sprint 833 changed
+        # this from "moderate" (score band) to "high": any HIGH conflict
+        # floors the tier at high (CEO decision on Sprint 827 item D2).
         u1_summary = next(s for s in result.user_summaries if s.user_id == "u1")
-        assert u1_summary.risk_tier == "moderate"
+        assert u1_summary.risk_score == 3
+        assert u1_summary.risk_tier == "high"
+        assert result.high_risk_users == 1
+
+
+# =============================================================================
+# HIGH-conflict tier floor (Sprint 833)
+# =============================================================================
+
+
+class TestHighConflictTierFloor:
+    def _single_high(self):
+        users = [UserRoleAssignment(user_id="u1", user_name="Poster", role_codes=["gl"])]
+        roles = [RolePermission(role_code="gl", permissions=["je_create", "je_post"])]
+        return analyze_segregation_of_duties(users, roles)
+
+    def test_single_high_conflict_tiers_high_with_reason(self):
+        result = self._single_high()
+        summary = result.user_summaries[0]
+        assert summary.high_severity_count == 1
+        assert summary.risk_score == 3  # score unchanged
+        assert summary.risk_tier == "high"
+        assert summary.risk_tier_reason == HIGH_CONFLICT_TIER_REASON
+        assert result.high_risk_users == 1
+        d = summary.to_dict()
+        assert d["risk_tier"] == "high"
+        assert d["risk_tier_reason"] == HIGH_CONFLICT_TIER_REASON
+
+    def test_score_band_high_has_no_floor_reason(self):
+        users = [UserRoleAssignment(user_id="u1", user_name="X", role_codes=["x"])]
+        roles = [
+            RolePermission(
+                role_code="x",
+                permissions=["je_create", "je_post", "vendor_create", "ap_invoice_create"],
+            )
+        ]
+        summary = analyze_segregation_of_duties(users, roles).user_summaries[0]
+        assert summary.risk_score >= 6
+        assert summary.risk_tier == "high"
+        assert summary.risk_tier_reason is None
+
+    def test_medium_only_user_is_not_floored(self):
+        custom = SodRule(
+            code="CUSTOM-M",
+            title="Custom medium",
+            severity=SodSeverity.MEDIUM,
+            permissions_required=frozenset({"foo"}),
+            permissions_alternate=frozenset({"bar"}),
+        )
+        users = [UserRoleAssignment(user_id="u1", user_name="M", role_codes=["x"])]
+        roles = [RolePermission(role_code="x", permissions=["foo", "bar"])]
+        summary = analyze_segregation_of_duties(users, roles, extra_rules=[custom]).user_summaries[0]
+        assert summary.high_severity_count == 0
+        assert summary.risk_tier == "low"  # score 2
+        assert summary.risk_tier_reason is None
+
+    def test_floored_high_user_ranks_above_higher_scoring_moderate(self):
+        # Two MEDIUM conflicts = score 4 ("moderate"); one HIGH = score 3
+        # but floored "high". The high-tier user must rank first.
+        meds = [
+            SodRule(
+                code=f"CUSTOM-M{i}",
+                title="Custom medium",
+                severity=SodSeverity.MEDIUM,
+                permissions_required=frozenset({f"foo{i}"}),
+                permissions_alternate=frozenset({f"bar{i}"}),
+            )
+            for i in (1, 2)
+        ]
+        users = [
+            UserRoleAssignment(user_id="mod", user_name="Moderate", role_codes=["m"]),
+            UserRoleAssignment(user_id="hi", user_name="High", role_codes=["gl"]),
+        ]
+        roles = [
+            RolePermission(role_code="m", permissions=["foo1", "bar1", "foo2", "bar2"]),
+            RolePermission(role_code="gl", permissions=["je_create", "je_post"]),
+        ]
+        result = analyze_segregation_of_duties(users, roles, extra_rules=meds)
+        by_id = {s.user_id: s for s in result.user_summaries}
+        assert by_id["mod"].risk_score == 4 and by_id["mod"].risk_tier == "moderate"
+        assert by_id["hi"].risk_score == 3 and by_id["hi"].risk_tier == "high"
+        assert [s.user_id for s in result.user_summaries] == ["hi", "mod"]
+
+    def test_csv_includes_tier_basis(self):
+        csv_text = sod_result_to_csv(self._single_high())
+        assert "Tier Basis" in csv_text
+        assert HIGH_CONFLICT_TIER_REASON in csv_text
 
 
 # =============================================================================

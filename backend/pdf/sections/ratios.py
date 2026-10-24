@@ -13,6 +13,7 @@ from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from ratio_engine import equity_basis_disclosure, unclosed_earnings_adjustment
 
 
 def render_ratios(story: list, styles: dict, statements: Any) -> bool:
@@ -91,11 +92,34 @@ def render_ratios(story: list, styles: dict, statements: Any) -> bool:
         ratio_lines.append(("EBITDA Margin", f"{ebitda_margin:.1%}", None))
 
     # 6. Debt-to-Equity Ratio
-    if statements.total_equity and statements.total_equity != 0:
-        de_ratio = statements.total_liabilities / statements.total_equity
+    # Sprint 832: on effective equity — the equity accounts (lead sheet K) plus
+    # current-period net income not yet closed to retained earnings — using
+    # the ratio engine's own rule, so this PDF and the diagnostic ratios agree.
+    # Closing entries move net income into retained earnings; a balance sheet
+    # presents equity including the period's result (ASC 505 / IAS 1).
+    _unclosed = float(
+        unclosed_earnings_adjustment(
+            statements.total_assets or 0.0,
+            statements.total_liabilities or 0.0,
+            statements.total_equity or 0.0,
+            statements.net_income or 0.0,
+        )
+    )
+    _equity = (statements.total_equity or 0.0) + _unclosed
+    if _equity != 0:
+        de_ratio = statements.total_liabilities / _equity
         prior_de_str = None
-        if _has_prior and statements.prior_total_equity and statements.prior_total_equity != 0:
-            prior_de_str = f"{statements.prior_total_liabilities / statements.prior_total_equity:.2f}x"
+        if _has_prior:
+            _prior_equity = (statements.prior_total_equity or 0.0) + float(
+                unclosed_earnings_adjustment(
+                    statements.prior_total_assets or 0.0,
+                    statements.prior_total_liabilities or 0.0,
+                    statements.prior_total_equity or 0.0,
+                    statements.prior_net_income or 0.0,
+                )
+            )
+            if _prior_equity != 0:
+                prior_de_str = f"{statements.prior_total_liabilities / _prior_equity:.2f}x"
         ratio_lines.append(("Debt-to-Equity Ratio", f"{de_ratio:.2f}x", prior_de_str))
 
     # 7. Interest Coverage
@@ -141,6 +165,11 @@ def render_ratios(story: list, styles: dict, statements: Any) -> bool:
         for label, value, _ in ratio_lines:
             line = create_leader_dots(f"      {label}", value)
             story.append(Paragraph(line, styles["LeaderLine"]))
+
+    _equity_note = equity_basis_disclosure(_unclosed)
+    if _equity_note:
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(f"<i>{_equity_note}</i>", styles["DocumentRef"]))
 
     story.append(Spacer(1, 4))
     return True

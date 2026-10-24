@@ -521,6 +521,15 @@ class PaciolusWorkpaperGenerator:
 
             row += 2  # Spacer
 
+        # Sprint 832: equity-basis disclosure beside the ratios that use equity.
+        equity_note = analytics.get("equity_basis_note")
+        if equity_note:
+            ws.cell(row=row, column=1, value=equity_note)
+            ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
+            ws.cell(row=row, column=1).alignment = Alignment(wrap_text=True)
+            ws.merge_cells(f"A{row}:D{row}")
+            row += 1
+
         # Category totals section
         row += 2
         ws.cell(row=row, column=1, value="Category Totals (Used in Calculations)")

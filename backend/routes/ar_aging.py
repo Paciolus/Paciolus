@@ -131,7 +131,9 @@ async def audit_ar_aging(
                 result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
             )
             flagged = extract_ar_aging_accounts(result_dict)
-            maybe_record_tool_run(db, engagement_id, current_user.id, "ar_aging", True, score, flagged)
+            maybe_record_tool_run(
+                db, engagement_id, current_user.id, "ar_aging", True, score, flagged, consumes_upload=True
+            )
 
             return result_dict  # type: ignore[no-any-return]
 

@@ -13,6 +13,8 @@ interface SamplingResultCardProps {
 export function SamplingResultCard({ result, onExportMemo, exporting }: SamplingResultCardProps) {
   const conclusionColor = SAMPLING_CONCLUSION_COLORS[result.conclusion]
   const conclusionBg = SAMPLING_CONCLUSION_BG[result.conclusion]
+  const underUel = result.understatement_upper_error_limit
+  const hasUnderBound = typeof underUel === 'number'
 
   return (
     <motion.div
@@ -50,11 +52,20 @@ export function SamplingResultCard({ result, onExportMemo, exporting }: Sampling
           {result.incremental_allowance > 0 && (
             <MetricCard label="Incremental Allowance" value={`$${result.incremental_allowance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
           )}
+          {/* Sprint 825 (S6): overstatement and understatement bounds are
+              evaluated separately and never netted; each is compared with TM. */}
           <MetricCard
-            label="Upper Error Limit"
+            label={hasUnderBound ? 'Upper Error Limit (Over)' : 'Upper Error Limit'}
             value={`$${result.upper_error_limit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-            highlight={result.conclusion === 'fail'}
+            highlight={hasUnderBound ? result.upper_error_limit > result.tolerable_misstatement : result.conclusion === 'fail'}
           />
+          {hasUnderBound && (
+            <MetricCard
+              label="Upper Error Limit (Under)"
+              value={`$${underUel.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+              highlight={underUel > result.tolerable_misstatement}
+            />
+          )}
           <MetricCard label="Tolerable Misstatement" value={`$${result.tolerable_misstatement.toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
           <MetricCard label="Confidence" value={`${(result.confidence_level * 100).toFixed(0)}%`} />
         </div>

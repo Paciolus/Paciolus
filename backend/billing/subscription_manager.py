@@ -106,6 +106,23 @@ def _extract_billing_interval(items: list[dict]) -> BillingInterval:
     return BillingInterval.MONTHLY
 
 
+def _period_advanced(old_start: datetime | None, new_start: datetime | None) -> bool:
+    """True when ``new_start`` begins a later billing period than ``old_start``.
+
+    SQLite (tests) hands back naive datetimes for a column Postgres returns
+    aware, so both sides are normalised to naive UTC before comparing.
+    """
+    if new_start is None:
+        return False
+    if old_start is None:
+        return True
+
+    def _naive_utc(dt: datetime) -> datetime:
+        return dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+
+    return _naive_utc(new_start) > _naive_utc(old_start)
+
+
 def sync_subscription_from_stripe(
     db: Session,
     user_id: int,
@@ -163,6 +180,17 @@ def sync_subscription_from_stripe(
         )
         db.add(sub)
     else:
+        # Sprint 790: a new billing period starts a new upload allowance.
+        # reset_upload_quotas (hourly) only zeroes a row whose period_end is
+        # already past when it runs, but Stripe's renewal webhook advances the
+        # period within seconds — so for a renewal that lands between two runs
+        # the job never sees an expired row and the counter carried over into
+        # the next month. Harmless while the counter never moved; a lockout
+        # once it meters every run. Reset here when the period start moves
+        # forward (or is first learned); an out-of-order older event does not.
+        # This write may move updated_at: it *is* the processing of a Stripe
+        # event, which is what the webhook ordering check is meant to see.
+        period_advanced = _period_advanced(sub.current_period_start, period_start)
         sub.tier = tier
         sub.status = status
         sub.billing_interval = interval
@@ -173,6 +201,13 @@ def sync_subscription_from_stripe(
         sub.cancel_at_period_end = stripe_subscription.get("cancel_at_period_end", False)
         sub.seat_count = seat_quantity
         sub.additional_seats = additional_seats
+        if period_advanced:
+            from shared.entitlement_checks import upload_window_start
+
+            sub.uploads_used_current_period = 0
+            # Open the new period's monthly window explicitly (computed from the
+            # period fields just assigned) so the zero is attributed to it.
+            sub.uploads_window_start = upload_window_start(sub)
 
     # Also update the User.tier column — only grant plan tier if status is entitled (AUDIT-08-F1)
     user = db.query(User).filter(User.id == user_id).first()

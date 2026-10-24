@@ -120,6 +120,14 @@ export default function StatisticalSamplingPage() {
       conclusion_detail: evalResult.conclusion_detail,
       errors: evalResult.errors,
       taintings_ranked: evalResult.taintings_ranked,
+      // Sprint 825 (S6): the separately-evaluated understatement bound
+      understatement_projected_misstatement: evalResult.understatement_projected_misstatement,
+      understatement_basic_precision: evalResult.understatement_basic_precision,
+      understatement_incremental_allowance: evalResult.understatement_incremental_allowance,
+      understatement_upper_error_limit: evalResult.understatement_upper_error_limit,
+      understatement_errors_found: evalResult.understatement_errors_found,
+      total_overstatement: evalResult.total_overstatement,
+      total_understatement: evalResult.total_understatement,
       design_result: designResult ? {
         method: designResult.method,
         population_size: designResult.population_size,

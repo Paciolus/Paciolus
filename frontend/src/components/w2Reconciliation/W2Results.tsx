@@ -44,9 +44,39 @@ interface Props {
 
 export function W2Results({ result }: Props) {
   const { employee_discrepancies, form_941_mismatches, w3_totals, tax_year } = result
+  const checksNotRun = result.checks_not_run ?? []
 
   return (
     <div className="space-y-6">
+      {checksNotRun.length > 0 && (
+        <section
+          role="status"
+          aria-label="Checks not run"
+          className="theme-card p-6 border-l-4 border-clay-400"
+        >
+          <h3 className="font-serif text-lg text-content-primary mb-1">
+            Checks Not Run{' '}
+            <span className="font-sans text-sm text-content-tertiary">({checksNotRun.length})</span>
+          </h3>
+          <p className="font-sans text-xs text-content-tertiary mb-4">
+            These catch-up checks could not be completed for this run. Amounts above the base
+            limit are still listed below, but are not asserted as excess contributions.
+          </p>
+          <ul className="space-y-3">
+            {checksNotRun.map((n) => (
+              <li key={`${n.check}-${n.reason}`} className="border border-theme rounded-lg p-4">
+                <p className="text-sm font-sans text-content-secondary">{n.message}</p>
+                {n.employee_ids.length > 0 && (
+                  <p className="text-xs font-sans text-content-tertiary mt-2">
+                    Employees: <span className="font-mono">{n.employee_ids.join(', ')}</span>
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Counter label="Tax year" value={tax_year} />
         <Counter label="Employees" value={w3_totals.employee_count} />

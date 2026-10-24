@@ -131,6 +131,7 @@ async def run_single_file_testing(
                 flagged,
                 filename,
                 result_dict.get("record_count"),
+                consumes_upload=True,
             )
 
             return dict(result_dict)

@@ -288,8 +288,15 @@ class ReconciliationMatchResponse(BaseModel):
 
     bank_txn: Optional[TransactionResponse] = None
     ledger_txn: Optional[TransactionResponse] = None
-    match_type: Literal["matched", "bank_only", "ledger_only"]
+    # Sprint 833: "split" (Sprint 639, one bank txn to 2-4 ledger txns) was
+    # missing here, so any result containing a split failed response
+    # validation and the endpoint returned 500.
+    match_type: Literal["matched", "bank_only", "ledger_only", "split"]
     match_confidence: float
+    # Sprint 639: every ledger txn in a split (ledger_txn is the first).
+    ledger_txns: Optional[list[TransactionResponse]] = None
+    # Sprint 833: set on a bank_only item whose split search was capped.
+    split_search_limited: Optional[bool] = None
 
 
 class ReconciliationSummaryResponse(BaseModel):
@@ -321,6 +328,16 @@ class BankColumnDetectionResponse(BaseModel):
     detection_notes: list[str]
 
 
+class SplitSearchDisclosureResponse(BaseModel):
+    """Sprint 833: bounds the split-match search ran under (Paciolus convention)."""
+
+    date_window_days: int
+    max_candidates: int
+    max_set_size: int
+    limited_count: int
+    note: str
+
+
 class BankRecResponse(BaseModel):
     """Complete bank reconciliation response."""
 
@@ -335,6 +352,7 @@ class BankRecResponse(BaseModel):
     # date tolerance) plus a ``materiality_source`` tag of "caller" or
     # "default".  Decimal values are stringified to preserve precision.
     active_thresholds: Optional[dict] = None
+    split_search: Optional[SplitSearchDisclosureResponse] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1139,6 +1157,11 @@ class SamplingEvaluationResponse(BaseModel):
     sample_value: float
     errors_found: int
     total_misstatement: float
+    # Sprint 825 (S6): these four, and taintings_ranked, are the OVERSTATEMENT
+    # evaluation. Overstatements and understatements are bounded separately and
+    # never netted (AICPA Audit Sampling Guide); the understatement side is in
+    # the understatement_* fields below. `conclusion` is "fail" if either
+    # side's upper limit exceeds tolerable misstatement.
     projected_misstatement: float
     basic_precision: float
     incremental_allowance: float
@@ -1147,3 +1170,12 @@ class SamplingEvaluationResponse(BaseModel):
     conclusion_detail: str
     errors: list[SamplingErrorResponse]
     taintings_ranked: list[float]
+    overstatement_errors_found: int = 0
+    understatement_errors_found: int = 0
+    total_overstatement: float = 0.0
+    total_understatement: float = 0.0
+    understatement_projected_misstatement: float = 0.0
+    understatement_basic_precision: float = 0.0
+    understatement_incremental_allowance: float = 0.0
+    understatement_upper_error_limit: float = 0.0
+    understatement_taintings_ranked: list[float] = []

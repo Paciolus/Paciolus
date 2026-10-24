@@ -21,7 +21,7 @@ from classification_rules import (
     NormalBalance,
     is_contra_account,
 )
-from ratio_engine import CategoryTotals
+from ratio_engine import CategoryTotals, unclosed_current_period_earnings
 from security_utils import log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE
 
@@ -263,7 +263,11 @@ def validate_balance_sheet_equation(category_totals: CategoryTotals) -> dict[str
     # are part of equity. Without them every unclosed TB failed the equation by
     # exactly its net income — reported as a "significant imbalance" on a TB
     # whose debits equal its credits. On a closed TB both totals are zero.
-    current_period_earnings = category_totals.total_revenue - category_totals.total_expenses
+    # Sprint 832: derived by the same function the ratio engine uses for
+    # effective equity, so the equation check and the equity-based ratios
+    # cannot disagree (including the Paciolus convention that earnings already
+    # inside equity are not added a second time).
+    current_period_earnings = unclosed_current_period_earnings(category_totals)
 
     liabilities_plus_equity = total_liabilities + total_equity + current_period_earnings
     difference = total_assets - liabilities_plus_equity

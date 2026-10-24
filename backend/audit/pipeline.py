@@ -25,7 +25,7 @@ from audit.rules.merger import _merge_anomalies
 from audit.streaming_auditor import StreamingAuditor
 from classification_validator import run_classification_validation
 from column_detector import ColumnMapping
-from ratio_engine import CategoryTotals, calculate_analytics, summarize_unclassified
+from ratio_engine import CategoryTotals, calculate_analytics, effective_equity, summarize_unclassified
 from security_utils import (
     DEFAULT_CHUNK_SIZE,
     clear_memory,
@@ -422,7 +422,10 @@ def audit_trial_balance_streaming(
         gc_report = compute_going_concern_profile(
             total_assets=gc_totals.total_assets,
             total_liabilities=gc_totals.total_liabilities,
-            total_equity=gc_totals.total_equity,
+            # Sprint 832: the leverage and net-liability indicators use the same
+            # effective equity (equity accounts + unclosed current-period
+            # earnings) as the ratio engine's debt-to-equity.
+            total_equity=effective_equity(gc_totals),
             current_assets=gc_totals.current_assets,
             current_liabilities=gc_totals.current_liabilities,
             total_revenue=gc_totals.total_revenue,

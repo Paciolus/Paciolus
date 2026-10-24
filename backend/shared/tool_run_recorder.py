@@ -51,8 +51,21 @@ def maybe_record_tool_run(
     filename: Optional[str] = None,
     record_count: Optional[int] = None,
     summary: Optional[dict] = None,
+    *,
+    consumes_upload: bool = False,
 ) -> None:
     """Write a ToolActivity row, and (if engagement_id resolves) a ToolRun row.
+
+    **Upload metering (Sprint 790).** When ``success`` is true and the caller
+    passes ``consumes_upload=True``, the user's monthly upload counter advances
+    by one (``shared.entitlement_checks.increment_upload_count``). The unit is
+    one successful analysis run, however many files it took; a failed run
+    (``success=False``) never consumes allowance. Only routes that gate on
+    ``check_upload_limit`` pass the flag, so an ungated side-analysis (the TB
+    diagnostics behind ``file_tool_scaffold``, multi-period comparisons of
+    already-uploaded balances, sampling evaluation) does not draw down a quota
+    it was never checked against. ``tests/test_sprint_790_upload_metering.py``
+    holds both directions of that pairing.
 
     Resolution happens **before** the activity row is written (Sprint 787b). The
     previous order wrote ``ToolActivity`` carrying the caller-supplied
@@ -92,6 +105,9 @@ def maybe_record_tool_run(
         summary=summary,
     )
 
+    if success and consumes_upload:
+        _consume_upload(db, user_id, tool_name)
+
     if engagement is None or manager is None:
         return
 
@@ -104,6 +120,22 @@ def maybe_record_tool_run(
         composite_score=composite_score if success else None,
         flagged_accounts=flagged_accounts if success else None,
     )
+
+
+def _consume_upload(db: Session, user_id: int, tool_name: str) -> None:
+    """Advance the upload counter for one successful run.
+
+    A failure here must not turn a finished analysis into a 500: the user has
+    their result, and an under-count can only ever let a run through, never
+    lock anyone out. So it is logged and rolled back, not raised.
+    """
+    from shared.entitlement_checks import increment_upload_count
+
+    try:
+        increment_upload_count(db, user_id)
+    except Exception:
+        logger.exception("Failed to advance upload counter for user %d, tool %s", user_id, tool_name)
+        db.rollback()
 
 
 def _log_tool_activity(

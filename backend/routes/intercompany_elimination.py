@@ -119,7 +119,9 @@ def run_consolidation(
     # again — the new entry invisible until a manual reload. The write is one
     # INSERT plus a commit after an analysis that already ran in-process, so the
     # latency it buys back is not worth the race.
-    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "intercompany_elimination", True, None, None)
+    maybe_record_tool_run(
+        db, payload.engagement_id, current_user.id, "intercompany_elimination", True, None, None, consumes_upload=True
+    )
     return result.to_dict()
 
 

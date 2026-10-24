@@ -218,6 +218,8 @@ class BankRecMemoInput(WorkpaperMetadata):
     summary: dict
     bank_column_detection: Optional[dict] = None
     ledger_column_detection: Optional[dict] = None
+    # Sprint 833: split-match search bounds, disclosed in the memo methodology.
+    split_search: Optional[dict] = None
     filename: str = "bank_reconciliation"
 
 
@@ -301,6 +303,16 @@ class SamplingEvaluationMemoInput(WorkpaperMetadata):
     conclusion_detail: str = ""
     errors: list = []
     taintings_ranked: list = []
+    # Sprint 825 (S6): the understatement bound, evaluated separately from the
+    # overstatement bound above. None = an older client that did not send it;
+    # the memo then omits the understatement lines rather than printing $0.
+    understatement_projected_misstatement: Optional[float] = None
+    understatement_basic_precision: Optional[float] = None
+    understatement_incremental_allowance: Optional[float] = None
+    understatement_upper_error_limit: Optional[float] = None
+    understatement_errors_found: Optional[int] = None
+    total_overstatement: Optional[float] = None
+    total_understatement: Optional[float] = None
     # Optional design context for combined memo
     design_result: Optional[dict] = None
     filename: str = "sampling_evaluation"

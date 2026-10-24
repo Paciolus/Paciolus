@@ -219,15 +219,18 @@ def test_resets_many_subscriptions_in_one_pass(db_session, make_sub):
     assert untouched.uploads_used_current_period == 11
 
 
-def test_reset_does_not_null_the_updated_at_column(db_session, make_sub):
-    """An ORM `update()` includes columns carrying `onupdate`, unlike the raw SQL it
-    replaced — so check the timestamp is refreshed rather than wiped.
+def test_reset_leaves_the_updated_at_column_alone(db_session, make_sub):
+    """The reset must neither wipe ``updated_at`` nor move it.
 
-    `Subscription.updated_at` has a callable `onupdate`, which SQLAlchemy evaluates at
-    execution time. Compiling the statement shows `updated_at=None` in the parameter dict,
-    which looks alarming and is only an artefact of compile-time inspection. Asserting the
-    runtime value is the way to tell the difference, and a NULL here would be silent data
-    damage on every hourly run.
+    Originally this asserted the timestamp was *refreshed* rather than nulled: an
+    ORM ``update()`` includes columns carrying ``onupdate``, unlike the raw SQL it
+    replaced, and a NULL would be silent data damage on every hourly run.
+
+    Sprint 790 (PR #227 review): refreshing it is also wrong. The webhook handler
+    acknowledges a Stripe subscription event created at-or-before ``updated_at``
+    *without processing it*, so a maintenance reset bumping the timestamp could
+    silently drop a renewal or cancellation still in flight. The UPDATE now
+    assigns the column to itself, which keeps ``onupdate`` from firing.
     """
     before = datetime(2020, 1, 1, tzinfo=UTC).replace(tzinfo=None)
     sub = make_sub(period_end=datetime.now(UTC) - timedelta(days=1), uploads_used=5)
@@ -238,8 +241,8 @@ def test_reset_does_not_null_the_updated_at_column(db_session, make_sub):
     db_session.refresh(sub)
 
     assert sub.uploads_used_current_period == 0
-    assert sub.updated_at is not None, "onupdate wrote NULL — the reset would corrupt the row"
-    assert sub.updated_at > before
+    assert sub.updated_at is not None, "onupdate wrote NULL - the reset would corrupt the row"
+    assert sub.updated_at == before, "the reset moved updated_at - webhook ordering would skip real events"
 
 
 def test_reset_matches_either_enum_label_convention(db_session, make_sub):
