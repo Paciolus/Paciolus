@@ -581,6 +581,10 @@ def compute_aging_schedule(sl_entries: list["ARSubledgerEntry"]) -> list[dict]:
     total_amount = Decimal("0")
     for entry in sl_entries:
         days = entry.aging_days if entry.aging_days is not None else 0
+        # Sprint 829: an invoice not yet due has negative days past due. It
+        # belongs in Current — it fell into no bucket, so the schedule summed
+        # to less than the ledger and disagreed with ar_summary.
+        days = max(days, 0)
         total_amount += entry.amount
         for b in buckets:
             if b["low"] <= days <= b["high"]:
@@ -1265,12 +1269,18 @@ def test_negative_aging(
     sl_entries: list[ARSubledgerEntry],
     config: ARAgingConfig,
 ) -> ARTestResult:
-    """T1-AR03: Flag sub-ledger entries with negative aging days (date logic errors)."""
+    """T1-AR03: Flag sub-ledger entries with negative aging days (date logic errors).
+
+    Sprint 829: negative days past due on an invoice with a due date is an
+    invoice not yet due — normal, and every open sub-ledger has them. Only a
+    negative age with no due date behind it (supplied directly, or measured
+    from an invoice dated after the as-of date) is a date error.
+    """
     flagged: list[FlaggedAR] = []
 
     if config.negative_aging_enabled:
         for e in sl_entries:
-            if e.aging_days is not None and e.aging_days < 0:
+            if e.aging_days is not None and e.aging_days < 0 and not e.due_date:
                 flagged.append(
                     FlaggedAR(
                         entry=_sl_to_entry(e),
@@ -1543,7 +1553,19 @@ def test_customer_concentration(
 ) -> ARTestResult:
     """T2-AR08: Flag when a single customer exceeds 20% of total AR."""
     flagged: list[FlaggedAR] = []
-    total_ar = sum(e.amount for e in sl_entries)
+
+    # Group by customer
+    customer_totals: dict[str, Decimal] = {}
+    customer_entries: dict[str, list[ARSubledgerEntry]] = {}
+    for e in sl_entries:
+        key = e.customer_name or e.customer_id or "Unknown"
+        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
+        customer_entries.setdefault(key, []).append(e)
+
+    # Sprint 829: the base is what customers owe — customers in credit are not
+    # receivables. Netting a $4,000 credit balance into the total made four
+    # $2,500 customers look like 41.7% each (HIGH) instead of 25%.
+    total_ar = sum((v for v in customer_totals.values() if v > 0), Decimal("0"))
 
     if total_ar <= 0:
         return ARTestResult(
@@ -1556,14 +1578,6 @@ def test_customer_concentration(
             severity=Severity.LOW,
             description="Concentration of AR balance by customer",
         )
-
-    # Group by customer
-    customer_totals: dict[str, Decimal] = {}
-    customer_entries: dict[str, list[ARSubledgerEntry]] = {}
-    for e in sl_entries:
-        key = e.customer_name or e.customer_id or "Unknown"
-        customer_totals[key] = customer_totals.get(key, Decimal("0")) + e.amount
-        customer_entries.setdefault(key, []).append(e)
 
     for customer, amount in customer_totals.items():
         pct = amount / total_ar

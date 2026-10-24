@@ -2382,6 +2382,35 @@ CURRENT_ASSET_KEYWORDS = [
     "marketable securities",
 ]
 
+# Sprint 829: names that mark an account non-current. The current-keyword
+# fallback matched substrings, so "Non-current Receivable" ("current",
+# "receivable") and "Long-term Notes Payable" ("payable") were counted as
+# current — inflating or deflating the current ratio. Deferred taxes are
+# non-current under ASC 740 (ASU 2015-17) / IAS 1.56.
+_NON_CURRENT_MARKERS = (
+    "non-current",
+    "noncurrent",
+    "non current",
+    "long-term",
+    "long term",
+    "deferred tax",
+    "mortgage",
+)
+# Current liabilities whose names carry no "payable"/"accrued": they were left
+# out of current liabilities entirely. A revolving line of credit is current.
+_CURRENT_LIABILITY_EXTRA = ("deferred revenue", "unearned", "customer deposit", "line of credit")
+# The allowance is contra-AR: DSO and the current ratio use net receivables.
+_AR_ALLOWANCE_MARKERS = ("doubtful", "bad debt", "credit loss", "receivable")
+# ...unless the name is the current slice of a long-term balance.
+_CURRENT_PORTION_MARKERS = ("current portion", "current maturit", "due within one year")
+
+
+def _is_non_current_name(account_lower: str) -> bool:
+    if any(m in account_lower for m in _CURRENT_PORTION_MARKERS):
+        return False
+    return any(m in account_lower for m in _NON_CURRENT_MARKERS)
+
+
 # Sprint 293: Keywords for identifying accounts payable (trade payables)
 # Excludes notes payable, interest payable, taxes payable, etc.
 ACCOUNTS_PAYABLE_KEYWORDS = [
@@ -2550,6 +2579,11 @@ def extract_category_totals(
                     totals.inventory += amount
                 if "receivable" in account_lower:
                     totals.accounts_receivable += amount
+            elif _is_non_current_name(account_lower):
+                pass  # Sprint 829: named non-current — the keywords below would misfire
+            elif "allowance" in account_lower and any(m in account_lower for m in _AR_ALLOWANCE_MARKERS):
+                totals.current_assets += amount  # Sprint 829: net AR (amount is negative)
+                totals.accounts_receivable += amount
             elif any(kw in account_lower for kw in CURRENT_ASSET_KEYWORDS):
                 # Fallback: keyword matching
                 totals.current_assets += amount
@@ -2570,7 +2604,11 @@ def extract_category_totals(
                 totals.current_liabilities += amount
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
                     totals.accounts_payable += amount
-            elif any(kw in account_lower for kw in ["payable", "current", "short-term", "accrued"]):
+            elif _is_non_current_name(account_lower):
+                pass  # Sprint 829: named non-current
+            elif any(
+                kw in account_lower for kw in ("payable", "current", "short-term", "accrued", *_CURRENT_LIABILITY_EXTRA)
+            ):
                 totals.current_liabilities += amount
                 if any(kw in account_lower for kw in ACCOUNTS_PAYABLE_KEYWORDS):
                     totals.accounts_payable += amount

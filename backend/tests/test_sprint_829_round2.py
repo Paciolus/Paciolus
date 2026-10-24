@@ -246,6 +246,10 @@ def test_an_unbalanced_ledger_is_never_rated_low():
         ("January 5, 2025", "2025-01-05"),
         ("20250105", "2025-01-05"),
         ("2025-01-05 00:00:00.000", "2025-01-05"),
+        ("01/08/25", "2025-01-08"),
+        ("08.01.2025", "2025-01-08"),
+        ("2025-01-08T23:15:00Z", "2025-01-08"),
+        ("6/2/2025 11:15 PM", "2025-06-02"),
     ],
 )
 def test_exported_ledger_date_forms_are_parsed(value, expected):
@@ -473,3 +477,226 @@ def test_a_file_supplied_account_type_outranks_a_contradicting_keyword():
         [{"account": "Revenue Share Payable", "debit": 0, "credit": 900, "type": "liability", "type_supplied": True}]
     )
     assert {s.lead_sheet for s in grouping.summaries if s.account_count} == {LeadSheet.G}
+
+
+@pytest.mark.parametrize(
+    "name, category, is_current",
+    [
+        ("Non-current Receivable", "asset", False),
+        ("Long-term Notes Receivable", "asset", False),
+        ("Deferred Tax Asset", "asset", False),
+        ("Accounts Receivable", "asset", True),
+        ("Long-term Notes Payable", "liability", False),
+        ("Non-current Lease Liability", "liability", False),
+        ("Current Portion of Long-term Debt", "liability", True),
+        ("Accounts Payable", "liability", True),
+        ("Mortgage Payable", "liability", False),
+        ("Deferred Revenue", "liability", True),
+        ("Customer Deposits", "liability", True),
+        ("Line of Credit", "liability", True),
+    ],
+)
+def test_current_classification_respects_non_current_names(name, category, is_current):
+    """T3: substring keywords put long-term balances in the current ratio."""
+    from ratio_engine import extract_category_totals
+
+    totals = extract_category_totals(
+        {name: {"debit": 100, "credit": 0} if category == "asset" else {"debit": 0, "credit": 100}},
+        {name: category},
+    )
+    current = totals.current_assets if category == "asset" else totals.current_liabilities
+    assert (current == 100) is is_current
+
+
+def test_allowance_nets_into_receivables_for_dso_and_the_current_ratio():
+    from ratio_engine import extract_category_totals
+
+    totals = extract_category_totals(
+        {
+            "Accounts Receivable": {"debit": 10000, "credit": 0},
+            "Allowance for Doubtful Accounts": {"debit": 0, "credit": 500},
+        },
+        {"Accounts Receivable": "asset", "Allowance for Doubtful Accounts": "asset"},
+    )
+    assert totals.accounts_receivable == 9500
+    assert totals.current_assets == 9500
+
+
+def test_je_after_hours_reads_iso_z_and_12_hour_timestamps():
+    from services.audit.je_testing.analysis import _extract_hour
+
+    assert _extract_hour("2025-06-02T23:15:00Z") == 23
+    assert _extract_hour("6/2/2025 11:15 PM") == 23
+    assert _extract_hour("2025-06-02 23:15:00.000") == 23
+
+
+def test_reconciliation_summary_counts_split_matches():
+    from bank_reconciliation import (
+        BankRecConfig,
+        BankTransaction,
+        LedgerTransaction,
+        calculate_summary,
+        match_transactions,
+    )
+
+    bank = [BankTransaction(date="2025-12-10", description="Deposit", amount=3000.0)]
+    ledger = [
+        LedgerTransaction(date="2025-12-10", description="A", amount=1000.0),
+        LedgerTransaction(date="2025-12-10", description="B", amount=2000.0),
+    ]
+    summary = calculate_summary(match_transactions(bank, ledger, BankRecConfig()))
+    assert summary.matched_count == 1
+    assert (summary.total_bank, summary.total_ledger, summary.reconciling_difference) == (3000, 3000, 0)
+
+
+# ── Revenue P2s ────────────────────────────────────────────────────────
+
+
+def test_revenue_trend_nets_returns_and_concentration_ignores_contra():
+    from services.audit.revenue_testing.analysis import (
+        RevenueEntry,
+        RevenueTestingConfig,
+        test_concentration_risk,
+        test_revenue_trend_variance,
+    )
+
+    trend = [
+        RevenueEntry(amount=-1_200_000, row_number=1, account_name="Sales"),
+        RevenueEntry(amount=150_000, row_number=2, account_name="Customer returns"),
+        RevenueEntry(amount=-1, row_number=3, account_name="Sales"),
+    ]
+    result = test_revenue_trend_variance(trend, RevenueTestingConfig(prior_period_total=1_000_000))
+    assert result.entries_flagged == 0  # net 1,050,001 vs 1,000,000 is +5%
+
+    mix = [
+        RevenueEntry(amount=-600_000, row_number=1, account_name="Product"),
+        RevenueEntry(amount=-400_000, row_number=2, account_name="Service"),
+        RevenueEntry(amount=200_000, row_number=3, account_name="Sales Returns"),
+    ]
+    flagged = test_concentration_risk(mix, RevenueTestingConfig())
+    assert flagged.entries_flagged == 1  # was 600/1,200 = 50.0%, under the threshold
+    assert "'product' represents 60.0%" in flagged.flagged_entries[0].issue
+
+
+# ── AR P2s ─────────────────────────────────────────────────────────────
+
+
+def test_not_yet_due_invoices_are_current_not_errors():
+    from services.audit.ar_aging.analysis import (
+        ARAgingConfig,
+        ARSubledgerEntry,
+        compute_aging_schedule,
+        test_negative_aging,
+    )
+
+    entries = [
+        ARSubledgerEntry(customer_name="A", amount=600, aging_days=-10, due_date="2026-01-10", row_number=1),
+        ARSubledgerEntry(customer_name="B", amount=400, aging_days=45, due_date="2025-11-16", row_number=2),
+        ARSubledgerEntry(customer_name="C", amount=100, aging_days=-5, row_number=3),  # no due date: an error
+    ]
+    assert [f.entry.row_number for f in test_negative_aging(entries, ARAgingConfig()).flagged_entries] == [3]
+    schedule = compute_aging_schedule(entries)
+    assert sum(b["amount"] for b in schedule) == 1100
+    assert schedule[0]["amount"] == 700
+
+
+def test_customer_concentration_base_excludes_customers_in_credit():
+    from services.audit.ar_aging.analysis import ARAgingConfig, ARSubledgerEntry, test_customer_concentration
+
+    entries = [ARSubledgerEntry(customer_name=c, amount=2500, row_number=i) for i, c in enumerate("ABCD", 1)]
+    entries.append(ARSubledgerEntry(customer_name="E", amount=-4000, row_number=5))
+    result = test_customer_concentration(entries, ARAgingConfig())
+    assert {f.details["customer_pct"] for f in result.flagged_entries} <= {0.25}
+    assert all(f.severity.value != "high" for f in result.flagged_entries)
+
+
+# ── Inventory P2s ──────────────────────────────────────────────────────
+
+
+def test_value_mismatch_catches_zero_extended_and_large_absolute_differences():
+    from services.audit.inventory_testing.analysis import (
+        InventoryEntry,
+        InventoryTestingConfig,
+        test_extended_value_mismatch,
+    )
+
+    entries = [
+        InventoryEntry(item_id="A", quantity=100, unit_cost=50, extended_value=0, row_number=1),
+        InventoryEntry(item_id="B", quantity=100_000, unit_cost=100, extended_value=10_090_000, row_number=2),
+        InventoryEntry(item_id="C", quantity=10, unit_cost=5, extended_value=50, row_number=3),
+    ]
+    flagged = test_extended_value_mismatch(entries, InventoryTestingConfig())
+    assert sorted(f.entry.row_number for f in flagged.flagged_entries) == [1, 2]
+
+    # No extended-value column at all: nothing to test, nothing flagged.
+    bare = [InventoryEntry(item_id="A", quantity=100, unit_cost=50, row_number=1)]
+    assert test_extended_value_mismatch(bare, InventoryTestingConfig()).entries_flagged == 0
+
+
+def test_duplicate_items_ignore_one_sku_across_locations_and_cost_only_groups():
+    from services.audit.inventory_testing.analysis import (
+        InventoryEntry,
+        InventoryTestingConfig,
+        test_duplicate_items,
+    )
+
+    two_warehouses = [
+        InventoryEntry(item_id="SKU-1", description="Widget", unit_cost=25, quantity=5, location="East", row_number=1),
+        InventoryEntry(item_id="SKU-1", description="Widget", unit_cost=25, quantity=7, location="West", row_number=2),
+    ]
+    assert test_duplicate_items(two_warehouses, InventoryTestingConfig()).entries_flagged == 0
+
+    no_description = [InventoryEntry(item_id=f"S{i}", unit_cost=25, quantity=1, row_number=i) for i in range(1, 6)]
+    assert test_duplicate_items(no_description, InventoryTestingConfig()).entries_flagged == 0
+
+    same_id_same_place = [
+        InventoryEntry(item_id="SKU-9", unit_cost=10, quantity=1, location="East", row_number=1),
+        InventoryEntry(item_id="SKU-9", unit_cost=10, quantity=1, location="East", row_number=2),
+    ]
+    assert test_duplicate_items(same_id_same_place, InventoryTestingConfig()).entries_flagged == 2
+
+
+def test_fixed_monthly_payments_are_not_fuzzy_duplicates():
+    from services.audit.ap_testing.analysis import APPayment, APTestingConfig, test_fuzzy_duplicate_payments
+
+    lease = [
+        APPayment(vendor_name="Landlord LLC", amount=18432.17, payment_date=f"2025-{m:02d}-01", row_number=m)
+        for m in range(1, 7)
+    ]
+    assert test_fuzzy_duplicate_payments(lease, APTestingConfig()).entries_flagged == 0
+
+    # A re-keyed duplicate inside the window is still caught.
+    dup = [
+        APPayment(vendor_name="Acme", amount=900, payment_date="2025-02-10", invoice_number="INV-5", row_number=1),
+        APPayment(vendor_name="Acme", amount=900, payment_date="2025-02-14", invoice_number="INV-6", row_number=2),
+    ]
+    assert test_fuzzy_duplicate_payments(dup, APTestingConfig()).entries_flagged == 2
+
+
+def test_round_amount_cap_keeps_the_largest_and_counts_all():
+    from services.audit.je_testing.analysis import JETestingConfig, test_round_amounts
+
+    entries = [_je(i, f"JE-{i}", "2025-03-05", "Expense", debit=10000) for i in range(1, 61)]
+    entries.append(_je(61, "JE-61", "2025-03-05", "Revenue", credit=500000))
+    result = test_round_amounts(entries, JETestingConfig())
+    assert result.entries_flagged == 61
+    assert len(result.flagged_entries) == 50
+    assert result.flagged_entries[0].entry.row_number == 61
+
+
+def test_small_group_outliers_can_be_flagged():
+    """Nine $101–$109 payments and one $1M payment: z inclusive of the outlier
+    can never exceed (n−1)/√n ≈ 2.85, so it was never flagged."""
+    from services.audit.ap_testing.analysis import APPayment, APTestingConfig, test_unusual_payment_amounts
+    from services.audit.je_testing.analysis import JETestingConfig, test_unusual_amounts
+
+    amounts = [101, 102, 103, 104, 105, 106, 107, 108, 109, 1_000_000]
+    payments = [
+        APPayment(vendor_name="V", amount=a, payment_date="2025-01-02", row_number=i) for i, a in enumerate(amounts)
+    ]
+    ap = test_unusual_payment_amounts(payments, APTestingConfig())
+    assert [f.entry.row_number for f in ap.flagged_entries] == [9]
+
+    entries = [_je(i, f"JE-{i}", "2025-03-05", "Supplies", debit=a) for i, a in enumerate(amounts)]
+    je = test_unusual_amounts(entries, JETestingConfig())
+    assert [f.entry.row_number for f in je.flagged_entries] == [9]

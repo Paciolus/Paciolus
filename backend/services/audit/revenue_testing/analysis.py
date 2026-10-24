@@ -967,6 +967,17 @@ def test_round_revenue_amounts(
     )
 
 
+def _revenue_sign(entries: list[RevenueEntry]) -> int:
+    """+1 when the file records revenue as positive numbers, −1 when as credits.
+
+    Sprint 829: a revenue register has one amount column and the exporter
+    picks the sign. The file's dominant sign is its normal side; amounts on the
+    other side are returns, reversals and other contra activity.
+    """
+    nonzero = [e.amount for e in entries if e.amount != 0]
+    return 1 if nonzero and sum(1 for a in nonzero if a > 0) > len(nonzero) / 2 else -1
+
+
 def test_sign_anomalies(
     entries: list[RevenueEntry],
     config: RevenueTestingConfig,
@@ -995,8 +1006,7 @@ def test_sign_anomalies(
     # positive numbers had 100% of its rows flagged as "debit balances". The
     # file's own dominant sign is the normal side; the anomalies are the
     # opposite sign. Ledger convention (credits negative) is unchanged.
-    nonzero = [e.amount for e in entries if e.amount != 0]
-    positive_is_normal = bool(nonzero) and sum(1 for a in nonzero if a > 0) > len(nonzero) / 2
+    positive_is_normal = _revenue_sign(entries) > 0
 
     flagged: list[FlaggedRevenue] = []
     for e in entries:
@@ -1200,7 +1210,9 @@ def test_revenue_trend_variance(
             flagged_entries=[],
         )
 
-    current_total = sum((abs(e.amount) for e in entries), Decimal("0"))
+    # Sprint 829: net revenue. Summing |amount| added returns to revenue — $1.2M
+    # of sales less $150K of returns read as $1.35M, a 35% "increase".
+    current_total = sum((e.amount for e in entries), Decimal("0")) * _revenue_sign(entries)
     variance_pct = float(current_total - Decimal(str(config.prior_period_total))) / abs(config.prior_period_total)
 
     flagged: list[FlaggedRevenue] = []
@@ -1260,7 +1272,11 @@ def test_concentration_risk(
 
     Flags if a single account represents >50% of total revenue.
     """
-    total_revenue = sum((abs(e.amount) for e in entries), Decimal("0"))
+    # Sprint 829: gross revenue on the file's normal side. The |amount| base
+    # counted returns and contra accounts as revenue, diluting every share.
+    sign = _revenue_sign(entries)
+    normal_side = [e for e in entries if e.amount * sign > 0]
+    total_revenue = sum((abs(e.amount) for e in normal_side), Decimal("0"))
     if total_revenue == 0:
         return RevenueTestResult(
             test_name="Revenue Concentration Risk",
@@ -1277,7 +1293,7 @@ def test_concentration_risk(
     # Group by account
     account_totals: dict[str, Decimal] = {}
     account_entries: dict[str, list[RevenueEntry]] = {}
-    for e in entries:
+    for e in normal_side:
         key = (e.account_name or e.account_number or "unknown").lower().strip()
         account_totals[key] = account_totals.get(key, Decimal("0")) + abs(e.amount)
         account_entries.setdefault(key, []).append(e)

@@ -249,6 +249,12 @@ def _parse_date_uncached(date_str: str) -> Optional[date]:
         # Sprint 829: forms seen in exported ledgers that were silently skipped.
         # All are unambiguous and only tried after the numeric forms above.
         "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%SZ",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %I:%M:%S %p",
+        "%m/%d/%y",  # 2-digit year, US order (the order the 4-digit forms prefer)
+        "%d.%m.%Y",  # dotted dates are day-first everywhere they are used
         "%d-%b-%Y",
         "%d %b %Y",
         "%b %d, %Y",

@@ -43,6 +43,7 @@ from shared.testing_enums import (  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
+    leave_one_out_zscores,
     score_to_risk_tier,  # noqa: F401 — re-export for backward compat
     zscore_to_severity,  # noqa: E402
 )
@@ -938,18 +939,19 @@ def test_round_dollar_amounts(
                 )
                 break  # Only flag the largest pattern match
 
-        if len(flagged) >= config.round_amount_max_flags:
-            break
-
-    # Sort by amount descending
+    # Sprint 829: count every round amount, then keep the largest for display.
+    # The loop used to stop at the cap in file order, so a $500K round entry
+    # after fifty $10K ones was never seen and the count stopped at 50.
     flagged.sort(key=lambda f: abs(f.entry.amount), reverse=True)
+    total_flagged = len(flagged)
+    flagged = flagged[: config.round_amount_max_flags]
 
-    flag_rate = len(flagged) / max(len(payments), 1)
+    flag_rate = total_flagged / max(len(payments), 1)
     return APTestResult(
         test_name="Round Dollar Amounts",
         test_key="round_dollar_amounts",
         test_tier=TestTier.STRUCTURAL,
-        entries_flagged=len(flagged),
+        entries_flagged=total_flagged,
         total_entries=len(payments),
         flag_rate=flag_rate,
         severity=Severity.LOW,
@@ -1039,6 +1041,31 @@ def test_payment_before_invoice(
 # =============================================================================
 
 
+_RECURRING_MIN_PAYMENTS = 3
+_RECURRING_MIN_SPACING_DAYS = 25  # roughly monthly or longer
+
+
+def _recurring_rows(group: list[APPayment], tolerance: Decimal) -> set[int]:
+    """Row numbers of payments that belong to a fixed-amount recurring series.
+
+    A series is 3+ payments of the same amount (within tolerance) whose
+    consecutive dates are all at least ~a month apart.
+    """
+    by_amount: dict[Decimal, list[APPayment]] = {}
+    for p in group:
+        anchor = next((k for k in by_amount if abs(k - p.amount) <= tolerance), p.amount)
+        by_amount.setdefault(anchor, []).append(p)
+    rows: set[int] = set()
+    for series in by_amount.values():
+        dated = sorted(((d, p) for p in series if (d := parse_date(p.payment_date)) is not None), key=lambda dp: dp[0])
+        if len(dated) < _RECURRING_MIN_PAYMENTS:
+            continue
+        gaps = [(dated[k][0] - dated[k - 1][0]).days for k in range(1, len(dated))]
+        if all(g >= _RECURRING_MIN_SPACING_DAYS for g in gaps):
+            rows.update(p.row_number for _, p in dated)
+    return rows
+
+
 def test_fuzzy_duplicate_payments(
     payments: list[APPayment],
     config: APTestingConfig,
@@ -1062,12 +1089,18 @@ def test_fuzzy_duplicate_payments(
     for vendor, group in vendor_groups.items():
         if len(group) < 2:
             continue
+        recurring = _recurring_rows(group, tolerance)
 
         for i in range(len(group)):
             for j in range(i + 1, len(group)):
                 a, b = group[i], group[j]
                 # Amount match within tolerance
                 if abs(a.amount - b.amount) > tolerance:
+                    continue
+                # Sprint 829: a fixed amount paid on a schedule (rent, a lease,
+                # insurance) is not a duplicate — 12 monthly lease payments
+                # were 20 HIGH flags and $129K of "recovery value".
+                if a.row_number in recurring and b.row_number in recurring:
                     continue
                 # Must be different dates
                 date_a = parse_date(a.payment_date)
@@ -1214,13 +1247,13 @@ def test_unusual_payment_amounts(
         if len(set(amounts)) < 2:
             continue  # All same amount — no variance
 
-        mean = statistics.mean(amounts)
-        stdev = statistics.stdev(amounts)
-        if stdev == 0:
+        if statistics.stdev(amounts) == 0:
             continue
 
-        for p in group:
-            z = abs(abs(p.amount) - mean) / stdev
+        # Sprint 829: each payment is measured against the vendor's other payments.
+        for p, (z_signed, mean_f, stdev_f) in zip(group, leave_one_out_zscores(amounts)):
+            z = Decimal(str(round(abs(z_signed), 6)))
+            mean, stdev = Decimal(str(round(mean_f, 2))), Decimal(str(round(stdev_f, 2)))
             if z < config.unusual_amount_stddev:
                 continue
 

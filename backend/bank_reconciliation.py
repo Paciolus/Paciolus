@@ -916,6 +916,16 @@ def calculate_summary(matches: list[ReconciliationMatch]) -> ReconciliationSumma
                 total_bank += m.bank_txn.amount
             if m.ledger_txn:
                 total_ledger += m.ledger_txn.amount
+        elif m.match_type == MatchType.SPLIT:
+            # Sprint 829: a split is a match — one bank line against several
+            # ledger lines. It fell through every branch, so a reconciliation
+            # cleared entirely by splits reported 0 matched and $0 on both sides.
+            matched_count += 1
+            if m.bank_txn:
+                matched_amount += abs(m.bank_txn.amount)
+                total_bank += m.bank_txn.amount
+            for ltx in m.ledger_txns or ([m.ledger_txn] if m.ledger_txn else []):
+                total_ledger += ltx.amount
         elif m.match_type == MatchType.BANK_ONLY:
             bank_only_count += 1
             if m.bank_txn:

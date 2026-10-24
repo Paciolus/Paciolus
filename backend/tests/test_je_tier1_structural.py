@@ -265,7 +265,9 @@ class TestRoundAmounts:
         entries = [JournalEntry(debit=100000, row_number=i) for i in range(1, 100)]
         config = JETestingConfig(round_amount_max_flags=5)
         result = run_round_amounts_test(entries, config)
-        assert result.entries_flagged <= 5
+        # Sprint 829: the cap bounds what is listed, not what is counted.
+        assert len(result.flagged_entries) == 5
+        assert result.entries_flagged == 99
 
     def test_credit_amount_detected(self):
         entries = [

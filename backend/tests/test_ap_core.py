@@ -619,7 +619,9 @@ class TestRoundDollarAmounts:
         payments = make_payments(rows, ["Vendor Name", "Amount", "Payment Date"])
         config = APTestingConfig(round_amount_max_flags=5)
         result = run_round_amounts_test(payments, config)
-        assert result.entries_flagged <= 5
+        # Sprint 829: the cap bounds what is listed, not what is counted.
+        assert len(result.flagged_entries) == 5
+        assert result.entries_flagged == 60
 
     def test_sorted_descending(self):
         rows = [

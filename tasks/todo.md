@@ -518,8 +518,22 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       variance); the memo and results card show quantities as units against the receipt.
 - [ ] Open: **T2 (ratios)** — ROE / D-E / equity multiplier use equity without current-period
       earnings on an unclosed TB; `CategoryTotals` is a public input shape, so the fix needs a
-      decision on where "effective equity" is derived. T3 (current/non-current by keyword), and
-      the P2 list in the discovery notes.
+      decision on where "effective equity" is derived.
+- [x] **T3** — named non-current balances (non-current, long-term, mortgage, deferred tax) stay
+      out of current; deferred revenue, customer deposits and lines of credit count as current
+      liabilities; the AR allowance nets into receivables and current assets.
+- [x] **Dates (2)** — `01/08/25`, `08.01.2025`, ISO `…Z`, fractional ISO and 12-hour times parse;
+      JE after-hours reads the same forms.
+- [x] **P2s** — bank-rec summary counts SPLIT matches; RT-07 trends net revenue and RT-08 uses the
+      normal-side base; AR-03 no longer flags not-yet-due invoices and the schedule buckets them
+      in Current; AR-08 excludes customers in credit from the base; IN-03 catches zero extended
+      values and large absolute differences; IN-08 ignores one SKU across locations and never
+      groups on cost alone; AP fuzzy duplicates skip fixed-amount recurring series; round-amount
+      caps list the largest and count all; JE/AP unusual amounts use leave-one-out z-scores.
+- [ ] Open P2/P3: RT-02 year-end window ignores `period_end`; RT-09 period from first/last entry
+      dates; W3 partial deliveries; T7 inventory reserve flagged as natural-balance violation;
+      JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
+      PR-T7 monthly staff in a biweekly population; Decimal→string serialization in details.
 - [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
       accounts), and Key Metrics states what the ratios leave out.
 - [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a

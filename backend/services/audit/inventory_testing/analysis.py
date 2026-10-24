@@ -60,6 +60,9 @@ class InventoryTestingConfig:
     # IN-03: Extended value mismatch
     value_mismatch_enabled: bool = True
     value_mismatch_tolerance_pct: float = 0.01  # 1% tolerance
+    # Sprint 829: a percentage alone hides large lines — $90,000 off on a $10M
+    # line is 0.9%. A difference over this amount is flagged regardless.
+    value_mismatch_tolerance_abs: float = 1000.0
 
     # IN-04: Unit cost z-score outliers
     cost_zscore_threshold: float = 2.5
@@ -771,8 +774,13 @@ def test_extended_value_mismatch(
         )
 
     flagged: list[FlaggedInventoryItem] = []
+    # Sprint 829: a zero extended value is a mismatch when the register carries
+    # extended values at all — qty 100 × $50 recorded at $0 was skipped here and
+    # not caught by IN-09 either (that needs a zero unit cost too). When no row
+    # has an extended value the column is absent and there is nothing to test.
+    has_extended = any(e.extended_value != 0 for e in entries)
     for e in entries:
-        if e.unit_cost == 0 or e.quantity == 0 or e.extended_value == 0:
+        if e.unit_cost == 0 or e.quantity == 0 or (e.extended_value == 0 and not has_extended):
             continue
 
         expected = Decimal(str(e.quantity)) * e.unit_cost
@@ -782,7 +790,9 @@ def test_extended_value_mismatch(
         diff = abs(e.extended_value - expected)
         diff_pct = diff / abs(expected)
 
-        if diff_pct <= config.value_mismatch_tolerance_pct:
+        if diff_pct <= config.value_mismatch_tolerance_pct and diff <= Decimal(
+            str(config.value_mismatch_tolerance_abs)
+        ):
             continue
 
         severity = Severity.HIGH if diff > 10000 else Severity.MEDIUM if diff > 1000 else Severity.LOW
@@ -1155,8 +1165,11 @@ def test_duplicate_items(
 ) -> InvTestResult:
     """IN-08: Duplicate Item Detection.
 
-    Flags items with identical description + unit cost,
-    which may indicate double-counting or duplicate records.
+    Flags (a) items with identical description + unit cost — one item entered
+    twice under different IDs — and (b) the same item ID recorded twice at one
+    location. Sprint 829: one SKU stocked at two locations is not a duplicate,
+    and rows are never grouped on cost alone (with no description column every
+    SKU priced $25 was one "duplicate ''").
     """
     if not config.duplicate_enabled:
         return InvTestResult(
@@ -1171,19 +1184,33 @@ def test_duplicate_items(
             flagged_entries=[],
         )
 
+    def _norm(x: Optional[str]) -> str:
+        return (x or "").strip().lower()
+
     groups: dict[tuple, list[InventoryEntry]] = {}
     for e in entries:
-        desc = (e.description or "").lower().strip()
-        key = (round(e.unit_cost, 2), desc)
-        if key == (Decimal("0"), ""):
-            continue
-        groups.setdefault(key, []).append(e)
+        desc = _norm(e.description)
+        if desc:
+            groups.setdefault(("desc", round(e.unit_cost, 2), desc), []).append(e)
+        if _norm(e.item_id):
+            groups.setdefault(("id", _norm(e.item_id), _norm(e.location)), []).append(e)
 
+    def _same_sku_across_locations(group: list[InventoryEntry]) -> bool:
+        ids = {_norm(e.item_id) for e in group}
+        locations = [_norm(e.location) for e in group]
+        return len(ids) == 1 and "" not in ids and len(set(locations)) == len(locations)
+
+    seen_rows: set[int] = set()
     flagged: list[FlaggedInventoryItem] = []
     for key, group in groups.items():
+        if len(group) < 2 or (key[0] == "desc" and _same_sku_across_locations(group)):
+            continue
+        group = [e for e in group if e.row_number not in seen_rows]
         if len(group) < 2:
             continue
-        cost, desc = key
+        seen_rows.update(e.row_number for e in group)
+        cost = round(group[0].unit_cost, 2)
+        desc = (group[0].description or group[0].item_id or "").lower().strip()
         value = sum(
             (
                 abs(e.extended_value) if e.extended_value != 0 else abs(Decimal(str(e.quantity)) * e.unit_cost)
@@ -1222,7 +1249,7 @@ def test_duplicate_items(
         total_entries=len(entries),
         flag_rate=flag_rate,
         severity=Severity.HIGH,
-        description="Flags items with identical description and unit cost.",
+        description="Flags items with identical description and unit cost, and item IDs repeated at one location.",
         flagged_entries=flagged,
     )
 
