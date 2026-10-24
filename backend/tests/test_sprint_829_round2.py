@@ -765,3 +765,35 @@ def test_partial_deliveries_against_one_po_line_are_combined():
     assert result.variances == []
     assert result.unmatched_receipts == []
     assert result.full_matches[0].receipt.quantity_received == 100
+
+
+def test_monthly_staff_in_a_biweekly_payroll_are_measured_against_their_own_cadence():
+    from datetime import date, timedelta
+
+    from services.audit.payroll_testing.analysis import (
+        PayrollEntry,
+        PayrollTestingConfig,
+        _test_pay_frequency_anomalies,
+    )
+
+    entries, row = [], 0
+    for emp in ("B1", "B2", "B3"):
+        for k in range(12):
+            row += 1
+            entries.append(
+                PayrollEntry(employee_id=emp, pay_date=date(2025, 1, 3) + timedelta(days=14 * k), _row_index=row)
+            )
+    for m in range(1, 7):
+        row += 1
+        entries.append(PayrollEntry(employee_id="M1", pay_date=date(2025, m, 28), _row_index=row))
+    # Extra runs every few days for one employee stay flagged.
+    for k in range(6):
+        row += 1
+        entries.append(
+            PayrollEntry(employee_id="W1", pay_date=date(2025, 1, 3) + timedelta(days=4 * k), _row_index=row)
+        )
+
+    result = _test_pay_frequency_anomalies(entries, PayrollTestingConfig())
+    flagged_emps = {f.entry.employee_id for f in result.flagged_entries}
+    assert "M1" not in flagged_emps
+    assert "W1" in flagged_emps

@@ -535,8 +535,10 @@ payroll, revenue, AR, inventory, bank rec, three-way match) against realistic sy
       reserves ("reserve for", "inventory reserve", "provision for") are contra accounts.
 - [x] **W3** — receipts delivered in instalments against one PO line are combined (every
       receipt on a single-line PO; same-description receipts on a multi-line PO).
+- [x] **PR-T7** — an employee with a regular cadence *longer* than the population's (monthly
+      staff in a biweekly payroll) is measured against it; shorter regular cadences stay flagged.
 - [ ] Open P2/P3: JE composite not monotone (Benford severity in the denominator); month-end/holiday noise;
-      PR-T7 monthly staff in a biweekly population; Decimal→string serialization in details.
+      Decimal→string serialization in details.
 - [x] **T4** — analytics carry `excluded_accounts` (count + absolute balance of unclassified
       accounts), and Key Metrics states what the ratios leave out.
 - [x] **T5** — a type the file supplied (and we could read) outranks a lead-sheet keyword of a
