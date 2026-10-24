@@ -995,11 +995,16 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 ---
 
 ### Sprint 822: CI and repository weight
-**Status:** PARTIAL — the pip-audit item done 2026-10-23; `reports/nightly/` awaits CEO decision 5; root clutter pending.
+**Status:** PARTIAL — the pip-audit item done 2026-10-23; `reports/nightly/` untracked 2026-10-24 (Sprint 831 PR); root clutter pending.
 **Priority:** P3.
 **Source:** Code health review 2026-10-23, repo pass.
 
-- [ ] `reports/nightly/` is 1,149 of 3,261 tracked files — **CEO decision 5**.
+- [x] `reports/nightly/` is 1,149 of 3,261 tracked files — **CEO decision 5, decided 2026-10-24.**
+      The default offered was "move to CI artifacts with 90-day retention", but the nightly does not
+      run in CI — `scripts/overnight/orchestrator.py` runs from Windows Task Scheduler on the CEO's
+      machine. Equivalent applied: the directory is untracked (`git rm --cached`, `.gitignore`), the
+      files stay on that machine, and the orchestrator prunes report files older than 90 days after
+      each run (`.baseline.json` is kept).
 - [x] *(Done 2026-10-23: the advisory audit is now a non-failing `if: always()` step inside the
       required `Python Dependency Audit (blocking)` job; that job's name is unchanged.)*
       `ci.yml` runs pip-audit twice (`pip-audit-blocking` `:660`, `pip-audit-advisory` `:690`), each
