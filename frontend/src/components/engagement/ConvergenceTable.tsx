@@ -99,7 +99,7 @@ export function ConvergenceTable({ data, onExportCsv, isExporting = false }: Con
                       {item.tools_flagging_it.map((tool) => (
                         <span
                           key={tool}
-                          className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-200"
+                          className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-sans bg-oatmeal-100 text-obsidian-500 border border-oatmeal-200"
                         >
                           {TOOL_NAME_LABELS[tool as ToolName] ?? tool}
                         </span>
@@ -122,7 +122,7 @@ function ConvergenceCountBadge({ count }: { count: number }) {
   if (count >= 3) {
     colorClasses = 'bg-clay-50 text-clay-700 border-clay-200';
   } else if (count === 2) {
-    colorClasses = 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300';
+    colorClasses = 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300';
   } else {
     colorClasses = 'bg-surface-card-secondary text-content-secondary border-theme';
   }
@@ -137,7 +137,7 @@ function ConvergenceCountBadge({ count }: { count: number }) {
 function ConvergenceDisclaimer() {
   return (
     <div className="p-3 bg-oatmeal-100 border border-oatmeal-300 rounded-xl">
-      <p className="text-xs font-sans text-oatmeal-700 leading-relaxed">
+      <p className="text-xs font-sans text-obsidian-500 leading-relaxed">
         <span className="font-semibold">Cross-Tool Convergence Index &mdash; Informational Only.</span>{' '}
         Convergence counts indicate how many diagnostic tools flagged an account.
         This is NOT an audit risk assessment or risk classification. The practitioner is solely

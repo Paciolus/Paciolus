@@ -78,7 +78,7 @@ function ToolCoverageMeter({ covered, total }: { covered: number; total: number 
 const PROOF_LEVEL_STYLES: Record<ProofReadiness['level'], { bar: string; text: string; label: string }> = {
   strong: { bar: 'bg-sage-500', text: 'text-sage-700', label: 'Strong' },
   adequate: { bar: 'bg-sage-400', text: 'text-sage-600', label: 'Adequate' },
-  limited: { bar: 'bg-oatmeal-500', text: 'text-oatmeal-700', label: 'Limited' },
+  limited: { bar: 'bg-oatmeal-500', text: 'text-obsidian-500', label: 'Limited' },
   insufficient: { bar: 'bg-clay-500', text: 'text-clay-700', label: 'Insufficient' },
 };
 
@@ -253,7 +253,7 @@ export function InsightRail() {
                           </span>
                         )}
                         {mediumCount > 0 && (
-                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-sm text-[9px] font-mono bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300">
+                          <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-sm text-[9px] font-mono bg-oatmeal-100 text-obsidian-500 border border-oatmeal-300">
                             {mediumCount}
                           </span>
                         )}

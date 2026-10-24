@@ -15,7 +15,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
-  partial: { label: 'Partial Contract Data', color: 'bg-oatmeal-100 border-oatmeal-300 text-oatmeal-700' },
+  partial: { label: 'Partial Contract Data', color: 'bg-oatmeal-100 border-oatmeal-300 text-obsidian-500' },
   minimal: { label: 'Minimal Contract Data', color: 'bg-clay-50 border-clay-200 text-clay-700' },
 }
 

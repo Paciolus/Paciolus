@@ -22,7 +22,7 @@ const BRAND_TOKENS = {
   obsidianElevated: '#303030',
   oatmealBase: '#EBE9E4',
   oatmealMuted: '#B5AD9F', // oatmeal-500: secondary body text on dark surface
-  oatmealDisabled: '#7F7A6E', // oatmeal-700: tertiary / disabled hint text
+  oatmealDisabled: '#B5AD9F', // oatmeal-500 — oatmeal-700 measured 3.4:1 on this panel (Sprint 828)
   clayBase: '#BC4749',
   clayLight: '#E99A9B',
   sageBase: '#4A7C59',

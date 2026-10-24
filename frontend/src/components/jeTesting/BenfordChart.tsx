@@ -20,7 +20,7 @@ function conformityColor(level: string): { bg: string; border: string; text: str
     case 'acceptable':
       return { bg: 'bg-sage-50', border: 'border-sage-200', text: 'text-sage-600', label: 'Acceptable' }
     case 'marginally_acceptable':
-      return { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-oatmeal-700', label: 'Marginally Acceptable' }
+      return { bg: 'bg-oatmeal-100', border: 'border-oatmeal-300', text: 'text-obsidian-500', label: 'Marginally Acceptable' }
     case 'nonconforming':
       return { bg: 'bg-clay-50', border: 'border-clay-200', text: 'text-clay-700', label: 'Non-Conforming' }
     default:

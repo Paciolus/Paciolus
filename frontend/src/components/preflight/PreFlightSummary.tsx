@@ -26,7 +26,7 @@ function scoreBarColor(score: number): string {
 function severityBadge(severity: string): string {
   switch (severity) {
     case 'high': return 'bg-clay-50 text-clay-700 border-clay-200'
-    case 'medium': return 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300'
+    case 'medium': return 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300'
     case 'low': return 'bg-sage-50 text-sage-700 border-sage-200'
     default: return 'bg-oatmeal-50 text-content-secondary border-oatmeal-200'
   }

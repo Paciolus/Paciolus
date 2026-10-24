@@ -80,7 +80,7 @@ export const ENGAGEMENT_STATUS_COLORS: Record<EngagementStatus, { bg: string; te
   },
   archived: {
     bg: 'bg-oatmeal-100',
-    text: 'text-oatmeal-700',
+    text: 'text-obsidian-500',
     border: 'border-oatmeal-300',
   },
 };
@@ -186,7 +186,7 @@ export const DISPOSITION_LABELS: Record<FollowUpDisposition, string> = {
 /** Severity badge styles (Oat & Obsidian). */
 export const SEVERITY_COLORS: Record<FollowUpSeverity, { bg: string; text: string; border: string }> = {
   high: { bg: 'bg-clay-50', text: 'text-clay-700', border: 'border-clay-200' },
-  medium: { bg: 'bg-oatmeal-100', text: 'text-oatmeal-700', border: 'border-oatmeal-300' },
+  medium: { bg: 'bg-oatmeal-100', text: 'text-obsidian-500', border: 'border-oatmeal-300' },
   low: { bg: 'bg-sage-50', text: 'text-sage-700', border: 'border-sage-200' },
 };
 
@@ -194,7 +194,7 @@ export const SEVERITY_COLORS: Record<FollowUpSeverity, { bg: string; text: strin
 export const DISPOSITION_COLORS: Record<FollowUpDisposition, { bg: string; text: string; border: string }> = {
   not_reviewed: { bg: 'bg-oatmeal-100', text: 'text-content-secondary', border: 'border-theme' },
   investigated_no_issue: { bg: 'bg-sage-50', text: 'text-sage-700', border: 'border-sage-200' },
-  investigated_adjustment_posted: { bg: 'bg-oatmeal-100', text: 'text-oatmeal-700', border: 'border-oatmeal-300' },
+  investigated_adjustment_posted: { bg: 'bg-oatmeal-100', text: 'text-obsidian-500', border: 'border-oatmeal-300' },
   investigated_further_review: { bg: 'bg-clay-50', text: 'text-clay-700', border: 'border-clay-200' },
   immaterial: { bg: 'bg-oatmeal-50', text: 'text-content-tertiary', border: 'border-theme' },
 };

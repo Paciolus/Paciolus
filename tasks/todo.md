@@ -232,12 +232,19 @@
 >   place.
 >
 > **Now unblocked by work that just landed — worth doing early:**
+> - **DONE 2026-10-23 (Sprint 828):** every `text-oatmeal-700` migrated by surface —
+>   `obsidian-500` (5.63:1) on the light badge/page surfaces, `oatmeal-600` (5.33:1) on dark
+>   marketing routes, `oatmeal-500` for the error digest on `global-error`'s #303030 panel — and
+>   the lint exemption deleted, so the gate now enforces it. The text below is the original note.
 > - **48 × `text-oatmeal-700` fail WCAG AA on both page surfaces** (4.38:1 dark /
 >   3.89:1 light). No oatmeal shade reaches AA on the light page — oatmeal *is* the light
 >   palette — so each usage needs to know its surface. That was blocked on the route→theme
 >   map, and **Sprint 809 built it** (`frontend/src/lib/theme-routes.ts`, asserted against
 >   the filesystem). The blocker is gone; `scripts/lint_design_tokens.py` prints this
 >   exemption on every run and says in terms that it is **not permanent**.
+> - **CHECKED 2026-10-23 — no change needed:** there are no `text-clay-500` usages left, and all
+>   nine `hover:text-sage-600` usages render on routes the theme map resolves to light (settings,
+>   workspace, portfolio, and `tools/layout.tsx`), where it passes. Original note follows.
 > - **`clay-500` on dark surfaces** (3.69:1) and `hover:text-sage-600` (2.85:1 on dark)
 >   are the same class and the same unblocking. The contrast gate deliberately does not
 >   flag either, because both pass on light and it had no theme map to decide with.

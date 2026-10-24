@@ -19,9 +19,9 @@ describe('StatusBadge', () => {
   })
 
   it('applies text color class', () => {
-    render(<StatusBadge label="Warning" colors={{ bg: 'bg-oatmeal-50', text: 'text-oatmeal-700', border: 'border-oatmeal-200' }} />)
+    render(<StatusBadge label="Warning" colors={{ bg: 'bg-oatmeal-50', text: 'text-obsidian-500', border: 'border-oatmeal-200' }} />)
     const badge = screen.getByText('Warning')
-    expect(badge.className).toContain('text-oatmeal-700')
+    expect(badge.className).toContain('text-obsidian-500')
   })
 
   it('applies border color class', () => {

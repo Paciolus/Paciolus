@@ -208,7 +208,7 @@ export default function WorkspaceDetailPage() {
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-sans ${
                   engagement.status === 'active'
                     ? 'bg-sage-50 text-sage-700 border border-sage-200'
-                    : 'bg-oatmeal-100 text-oatmeal-700 border border-oatmeal-300'
+                    : 'bg-oatmeal-100 text-obsidian-500 border border-oatmeal-300'
                 }`}>
                   {engagement.status === 'active' ? 'Active' : 'Archived'}
                 </span>
@@ -284,7 +284,7 @@ export default function WorkspaceDetailPage() {
               >
                 {labels[tab]}
                 {tab === 'follow-up' && followUpItems.length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono bg-oatmeal-100 text-oatmeal-700">
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-mono bg-oatmeal-100 text-obsidian-500">
                     {followUpItems.length}
                   </span>
                 )}
@@ -301,7 +301,7 @@ export default function WorkspaceDetailPage() {
         {activeTab === 'follow-up' && (
           <div>
             <div className="mb-4 p-3 bg-oatmeal-100 border border-oatmeal-300 rounded-xl">
-              <p className="text-xs font-sans text-oatmeal-700 leading-relaxed">
+              <p className="text-xs font-sans text-obsidian-500 leading-relaxed">
                 <span className="font-semibold">Follow-Up Items Tracker &mdash; Data Anomalies Only.</span>{' '}
                 This tracker documents data anomalies requiring investigation. Items listed
                 here are NOT findings or control deficiencies until the practitioner completes

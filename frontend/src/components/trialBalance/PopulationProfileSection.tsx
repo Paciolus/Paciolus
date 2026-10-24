@@ -11,7 +11,7 @@ interface PopulationProfileSectionProps {
 
 const GINI_COLORS: Record<string, string> = {
   Low: 'bg-sage-50 text-sage-700 border-sage-200',
-  Moderate: 'bg-oatmeal-100 text-oatmeal-700 border-oatmeal-300',
+  Moderate: 'bg-oatmeal-100 text-obsidian-500 border-oatmeal-300',
   High: 'bg-clay-50 text-clay-700 border-clay-200',
   'Very High': 'bg-clay-50 text-clay-700 border-clay-200',
 }
