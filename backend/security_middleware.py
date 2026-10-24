@@ -49,6 +49,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - Permissions-Policy: Restrict browser features
     - Content-Security-Policy: Restrict content sources (production only)
     - Strict-Transport-Security: HSTS (production only)
+    - Cache-Control: no-store on every file download (Content-Disposition: attachment)
     """
 
     def __init__(self, app: Any, production_mode: bool = False) -> None:
@@ -68,6 +69,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
             "magnetometer=(), microphone=(), payment=(), usb=()"
         )
+
+        # Sprint 819: a downloaded export is client financial data. Without
+        # Cache-Control a browser or an intermediate cache may keep a copy on
+        # disk — at odds with the zero-storage promise. Only the export-share
+        # download set no-store; this covers every attachment, without
+        # overriding a route that chose its own policy.
+        if "attachment" in response.headers.get("content-disposition", "").lower():
+            response.headers.setdefault("Cache-Control", "no-store")
 
         # Production-only headers
         if self.production_mode:
