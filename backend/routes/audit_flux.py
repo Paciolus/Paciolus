@@ -93,6 +93,7 @@ async def flux_analysis(
                 True,
                 None,
                 flagged,
+                consumes_upload=True,
             )
 
             # Sprint 728c: evaluate ISA 520 expectations targeting these

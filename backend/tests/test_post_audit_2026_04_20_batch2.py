@@ -506,26 +506,23 @@ class TestUploadFormatGateIsWiredNotMerelyImportable:
                 enforce_format_access(user, MagicMock(), name)
 
 
-class TestUploadAllowanceEnforcementIsHonestlyReported:
-    """Sprint 790 is open: paid-tier upload allowances are not enforced.
+class TestUploadAllowanceEnforcement:
+    """Paid-tier upload allowances are metered (Sprint 790).
 
-    The class this replaces was called ``TestToolRoutesCheckUploadLimit``,
-    said "The 11 testing-tool routes should enforce upload limits", and
-    asserted ``hasattr(testing_route, "enforce_tool_access")``. The property
-    in its name is **false** and has been recorded as false since Sprint 790.
+    This class was ``TestUploadAllowanceEnforcementIsHonestlyReported`` and
+    pinned the gap: ``increment_upload_count`` had a single caller, bulk upload,
+    so ``check_upload_limit`` was inert for every paid tier on every other route.
+    It was written to fail the moment Sprint 790 landed, and it did.
 
-    Rather than delete the coverage or assert something vacuous, this pins the
-    situation as it actually is, so that:
-
-      * the gap stays visible in the test suite rather than only in a sprint
-        file nobody greps, and
-      * whoever implements Sprint 790 gets a failing test telling them to
-        update this class, instead of a green suite implying it was already
-        done.
+    It now pins the shape that closed the gap: the counter is advanced from
+    exactly one place — the tool-run recorder's success path, behind
+    ``consumes_upload=True``. Bulk upload's old per-file increment was removed:
+    that path runs no engine, so it charged allowance for no analysis. The
+    per-route pairing of check and increment is held by
+    ``tests/test_sprint_790_upload_metering.py``.
     """
 
-    def test_increment_upload_count_is_still_only_called_by_bulk_upload(self):
-        """When this fails, Sprint 790 has been implemented — update the class."""
+    def test_increment_upload_count_is_called_only_by_the_recorder(self):
         import pathlib
 
         backend_root = pathlib.Path(__file__).resolve().parent.parent
@@ -537,10 +534,10 @@ class TestUploadAllowanceEnforcementIsHonestlyReported:
             if "increment_upload_count(" in text and "def increment_upload_count" not in text:
                 callers.append(str(path.relative_to(backend_root)).replace("\\", "/"))
 
-        assert callers == ["routes/bulk_upload.py"], (
-            f"increment_upload_count callers changed to {callers}. If paid-tier upload metering "
-            f"has been implemented (Sprint 790), update this class to assert the new behaviour "
-            f"rather than the gap."
+        assert sorted(callers) == ["shared/tool_run_recorder.py"], (
+            f"increment_upload_count callers changed to {callers}. Metering belongs in the "
+            f"recorder's success path (consumes_upload=True), not in individual routes — a "
+            f"route-level call next to a consuming recorder call would count one run twice."
         )
 
     # Functions that call `enforce_tool_access` on a route's behalf. A route

@@ -122,38 +122,75 @@ def _raise_or_log(user: User, resource: str, detail: str) -> None:
     )
 
 
+def _metered_subscription(sub: object) -> bool:
+    """Whether the subscription's own counter is the meter for this user.
+
+    Sprint 790: only an ACTIVE or TRIALING subscription has a counter that is
+    reset each billing period (``reset_upload_quotas`` and the period-rollover
+    reset in ``billing.subscription_manager``). A PAST_DUE / CANCELED / UNPAID
+    row is never reset again, so once the counter actually moves it would
+    accumulate for ever and lock a lapsed subscriber out of the Free allowance
+    permanently. Those users are metered exactly like a user with no row.
+    """
+    if sub is None or getattr(sub, "uploads_used_current_period", None) is None:
+        return False
+    from subscription_model import SubscriptionStatus
+
+    return getattr(sub, "status", None) in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING)
+
+
+def uploads_used_this_period(db: Session, user_id: int) -> int:
+    """Uploads consumed in the current period - the number the quota compares against.
+
+    Metering unit (Sprint 790): **one successful analysis run is one upload.**
+    A run that takes two files in one request (AR aging TB + sub-ledger, three-way
+    match, flux current + prior) costs one; a run that fails costs nothing. The
+    counter is advanced by ``increment_upload_count`` from the success path of
+    ``shared.tool_run_recorder.maybe_record_tool_run(..., consumes_upload=True)``
+    and nowhere else. Bulk upload consumes nothing: it runs no engine yet.
+
+    Source of the count:
+    - an ACTIVE/TRIALING subscription -> ``Subscription.uploads_used_current_period``;
+    - otherwise (Free, or a lapsed subscription) -> this calendar month's
+      ``ActivityLog`` rows. Exactly one source is ever read, so a user is never
+      counted twice.
+    """
+    sub = _user_subscription(db, user_id)
+    if _metered_subscription(sub):
+        return int(sub.uploads_used_current_period or 0)  # type: ignore[attr-defined]
+
+    now = datetime.now(UTC)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    return (
+        db.query(func.count(ActivityLog.id))
+        .filter(
+            ActivityLog.user_id == user_id,
+            ActivityLog.timestamp >= month_start,
+            ActivityLog.archived_at.is_(None),
+        )
+        .scalar()
+    ) or 0
+
+
 def check_upload_limit(
     user: Annotated[User, Depends(require_current_user)],
     db: Session = Depends(get_db),
 ) -> User:
     """Check that the user hasn't exceeded their monthly upload limit.
 
-    Uses Subscription.uploads_used_current_period if available,
-    falls back to ActivityLog counting for free tier.
-    Returns the user if allowed, raises 403 if limit exceeded.
+    See ``uploads_used_this_period`` for the metering unit and the count source.
+    Every endpoint that calls this must reach an increment on its success path
+    (``maybe_record_tool_run(..., consumes_upload=True)`` or
+    ``increment_upload_count``) - ``tests/test_sprint_790_upload_metering.py``
+    enforces that mechanically. Returns the user if allowed, raises 403 if the
+    limit is reached.
     """
     entitlements = get_effective_entitlements(user, db)
 
     if entitlements.uploads_per_month == 0:
         return user  # unlimited
 
-    # Try subscription-based counting first
-    sub = _user_subscription(db, user.id)
-    if sub and sub.uploads_used_current_period is not None:
-        count = sub.uploads_used_current_period
-    else:
-        # Fall back to ActivityLog counting (free tier / no subscription)
-        now = datetime.now(UTC)
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        count = (
-            db.query(func.count(ActivityLog.id))
-            .filter(
-                ActivityLog.user_id == user.id,
-                ActivityLog.timestamp >= month_start,
-                ActivityLog.archived_at.is_(None),
-            )
-            .scalar()
-        ) or 0
+    count = uploads_used_this_period(db, user.id)
 
     if count >= entitlements.uploads_per_month:
         _raise_or_log(
@@ -171,15 +208,31 @@ check_diagnostic_limit = check_upload_limit
 
 
 def increment_upload_count(db: Session, user_id: int) -> None:
-    """Increment the upload counter on the user's subscription.
+    """Advance the upload counter on the user's subscription by one.
 
-    Called after a successful upload/analysis.
-    No-op if user has no subscription (free tier uses ActivityLog counting).
+    Called after a successful analysis run (see ``uploads_used_this_period``).
+    No-op if the user has no subscription row: Free is metered from ActivityLog,
+    so there is nothing to advance and nothing is counted twice.
+
+    Sprint 790: one atomic ``UPDATE ... SET n = n + 1`` rather than a
+    read-modify-write on the ORM object, so two concurrent runs cannot lose an
+    increment. Commits only when a row was updated; the commit expires every
+    loaded instance (including the per-session cached row), so the next read
+    sees the new value.
     """
-    sub = _user_subscription(db, user_id)
-    if sub:
-        sub.uploads_used_current_period = (sub.uploads_used_current_period or 0) + 1
-        db.commit()
+    from sqlalchemy import update
+
+    from subscription_model import Subscription
+
+    result = db.execute(
+        update(Subscription)
+        .where(Subscription.user_id == user_id)
+        .values(uploads_used_current_period=func.coalesce(Subscription.uploads_used_current_period, 0) + 1)
+        .execution_options(synchronize_session=False)
+    )
+    if not result.rowcount:  # type: ignore[attr-defined]
+        return
+    db.commit()
 
 
 def check_client_limit(
