@@ -574,7 +574,7 @@ def delete_account(
     except ErasureBlocked as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ErasureProviderError as exc:
-        raise HTTPException(status_code=503, detail=f"{exc} Nothing was deleted; please try again.") from exc
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     out = Response(status_code=204)
     _clear_refresh_cookie(out)
