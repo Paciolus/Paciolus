@@ -587,7 +587,7 @@ def erase_user(
     except ErasureBlocked as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ErasureProviderError as exc:
-        raise HTTPException(status_code=503, detail=f"{exc} Nothing was deleted.") from exc
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     _create_audit_entry(
         db,

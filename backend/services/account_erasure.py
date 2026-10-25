@@ -34,9 +34,11 @@ WHAT IS REFUSED (``ErasureBlocked``)
   client): deleting them would delete a colleague's records, and the columns
   are NOT NULL so they cannot be anonymised. Handled by privacy@ by hand.
 
-Order matters: Stripe is cancelled and R2 objects are removed **before** any
-row is deleted, so a provider failure leaves the account intact rather than
-half-erased (and still billed).
+Order matters: R2 share objects are removed (each share row with it, durably)
+and then Stripe is cancelled, **before** any other row is deleted. A provider
+failure therefore leaves the account in place, and the error says exactly what
+was already removed. A late Stripe webhook for the erased account is ignored by
+``billing.webhook_handler._resolve_user_id``.
 """
 
 from __future__ import annotations
@@ -170,17 +172,32 @@ def _cancel_stripe(db: Session, user_id: int) -> None:
         raise ErasureProviderError("We could not cancel your subscription with our payment provider.") from exc
 
 
-def _delete_share_objects(db: Session, user_id: int, org_ids: list[int]) -> None:
+def _delete_share_objects(db: Session, user_id: int, org_ids: list[int]) -> int:
+    """Remove shared-report objects from R2, one share at a time. Returns the count.
+
+    PR #237 review: R2 deletions cannot be rolled back, so the provider phase is
+    not all-or-nothing. Each share's row is deleted (and committed) as soon as
+    its object is gone, so a failure part-way leaves no rows pointing at missing
+    reports, and a retry resumes where it stopped.
+    """
     from shared import export_share_storage
 
     shares = _t("export_shares")
     cond = shares.c.user_id == user_id
     if org_ids:
         cond = cond | shares.c.organization_id.in_(org_ids)
-    keys = [r[0] for r in db.execute(select(shares.c.object_key).where(cond)) if r[0]]
-    for key in keys:
-        if not export_share_storage.delete(key):
-            raise ErasureProviderError("We could not remove a shared report from storage.")
+    removed = 0
+    for share_id, key in list(db.execute(select(shares.c.id, shares.c.object_key).where(cond))):
+        if key and not export_share_storage.delete(key):
+            done = f" {removed} shared link(s) were removed first." if removed else ""
+            raise ErasureProviderError(
+                f"We could not remove a shared report from storage.{done} Your account and other data were "
+                "not deleted; please try again."
+            )
+        db.execute(delete(shares).where(shares.c.id == share_id))
+        db.commit()
+        removed += 1
+    return removed
 
 
 def erase_account(db: Session, user: Any) -> dict[str, int]:
@@ -196,9 +213,20 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
     orgs = _t("organizations")
     owned_orgs = [r[0] for r in db.execute(select(orgs.c.id).where(orgs.c.owner_user_id == user_id))]
 
-    # Providers first: if either refuses, the account stays whole.
-    _cancel_stripe(db, user_id)
-    _delete_share_objects(db, user_id, owned_orgs)
+    # Providers first, so a provider failure leaves the account in place.
+    # Shared links go first (each removed durably, see _delete_share_objects);
+    # Stripe last, so a storage failure never leaves a cancelled subscription
+    # on an account that still exists.
+    shares_removed = _delete_share_objects(db, user_id, owned_orgs)
+    try:
+        _cancel_stripe(db, user_id)
+    except ErasureProviderError as exc:
+        if shares_removed:
+            raise ErasureProviderError(
+                f"{exc} Your {shares_removed} shared link(s) were removed; your subscription and account were "
+                "not changed. Please try again."
+            ) from exc
+        raise ErasureProviderError(f"{exc} Nothing was deleted; please try again.") from exc
 
     counts: dict[str, int] = {}
 

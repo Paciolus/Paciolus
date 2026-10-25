@@ -254,3 +254,58 @@ class TestRoutes:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
             r = await c.post(f"/internal/admin/users/{populated['user'].id}/erase", headers=self._headers(bystander))
         assert r.status_code == 403
+
+
+class TestPartialProviderCleanup:
+    """PR #237 review: R2 deletions cannot be rolled back."""
+
+    def _shares(self, db_session, user, n):
+        from datetime import UTC, datetime, timedelta
+
+        from export_share_model import ExportShare
+
+        for i in range(n):
+            db_session.add(
+                ExportShare(
+                    user_id=user.id,
+                    share_token_hash=f"{i:064d}",
+                    tool_name="trial_balance",
+                    export_format="pdf",
+                    object_key=f"shares/{i}",
+                    expires_at=datetime.now(UTC) + timedelta(hours=1),
+                )
+            )
+        db_session.commit()
+
+    def test_a_failure_part_way_removes_only_the_rows_whose_objects_are_gone(self, db_session, populated, monkeypatch):
+        from shared import export_share_storage
+
+        user_id = populated["user"].id
+        self._shares(db_session, populated["user"], 3)
+        calls = []
+
+        def flaky(key):
+            calls.append(key)
+            return len(calls) < 2  # first succeeds, second fails
+
+        monkeypatch.setattr(export_share_storage, "delete", flaky)
+        with pytest.raises(ErasureProviderError, match="1 shared link"):
+            erase_account(db_session, populated["user"])
+        assert _count(db_session, "export_shares", user_id=user_id) == 2
+        assert _count(db_session, "users", id=user_id) == 1
+
+    def test_stripe_failure_after_shares_says_what_was_removed(self, db_session, populated, monkeypatch):
+        import services.account_erasure as mod
+        from shared import export_share_storage
+
+        self._shares(db_session, populated["user"], 1)
+        monkeypatch.setattr(export_share_storage, "delete", lambda key: True)
+
+        def boom(*_a, **_k):
+            raise ErasureProviderError("Stripe down.")
+
+        monkeypatch.setattr(mod, "_cancel_stripe", boom)
+        with pytest.raises(
+            ErasureProviderError, match="shared link.*were removed; your subscription and account were not changed"
+        ):
+            erase_account(db_session, populated["user"])
