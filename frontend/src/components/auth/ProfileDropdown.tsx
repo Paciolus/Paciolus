@@ -159,11 +159,11 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
 
             {/* Menu Items */}
             <div className="py-2">
-              {/* Zero-Storage Badge */}
+              {/* Data-handling badge */}
               <div className="px-4 py-2 mb-1">
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sage-500/10 border border-sage-500/20">
                   <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
-                  <span className="text-sage-300 text-xs font-sans font-medium">Zero-Storage Active</span>
+                  <span className="text-sage-300 text-xs font-sans font-medium">Uploads Not Kept</span>
                 </div>
               </div>
 

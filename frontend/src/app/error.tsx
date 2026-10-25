@@ -43,8 +43,8 @@ export default function Error({
         </h1>
 
         <p className="text-content-secondary mb-8 leading-relaxed">
-          An unexpected error occurred. Your data has not been affected
-          &mdash; Zero-Storage processing means nothing was persisted.
+          An unexpected error occurred. Anything you had already saved is unaffected; an upload that was in progress
+          was not kept, so you may need to upload it again.
         </p>
 
         {process.env.NODE_ENV === 'development' && (

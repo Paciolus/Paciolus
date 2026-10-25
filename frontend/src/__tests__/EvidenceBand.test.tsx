@@ -54,14 +54,14 @@ describe('EvidenceBand', () => {
   it('renders stat values', () => {
     render(<EvidenceBand />)
     expect(screen.getByText('140+')).toBeInTheDocument()
-    expect(screen.getByText('Zero')).toBeInTheDocument()
+    expect(screen.getByText('None')).toBeInTheDocument()
   })
 
   it('renders cell labels', () => {
     render(<EvidenceBand />)
     expect(screen.getByText('Automated Tests')).toBeInTheDocument()
     expect(screen.getByText('Per-Memo Citations')).toBeInTheDocument()
-    expect(screen.getByText('Lines Stored')).toBeInTheDocument()
+    expect(screen.getByText('Uploaded Files Kept')).toBeInTheDocument()
     expect(screen.getByText('Diagnostic Runtime')).toBeInTheDocument()
   })
 

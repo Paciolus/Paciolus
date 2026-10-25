@@ -12,12 +12,12 @@
 
 ## Executive Summary
 
-Paciolus operates under a **Zero-Storage security model** that fundamentally differentiates it from traditional cloud accounting platforms. While competitors store client financial data on their servers, Paciolus processes trial balance data entirely in-memory and immediately discards it after analysis.
+**Uploaded files are processed in memory and not kept after analysis.** Paciolus does save user accounts, client metadata, a summary of each analysis, the names of accounts a tool flagged, practitioner-entered engagement content and — for up to 48 hours — reports a customer shares by link. (Sprint 841, 2026-10-24: this document no longer describes the model as "Zero-Storage"; that word read as a promise about all data. The filename is kept so links do not break.)
 
 **Key Points:**
 - ✅ **What Is Stored:** User credentials, client metadata, aggregate diagnostic metadata (category totals, ratios, row counts), and workpaper conclusions the practitioner types in themselves (see §2.2)
-- ❌ **What Is Never Stored:** Raw uploaded files, and any line-level account balance, account name, or transaction detail **parsed from an upload**
-- 🔒 **Security Benefit:** A breach exposes no client trial balance — the line-level data was never written to disk
+- ❌ **What Is Not Kept:** Raw uploaded files, and the line-level balances and transaction details **parsed from an upload**. Account names parsed from an upload are kept only when a tool flags the account (name only, no amount)
+- 🔒 **Security Benefit:** A breach exposes no uploaded trial balance rows — they are not written to disk or the database; summaries and engagement entries are in scope
 - ⚖️ **Compliance Impact:** Simplified GDPR, CCPA, SOC 2 requirements
 - 💼 **Business Value:** Competitive differentiator for privacy-conscious financial professionals
 
@@ -78,7 +78,7 @@ Traditional accounting platforms operate on a "store first, process later" model
 
 | Term | Meaning |
 |------|---------|
-| **Zero-storage** | No persistence of upload-derived financial detail — raw uploaded files, and the individual account names, balances and transaction details parsed from them, are never written to disk or database |
+| **Uploads not kept** | Raw uploaded files, and the individual balances and transaction details parsed from them, are not written to disk or the database. Exceptions: flagged account names (no amounts) are saved with the analysis summary; a previewed file is held in memory for up to 10 minutes; shared report files are held in Cloudflare R2 for up to 48 hours |
 
 | **Practitioner-entered workpaper entry** | A conclusion the auditor types themselves (ISA 450 misstatement, ISA 520 expectation). Persisted for the engagement lifecycle, soft-deletable, and outside the Zero-Storage exclusion because it is the auditor's own record rather than extracted client data |
 | **Aggregate metadata retention** | Separate and controlled persistence of computed summaries (category totals, ratios, row counts) subject to configurable retention windows (see Section 2.4) |
@@ -88,7 +88,7 @@ Paciolus maintains a minimal metadata database for authentication, client organi
 ### 1.4 Scope
 
 Zero-Storage applies to:
-- ✅ Raw uploaded files in all 10 supported formats (CSV, XLSX, XLS, TSV, TXT, OFX, QBO, IIF, PDF, ODS — never written to disk)
+- ✅ Raw uploaded files in all 10 supported formats (CSV, XLSX, XLS, TSV, TXT, OFX, QBO, IIF, PDF, ODS — not written to disk; uploads below the 110 MB request cap stay in memory since Sprint 840)
 - ✅ Line-level account names and balances (not persisted)
 - ✅ Individual transaction details (not persisted)
 - ✅ Ledger entries (not persisted)
@@ -111,9 +111,10 @@ Zero-Storage does **not** apply to:
 
 | Data Type | Storage Status | Retention | Example |
 |-----------|----------------|-----------|---------|
-| **Raw Trial Balance Rows** | ❌ Never Stored | Ephemeral (seconds) | "Cash: $50,000 DR" |
-| **Account Names Parsed From an Upload** | ❌ Never Stored | Ephemeral | "Accounts Receivable", read out of a TB file |
-| **Raw Uploaded Files** | ❌ Never Stored | Ephemeral | "ClientXYZ_Q4_2024.xlsx" |
+| **Raw Trial Balance Rows** | ❌ Not Kept | The request only | "Cash: $50,000 DR" |
+| **Account Names Parsed From an Upload** | ⚠️ Only if flagged | Name only, with the analysis summary (`tool_runs.flagged_accounts`) | "Accounts Receivable", flagged by a test |
+| **Raw Uploaded Files** | ❌ Not Kept | The request only (preview: up to 10 minutes in memory) | "ClientXYZ_Q4_2024.xlsx" |
+| **Shared Report Files** | ✅ Stored (Cloudflare R2) | Up to 48 hours, then deleted | A memo PDF shared by link |
 | **Account Names Typed by the Practitioner** | ✅ Stored | Engagement lifecycle (soft-delete) | An ISA 450 misstatement line naming "Accrued Payroll, CR 12,400" |
 | **User Credentials** | ✅ Stored | Until account deletion | "user@example.com, bcrypt hash" |
 | **Client Metadata** | ✅ Stored | Until deletion | "Acme Corp, Technology, 12-31 FYE" |
@@ -509,7 +510,7 @@ When users export diagnostic reports:
 3. **Buffer cleared immediately after streaming completes**
 4. **User's browser saves file locally** (user's device, not Paciolus servers)
 
-**Key Point:** The exported file never touches Paciolus's persistent storage.
+**Key Point:** A downloaded export is not saved by Paciolus. **Exception — share links:** when a customer shares a report by link, the generated file is stored, encrypted at rest by the provider, in Cloudflare R2 (`paciolus-exports`), keyed by a hash of the share token, for 24 hours (Professional) or 48 hours (Enterprise), and deleted when the share expires or is revoked (the cleanup removes the database row only after R2 confirms deletion — Sprint 840).
 
 ---
 
@@ -586,7 +587,7 @@ Paciolus demonstrates **privacy by design** through Zero-Storage:
 
 #### Right to Erasure (Article 17)
 
-Users can delete their data via `/activity/clear` endpoint. Since raw financial data is never stored, there is nothing to erase beyond aggregate metadata.
+`/activity/clear` archives (soft-deletes) activity history; it does not erase it. Erasure requests go to privacy@paciolus.com. Uploaded files are not kept, so erasure covers account data, client metadata, analysis summaries, flagged account names and engagement entries.
 
 #### Data Processing Agreement (DPA)
 

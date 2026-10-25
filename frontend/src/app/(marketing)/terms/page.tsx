@@ -37,7 +37,7 @@ export default function TermsPage() {
               4. Acceptable Use
             </Link>
             <Link href="#section-5" className="text-sage-400 hover:text-sage-300 underline font-sans">
-              5. Zero-Storage Model
+              5. How We Handle Your Data
             </Link>
             <Link href="#section-6" className="text-sage-400 hover:text-sage-300 underline font-sans">
               6. Intellectual Property
@@ -334,149 +334,145 @@ export default function TermsPage() {
             </ul>
           </section>
 
-          {/* Section 5: Zero-Storage Model */}
+          {/* Section 5: How We Handle Your Data (Sprint 841: facts corrected; counsel reviews the wording) */}
           <section id="section-5">
             <h2 className="font-serif text-2xl text-oatmeal-100 mb-4 pt-8">
-              5. Zero-Storage Model
+              5. How We Handle Your Data
             </h2>
             <div className="bg-sage-500/10 border-l-4 border-sage-500 p-4 rounded-r-lg mb-6">
               <p className="font-sans text-oatmeal-300 font-semibold mb-2">
-                Paciolus operates on a strict Zero-Storage architecture for financial data.
+                Your uploaded files are processed in memory and not kept after analysis.
               </p>
               <p className="font-sans text-oatmeal-400">
-                This means your trial balance data is processed in-memory only and is never written to disk, databases, or logs.
+                We do store your account, your client list, a summary of each analysis and anything you enter in an engagement, as described below and in our <Link href="/privacy" className="text-sage-400 hover:text-sage-300 underline">Privacy Policy</Link>.
               </p>
             </div>
-
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
-              5.1 Financial Data Processing
+              5.1 Processing an Upload
             </h3>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              When you upload a trial balance:
+              When you upload a file:
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">The file is held in server memory for processing (typically 3-5 seconds)</span>
+                <span className="font-sans text-oatmeal-400">The file is held in server memory for the duration of the request and is not written to disk</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Analysis results (ratios, anomalies, classifications) are returned to your browser</span>
+                <span className="font-sans text-oatmeal-400">Analysis results are returned to your browser</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">The uploaded file and all account-level data are immediately discarded from memory</span>
+                <span className="font-sans text-oatmeal-400">The uploaded file and the line-level rows in it are then released from memory and not kept</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">No financial data is logged, cached, or retained server-side</span>
+                <span className="font-sans text-oatmeal-400">If you previewed the file first, its contents are held in memory for up to 10 minutes so the tool can reuse them, then released</span>
               </li>
             </ul>
-
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
               5.2 What We Store
             </h3>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              Paciolus permanently stores only:
+              Paciolus stores:
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Your account credentials (email, hashed password)</span>
+                <span className="font-sans text-oatmeal-400">Your account details (name, email, hashed password)</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Client metadata (company names, industry classifications, fiscal periods)</span>
+                <span className="font-sans text-oatmeal-400">Client metadata (company names, industry classifications, fiscal year-ends)</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Practice configuration settings (materiality thresholds, benchmarks)</span>
+                <span className="font-sans text-oatmeal-400">Practice configuration settings (materiality thresholds, testing thresholds, preferences)</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Aggregate activity logs (timestamps, feature usage counts, no financial amounts)</span>
+                <span className="font-sans text-oatmeal-400">A summary of each analysis: category totals, ratios, row counts, total debits and credits, the materiality used, anomaly counts, the first characters of the filename and a hash of it</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="font-sans text-oatmeal-400">The names of accounts a tool flagged (without amounts or entry details)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="font-sans text-oatmeal-400">Anything you enter in an engagement, including materiality, follow-up items, intercompany mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span className="font-sans text-oatmeal-400">Reports you choose to share by link, stored encrypted with our storage provider for up to 48 hours and then deleted</span>
               </li>
             </ul>
-
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
-              5.3 What We Do NOT Store
+              5.3 What We Do Not Store
             </h3>
-            <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              Paciolus never stores:
-            </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-clay-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Trial balance files or raw financial data</span>
+                <span className="font-sans text-oatmeal-400">Uploaded files, or copies of them</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-clay-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Individual account numbers, descriptions, or balances</span>
+                <span className="font-sans text-oatmeal-400">The line-level rows in your uploads: individual account balances, journal entries, invoices, payments or payroll records</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-clay-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Copies of uploaded files</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-clay-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span className="font-sans text-oatmeal-400">Financial statement line items or totals</span>
+                <span className="font-sans text-oatmeal-400">The detail behind a flag (the specific entries and amounts), beyond the flagged account names above</span>
               </li>
             </ul>
-
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
-              5.4 Implications for Users
+              5.4 What This Means for You
             </h3>
-            <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              Because of our Zero-Storage model:
-            </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">We cannot recover past analyses or re-generate reports after the session ends</span>
+                <span className="font-sans text-oatmeal-400">Your saved history holds summaries, not your files; to re-run a test you upload the file again</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">You must download and save any reports you need before closing the browser</span>
+                <span className="font-sans text-oatmeal-400">Line-level detail lives in the reports you export, so download the reports you need for your workpapers</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Each analysis requires re-uploading the trial balance file</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span className="font-sans text-oatmeal-400">Your financial data is never at risk of being exposed through a Paciolus data breach</span>
+                <span className="font-sans text-oatmeal-400">Because we keep summaries and engagement entries, they are covered by our security measures and the deletion rights in our Privacy Policy</span>
               </li>
             </ul>
           </section>
@@ -872,7 +868,7 @@ export default function TermsPage() {
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">No financial data will be retained (per Zero-Storage model, it was already purged)</span>
+                <span className="font-sans text-oatmeal-400">Uploaded files were never kept; the analysis summaries and engagement entries we hold are deleted with your other stored data</span>
               </li>
             </ul>
           </section>

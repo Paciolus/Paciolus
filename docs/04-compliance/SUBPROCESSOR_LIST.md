@@ -25,7 +25,7 @@ Paciolus will notify Customers at least **30 days** before adding or replacing a
 | **Render** | Backend API hosting, managed PostgreSQL database | User credentials (encrypted), client metadata, diagnostic metadata (aggregates), engagement metadata, activity logs | United States (Oregon) | EU-US DPF / SCCs | SOC 2 Type II | Signed | 2025-01-01 |
 | **Vercel** | Frontend hosting, CDN, static asset delivery | None (static files only; no personal data processed) | United States / Global CDN | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2025-01-01 |
 | **Stripe** | Payment processing, subscription management, billing portal | Email address, billing information (card details handled by Stripe — never touch Paciolus servers) | United States | EU-US DPF / SCCs | PCI DSS Level 1, SOC 2 Type II | Signed | 2025-12-01 |
-| **Sentry** | Error tracking, application performance monitoring (APM) | Anonymized user IDs, error messages (sanitized), performance traces (10% sampled). Request bodies stripped by `before_send` hook (Zero-Storage compliant) | United States | EU-US DPF / SCCs | SOC 2 Type II | Signed | 2025-06-01 |
+| **Sentry** | Error tracking, application performance monitoring (APM) | Anonymized user IDs, error messages (sanitized), performance traces (10% sampled). Request bodies, frame local variables, exception messages and log breadcrumbs stripped by the `before_send` hook (Sprint 840) | United States | EU-US DPF / SCCs | SOC 2 Type II | Signed | 2025-06-01 |
 | **SendGrid** (Twilio) | Transactional email delivery | Email addresses, verification tokens (24-hour expiry), user display names | United States | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2025-01-01 |
 | **Cloudflare** (R2 object storage) | Storage of export-share file content — the `paciolus-exports` bucket, keyed `shares/<share_token_hash>` | **Customer financial export content** (PDF / Excel / CSV bytes of an export the Customer has chosen to share via a passcode-protected link). Object keys are SHA-256 hashes of the share token and carry no account or client identifiers | Eastern North America (ENAM) | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2026-04-23 |
 
@@ -43,7 +43,7 @@ Paciolus will notify Customers at least **30 days** before adding or replacing a
 | **Email delivery data** | Recipient email, delivery status, verification tokens | 24 hours (tokens); per SendGrid policy (delivery logs) | SendGrid |
 | **Error telemetry** | Anonymized user ID, error context, stack traces | 90 days | Sentry |
 | **Export-share content** | Rendered export files (PDF / Excel / CSV) behind a Customer-created share link | Until the share expires or is revoked | Cloudflare R2 (`paciolus-exports`) |
-| **Uploaded financial data** | Trial balances, ledgers, payment registers | **Never stored** (in-memory only) | None |
+| **Uploaded financial data** | Trial balances, ledgers, payment registers | **Not kept** (in memory for the request only) | None |
 
 ---
 
@@ -56,7 +56,7 @@ All subprocessors operate in compliance with the Paciolus Zero-Storage architect
 - **Stripe:** Receives only email addresses and billing information. No financial analysis data is shared with Stripe. Credit card details are handled entirely by Stripe's PCI-compliant infrastructure and never touch Paciolus servers.
 - **Sentry:** A `before_send` hook strips all request body data before transmission. `send_default_pii=False` is enforced. No financial data reaches Sentry.
 - **SendGrid:** Receives only email addresses and short-lived verification tokens. No financial data is included in transactional emails.
-- **Cloudflare (R2):** The one subprocessor that does hold Customer financial content, and the exception that the Zero-Storage architecture document calls out explicitly. It stores only exports the Customer has *chosen* to share through a passcode-protected link. Objects are keyed by the SHA-256 hash of the share token, so the key reveals nothing about the client or engagement; the passcode is hashed with Argon2id and is never stored alongside the object; and the object is deleted when the share is revoked or expires. Trial balances and ledgers as uploaded are still never written anywhere.
+- **Cloudflare (R2):** The one subprocessor that does hold Customer financial content, and the exception that the Zero-Storage architecture document calls out explicitly. It stores only exports the Customer has *chosen* to share through a link, optionally passcode-protected. Objects are keyed by the SHA-256 hash of the share token, so the key reveals nothing about the client or engagement; a passcode, if set, is hashed with Argon2id and kept in the database, not with the object; and the object is deleted when the share is revoked or expires. Trial balances and ledgers as uploaded are not written to storage.
 
 ---
 

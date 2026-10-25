@@ -47,10 +47,10 @@ describe('FeaturePillars', () => {
     expect(screen.getByText('Why Paciolus')).toBeInTheDocument()
   })
 
-  it('renders Zero-Storage Security pillar', () => {
+  it('renders the uploads-not-kept pillar', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText('Zero-Storage Security')).toBeInTheDocument()
-    expect(screen.getByText('Never written to disk. Never retained.')).toBeInTheDocument()
+    expect(screen.getByText('Uploads Not Kept')).toBeInTheDocument()
+    expect(screen.getByText('Processed in memory, then released.')).toBeInTheDocument()
   })
 
   it('renders Precision pillar', () => {
@@ -67,7 +67,7 @@ describe('FeaturePillars', () => {
 
   it('renders pillar descriptions', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText(/processed in-memory/)).toBeInTheDocument()
+    expect(screen.getByText(/processed in memory and not kept/)).toBeInTheDocument()
     expect(screen.getByText(/Configure materiality/)).toBeInTheDocument()
     expect(screen.getByText(/PDF memos with ISA and PCAOB citations/)).toBeInTheDocument()
   })

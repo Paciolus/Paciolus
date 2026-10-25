@@ -239,7 +239,7 @@ function HomeContent() {
               </div>
 
               <p className="text-center text-content-tertiary text-xs font-sans mt-4">
-                Your file is processed entirely in-memory and is never saved to any disk or server.
+                Your file is processed in memory and not kept after analysis. The summary totals are saved to your history.
               </p>
             </section>
 

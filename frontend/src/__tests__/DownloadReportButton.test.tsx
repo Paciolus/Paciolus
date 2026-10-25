@@ -2,7 +2,7 @@
  * Sprint 277: DownloadReportButton component tests
  *
  * Tests the export button used for PDF diagnostic summary downloads.
- * Covers: rendering, disabled state, download flow, error handling, loading state, zero-storage hint.
+ * Covers: rendering, disabled state, download flow, error handling, loading state, storage hint.
  */
 import React from 'react'
 import { DownloadReportButton } from '@/components/export/DownloadReportButton'
@@ -165,10 +165,10 @@ describe('DownloadReportButton', () => {
     })
   })
 
-  it('shows Zero-Storage hint when idle', () => {
+  it('shows the storage hint when idle', () => {
     render(<DownloadReportButton {...defaultProps} />)
     expect(
-      screen.getByText('Zero-Storage: Summary generated on-demand, never stored')
+      screen.getByText('Generated on demand; the file is not kept')
     ).toBeInTheDocument()
   })
 })

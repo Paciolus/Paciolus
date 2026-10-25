@@ -10,13 +10,10 @@ import { render, screen } from '@/test-utils'
 
 
 describe('ZeroStorageNotice', () => {
-  it('renders zero-storage text', () => {
+  it('says what happens to uploads and links to what is kept (Sprint 841)', () => {
     render(<ZeroStorageNotice />)
-    expect(
-      screen.getByText(
-        'Zero-Storage: Raw files are processed in-memory and not stored at rest.'
-      )
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Your uploaded files are processed in memory and not kept after analysis\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'See exactly what we keep' })).toHaveAttribute('href', '/trust#transparency')
   })
 
   it('renders lock icon (svg element)', () => {

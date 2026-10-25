@@ -210,7 +210,7 @@ function RegisterPageInner() {
             <p
               className="text-oatmeal-400 font-sans text-sm"
             >
-              Seven-day trial. All eighteen tools. Raw financial files are never stored.
+              Seven-day trial. All eighteen tools. Uploaded files are not kept after analysis.
             </p>
           </div>
 
@@ -221,11 +221,11 @@ function RegisterPageInner() {
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
               <span className="text-sage-300 text-sm font-sans font-medium">
-                Zero-Storage Architecture
+                Uploads Not Kept
               </span>
             </div>
             <p className="text-oatmeal-500 text-xs font-sans text-center mt-2">
-              Your raw financial files are never stored. Only credentials are saved securely.
+              Uploaded files are processed in memory and not kept. We save your account, client list, analysis summaries and engagement entries.
             </p>
           </div>
 

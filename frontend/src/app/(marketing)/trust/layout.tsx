@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Trust & Security — How Paciolus Protects Your Data',
-  description: 'Zero-storage architecture, enterprise-grade encryption, CSRF protection, and defense-in-depth security. Your financial data is never stored at rest.',
+  description: 'TLS in transit, provider-managed encryption at rest, CSRF protection and layered security controls. Uploaded files are processed in memory and not kept; see exactly what we do keep.',
   openGraph: {
     title: 'Trust & Security — How Paciolus Protects Your Data',
-    description: 'Zero-storage architecture, enterprise-grade encryption, and defense-in-depth security.',
+    description: 'How Paciolus handles your data, and exactly what it keeps.',
   },
 }
 

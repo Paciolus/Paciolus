@@ -337,6 +337,6 @@ describe('CurrencyRatePanel', () => {
     render(<CurrencyRatePanel />)
     await user.click(screen.getByText('Multi-Currency Conversion'))
 
-    expect(screen.getByText(/Rates are session-scoped and never stored/)).toBeInTheDocument()
+    expect(screen.getByText(/Rates are kept for up to 2 hours, then deleted/)).toBeInTheDocument()
   })
 })

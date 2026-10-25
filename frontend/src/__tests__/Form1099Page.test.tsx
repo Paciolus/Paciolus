@@ -72,7 +72,7 @@ describe('Form1099Page', () => {
     // Sprint 837: card renamed — thresholds are now selected by tax year.
     expect(screen.getByText('Thresholds by Tax Year')).toBeInTheDocument()
     expect(screen.getByText('Processor Safe-Harbor')).toBeInTheDocument()
-    expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
+    expect(screen.getByText('Your Data')).toBeInTheDocument()
     expect(screen.getByText(/corporate \/ processor safe-harbors/i)).toBeInTheDocument()
   })
 })

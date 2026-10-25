@@ -147,7 +147,7 @@ export function DemoZone() {
         <motion.div className="mt-4 p-3 bg-obsidian-700/50 border border-obsidian-500/40 rounded-lg" variants={fadeUp}>
           <p className="text-oatmeal-500 text-xs font-sans text-center leading-relaxed">
             This is a demo using synthetic data for Acme Manufacturing Corp. Sign in to analyze your own trial balance.
-            Your data is processed in server memory only and immediately destroyed — never written to disk or database.
+            Uploaded files are processed in memory and not kept after analysis; a summary of each run is saved to your history.
           </p>
         </motion.div>
 
@@ -182,7 +182,7 @@ export function DemoZone() {
             </Link>
           </div>
           <p className="text-oatmeal-500 text-xs font-sans mt-6">
-            Zero-Storage Architecture. Raw financial files are processed in server memory only and immediately destroyed — never written to disk or database.
+            Uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and anything you enter in an engagement.
           </p>
         </motion.div>
       </motion.div>

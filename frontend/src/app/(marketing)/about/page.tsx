@@ -35,14 +35,14 @@ const whatItIs = [
   'An analytical tool designed for substantive audit procedures',
   'A tool that surfaces analytical exceptions requiring professional evaluation',
   'A workpaper-ready export system (PDF, Excel, CSV)',
-  'Built on Zero-Storage architecture to preserve client confidentiality',
+  'Built so uploaded files are processed in memory and not kept after analysis',
 ]
 
 const whatItIsNot = [
   'Not an audit software that replaces professional judgment',
   'Not a system that provides assurance opinions',
   'Not a tool that generates audit evidence',
-  'Not a platform that stores your financial data',
+  'Not a document store — your uploaded files are not kept',
 ]
 
 const professionalsCards = [
@@ -202,16 +202,17 @@ export default function AboutPage() {
       >
         <div className="max-w-3xl mx-auto">
           <h2 className="type-headline text-oatmeal-100 text-center mb-8">
-            Zero-Storage Commitment
+            What We Keep, and What We Don&apos;t
           </h2>
           <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 leading-relaxed">
-              Paciolus processes all financial data entirely in-memory. Nothing is written to disk,
-              stored in a database, or retained after your session ends. There is no persistent raw financial data
-              to breach, subpoena, or expose &mdash; which simplifies your GDPR and CCPA posture
-              to its most defensible form: zero retention.{' '}
-              <Link href="/approach" className="text-sage-400 hover:text-sage-300 underline transition-colors">
-                Learn more about our technical approach
+              Your uploaded files are processed in memory and not kept after analysis &mdash; the
+              ledger rows, invoices and payroll records in them are never saved. We do save your account,
+              your client list, a summary of each analysis (totals, ratios and the names of accounts a tool
+              flagged) and anything you enter in an engagement, such as materiality, analytical expectations
+              and uncorrected misstatements. Reports you share by link are held for up to 48 hours.{' '}
+              <Link href="/trust#transparency" className="text-sage-400 hover:text-sage-300 underline transition-colors">
+                See exactly what we keep
               </Link>.
             </p>
           </div>
@@ -276,8 +277,8 @@ export default function AboutPage() {
                 description: 'Access from any device without desktop software or plugins. Open a browser, upload a file, get documented results.',
               },
               {
-                title: 'Zero-Storage by Architecture',
-                description: 'Client financial data never touches a database. All processing occurs in-memory and is destroyed on session completion, preserving confidentiality by design.',
+                title: 'Uploads Processed in Memory',
+                description: 'Uploaded files are parsed in memory and not kept after analysis. What we do save — summaries and your engagement entries — is listed on the Trust page.',
               },
               {
                 title: 'Standards-Cited Memos',
@@ -338,7 +339,7 @@ export default function AboutPage() {
             Start your first analysis.
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
-            Seven-day trial. All eighteen tools. Your client&apos;s raw files are never stored.
+            Seven-day trial. All eighteen tools. Your uploaded files are not kept after analysis.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

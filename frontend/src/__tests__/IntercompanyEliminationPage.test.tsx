@@ -96,7 +96,7 @@ describe('IntercompanyEliminationPage', () => {
 
     expect(screen.getByText('Automatic Direction Inference')).toBeInTheDocument()
     expect(screen.getByText('Configurable Tolerance')).toBeInTheDocument()
-    expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
+    expect(screen.getByText('Your Data')).toBeInTheDocument()
 
     // Disclaimer body sentence is unique (distinct from hero badge / citation footer)
     expect(screen.getByText(/elimination entries on matched reciprocal intercompany balances/i)).toBeInTheDocument()

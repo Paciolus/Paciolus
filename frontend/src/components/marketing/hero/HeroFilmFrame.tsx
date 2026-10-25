@@ -489,13 +489,13 @@ export function ExportLayer({ opacity, isActive }: { opacity: MotionValue<number
         )}
       </div>
 
-      {/* Zero-storage whisper */}
+      {/* Upload-handling whisper */}
       <motion.p
         className="font-sans text-[11px] text-obsidian-400 italic text-center"
         animate={phase >= 5 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
       >
-        Processed in-memory and immediately destroyed. Raw financial data is never stored.
+        Processed in memory. Uploaded files are not kept after analysis.
       </motion.p>
     </motion.div>
   )

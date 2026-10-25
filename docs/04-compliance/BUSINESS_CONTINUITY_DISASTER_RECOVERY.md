@@ -66,7 +66,7 @@ Paciolus's [Zero-Storage Architecture](./ZERO_STORAGE_ARCHITECTURE.md) fundament
 | Traditional SaaS | Paciolus |
 |-------------------|----------|
 | Must recover customer financial data from backups | No financial data to recover |
-| Data loss window = time since last backup | Financial data loss window = 0 (never stored) |
+| Data loss window = time since last backup | Uploaded files: none to lose (not kept). Summaries and engagement entries: the database's recovery point |
 | Recovery includes data integrity verification | Recovery limited to credentials, metadata, billing |
 | Breach during DR may expose financial records | Financial records cannot be exposed (do not exist) |
 

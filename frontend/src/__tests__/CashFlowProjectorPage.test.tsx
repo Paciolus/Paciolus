@@ -71,7 +71,7 @@ describe('CashFlowProjectorPage', () => {
     expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument()
     expect(screen.getByText('Three-Scenario Forecast')).toBeInTheDocument()
     expect(screen.getByText('Min-Safe-Cash Alerts')).toBeInTheDocument()
-    expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
+    expect(screen.getByText('Your Data')).toBeInTheDocument()
     expect(screen.getByText(/liquidity sensitivity, not a budget/i)).toBeInTheDocument()
   })
 })

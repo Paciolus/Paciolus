@@ -89,10 +89,10 @@ export default function W2ReconciliationPage() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <h3 className="font-serif text-content-primary text-sm mb-2">Zero-Storage</h3>
+                  <h3 className="font-serif text-content-primary text-sm mb-2">Your Data</h3>
                   <p className="font-sans text-content-tertiary text-xs">
                     CSVs are parsed in-browser, posted as JSON, reconciled in memory, and discarded
-                    after the response. No payroll data persists to long-term storage.
+                    after the response. The payroll data itself is not kept.
                   </p>
                 </div>
               </div>

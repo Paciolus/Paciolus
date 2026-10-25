@@ -43,10 +43,10 @@ interface FeaturePillar {
 const pillars: FeaturePillar[] = [
   {
     id: 'zero-knowledge',
-    title: 'Zero-Storage Security',
-    tagline: 'Never written to disk. Never retained.',
+    title: 'Uploads Not Kept',
+    tagline: 'Processed in memory, then released.',
     description:
-      'Every file is processed in-memory and immediately discarded after analysis. Nothing is written to disk. No raw data is retained. Zero exposure, by design — not by policy.',
+      'Uploaded files are processed in memory and not kept after analysis — the ledger rows in them are never saved. We keep your account, client list, analysis summaries and what you enter in an engagement, and list exactly what on the Trust page.',
     accentGradient: 'from-sage-500/15 via-transparent to-transparent',
     accentBorder: 'border-sage-500/30 hover:border-sage-500/50',
     accentIconBg: 'bg-sage-500/20',
@@ -121,7 +121,7 @@ export function FeaturePillars() {
           Built for Financial Professionals
         </h2>
         <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-4">
-          What used to take days now takes seconds. Your client&apos;s raw financial data is never stored — the architecture makes it impossible. Every output is report-ready the moment analysis completes.
+          What used to take days now takes seconds. Your client&apos;s uploaded files are not kept after analysis. Every output is report-ready the moment analysis completes.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
       </Reveal>

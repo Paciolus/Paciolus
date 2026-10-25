@@ -158,7 +158,7 @@ export default function FluxPage() {
                 </header>
 
                 {!isAuthenticated && (
-                    <GuestCTA description="Flux & Variance Intelligence requires a verified account. Sign in or create an account for Zero-Storage processing." />
+                    <GuestCTA description="Flux & Variance Intelligence requires a verified account. Sign in or create an account to continue." />
                 )}
 
                 {isAuthenticated && (<>

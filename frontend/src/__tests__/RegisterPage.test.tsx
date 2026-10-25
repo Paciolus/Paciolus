@@ -69,9 +69,9 @@ describe('RegisterPage', () => {
     expect(screen.getByText('Create My Account')).toBeInTheDocument()
   })
 
-  it('shows Zero-Storage badge', () => {
+  it('shows the uploads-not-kept badge', () => {
     render(<RegisterPage />)
-    expect(screen.getByText('Zero-Storage Architecture')).toBeInTheDocument()
+    expect(screen.getByText('Uploads Not Kept')).toBeInTheDocument()
   })
 
   it('shows login link', () => {

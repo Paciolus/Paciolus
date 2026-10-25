@@ -3,7 +3,7 @@
 /**
  * Loan Amortization Generator (Sprint 625)
  *
- * Form-input only — zero-storage compliant. Generates a period-by-period
+ * Form-input only — nothing is uploaded. Generates a period-by-period
  * amortization schedule with annual roll-ups and book journal entry templates.
  */
 

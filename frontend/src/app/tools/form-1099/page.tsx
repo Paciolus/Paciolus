@@ -85,7 +85,7 @@ export default function Form1099Page() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <h3 className="font-serif text-content-primary text-sm mb-2">Zero-Storage</h3>
+                  <h3 className="font-serif text-content-primary text-sm mb-2">Your Data</h3>
                   <p className="font-sans text-content-tertiary text-xs">
                     Vendor master and payment register data are parsed in-browser, posted as JSON, analyzed
                     in memory, and discarded after the response.

@@ -131,7 +131,7 @@ describe('SODPage', () => {
     // Info cards
     expect(screen.getByText('Hardcoded Rule Library')).toBeInTheDocument()
     expect(screen.getByText('Per-User Risk Ranking')).toBeInTheDocument()
-    expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
+    expect(screen.getByText('Your Data')).toBeInTheDocument()
 
     // Disclaimer + badge + citation footer all cite COSO 2013
     expect(screen.getAllByText(/COSO 2013/i).length).toBeGreaterThanOrEqual(1)

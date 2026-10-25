@@ -1,9 +1,16 @@
+import Link from 'next/link'
+import { STORAGE_DETAIL_HREF, STORAGE_DETAIL_LABEL, UPLOAD_HANDLING } from '@/content/storage-statement'
+
 interface ZeroStorageNoticeProps {
   className?: string
 }
 
 /**
- * ZeroStorageNotice — Lock icon + "Zero-Storage" reassurance text.
+ * ZeroStorageNotice — Lock icon + what happens to an upload.
+ *
+ * Sprint 841: says only what is true of uploads and links to the Trust page's
+ * list of what is kept (the old wording read as a promise about
+ * all data). The component name is kept to avoid churning 15 call sites.
  *
  * Displayed below upload zones on all tool pages.
  * Standardizes the icon color to the semantic success token.
@@ -17,7 +24,10 @@ export function ZeroStorageNotice({ className = '' }: ZeroStorageNoticeProps) {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
       </svg>
       <span className="font-sans text-xs text-content-tertiary">
-        Zero-Storage: Raw files are processed in-memory and not stored at rest.
+        {UPLOAD_HANDLING}{' '}
+        <Link href={STORAGE_DETAIL_HREF} className="underline hover:text-content-secondary">
+          {STORAGE_DETAIL_LABEL}
+        </Link>
       </span>
     </div>
   )

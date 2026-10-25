@@ -15,7 +15,7 @@ import { fadeUp } from '@/lib/motion'
  *
  * Closing argument section: quantified platform credentials replacing
  * placeholder social proof. Auditor-relevant metrics (test depth,
- * standards coverage, Zero-Storage) with an auth-aware CTA.
+ * standards coverage, upload handling) with an auth-aware CTA.
  *
  * Placed after EvidenceBand, before footer.
  */

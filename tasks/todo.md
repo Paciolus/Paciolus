@@ -363,7 +363,7 @@
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Next: Sprint 841.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprint 841 (storage wording) COMPLETE. Next: Sprint 842.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -379,21 +379,31 @@
 > Sprints 836–840 archived to `tasks/archive/sprints-836-840-details.md`.
 
 ### Sprint 841: One honest storage statement everywhere
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 2 (A1–A26 + Medium list).
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 2 (A1–A26 + Medium list).
 
-- [ ] Adopt Option B wording (report Part 2) in every location A1–A26 and the Medium list: SEO metadata, homepage
-      pillars/evidence band/demo zone, About, login/register, **verification and password-reset email templates
-      (html + txt)**, TB tool page, WelcomeModal, workspace footer, portfolio page, multi-currency page, error pages,
-      Privacy §2–3 + retention table, Terms §5 (fix facts only; counsel reviews later), USER_GUIDE, Subprocessor
-      List, DPA §2.3/§11.3, ZERO_STORAGE_ARCHITECTURE (add an R2 section), Security/Access Control policy absolutes.
-- [ ] USER_GUIDE: stop calling "Clear All Activity History" a GDPR erasure (it archives).
-- [ ] Sentry/log claims (`trust/page.tsx:148, 193`) only after Sprint 840 S2/S6 land.
-- [ ] Guard test: fail the build if "never stored", "never written to disk", "no database to breach",
-      "architecturally impossible", "zero exposure" or "Zero-Storage compliant" reappears in customer-facing files
-      (frontend `src/app`, `src/components`, `src/content`, `src/domain`, backend `templates/`, `docs/04-compliance`,
-      `docs/07-user-facing`).
+- [x] Option B wording in one place — `frontend/src/content/storage-statement.ts` (`UPLOAD_HANDLING`,
+      `WHAT_WE_KEEP`, link to `/trust#transparency`) — and applied at every A1–A26 location and the Medium list:
+      SEO metadata (root, about, approach, privacy, terms, trust), homepage pillars/evidence band/demo zone/hero,
+      About, login/register, all four email templates, TB tool page, WelcomeModal, workspace + marketing footers,
+      portfolio, multi-currency and the five JSON-tool sidebars, the four error pages (they claimed "nothing was
+      persisted"; now: saved work is unaffected, an in-progress upload was not kept), history, batch panel,
+      Privacy §1.3 (now a kept / not-kept / how-long table), §3 (adds the 10-minute preview cache and R2 share
+      links), retention table (adds analysis summaries + engagement entries; flagged account names marked kept),
+      Terms §5 (rewritten from the facts; counsel reviews wording later), USER_GUIDE, Subprocessor List, DPA §2.3 +
+      data table, ZERO_STORAGE_ARCHITECTURE (R2 share-link exception; flagged names), Security / Access Control /
+      BCP absolutes.
+- [x] USER_GUIDE: "Clear All Activity History" now says it archives, and erasure goes to privacy@paciolus.com.
+- [x] Sentry/log claims: Trust page now describes what Sprint 840 S2 strips.
+- [x] Guards in `backend/tests/test_storage_claims.py`: (1) 22 retired phrases fail anywhere on the site, app,
+      emails, user guide or compliance docs (archive/ excluded); (2) "Zero-Storage" as a claim fails on the site,
+      app, emails and user guide (code comments skipped; compliance docs keep the name until Sprint 845).
 - [ ] Optional later (CEO): Option C — stop storing `tool_runs.flagged_accounts` etc. so "we keep nothing from your
       uploads" becomes literally true.
+- **Also done here because the same lines carried them:** L5 "Audit Intelligence" in the about/approach metadata,
+      M6 "ISA and PCAOB alignment" in the approach metadata, "enterprise-grade encryption" in the trust metadata,
+      A3's "Eliminate sign errors" → "flags likely sign errors". Sprint 843/844 should skip those.
+- **Left for 844:** the account-deletion promises ("immediate and irreversible", "deleted within 30 days") and the
+      "anonymized usage statistics" line — they need the deletion feature / the analytics decision, not a rewording.
 
 **Commit SHA:** TBD.
 

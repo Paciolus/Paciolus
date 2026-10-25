@@ -80,10 +80,10 @@ export function mapActivityLogToAuditActivity(log: ActivityLogResponse): AuditAc
   };
 }
 
-// What IS stored vs NOT stored (for Zero-Storage transparency)
+// What IS stored vs NOT stored (Sprint 841: matches the activity_logs columns)
 export const STORED_METADATA = [
   'Timestamp of audit',
-  'File hash (SHA-256, not actual filename)',
+  'File hash (SHA-256) and the first 8 characters of the filename',
   'Row count',
   'Balance status (Balanced/Unbalanced)',
   'Summary totals (Debits/Credits)',
@@ -96,6 +96,6 @@ export const NOT_STORED = [
   'Account names or details',
   'Individual transactions',
   'Specific anomaly descriptions',
-  'Original filename (only hash stored)',
+  'The full filename',
   'Any PII (Personally Identifiable Information)',
 ] as const;

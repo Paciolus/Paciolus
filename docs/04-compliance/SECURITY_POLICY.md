@@ -98,7 +98,7 @@ This document defines Paciolus's security principles, practices, and incident re
 | **Confidential** | User credentials, client metadata | Encryption + access control |
 | **Highly Confidential** | Trial balance data | **Zero-Storage (not retained)** |
 
-**Key Point:** The most sensitive data category (financial transactions) is **never stored**, eliminating the highest-risk scenario.
+**Key Point:** Uploaded files and the transactions in them are **not kept**. The database does hold analysis summaries and Customer-entered engagement content (including misstatement amounts), which this policy protects.
 
 ### 2.2 Encryption Standards
 
@@ -119,7 +119,7 @@ ssl_prefer_server_ciphers on;
 - **bcrypt** for user-account password hashing (work factor: 12 rounds, auto-salted)
 - **Argon2id** for export-share passcodes (OWASP 2024 cheat-sheet params — memory=64 MiB, time=3, parallelism=4, 32-byte tag, 16-byte salt). bcrypt retained on the verify path during the ≤48h share-TTL transition window so Sprint 696 shares still open while Sprint 697 (Argon2id) shares are the new write format. SHA-256 hex passcodes (pre-Sprint-696) are refused at verification and proactively revoked by the nightly retention cleanup (Sprint 700).
 - **AES-256 encryption** for all application data at rest — provided and enforced by Render's managed PostgreSQL service (industry-standard provider-level encryption; not reliant on application configuration)
-- **No encryption needed for financial data** (Zero-Storage — data is ephemeral; trial balance data is never written to disk)
+- **Uploaded files are not written to disk** — they are processed in memory; the summaries and engagement content that are stored rely on the provider-level encryption above
 - **Vercel** (frontend hosting) has no persistent storage configured — no KV, Blob, Postgres, or Edge Config instances are provisioned; all application data resides exclusively on Render
 
 **Encryption at Rest — Control Verification:**
@@ -568,7 +568,7 @@ Each key can be rotated independently without affecting the other domains. `AUDI
 4. **User notification:** Email affected users within 72 hours (GDPR requirement)
 5. **Regulatory notification:** Report to authorities if required (e.g., ICO for UK users)
 
-**Note:** Financial data breach is architecturally impossible (Zero-Storage).
+**Note:** Uploaded files are not kept, which limits what a breach could expose; stored summaries and engagement entries remain in scope.
 
 #### Zero-Storage Violation
 **Definition:** Trial balance data persisted to disk/database (policy violation).
@@ -781,7 +781,7 @@ All third-party services evaluated for security:
 | **Render** | Backend hosting | SOC 2 Type II | ✅ Passed |
 | **PostgreSQL** | Database (managed) | GDPR-compliant | ✅ Passed |
 | **Stripe** | Payment processing | PCI DSS Level 1, SOC 2 Type II | ✅ Passed |
-| **Sentry** | Error tracking (Zero-Storage compliant — request body stripped) | SOC 2 Type II | ✅ Passed |
+| **Sentry** | Error tracking (request bodies, local variables, exception text and breadcrumbs stripped) | SOC 2 Type II | ✅ Passed |
 
 **Criteria:**
 - ✅ SOC 2 Type II or equivalent certification

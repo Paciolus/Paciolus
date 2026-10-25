@@ -107,12 +107,12 @@ const architectureNodes: ArchitectureNode[] = [
     id: 'purge',
     number: '04',
     title: 'Purge',
-    subtitle: 'Zero-Storage guarantee',
+    subtitle: 'Uploads not kept',
     icon: 'archive',
     accent: 'oatmeal',
     boundary: 'persistent',
     controls: [
-      { label: 'Zero-Storage Architecture', detail: 'No raw files or line-level financial rows are persisted. Only aggregate metadata is stored.' },
+      { label: 'Uploads Not Kept', detail: 'Uploaded files and the ledger rows in them are not saved. Analysis summaries and engagement entries are — see the lists below.' },
       { label: 'Memory Cleanup', detail: 'Context-managed memory purge after every analysis operation completes.' },
     ],
   },
@@ -143,7 +143,7 @@ const securityControls: SecurityControl[] = [
   { name: 'Formula Injection Guard', description: 'All CSV/Excel exports sanitized against =, +, -, @ formula injection.', category: 'export', standard: 'CWE-1236', active: true },
   { name: 'Export Signing', description: 'Workpaper signoff metadata embedded in every PDF and Excel export.', category: 'export', standard: 'PCAOB AS 1215', active: true },
   { name: 'Column & Cell Limits', description: 'Upload validation enforces column count and cell count boundaries.', category: 'export', standard: 'OWASP Input Val.', active: true },
-  { name: 'Zero-Storage Architecture', description: 'No raw uploaded files or line-level financial data persisted. Only aggregate metadata stored.', category: 'data-handling', standard: 'GDPR Art. 25', active: true },
+  { name: 'Uploads Not Kept', description: 'Uploaded files and line-level rows are not saved. Analysis summaries, flagged account names and engagement entries are stored.', category: 'data-handling', standard: 'GDPR Art. 25', active: true },
   { name: 'Memory Cleanup', description: 'Context-managed memory purge after every analysis operation.', category: 'data-handling', standard: 'CWE-401', active: true },
   { name: 'Structured Logging', description: 'Request-ID correlated logs with sanitized error output. No PII in logs.', category: 'data-handling', standard: 'OWASP ASVS 7.1', active: true },
 ]
@@ -190,7 +190,7 @@ const playbookPhases: PlaybookPhase[] = [
     description: 'Automated monitoring and anomaly detection across infrastructure and application layers.',
     measures: [
       'Structured logging with request-ID correlation',
-      'Sentry APM with Zero-Storage compliant error tracking',
+      'Sentry error tracking with local variables, error text and log breadcrumbs removed',
       'Rate limit breach alerting',
     ],
   },
@@ -209,7 +209,7 @@ const playbookPhases: PlaybookPhase[] = [
     title: 'Recovery',
     icon: 'archive',
     accent: 'sage',
-    description: 'Zero-Storage architecture minimizes exposure — no raw financial data to exfiltrate.',
+    description: 'Not keeping uploads limits exposure — there are no uploaded files or ledger rows at rest to exfiltrate.',
     measures: [
       'No raw files stored means no file-level breach surface',
       'Aggregate-only metadata limits data exposure scope',
@@ -232,12 +232,12 @@ const playbookPhases: PlaybookPhase[] = [
 const downloadableArtifacts: DownloadableArtifact[] = [
   { label: 'Privacy Policy', description: 'Full GDPR/CCPA-compliant privacy disclosure.', href: '/privacy', icon: 'document', type: 'Policy' },
   { label: 'Terms of Service', description: 'Platform usage terms and liability framework.', href: '/terms', icon: 'clipboard-check', type: 'Legal' },
-  { label: 'Zero-Storage Architecture', description: 'Technical deep-dive into our ephemeral processing model.', href: '/approach', icon: 'shield-check', type: 'Technical' },
+  { label: 'How We Handle Your Data', description: 'What happens to an upload, and exactly what we keep.', href: '/approach', icon: 'shield-check', type: 'Technical' },
   { label: 'Request DPA', description: 'Data Processing Agreement available for Organization accounts.', href: '/contact?inquiry_type=organization', icon: 'file-download', type: 'Organization' },
 ]
 
 // Sprint 834 (CEO decision 8, 2026-10-24): these lists must say exactly what
-// the database holds. The earlier copy promised Paciolus never stored account
+// the database holds. The earlier copy promised Paciolus kept no account
 // balances or anomaly details tied to accounts or amounts, while
 // uncorrected_misstatements, analytical_expectations, diagnostic_summaries and
 // tool_runs.flagged_accounts do persist such figures and names. Keep this in
@@ -476,7 +476,7 @@ function ArchitectureDiagram() {
           </span>
         </div>
         <p className="font-sans text-xs text-oatmeal-500 mb-8 text-center">
-          Your data lives here temporarily — processed in-memory, never written to disk
+          Your upload lives here temporarily — processed in memory, then released
         </p>
 
         {/* Desktop: Horizontal Pipeline */}
@@ -672,7 +672,7 @@ function ArchitectureDiagram() {
         )}
       </motion.div>
 
-      {/* Zero-Storage Summary Pill */}
+      {/* Upload-handling summary pill */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -685,7 +685,7 @@ function ArchitectureDiagram() {
         >
           <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" aria-hidden="true" />
           <span className="font-sans text-sm text-oatmeal-400">
-            Zero-Storage: all raw data purged after analysis
+            Uploaded files are not kept after analysis
           </span>
           <BrandIcon name="chevron-right" className="w-3.5 h-3.5 text-sage-400 group-hover:translate-x-0.5 transition-transform" />
         </Link>
@@ -1262,7 +1262,7 @@ export default function TrustAndSecurity() {
         id="playbook"
         meta="Incident Response"
         title="Preparedness Playbook"
-        subtitle="Our four-phase incident response posture. Zero-Storage architecture minimizes breach impact by design."
+        subtitle="Our four-phase incident response posture. Not keeping uploads limits what a breach could expose."
         surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
       >
         <PlaybookPreview />
