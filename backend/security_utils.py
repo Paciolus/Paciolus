@@ -405,6 +405,29 @@ PERSISTED_EVENTS: frozenset[str] = frozenset(
     }
 )
 
+# PR #232 review: quote-stripping alone was not enough — some call sites put
+# the filename unquoted ("... for file: {file.filename}"). Details are now
+# written only for events whose call sites build them from IDs, counts and
+# masked emails; every other security event is logged by name alone.
+DETAIL_SAFE_EVENTS: frozenset[str] = frozenset(
+    {
+        "auth_failed",
+        "login_failed",
+        "account_locked",
+        "ip_blocked",
+        "refresh_token_reuse_detected",
+        "refresh_token_race_detected",
+        "all_sessions_revoked",
+        "all_tokens_revoked",
+        "password_changed",
+        "password_reset_success",
+        "email_changed",
+        "impersonation_token_created",
+        "rate_limit_fail_closed",
+        "rate_limit_degraded",
+    }
+)
+
 _QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _MAX_DETAIL_CHARS = 500
@@ -437,7 +460,7 @@ def log_secure_operation(
         _security_logger.debug("security_op %s", operation)
         return
 
-    safe_details = _redact_details(details) if details else ""
+    safe_details = _redact_details(details) if details and operation in DETAIL_SAFE_EVENTS else ""
     ip_hash = None
     if ip_address:
         from security_middleware import hash_ip_address

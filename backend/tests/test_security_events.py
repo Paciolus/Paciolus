@@ -71,18 +71,27 @@ class TestPersistence:
 class TestLogging:
     def test_security_event_reaches_the_security_logger(self, caplog):
         with caplog.at_level(logging.WARNING, logger="paciolus.security"):
-            log_secure_operation("csrf_blocked", "Origin mismatch")
-        assert "security_event csrf_blocked" in caplog.text
-        assert "Origin mismatch" in caplog.text
+            log_secure_operation("login_failed", "Failed attempt 2/5")
+        assert "security_event login_failed" in caplog.text
+        assert "Failed attempt 2/5" in caplog.text
 
-    def test_details_are_redacted(self, caplog):
+    def test_upload_event_details_are_never_logged(self, caplog):
+        """PR #232 review: some call sites put the filename unquoted."""
         with caplog.at_level(logging.WARNING, logger="paciolus.security"):
-            log_secure_operation(
-                "content_sniff_rejected", "File 'Acme Holdings TB 2025.xlsx' from jane.doe@acme.com rejected"
-            )
-        assert "Acme Holdings" not in caplog.text
+            log_secure_operation("content_type_rejected", "Rejected content type: text/x for file: Acme TB 2025.xlsx")
+        assert "security_event content_type_rejected" in caplog.text
+        assert "Acme" not in caplog.text
+
+    def test_safe_event_details_are_still_redacted(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="paciolus.security"):
+            log_secure_operation("auth_failed", "Unknown email: jane.doe@acme.com via 'Acme portal'")
         assert "jane.doe@acme.com" not in caplog.text
-        assert "'[redacted]'" in caplog.text
+        assert "Acme portal" not in caplog.text
+
+    def test_detail_safe_events_are_security_events(self):
+        from security_utils import DETAIL_SAFE_EVENTS
+
+        assert DETAIL_SAFE_EVENTS <= SECURITY_EVENTS
 
     def test_routine_operation_never_logs_its_details(self, caplog):
         with caplog.at_level(logging.DEBUG, logger="paciolus.security"):
