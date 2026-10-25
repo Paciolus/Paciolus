@@ -1,4 +1,4 @@
-"""Sprint 634 — Form 1099 Preparation engine tests.
+"""Sprint 634 — 1099 Vendor Threshold Review engine tests.
 
 Sprint 837: the original tests ran as tax year 2026 while asserting the $600
 rules. For 2026 the 1099-NEC / 1099-MISC threshold is $2,000, so those tests

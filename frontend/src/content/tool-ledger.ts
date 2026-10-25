@@ -122,7 +122,7 @@ export const TOOL_LEDGER: LedgerEntry[] = [
     name: 'Payroll Testing',
     testCount: 13,
     standards: ['ISA 240'],
-    summary: 'Ghost-employee detection, rate anomalies, overtime spikes, gross-to-net reconciliation across the payroll register.',
+    summary: 'Ghost-employee indicators, rate anomalies, overtime spikes, gross-to-net reconciliation across the payroll register.',
     href: '/tools/payroll-testing',
   },
   {
@@ -186,7 +186,7 @@ export const TOOL_LEDGER: LedgerEntry[] = [
   {
     id: 'form_1099',
     number: 16,
-    name: 'Form 1099 Preparation',
+    name: '1099 Vendor Threshold Review',
     testCount: null,
     standards: ['IRC §6041', 'Pub 1220'],
     summary: 'Identify vendors meeting 1099-NEC / 1099-MISC / 1099-INT thresholds — corporate safe-harbor, processor exemptions, W-9-on-file flags.',
@@ -227,6 +227,16 @@ export const CANONICAL_TOOL_COUNT = 18
  * `tests/test_pricing_copy_consistency.py`.
  */
 export const TOTAL_AUTOMATED_TESTS = TOOL_LEDGER.reduce((sum, t) => sum + (t.testCount ?? 0), 0)
+
+/** Test count for one tool, from the ledger (Sprint 843 — pages had drifted). */
+export function testCountFor(id: string): number {
+  const n = TOOL_LEDGER.find(t => t.id === id)?.testCount
+  if (n == null) throw new Error(`tool-ledger: ${id} has no testCount`)
+  return n
+}
+
+/** Tools that run a numbered test battery (the ones with a `testCount`). */
+export const TESTING_TOOL_COUNT = TOOL_LEDGER.filter(t => t.testCount !== null).length
 
 if (TOOL_LEDGER.length !== CANONICAL_TOOL_COUNT) {
   throw new Error(

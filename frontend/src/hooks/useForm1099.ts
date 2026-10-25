@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Form 1099 Preparation hook — Sprint 689e.
+ * 1099 Vendor Threshold Review hook — Sprint 689e.
  */
 
 import type { Form1099Request, Form1099Response } from '@/types/form1099'
@@ -21,7 +21,7 @@ export interface UseForm1099Return {
 const useForm1099Analysis = createJsonAnalysisHook<Form1099Request, Form1099Response>({
   endpoint: '/audit/form-1099',
   exportEndpoint: '/audit/form-1099/export.csv',
-  toolName: 'Form 1099 Preparation',
+  toolName: '1099 Vendor Threshold Review',
   analyzeErrorMessage: 'Failed to prepare 1099 candidates',
   exportFilename: payload => `form_1099_candidates_${payload.tax_year}.csv`,
 })

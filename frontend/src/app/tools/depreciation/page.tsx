@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { DisclaimerBox } from '@/components/shared/DisclaimerBox'
 import { Reveal } from '@/components/ui/Reveal'
 import { apiDownload, apiPost, downloadBlob } from '@/utils/apiClient'
 
@@ -498,6 +499,8 @@ export default function DepreciationPage() {
             )}
           </Reveal>
         )}
+        {/* Sprint 843 (claims review M8): the standard tax-tool disclaimer */}
+        <DisclaimerBox tax />
       </div>
     </div>
   )

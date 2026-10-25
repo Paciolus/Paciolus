@@ -510,7 +510,7 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprint 841 (storage wording) and 842 (billing claims) COMPLETE. Next: Sprint 843.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims) and 843 (positioning/disclaimers) COMPLETE. Next: Sprint 844.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -595,26 +595,36 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 ---
 
 ### Sprint 843: Professional positioning, memo wording and disclaimers
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 4 (H1–H13, M1–M12, L1–L10, disclaimer set).
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 4 (H1–H13, M1–M12, L1–L10, disclaimer set).
 
-- [ ] Homepage hero (H1, H2), WelcomeModal (H3), demo memo card + AS 1215 badge (H4), About (H5, M5, L9), feature
-      pillars (H6), "every memo follows ISA/PCAOB format" (M4), approach meta "aligned" (M6).
-- [ ] Standard-name hero badges on nine tool pages + tools index + demo strip → quiet "References …" line;
-      "ISA 500 Audit Evidence" → "Bank-to-book matching" (H7).
-- [ ] Memo cover fields "(entered by user)" + cover line (H8); "Conclusion" → "Summary of Results" with the
-      flag-density wording (H9); bank-rec/TWM "immaterial / satisfactory" (H10); TB report "appears sound",
-      "Risk Assessment", "Findings", "Material Exceptions" (H11); memo disclaimer "sufficient" (M1); sampling
-      PASS/FAIL → "UEL ≤ TM" (M2); demo PASS chips (M3).
-- [ ] Composite risk ISA 315 "Appendix 1 matrix" claim (H12) — **CEO verifies against ISA 315 first**; likely relabel
-      as a Paciolus convention and add composite risk to `methodology-sources.ts`.
-- [ ] Rename "Form 1099 Preparation" → "1099 Vendor Threshold Review" (H13) across registry, ledger, pages, tests.
-- [ ] Fraud framing "detection" → "indicators" (M7); tax disclaimer on 1099, W-2, Book-to-Tax, **Depreciation and Loan
-      Amortization** (M8); USER_GUIDE "compliant", "client-ready", "Guarantees" (M9); independence line on
-      intercompany / adjusting entries / book-to-tax / FS (M11).
-- [ ] Adopt the standard disclaimer set verbatim (site footer, tool pages, memo cover + footer, tax tools).
-- [ ] Stale test counts (L1, with a consistency test), hero animation copy (L3, L7), "7 standards" (L4), "Audit
-      Intelligence" naming per CEO decision (L5: about/approach meta, `main.py:243`, `email_service.py:577`,
-      `memo_base.py:795`), memo title ISA 520 (L10).
+- [x] Homepage hero (H1 "Diagnostics in Seconds. Your Judgment, Better Informed."; H2), WelcomeModal (H3; also its
+      "12 tools / 19 fraud indicators" → 18 tools / 19 tests), demo memo card + AS 1215 badge → "PDF" (H4), About
+      (H5, M5, L9), feature pillars (H6), M4 ("Every test names the rule it applies, or says when a threshold is our
+      own convention" on EvidenceBand, BottomProof, demo). M6 was done in 841.
+- [x] H7: nine tool-page hero badges → "References …" ("Bank-to-book matching" for bank rec); tools index references
+      stripped of descriptive claims ("ISA 500 External Confirmation" was wrong for bank rec); demo strip.
+- [x] Memo cover (H8): "Prepared by / Reviewer / Status (entered by user)" + the standard cover line; input labels say
+      "(shown on the memo cover)", no "Jane Smith, CPA" placeholder. "Conclusion" → "Summary of Results" in the shared
+      template and bank rec, TWM, currency, multi-period, preflight (H9); fallback text says "flag-density indicator
+      … not a risk assessment". Bank rec / TWM low-tier "immaterial / satisfactory" removed (H10). TB report: "Diagnostic
+      Score", "Items Flagged", "Above / Below Materiality", "No items exceeded the configured thresholds" (H11). Memo
+      footer is the standard memo footer (M1). Sampling: PASS/FAIL → "UEL ≤ TM" / "UEL > TM", "Evaluation Result",
+      "Suggested close-out steps" (M2). Demo PASS chips gone, "Low flag density — N items flagged" (M3). The flux
+      memo keeps its "Conclusion:" field — that one is the auditor's own written conclusion.
+- [x] H12 relabelled: the 4×4 RMM table is a **Paciolus convention**; ISA 315 (Revised 2019) requires separate IR/CR
+      assessment and prescribes no matrix (its Appendix 1 is about understanding the entity). Engine disclaimer,
+      docstrings, standards registry usage, specimen, pages, CLAUDE.md, and a new `methodology-sources.ts` rule.
+      **CEO: confirm against your copy of ISA 315** — removing the attribution is the safe direction either way.
+- [x] H13: "Form 1099 Preparation" → "1099 Vendor Threshold Review" across registry, taxonomy, workpaper index,
+      ledger, pages, toolbar, command palette, methodology, docs and tests.
+- [x] M7 "detection" → "indicators" / "patterns associated with fraud schemes"; M8 tax disclaimer on 1099, W-2,
+      Book-to-Tax, Depreciation and Loan Amortization; M9 USER_GUIDE "compliant", "client-ready", "Guarantees";
+      M11 independence note on intercompany, adjusting entries, financial statements (book-to-tax via the tax text).
+- [x] Standard disclaimer set in `frontend/src/content/disclaimers.ts`: site footer, every tool page (inside
+      `DisclaimerBox`, above the tool's own text), tax tools; memo cover + footer in the backend.
+- [x] L1 test counts derived (`testCountFor()` on six tool pages and practice settings, demo, hero); L3/L7 hero
+      animation copy; L4 → "6 Standard-Setters Cited" (pinned to the registry); L5 naming (`main.py`, email footer,
+      memo footer; about/approach meta in 841); L10 memo title "(ref. ISA 520)". M12 (CPA advertising) is counsel's.
 - [ ] **Merge gate (2026-10-28 plan):** a banned-phrase test across **every** memo generator ("we conclude", "appears
       sound", "satisfactory", a "Conclusion" heading, …), generalising `test_multi_period_memo.py:875-890`, lands in
       #235 **before** it merges. Re-locate H10 by symbol: bank-rec is now near `bank_reconciliation_memo_generator.py:945`

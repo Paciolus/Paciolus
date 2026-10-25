@@ -47,7 +47,7 @@ The legal-and-security claims review (https://claude.ai/artifact/MFTYHezjA4zakoi
 4. Repository visibility — private, or public with rewritten compliance docs? [ask; recommend private]
 5. Product line — [“Diagnostic Intelligence for Financial Professionals”], “Audit Analytics”, or keep “Audit Intelligence”?
 6. Support promise — [“Email support; we aim to reply within 1–2 business days” for every tier].
-7. Verify ISA 315: does it prescribe the 4×4 inherent × control matrix the composite-risk tool attributes to “Appendix 1”? (Sprint 843 H12)
+7. Verify ISA 315: does it prescribe the 4×4 inherent × control matrix the composite-risk tool attributes to “Appendix 1”? (Sprint 843 H12) — **Sprint 843 relabelled it as a Paciolus convention** (no matrix in ISA 315 as far as engineering can tell); confirm, or tell us the paragraph and we restore the citation.
 
 **Verify in your consoles:** Neon region and PITR window; Render service region; an R2 lifecycle rule deleting `shares/` after ≤2 days; Sentry DSN set in production and its retention; whether Loki is enabled (Grafana Labs would be an unlisted processor); Render log retention; MFA on GitHub, Render, Vercel, Stripe, Sentry, Neon, Cloudflare and SendGrid; whether provider DPAs/SCCs were accepted; `JWT_EXPIRATION_MINUTES` on Render; after Sprint 851 deploys, set `TRUSTED_PROXY_IPS` to the range Render's proxy connects from (ask Render support) and never set `FORWARDED_ALLOW_IPS='*'` (the 851 code fix itself shipped without this); TLS minimum on Vercel/Render; whether help@, privacy@ and security@ mailboxes exist.
 

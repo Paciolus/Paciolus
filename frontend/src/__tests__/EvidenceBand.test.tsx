@@ -73,6 +73,6 @@ describe('EvidenceBand', () => {
 
   it('renders description text', () => {
     render(<EvidenceBand />)
-    expect(screen.getByText(/Every test cites its standard/)).toBeInTheDocument()
+    expect(screen.getByText(/Every test names the rule it applies/)).toBeInTheDocument()
   })
 })

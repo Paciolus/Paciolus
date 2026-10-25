@@ -479,7 +479,7 @@ def generate_flux_expectations_memo(
         )
 
     return render_memo(
-        "ISA 520 Flux & Expectation Documentation",
+        "Flux & Expectation Documentation (ref. ISA 520)",
         "WP-FE",
         _body,
         cover={
