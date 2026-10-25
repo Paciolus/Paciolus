@@ -13593,6 +13593,20 @@
         "title": "HeatmapRowResponse",
         "type": "object"
       },
+      "ImpersonationRequest": {
+        "properties": {
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_user_id"
+        ],
+        "title": "ImpersonationRequest",
+        "type": "object"
+      },
       "ImpersonationResponse": {
         "properties": {
           "access_token": {
@@ -13624,6 +13638,21 @@
           "target_email"
         ],
         "title": "ImpersonationResponse",
+        "type": "object"
+      },
+      "ImpersonationStopRequest": {
+        "properties": {
+          "token": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ImpersonationStopRequest",
         "type": "object"
       },
       "IncomeStatementTotals": {
@@ -37557,6 +37586,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpersonationRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -37815,8 +37854,18 @@
     },
     "/internal/admin/impersonate/stop": {
       "post": {
-        "description": "Revoke an active impersonation token (Sprint 661).\n\nThe admin POSTs the impersonation token they received from\n``/customers/{org_id}/impersonate``. The token's ``jti`` is added to the\nrevocation set so ImpersonationMiddleware stops treating it as read-only.\nThe token is decoded with ``verify_exp=False`` so already-expired sessions\ncan still be explicitly closed out.",
+        "description": "Revoke an active impersonation token (Sprint 661; reachable since Sprint 840).\n\nThe admin, authenticated with their own session, POSTs the impersonation\ntoken they received from ``/customers/{org_id}/impersonate`` in the body.\nThe token's ``jti`` is added to the revocation set, after which the auth\ndependency rejects the token on every request. Decoded with\n``verify_exp=False`` so an already-expired session can still be closed out.",
         "operationId": "stop_impersonation_internal_admin_impersonate_stop_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImpersonationStopRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -37829,6 +37878,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
