@@ -8,7 +8,7 @@
  * since Sprint 834).
  *
  * `backend/tests/test_storage_claims.py` fails the build if the retired absolutes
- * ("never stored", "never written to disk", ...) reappear in customer-facing
+ * (listed in RETIRED_PHRASES there) reappear in customer-facing
  * copy.
  */
 
