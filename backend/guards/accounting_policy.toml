@@ -33,7 +33,11 @@ enabled = true
 description = "No hard-delete on protected audit tables (Phase XLVI invariant)"
 protected_models = ["ActivityLog", "DiagnosticSummary", "ToolRun", "FollowUpItem", "FollowUpItemComment"]
 scan_dirs = [".", "routes"]
-exclude_patterns = ["tests/", "shared/soft_delete.py", "client_manager.py"]
+# services/account_erasure.py: the one sanctioned erasure path — a user's own
+# records on the user's own request (GDPR Art. 17 / CCPA), approved by the CEO
+# 2026-10-24 (Sprint 844). See that module's docstring. Nothing else may be added
+# here without the same argument.
+exclude_patterns = ["tests/", "shared/soft_delete.py", "client_manager.py", "services/account_erasure.py"]
 
 [rules.revenue_contract_fields]
 enabled = true

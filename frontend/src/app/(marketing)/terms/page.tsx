@@ -87,14 +87,14 @@ export default function TermsPage() {
               1.1 What Paciolus Provides
             </h3>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              Paciolus is a trial balance diagnostic intelligence platform designed for professional accountants, auditors, and financial analysts. Our service includes:
+              Paciolus is diagnostic software for professional accountants, auditors and financial analysts. Our service includes:
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">Trial balance upload and analysis (CSV/Excel format)</span>
+                <span className="font-sans text-oatmeal-400">Eighteen diagnostic tools for trial balances, ledgers and registers, accepting ten file formats (CSV, Excel, TSV, TXT, OFX, QBO, IIF, PDF, ODS)</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -815,7 +815,7 @@ export default function TermsPage() {
               <Link href="mailto:support@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">
                 support@paciolus.com
               </Link>
-              {' '}or using the account deletion feature in Settings.
+              {' '}or by deleting it yourself in Settings &rarr; Profile &rarr; Your Data, which removes your stored data immediately.
             </p>
 
             <h3 className="font-serif text-xl text-oatmeal-200 mb-3">
@@ -862,7 +862,7 @@ export default function TermsPage() {
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <span className="font-sans text-oatmeal-400">All stored metadata (client names, settings) will be deleted within 30 days</span>
+                <span className="font-sans text-oatmeal-400">Your stored data (account, clients, settings, analysis summaries and engagement entries) will be deleted within 30 days</span>
               </li>
               <li className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-sage-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">

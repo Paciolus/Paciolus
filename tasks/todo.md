@@ -510,7 +510,7 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims) and 843 (positioning/disclaimers) COMPLETE. Next: Sprint 844.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims), 843 (positioning/disclaimers) and 844 (privacy + account deletion) COMPLETE. Next: Sprint 845.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -640,23 +640,37 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 ---
 
 ### Sprint 844: Privacy promises and legal-page accuracy (account deletion feature)
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 5. Counsel reviews the finished pages at website-final.
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 5. Counsel reviews the finished pages at website-final.
 
-- [ ] Account deletion: change copy now to "email privacy@paciolus.com; deleted within 30 days", then **build**
-      self-service deletion (hard-delete user, clients, engagements, summaries, tool runs, sessions, follow-ups,
-      misstatements, expectations; R2 shares; cancel Stripe subscription; keep only what billing/law requires and say
-      so) + a data-export endpoint; termination hard-delete job; disclose that history "clear" archives.
-- [ ] Remove the DPO line → privacy contact; fix the entity name everywhere (CEO decision); providers and regions
-      (Neon us-east-1, Render region, SendGrid, Cloudflare R2, Render Key Value, Loki if enabled) in Privacy,
-      Subprocessor List, DPA, Security Policy; passwords "hashed" not "encrypted".
-- [ ] Checkout DPA checkbox: publish the DPA at a real URL (updated for Neon/R2/actual data) or remove the checkbox
-      until it exists; Trust page DPA status consistent.
-- [ ] Make the website Terms/Privacy authoritative; delete or sync the markdown copies (dates, arbitration body,
-      refunds, seat caps, CCPA days, "[State]", placeholders, non-existent /history routes).
-- [ ] "72 hours (GDPR requirement)" → "without undue delay, and regulators as the law requires"; remove analytics
-      collection claims; drop "compliant 2024" years; CPRA rights; Terms service description (18 tools, 10 formats).
-- [ ] Trust/Privacy security claims list in report Part 5 (15-minute tokens, lockout, rate-limit wording, no RLS,
-      TLS 1.2+, memory "released", share-link exception, "enterprise-grade", monitoring/on-call).
+- [x] **Built** self-service deletion + data export (`services/account_erasure.py`): `POST /auth/account/delete`
+      (password + typing DELETE) hard-deletes the user, clients, engagements, expectations, misstatements, follow-ups
+      and comments, tool runs, summaries, activity logs, sessions, tokens, shares (R2 objects first) and the
+      subscription (Stripe cancelled first; a provider failure deletes nothing). Billing history kept with the user
+      unlinked; a security-log row records the erasure. Refused (409) for superadmins, owners of orgs that still have
+      members, and authors of entries inside someone else's engagement. `GET /auth/account/export` returns JSON of
+      everything stored (no password hashes or token material). Superadmin `POST /internal/admin/users/{id}/erase`
+      (audit-logged; migration `b9d3f6a2c418` adds `ACCOUNT_ERASED`) honours emailed requests and terminations with
+      the same code. Settings → Profile → Your Data has both controls. The no-hard-delete policy exempts exactly this
+      module, with the justification in `accounting_policy.toml`.
+- [x] Privacy: deletion section describes the real feature + what is kept; "clear history" disclosed as archival;
+      DPO → "Privacy Contact"; processors (Vercel, Render, Render Key Value, Neon, Cloudflare R2, Stripe, SendGrid,
+      Sentry) and regions (Neon us-east-1; Render/Vercel Virginia); "SCCs" → provider's standard terms; access right
+      points at the export; CPRA rights added; analytics claims (session duration, screen resolution) removed.
+- [x] Checkout DPA checkbox removed (it linked to a page calling the DPA "planned"); replaced with "request one".
+      Trust: GDPR/CCPA "2024" and DPA "2025" years removed; SOC 2 "No audit performed or scheduled".
+- [x] Website Terms/Privacy authoritative: the markdown copies moved to `docs/04-compliance/archive/` and replaced by
+      pointers (they had drifted on dates, arbitration body, refunds, seat caps, CCPA days, "[State]", placeholders,
+      non-existent /history routes).
+- [x] Breach notice "without undue delay, and regulators as the law requires"; Terms service description (18 tools,
+      10 formats); termination wording covers summaries and engagement entries.
+- [x] Trust security claims: 15-minute tokens, "5 attempts, 15 minutes", rate limits on every route, app-level account
+      scoping (no RLS claim), TLS 1.2+, "released from memory", optional sign-off block, monitoring = Sentry + 15-minute
+      uptime probe + no 24/7 on-call. (Share-link exception and "enterprise-grade" were done in 841.)
+- **Open — CEO:** legal entity (Paciolus LLC on Privacy vs Paciolus, Inc. on Terms and footer) is still unresolved and
+      deliberately not guessed. Provider DPAs / regions are stated as engineering understands them — verify in the
+      consoles (report "Verify in console").
+- **Left for 845:** provider lists inside `SUBPROCESSOR_LIST.md`, `DATA_PROCESSING_ADDENDUM.md`, `SECURITY_POLICY.md`
+      (those documents are rewritten there).
 
 **Commit SHA:** TBD.
 
