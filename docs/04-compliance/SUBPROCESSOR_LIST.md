@@ -1,120 +1,42 @@
 # Subprocessor List
 
-**Version:** 1.1
-**Document Classification:** Public
-**Effective Date:** February 26, 2026
-**Last Updated:** October 23, 2026
-**Owner:** privacy@paciolus.com
-**Review Cycle:** Quarterly
-**Next Review:** January 23, 2027
+**Version:** 2.0 · **Last updated:** 2026-10-24 · **Owner:** privacy@paciolus.com · **Classification:** Public
 
----
+The third parties that process personal data for Paciolus. Version 1.1 listed the database as
+"Render (Oregon)" (it is Neon, US East), omitted Neon and Render Key Value, marked every provider's DPA
+"Signed" without a record of signature, and described share links as passcode-protected (the passcode is
+optional). The previous text is in
+[`archive/SUBPROCESSOR_LIST_pre-sprint-845_2026-10-24.md`](archive/SUBPROCESSOR_LIST_pre-sprint-845_2026-10-24.md).
 
-## Overview
-
-This document lists all third-party subprocessors engaged by Paciolus, Inc. ("Paciolus") to process personal data on behalf of Customers, as referenced in the [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) Section 6.
-
-Paciolus will notify Customers at least **30 days** before adding or replacing a subprocessor. Customers may subscribe to change notifications by contacting privacy@paciolus.com.
-
----
+We will update this list before adding a subprocessor and will tell customers who ask to be notified
+(privacy@paciolus.com).
 
 ## Active Subprocessors
 
-| Provider | Service Function | Data Categories Processed | Hosting Region | Transfer Mechanism | Security Certifications | DPA Status | Date Added |
-|----------|-----------------|--------------------------|----------------|-------------------|------------------------|------------|------------|
-| **Render** | Backend API hosting, managed PostgreSQL database | User credentials (encrypted), client metadata, diagnostic metadata (aggregates), engagement metadata, activity logs | United States (Oregon) | EU-US DPF / SCCs | SOC 2 Type II | Signed | 2025-01-01 |
-| **Vercel** | Frontend hosting, CDN, static asset delivery | None (static files only; no personal data processed) | United States / Global CDN | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2025-01-01 |
-| **Stripe** | Payment processing, subscription management, billing portal | Email address, billing information (card details handled by Stripe — never touch Paciolus servers) | United States | EU-US DPF / SCCs | PCI DSS Level 1, SOC 2 Type II | Signed | 2025-12-01 |
-| **Sentry** | Error tracking, application performance monitoring (APM) | Anonymized user IDs, error messages (sanitized), performance traces (10% sampled). Request bodies, frame local variables, exception messages and log breadcrumbs stripped by the `before_send` hook (Sprint 840) | United States | EU-US DPF / SCCs | SOC 2 Type II | Signed | 2025-06-01 |
-| **SendGrid** (Twilio) | Transactional email delivery | Email addresses, verification tokens (24-hour expiry), user display names | United States | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2025-01-01 |
-| **Cloudflare** (R2 object storage) | Storage of export-share file content — the `paciolus-exports` bucket, keyed `shares/<share_token_hash>` | **Customer financial export content** (PDF / Excel / CSV bytes of an export the Customer has chosen to share via a passcode-protected link). Object keys are SHA-256 hashes of the share token and carry no account or client identifiers | Eastern North America (ENAM) | EU-US DPF / SCCs | SOC 2 Type II, ISO 27001 | Signed | 2026-04-23 |
+| Provider | What it does | Personal data it processes | Region |
+|----------|-------------|----------------------------|--------|
+| **Neon** | PostgreSQL database | Accounts (email, name, password hash), client metadata, analysis summaries, flagged account names, engagement entries, activity history, security events | United States (us-east-1) |
+| **Render** | Backend hosting and application logs | API requests in transit; logs (no uploaded file contents) | United States |
+| **Render Key Value** | Rate limiting | Request counters keyed by user ID or IP address | United States |
+| **Vercel** | Frontend hosting and CDN | IP address, browser details, access logs | United States / global edge |
+| **Cloudflare** | R2 object storage for shared reports (`paciolus-exports`) | The PDF / Excel / CSV file a user shares by link, for 24–48 hours; keys are hashes of the share token | Eastern North America |
+| **Stripe** | Payments and subscriptions | Email, billing details, payment method (card data never reaches Paciolus) | United States |
+| **SendGrid** | Transactional email | Email address, name, message content (verification, password reset, billing notices) | United States |
+| **Sentry** | Error monitoring | User ID, error type and stack location; request bodies, local variables, exception messages and breadcrumbs are stripped before sending | United States |
 
----
+**Grafana Cloud (Loki)** receives a copy of the application logs only if log shipping is enabled in
+production; it is listed here when it is.
 
-## Data Categories Reference
+Each provider's standard data processing terms apply. Which terms have been formally accepted, and the
+transfer mechanism each uses, is being confirmed and will be recorded here.
 
-| Category | Description | Retention | Stored By |
-|----------|-------------|-----------|-----------|
-| **User credentials** | Email (plaintext), password (bcrypt hash), display name | Account lifetime | Render (PostgreSQL) |
-| **Client metadata** | Client name, industry classification, fiscal year end | Account lifetime | Render (PostgreSQL) |
-| **Diagnostic metadata** | Aggregate totals, financial ratios, row counts, anomaly counts | 365 days | Render (PostgreSQL) |
-| **Engagement metadata** | Period, status, materiality threshold, follow-up narratives | 365 days | Render (PostgreSQL) |
-| **Billing information** | Stripe customer ID, subscription tier, billing interval | Account lifetime | Render (PostgreSQL) + Stripe |
-| **Email delivery data** | Recipient email, delivery status, verification tokens | 24 hours (tokens); per SendGrid policy (delivery logs) | SendGrid |
-| **Error telemetry** | Anonymized user ID, error context, stack traces | 90 days | Sentry |
-| **Export-share content** | Rendered export files (PDF / Excel / CSV) behind a Customer-created share link | Until the share expires or is revoked | Cloudflare R2 (`paciolus-exports`) |
-| **Uploaded financial data** | Trial balances, ledgers, payment registers | **Not kept** (in memory for the request only) | None |
+## Not subprocessors
 
----
+GitHub (source code and CI), Cloudflare DNS, and Dependabot handle no customer data.
 
-## Zero-Storage Compliance
+## Change log
 
-All subprocessors operate in compliance with the Paciolus Zero-Storage architecture:
-
-- **Render / PostgreSQL:** Stores only aggregate metadata (row counts, ratio values, category totals). No line-level account names, balances, or transaction details are ever written to the database.
-- **Vercel:** Serves static frontend assets only. No personal data is transmitted to or stored by Vercel.
-- **Stripe:** Receives only email addresses and billing information. No financial analysis data is shared with Stripe. Credit card details are handled entirely by Stripe's PCI-compliant infrastructure and never touch Paciolus servers.
-- **Sentry:** A `before_send` hook strips all request body data before transmission. `send_default_pii=False` is enforced. No financial data reaches Sentry.
-- **SendGrid:** Receives only email addresses and short-lived verification tokens. No financial data is included in transactional emails.
-- **Cloudflare (R2):** The one subprocessor that does hold Customer financial content, and the exception that the Zero-Storage architecture document calls out explicitly. It stores only exports the Customer has *chosen* to share through a link, optionally passcode-protected. Objects are keyed by the SHA-256 hash of the share token, so the key reveals nothing about the client or engagement; a passcode, if set, is hashed with Argon2id and kept in the database, not with the object; and the object is deleted when the share is revoked or expires. Trial balances and ledgers as uploaded are not written to storage.
-
----
-
-## Infrastructure-Only Services (Not Subprocessors)
-
-The following services are used for infrastructure or operations but do **not** process personal data on behalf of Customers:
-
-| Service | Purpose | Data Exposure |
-|---------|---------|--------------|
-| **GitHub** | Source code repository, CI/CD pipeline | No customer data (code and configuration only) |
-| **Prometheus** | Self-hosted metrics collection | Aggregated counters only (no PII, no customer data) |
-| **Dependabot** | Automated dependency security updates | No customer data |
-| **Cloudflare** (DNS, CDN fallback) | Authoritative DNS for paciolus.com | No customer data. Distinct from the R2 object-storage role above, which **is** a processor and is listed as one |
-
----
-
-## Subprocessor Change Log
-
-| Date | Change Type | Provider | Description |
-|------|------------|----------|-------------|
-| 2026-02-26 | Initial publication | All | Subprocessor list created (v1.0) |
-| 2026-10-23 | **Addition (retroactive disclosure)** | Cloudflare (R2) | Export-share file content has been written to the `paciolus-exports` R2 bucket since Sprint 611 (2026-04-23) and was not listed. Added with the original engagement date rather than today's, so the record is accurate rather than flattering. Found by the full-spectrum review of 2026-10-22 (finding C-1). |
-| 2026-10-23 | **Removal by elimination** | Google LLC (Fonts) | `globals.css` loaded three font families from `fonts.googleapis.com`, transmitting every visitor's IP address and User-Agent to Google on every page load. Rather than disclose a processor we did not need, Sprint 807 self-hosts the fonts via `next/font`; the two Google hosts are gone from the CSP allowlist. |
-
----
-
-## Notification and Objection
-
-### Subscribing to Updates
-
-Customers may subscribe to subprocessor change notifications by emailing privacy@paciolus.com with subject "Subprocessor Notification Subscription."
-
-### Objection Process
-
-Per the [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) Section 6.3:
-
-1. Paciolus publishes the proposed change at least **30 days** before it takes effect
-2. The Customer may object in writing to privacy@paciolus.com within the 30-day notice period
-3. Paciolus will work with the Customer to find a mutually acceptable resolution
-4. If no resolution is reached, the Customer may terminate the Agreement in accordance with the Terms of Service
-
----
-
-## Contact
-
-- **Subprocessor inquiries:** privacy@paciolus.com
-- **DPA requests:** legal@paciolus.com
-- **Security assessments:** security@paciolus.com
-
----
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-02-26 | Initial subprocessor list |
-| 1.1 | 2026-10-23 | Added Cloudflare (R2) as a processor of export-share file content, backdated to its actual engagement date. Recorded the elimination of Google Fonts. Added an export-share data category. Sprint 807, finding C-1. |
-
----
-
-*Paciolus, Inc. — Professional Audit Intelligence Platform*
+| Date | Change |
+|------|--------|
+| 2026-10-24 | v2.0 — rewritten to the facts (Sprint 845): Neon and Render Key Value added, regions corrected, unverified "DPA Signed" and certification columns removed. |
+| 2026-10-23 | v1.1 — Cloudflare R2 added; Google Fonts eliminated (fonts self-hosted). |

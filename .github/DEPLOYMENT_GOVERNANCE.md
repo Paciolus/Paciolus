@@ -78,4 +78,4 @@ PR opened → CI runs all jobs → Required checks must pass → Merge to main
 - CI workflow: `.github/workflows/ci.yml`
 - Pinned actions registry: `.github/actions-pin-registry.md`
 - Incident Response Plan: `docs/04-compliance/INCIDENT_RESPONSE_PLAN.md`
-- BCP/DR Plan: `docs/04-compliance/BCP_DR_PLAN.md`
+- BCP/DR Plan: `docs/04-compliance/BUSINESS_CONTINUITY_DISASTER_RECOVERY.md`

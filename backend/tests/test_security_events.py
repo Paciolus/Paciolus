@@ -111,3 +111,22 @@ class TestRetention:
         db_session.commit()
         assert purge_old_security_events(db_session) == 1
         assert len(_events(db_session)) == 1
+
+
+class TestAdminAuditLogIsAppendOnly:
+    """Sprint 845 (claims review Part 6): the admin audit log had no deletion guard."""
+
+    def test_deleting_an_admin_audit_row_is_refused(self, db_session, make_user):
+        import pytest
+
+        from admin_audit_model import AdminActionType, AdminAuditLog
+        from shared.soft_delete import AuditImmutabilityError
+
+        admin = make_user(email="aal_guard@example.com")
+        row = AdminAuditLog(admin_user_id=admin.id, action_type=AdminActionType.SESSION_REVOKE)
+        db_session.add(row)
+        db_session.commit()
+        db_session.delete(row)
+        with pytest.raises(AuditImmutabilityError):
+            db_session.flush()
+        db_session.rollback()

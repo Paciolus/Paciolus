@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import ActivityLog, Client, ToolActivity, User
-from shared.audit_chain import GENESIS_HASH, compute_chain_hash, verify_audit_chain
+from shared.audit_chain import compute_chain_hash, previous_chain_hash, verify_audit_chain
 from shared.db_unit_of_work import db_transaction
 from shared.filenames import (
     get_filename_display,
@@ -76,6 +76,7 @@ class ChainVerifyResponse(BaseModel):
     records_checked: int
     first_broken_id: Optional[int] = None
     error_message: Optional[str] = None
+    unchained_records: int = 0  # Sprint 845: rows that predate chaining
 
 
 class DashboardStatsResponse(BaseModel):
@@ -149,19 +150,9 @@ def log_activity(
         db.add(db_activity)
         db.flush()  # Assigns ID + timestamp before chain hash computation
 
-        # Sprint 461: Compute cryptographic chain hash (SOC 2 CC7.4)
-        previous_record = (
-            db.query(ActivityLog)
-            .filter(
-                ActivityLog.id < db_activity.id,
-                ActivityLog.archived_at.is_(None),
-                ActivityLog.chain_hash.isnot(None),
-            )
-            .order_by(ActivityLog.id.desc())
-            .first()
-        )
-        previous_hash = previous_record.chain_hash if previous_record else GENESIS_HASH
-        db_activity.chain_hash = compute_chain_hash(previous_hash or GENESIS_HASH, db_activity)
+        # Sprint 461: Compute cryptographic chain hash (SOC 2 CC7.4).
+        # Sprint 845: per-user chain, the same rule verification uses.
+        db_activity.chain_hash = compute_chain_hash(previous_chain_hash(db, db_activity), db_activity)
 
     db.refresh(db_activity)
 
@@ -600,4 +591,5 @@ def verify_chain(
         records_checked=result.records_checked,
         first_broken_id=result.first_broken_id,
         error_message=result.error_message,
+        unchained_records=result.unchained_records,
     )

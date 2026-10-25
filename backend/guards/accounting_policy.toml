@@ -31,7 +31,7 @@ float_allowlist = [
 [rules.no_hard_delete]
 enabled = true
 description = "No hard-delete on protected audit tables (Phase XLVI invariant)"
-protected_models = ["ActivityLog", "DiagnosticSummary", "ToolRun", "FollowUpItem", "FollowUpItemComment"]
+protected_models = ["ActivityLog", "DiagnosticSummary", "ToolRun", "FollowUpItem", "FollowUpItemComment", "AdminAuditLog"]
 scan_dirs = [".", "routes"]
 # services/account_erasure.py: the one sanctioned erasure path — a user's own
 # records on the user's own request (GDPR Art. 17 / CCPA), approved by the CEO
