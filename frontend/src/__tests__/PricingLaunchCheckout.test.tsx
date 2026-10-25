@@ -11,8 +11,9 @@ import { render, screen, fireEvent, waitFor } from '@/test-utils'
 // ── Mocks ─────────────────────────────────────────────────────────
 
 const mockCreateCheckoutSession = jest.fn()
-const mockUseBilling = {
-  subscription: null,
+const mockUseBilling: { subscription: { id?: number; tier: string; status: string } | null; [k: string]: unknown } = {
+  // No subscription yet: the backend answers {tier, status: 'active'} with no id.
+  subscription: { tier: 'free', status: 'active' },
   usage: null,
   isLoading: false,
   error: null,
@@ -300,6 +301,23 @@ describe('PricingLaunchCheckout', () => {
     expect(box).toHaveTextContent(/\$100/)
     expect(box).toHaveTextContent(/every month until you cancel/)
     jest.useRealTimers()
+  })
+
+  it('existing subscribers are told there is no trial (PR #234 review)', () => {
+    mockUseBilling.subscription = { id: 9, tier: 'solo', status: 'active' }
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
+    render(<CheckoutPage />)
+    const box = screen.getByTestId('trial-disclosure')
+    expect(box).toHaveTextContent(/there is no free trial/)
+    expect(box).not.toHaveTextContent(/won.t be charged today/)
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('shows nothing definite while the subscription is loading', () => {
+    mockUseBilling.subscription = null
+    render(<CheckoutPage />)
+    expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/Checking your billing terms/)
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
   })
 
   it('states the annual renewal interval', () => {
