@@ -220,6 +220,14 @@ export const TOOL_LEDGER: LedgerEntry[] = [
  */
 export const CANONICAL_TOOL_COUNT = 18
 
+/**
+ * Total automated tests across the tools that run a test battery (Sprint 842).
+ * Derived, so marketing copy cannot drift from the ledger — it said "140+"
+ * while the ledger summed to 97. Tied to the backend registry by
+ * `tests/test_pricing_copy_consistency.py`.
+ */
+export const TOTAL_AUTOMATED_TESTS = TOOL_LEDGER.reduce((sum, t) => sum + (t.testCount ?? 0), 0)
+
 if (TOOL_LEDGER.length !== CANONICAL_TOOL_COUNT) {
   throw new Error(
     `Tool ledger count mismatch: CANONICAL_TOOL_COUNT=${CANONICAL_TOOL_COUNT} but TOOL_LEDGER has ${TOOL_LEDGER.length} entries`,

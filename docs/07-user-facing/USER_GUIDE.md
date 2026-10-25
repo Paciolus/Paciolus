@@ -118,11 +118,11 @@ Paciolus accepts the following file formats for upload. Format availability depe
 | OFX | `.ofx` | Open Financial Exchange (SGML v1 / XML v2) | Solo and above |
 | IIF | `.iif` | QuickBooks Interchange Format | Solo and above |
 | PDF | `.pdf` | Table extraction from PDF documents | Solo and above |
-| ODS | `.ods` | OpenDocument Spreadsheet (LibreOffice/Calc) | Team and above |
+| ODS | `.ods` | OpenDocument Spreadsheet (LibreOffice/Calc) | Solo and above |
 
 ### 2.2 File Requirements
 
-- **Maximum file size:** 50 MB per upload
+- **Maximum file size:** 100 MB and 500,000 rows per upload
 - **Headers:** Place column headers in the first row
 - **Column detection:** Paciolus auto-detects columns using weighted pattern matching. If detection fails, use "Manual Mapping" to assign columns
 - **Encoding:** UTF-8 recommended for CSV/TSV/TXT files
@@ -1058,7 +1058,7 @@ Paciolus offers three purchasable plans plus a Free tier for evaluation.
 | **Export sharing** | — | — | Yes | Yes |
 | **Admin dashboard** | — | — | Yes | Yes |
 | **Custom PDF branding** | — | — | — | Yes |
-| **Priority support** | — | — | Yes | Yes |
+| **Support** | Email | Email | Email | Email |
 
 ### 21.2 Tool Access by Plan
 
@@ -1091,8 +1091,9 @@ Free tier is limited to TB Diagnostics and Flux Analysis.
 
 Professional and Enterprise plans include a base number of seats. Additional seats can be added:
 
-- **Seats 8–22:** $80/month ($800/year) per seat (graduated: Tier 1 qty 1–7 = $80, Tier 2 qty 8–22 = $70)
-- **23+ seats:** Contact sales for a custom quote
+- **Professional:** 7 seats included; additional seats $65/month ($650/year) each, up to 20 seats in total
+- **Enterprise:** 20 seats included; additional seats $45/month ($450/year) each, up to 100 seats in total
+- **More than 100 seats:** contact us
 
 Manage seats from **Settings > Billing > Manage Seats**.
 
@@ -1318,7 +1319,7 @@ Ensure your file has headers in the first row. Try the following:
 
 ### "File Too Large"
 
-Maximum file size is 50 MB. Remove unnecessary columns or split into smaller files.
+Maximum file size is 100 MB (500,000 rows). Remove unnecessary columns or split into smaller files.
 
 ### "Unsupported Format"
 
@@ -1338,7 +1339,7 @@ You've attempted to access a tool or feature outside your current plan. Visit Se
 
 ### "Diagnostic Limit Reached"
 
-Free plans allow 10 uploads per month; Solo allows 100. Professional and Enterprise plans have unlimited uploads.
+Free plans allow 10 uploads per month, Solo 100 and Professional 500. Enterprise has unlimited uploads.
 
 ---
 
@@ -1374,7 +1375,7 @@ A: Paciolus is a diagnostic intelligence tool, not an audit. It provides data-dr
 A: Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS. Some formats require a Solo plan or higher. See Section 2 for details.
 
 **Q: What is the maximum file size?**
-A: 50 MB per upload across all formats.
+A: 100 MB and 500,000 rows per upload, across all formats.
 
 **Q: How do I add team members?**
 A: Professional and Enterprise plans support multiple seats. Go to Settings > Billing > Manage Seats to add users.
@@ -1387,8 +1388,7 @@ A: Yes. Upgrade or downgrade at any time from Settings > Billing. Plan changes t
 ## Contact Support
 
 - **Email:** help@paciolus.com
-- **Response time:** 1–2 business days
-- **Priority support:** Available on Team and Organization plans
+- **Response time:** we aim to reply within 1–2 business days, on every plan
 - **Help Center:** [help.paciolus.com](#)
 
 ---

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
 import { ANALYSIS_LABEL_SHORT } from '@/utils/constants'
 import { VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
@@ -27,9 +28,9 @@ interface EvidenceCell {
 const CELLS: EvidenceCell[] = [
   {
     icon: 'shield-check',
-    stat: '140+',
+    stat: String(TOTAL_AUTOMATED_TESTS),
     label: 'Automated Tests',
-    sub: 'Across all 18 diagnostic tools',
+    sub: 'Across the testing tools',
     accent: 'sage',
   },
   {
@@ -49,8 +50,8 @@ const CELLS: EvidenceCell[] = [
   {
     icon: 'trend-chart',
     stat: ANALYSIS_LABEL_SHORT,
-    label: 'Diagnostic Runtime',
-    sub: 'Typical runtime for standard trial balance files',
+    label: 'Typical Runtime',
+    sub: 'Most standard trial balance files finish in seconds',
     accent: 'oatmeal',
   },
 ]

@@ -311,7 +311,8 @@ From time to time, we may offer promotional discounts.
 - **Billing cycle:** Monthly or annual
 - **Payment method:** Credit card via Stripe (we do not store your card details)
 - **Automatic renewal:** Subscriptions renew automatically unless canceled
-- **Cancellation:** You may cancel anytime; access continues through the end of the current billing period. No refunds for partial billing periods.
+- **Cancellation:** You may cancel anytime; access continues through the end of the current billing period.
+- **Refunds:** 30-day money-back guarantee for first-time paid subscribers (Solo, Professional or Enterprise), issued manually on request to support@paciolus.com. *(Matches the website Terms, which are authoritative; the refund policy is pending a CEO decision — see `tasks/ceo-actions.md`.)*
 
 ### 8.7 Free Tier Limitations
 

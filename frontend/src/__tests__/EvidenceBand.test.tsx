@@ -53,7 +53,7 @@ describe('EvidenceBand', () => {
 
   it('renders stat values', () => {
     render(<EvidenceBand />)
-    expect(screen.getByText('140+')).toBeInTheDocument()
+    expect(screen.getByText('97')).toBeInTheDocument() // TOTAL_AUTOMATED_TESTS, derived from the ledger
     expect(screen.getByText('None')).toBeInTheDocument()
   })
 
@@ -62,7 +62,7 @@ describe('EvidenceBand', () => {
     expect(screen.getByText('Automated Tests')).toBeInTheDocument()
     expect(screen.getByText('Per-Memo Citations')).toBeInTheDocument()
     expect(screen.getByText('Uploaded Files Kept')).toBeInTheDocument()
-    expect(screen.getByText('Diagnostic Runtime')).toBeInTheDocument()
+    expect(screen.getByText('Typical Runtime')).toBeInTheDocument()
   })
 
   it('renders demo CTA link', () => {

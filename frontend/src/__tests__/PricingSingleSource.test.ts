@@ -27,7 +27,7 @@ const read = (...parts: string[]) => fs.readFileSync(path.join(SRC, ...parts), '
 describe('domain/pricing id-keyed lookups', () => {
   it('resolve every paid tier by backend id', () => {
     expect(tiers.map(t => t.internalId)).toEqual(['solo', 'professional', 'enterprise'])
-    expect(getTier('professional')?.badge).toBe('Most Popular')
+    expect(getTier('professional')?.badge).toBeUndefined() // Sprint 842: no "Most Popular" claim
     expect(getTier('free')).toBeUndefined()
   })
 

@@ -154,7 +154,7 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
         className="font-sans text-xs text-oatmeal-500 mt-3 text-center lg:text-left"
         variants={fadeUp}
       >
-        No credit card required
+        Free plan needs no card. Paid trials ask for one; no charge for 7 days.
       </motion.p>
     </motion.div>
   )

@@ -286,7 +286,7 @@ export default function AboutPage() {
               },
               {
                 title: 'Immediate Results',
-                description: 'Upload to documented analysis — typically under three seconds for files up to 10,000 rows in a standard cloud environment. No batch queuing, no overnight processing.',
+                description: 'Upload to documented analysis, usually in a few seconds for standard files. No batch queuing, no overnight processing.',
               },
             ].map((item) => (
               <motion.div

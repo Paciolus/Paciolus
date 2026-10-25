@@ -288,4 +288,23 @@ describe('PricingLaunchCheckout', () => {
     render(<CheckoutPage />)
     expect(screen.getByText(/1 seat included/)).toBeInTheDocument()
   })
+
+  // Sprint 842: trial + auto-renewal terms before the card is collected
+  it('discloses card required, the charge amount and the charge date', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-24T12:00:00Z'))
+    mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
+    render(<CheckoutPage />)
+    const box = screen.getByTestId('trial-disclosure')
+    expect(box).toHaveTextContent(/A card is required/)
+    expect(box).toHaveTextContent(/October 31, 2026/)
+    expect(box).toHaveTextContent(/\$100/)
+    expect(box).toHaveTextContent(/every month until you cancel/)
+    jest.useRealTimers()
+  })
+
+  it('states the annual renewal interval', () => {
+    mockSearchParams = new URLSearchParams('plan=solo&interval=annual')
+    render(<CheckoutPage />)
+    expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/every year until you cancel/)
+  })
 })

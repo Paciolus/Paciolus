@@ -13,7 +13,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
-import { baseSeats, getTier, maxAdditionalSeats, seatPriceDollars, tierPriceDollars } from '@/domain/pricing'
+import { baseSeats, getTier, maxAdditionalSeats, seatPriceDollars, tierPriceDollars, TRIAL_DAYS, trialChargeDate } from '@/domain/pricing'
 
 // Sprint 818: every price, seat count and seat limit comes from
 // `@/domain/pricing` — the same source the pricing page renders.
@@ -160,8 +160,7 @@ function CheckoutContent() {
             </span>
           </div>
           <p className="text-sm text-content-secondary">
-            {interval === 'annual' ? 'Billed annually' : 'Billed monthly'}.
-            {' '}Cancel anytime.
+            {interval === 'annual' ? 'Billed annually' : 'Billed monthly'} from your start date until you cancel.
           </p>
           <p className="text-sm text-content-tertiary mt-1">
             {includedSeats} seat{includedSeats > 1 ? 's' : ''} included
@@ -317,6 +316,24 @@ function CheckoutContent() {
         )}
 
         {/* Checkout Button */}
+        {/* Sprint 842: trial and auto-renewal terms, stated before the card is collected */}
+        <div className="border border-theme rounded-lg p-5 mb-6" data-testid="trial-disclosure">
+          <h2 className="font-serif text-base text-content-primary mb-2">Trial and renewal</h2>
+          <p className="text-sm text-content-secondary leading-relaxed">
+            A card is required. New subscriptions start with a {TRIAL_DAYS}-day free trial, so you
+            won&apos;t be charged today. On{' '}
+            <strong className="text-content-primary">{trialChargeDate(new Date()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>{' '}
+            we will charge <strong className="font-mono text-content-primary">{formatCents(subtotal)}</strong>
+            {promoApplied ? ' less your promo discount' : ''}, then{' '}
+            <span className="font-mono">{formatCents(subtotal)}</span> every {interval === 'annual' ? 'year' : 'month'} until you cancel.
+            Cancel before then and you won&apos;t be charged.
+          </p>
+          <p className="text-xs text-content-tertiary mt-2">
+            Changing a plan you already pay for has no trial; the new price applies from the change.
+            You can cancel at any time in Settings &rarr; Billing.
+          </p>
+        </div>
+
         <button
           onClick={handleCheckout}
           disabled={isLoading || (requiresDpa && !dpaAccepted)}

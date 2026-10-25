@@ -1,5 +1,18 @@
 // Pricing domain: all tier definitions, constants, and pure calculation functions.
 
+/**
+ * Free-trial length in days. Mirrors `TRIAL_PERIOD_DAYS` in
+ * backend/billing/price_config.py (pinned by tests/test_pricing_copy_consistency.py).
+ */
+export const TRIAL_DAYS = 7
+
+/** The date the first charge lands when a trial starts on `start` (Sprint 842). */
+export function trialChargeDate(start: Date): Date {
+  const d = new Date(start.getTime())
+  d.setDate(d.getDate() + TRIAL_DAYS)
+  return d
+}
+
 /* ────────────────────────────────────────────────
    Estimator types
    ──────────────────────────────────────────────── */
@@ -171,7 +184,7 @@ export const tiers: Tier[] = [
       { text: 'Unlimited clients' },
       { text: 'PDF, Excel & CSV exports' },
       { text: 'Diagnostic Workspace — engagement tracking & follow-ups' },
-      { text: 'Email support (next business day)' },
+      { text: 'Email support (reply within 1–2 business days)' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
@@ -193,14 +206,13 @@ export const tiers: Tier[] = [
       { text: '7 seats included (up to 20)' },
       { text: 'Export sharing' },
       { text: 'Admin dashboard & activity logs' },
-      { text: 'Priority support' },
+      { text: 'Email support (reply within 1–2 business days)' },
       { text: '7-day free trial' },
     ],
     cta: 'Start Free Trial',
     ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
     ctaFilled: true,
     hasSeats: true,
-    badge: 'Most Popular',
   },
   {
     name: 'Enterprise',
@@ -213,8 +225,7 @@ export const tiers: Tier[] = [
       { text: 'Unlimited uploads & clients' },
       { text: '20 seats included (up to 100)' },
       { text: 'Custom PDF branding' },
-      { text: 'Dedicated account manager' },
-      { text: 'Custom SLA & priority support' },
+      { text: 'Email support (reply within 1–2 business days)' },
     ],
     cta: 'Start Free Trial',
     ctaHref: (interval) => `/register?plan=enterprise&interval=${interval}`,
@@ -248,9 +259,7 @@ export const comparisonRows: ComparisonRow[] = [
   { feature: 'Admin Dashboard', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
-  { feature: 'Priority Support', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Dedicated Account Manager', free: false, solo: false, professional: false, enterprise: true },
-  { feature: 'Support SLA', free: 'Community', solo: 'Email — next business day', professional: 'Email — 8 hr response', enterprise: 'Custom SLA' },
+  { feature: 'Support', free: 'Email', solo: 'Email', professional: 'Email', enterprise: 'Email' },
   { feature: 'Free Trial', free: false, solo: '7 days', professional: '7 days', enterprise: '7 days' },
 ]
 
@@ -266,15 +275,15 @@ export interface FaqItem {
 export const faqItems: FaqItem[] = [
   {
     question: 'What is the difference between monthly and annual billing?',
-    answer: 'Annual billing saves you approximately 16.7% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed at the start of each calendar month.',
+    answer: 'Annual billing saves you approximately 16.7% compared to paying month-to-month. Annual plans are billed as a single payment at the start of each billing year. Monthly plans are billed monthly from your start date.',
   },
   {
     question: 'How does the 7-day free trial work?',
-    answer: 'Every paid plan includes a 7-day free trial with full feature access — no credit card required. You can cancel anytime during the trial. After 7 days, your selected plan begins billing automatically if a payment method is on file.',
+    answer: `Every paid plan starts with a ${TRIAL_DAYS}-day free trial with full feature access. A card is required when you start the trial, but you are not charged during it. On day ${TRIAL_DAYS + 1} we charge the plan price you chose, and then charge it again every month or year until you cancel. Cancel before the trial ends and you will not be charged. Checkout shows the exact amount and date before you enter your card.`,
   },
   {
     question: 'What happens when my trial expires?',
-    answer: 'If you have not added a payment method by day 8, your account transitions to a read-only state. You can still log in, view client metadata, and download previously exported files, but new uploads and analyses are paused until you select a plan. No data is deleted — your account resumes the moment you subscribe.',
+    answer: 'When the trial ends, your subscription continues on the plan you chose and the card on file is charged. If that charge fails, we email you and the card is retried over the following days; if it still has not gone through after a 7-day grace period, the subscription is canceled and your account moves to the Free plan. Your client list, analysis summaries and engagement entries are kept.',
   },
   {
     question: 'What counts as an "upload"?',
@@ -290,11 +299,11 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'What is the difference between Solo and Professional?',
-    answer: 'Both Solo and Professional include all 18 diagnostic tools and all export formats. Professional adds team collaboration (7 seats included), export sharing, admin dashboard with activity logs, and priority support. Professional is ideal for growing firms that need team-level visibility and collaboration.',
+    answer: 'Both Solo and Professional include all 18 diagnostic tools and all export formats. Professional adds team collaboration (7 seats included), export sharing, and an admin dashboard with activity logs. Professional is ideal for growing firms that need team-level visibility and collaboration.',
   },
   {
     question: 'What does Enterprise include beyond Professional?',
-    answer: `Enterprise ($${tiers[2]!.monthlyPrice.toLocaleString()}/mo) adds unlimited uploads, ${SEAT_CONFIGS[1]!.baseSeats} seats included (expandable to ${SEAT_CONFIGS[1]!.maxSeats} at $${SEAT_CONFIGS[1]!.seatMonthly}/seat), custom PDF branding with your firm logo, a dedicated account manager, and a custom SLA.`,
+    answer: `Enterprise ($${tiers[2]!.monthlyPrice.toLocaleString()}/mo) adds unlimited uploads, ${SEAT_CONFIGS[1]!.baseSeats} seats included (expandable to ${SEAT_CONFIGS[1]!.maxSeats} at $${SEAT_CONFIGS[1]!.seatMonthly}/seat) and custom PDF branding with your firm logo.`,
   },
   {
     question: 'What can Free users access?',
@@ -306,15 +315,15 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Are there file size or row limits?',
-    answer: 'All plans support files up to 100 MB. There is no hard row limit — trial balances with 50,000+ rows are processed routinely. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'Files can be up to 100 MB and 500,000 rows. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
   },
   {
     question: 'Can I downgrade my plan?',
-    answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Existing exports and metadata remain accessible; upload limits adjust to the new tier.',
+    answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Your client list, analysis summaries and engagement entries stay in your account; upload limits adjust to the new tier. Paciolus does not store your exported files, so keep the ones you downloaded.',
   },
   {
     question: 'What payment methods do you accept?',
-    answer: 'We accept all major credit cards. Annual plans can also be invoiced. Enterprise contracts support custom payment terms.',
+    answer: 'We accept all major credit cards, processed by Stripe. If you need an invoice or other payment arrangements, contact us.',
   },
 ]
 

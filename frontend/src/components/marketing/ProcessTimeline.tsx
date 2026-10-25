@@ -45,7 +45,7 @@ const steps: ProcessStep[] = [
     number: '01',
     title: 'Upload',
     description: 'Raw trial balance data',
-    detail: 'Ten formats: CSV, Excel, TSV, TXT, QBO, OFX, IIF, PDF, and ODS. Multi-sheet workbooks supported.',
+    detail: 'Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF and ODS. Multi-sheet workbooks supported.',
     accentColor: 'oatmeal',
     icon: 'cloud-upload',
   },
@@ -63,7 +63,7 @@ const steps: ProcessStep[] = [
     number: '03',
     title: 'Export',
     description: 'Reclassified intelligence',
-    detail: 'Professional PDF summaries and Excel workpapers. Branded and ready for delivery.',
+    detail: 'PDF summaries and Excel workpapers, formatted for your review. Custom branding on Enterprise.',
     accentColor: 'sage',
     icon: 'file-download',
   },
@@ -290,7 +290,7 @@ export function ProcessTimeline() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/70 border border-obsidian-500/40">
           <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
           <span className="font-sans text-sm text-oatmeal-400">
-            Average analysis time: <span className="font-mono text-sage-400">{ANALYSIS_LABEL_STANDARD}</span>
+            Analysis time: <span className="font-mono text-sage-400">{ANALYSIS_LABEL_STANDARD}</span>
           </span>
         </div>
       </Reveal>

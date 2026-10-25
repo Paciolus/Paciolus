@@ -10,7 +10,7 @@ import { trackEvent } from '@/utils/telemetry'
 
 // Sprint 818: tiers, seat pricing, the estimator, the FAQ and the promo copy
 // all come from `@/domain/pricing`. This page used to redefine every one of
-// them, and the copies had already drifted (the "Most Popular" badge existed
+// them, and the copies had already drifted (the featured-plan badge existed
 // only here), so tests of the domain module were testing code that never
 // rendered.
 
@@ -122,10 +122,10 @@ export default function PricingPage() {
               Straightforward Pricing for Serious Work
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Eighteen tools. Zero file storage. One platform. Pick the plan that matches your practice.
+              Eighteen tools. Uploads not kept. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
-              Every plan includes a 7-day free trial — no credit card required to start.
+              Every paid plan starts with a 7-day free trial. A card is required; you are not charged until the trial ends.
             </p>
           </motion.div>
         </div>

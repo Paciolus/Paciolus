@@ -128,9 +128,10 @@ describe('PricingPage', () => {
     expect(headerTexts).not.toContain('Organization')
   })
 
-  it('comparison table includes "Dedicated Account Manager" row', () => {
+  it('comparison table promises no unstaffed support tiers (Sprint 842)', () => {
     render(<PricingPage />)
-    expect(screen.getByText('Dedicated Account Manager')).toBeInTheDocument()
+    expect(screen.queryByText('Dedicated Account Manager')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Custom SLA/)).not.toBeInTheDocument()
   })
 
   // ── FAQ ───────────────────────────────────────────
@@ -190,14 +191,14 @@ describe('PricingPage', () => {
   it('hero subtitle describes the platform', () => {
     render(<PricingPage />)
     expect(
-      screen.getByText('Eighteen tools. Zero file storage. One platform. Pick the plan that matches your practice.')
+      screen.getByText('Eighteen tools. Uploads not kept. One platform. Pick the plan that matches your practice.')
     ).toBeInTheDocument()
   })
 
-  it('hero trial line says "Every plan includes"', () => {
+  it('hero trial line discloses that a card is required (Sprint 842)', () => {
     render(<PricingPage />)
     expect(
-      screen.getByText(/Every plan includes a 7-day free trial/)
+      screen.getByText(/7-day free trial\. A card is required/)
     ).toBeInTheDocument()
   })
 })

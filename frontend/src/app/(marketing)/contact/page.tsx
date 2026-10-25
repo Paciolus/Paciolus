@@ -82,7 +82,7 @@ function ContactForm() {
         </svg>
         <h3 className="font-serif text-2xl text-oatmeal-100 mb-2">Message Sent</h3>
         <p className="font-sans text-oatmeal-400">
-          We&apos;ll respond within 1&ndash;2 business days.
+          We aim to reply within 1&ndash;2 business days.
         </p>
       </motion.div>
     )
@@ -220,7 +220,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="font-sans text-lg text-oatmeal-400 mb-10">
-            Questions about pricing, platform fit, or deployment. Send a message — we respond within 1&ndash;2 business days.
+            Questions about pricing, platform fit, or deployment. Send a message — we aim to reply within 1&ndash;2 business days.
           </p>
 
           <Suspense fallback={

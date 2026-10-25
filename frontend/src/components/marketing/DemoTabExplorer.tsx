@@ -154,7 +154,7 @@ function WorkspaceTab() {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Tools Run', value: '8', sub: 'of 12' },
+          { label: 'Tools Run', value: '8', sub: 'of 18' },
           { label: 'Follow-ups', value: '5', sub: 'items' },
           { label: 'Workpapers', value: '12', sub: 'indexed' },
         ].map((stat) => (
