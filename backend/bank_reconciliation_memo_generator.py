@@ -941,9 +941,12 @@ def generate_bank_rec_memo(
 
         # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
         _bank_rec_suffixes = {
+            # PR #235 review: a low composite does not mean no test flagged anything
+            # (high-value and stale items add only a few points), so this tier makes
+            # no claim about individual items.
             "low": (
-                "The reconciling difference is below the materiality you entered, "
-                "and no items exceeded the configured thresholds."
+                "The automated tests returned a low flag-density indicator. Review any items "
+                "flagged in the sections above; a low indicator does not mean no item exceeded a threshold."
             ),
             "moderate": (
                 "The reconciling difference and outstanding items should be reviewed "
