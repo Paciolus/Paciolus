@@ -158,7 +158,11 @@ def _cancel_stripe(db: Session, user_id: int) -> None:
     from billing.stripe_client import get_stripe, is_stripe_enabled
 
     if not is_stripe_enabled():
-        return
+        # PR #236 review: a live subscription with Stripe unconfigured is not a
+        # cancellation. Deleting the local rows here would leave Stripe billing
+        # a customer who can no longer reach their billing settings.
+        logger.error("Account erasure: live Stripe subscription but Stripe is not configured")
+        raise ErasureProviderError("We could not reach our payment provider to cancel your subscription.")
     try:
         get_stripe().Subscription.cancel(row[0])
     except Exception as exc:  # noqa: BLE001 — any provider failure aborts the erasure
@@ -321,5 +325,8 @@ def export_account(db: Session, user: Any) -> dict[str, Any]:
         "tool_activities": _rows(db, "tool_activities", _t("tool_activities").c.user_id == user_id),
         "export_shares": _rows(db, "export_shares", _t("export_shares").c.user_id == user_id),
         "sessions": _rows(db, "refresh_tokens", _t("refresh_tokens").c.user_id == user_id),
+        # PR #236 review: saved adjusting-entry and currency-rate sessions are
+        # stored data too, and erasure deletes them.
+        "tool_sessions": _rows(db, "tool_sessions", _t("tool_sessions").c.user_id == user_id),
     }
     return data

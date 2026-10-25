@@ -117,6 +117,29 @@ class TestErase:
         assert _count(db_session, "clients", user_id=user_id) == 1
 
 
+class TestStripeLinkage:
+    def test_live_subscription_with_stripe_disabled_deletes_nothing(self, db_session, populated, monkeypatch):
+        """PR #236 review: Stripe unconfigured is not a cancellation."""
+        from subscription_model import BillingInterval, Subscription, SubscriptionStatus
+
+        user_id = populated["user"].id
+        db_session.add(
+            Subscription(
+                user_id=user_id,
+                tier="solo",
+                status=SubscriptionStatus.ACTIVE,
+                billing_interval=BillingInterval.MONTHLY,
+                stripe_subscription_id="sub_live_123",
+            )
+        )
+        db_session.commit()
+        monkeypatch.setattr("billing.stripe_client.is_stripe_enabled", lambda: False)
+        with pytest.raises(ErasureProviderError):
+            erase_account(db_session, populated["user"])
+        assert _count(db_session, "users", id=user_id) == 1
+        assert _count(db_session, "subscriptions", user_id=user_id) == 1
+
+
 class TestRefusals:
     def test_superadmin_is_refused(self, db_session, make_user):
         admin = make_user(email="erase_admin@example.com")
@@ -162,6 +185,7 @@ class TestExport:
         assert data["clients"][0]["name"] == "Erase Me Client"
         assert len(data["engagements"]) == 1
         assert all("token_hash" not in s for s in data["sessions"])
+        assert "tool_sessions" in data
 
 
 @pytest.mark.usefixtures("bypass_csrf")
