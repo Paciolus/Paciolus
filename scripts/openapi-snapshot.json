@@ -7226,6 +7226,11 @@
           "records_checked": {
             "title": "Records Checked",
             "type": "integer"
+          },
+          "unchained_records": {
+            "default": 0,
+            "title": "Unchained Records",
+            "type": "integer"
           }
         },
         "required": [
