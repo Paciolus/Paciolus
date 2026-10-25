@@ -9,7 +9,6 @@ follow-up alongside the downstream section framework work.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from datetime import date
@@ -31,6 +30,7 @@ from cash_flow_projector_engine import (
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access
@@ -163,7 +163,7 @@ def export_projection_csv(
         raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
     writer.writerow(
         [
             "Scenario",

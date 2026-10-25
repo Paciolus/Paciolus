@@ -701,11 +701,14 @@ def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[dateti
     if failed_count >= MAX_FAILED_ATTEMPTS:
         locked_until = datetime.now(UTC) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
         user.locked_until = locked_until
-        log_secure_operation("account_locked", f"User {user_id} locked until {locked_until.isoformat()}")
+        db.commit()
+        log_secure_operation("account_locked", f"Locked until {locked_until.isoformat()}", db=db, user_id=user_id)
     else:
-        log_secure_operation("login_failed", f"User {user_id} failed attempt {failed_count}/{MAX_FAILED_ATTEMPTS}")
+        db.commit()
+        log_secure_operation(
+            "login_failed", f"Failed attempt {failed_count}/{MAX_FAILED_ATTEMPTS}", db=db, user_id=user_id
+        )
 
-    db.commit()
     return (failed_count, locked_until)
 
 
@@ -871,12 +874,14 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
         if request.method not in _MUTATION_METHODS:
             return await call_next(request)
 
-        # Check for impersonation token in Authorization header
-        auth_header = request.headers.get("authorization", "")
-        if not auth_header.startswith("Bearer "):
+        # Sprint 840 (S3): resolve the token exactly as `auth.resolve_access_token`
+        # does — any-case "Bearer" scheme first, then the access cookie. The
+        # first version only looked at a header starting with "Bearer ", so a
+        # lowercase scheme or the cookie walked straight past the block.
+        token_str = _extract_access_token(request)
+        if not token_str:
             return await call_next(request)
 
-        token_str = auth_header[7:]
         import jwt as _jwt
 
         from config import JWT_ALGORITHM, JWT_SECRET_KEY
@@ -893,16 +898,11 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if payload.get("imp"):
-            # Sprint 661: Revoked impersonation tokens stop blocking mutations
-            # so an admin can end a session immediately rather than waiting
-            # for the 15-minute `exp`. Since the middleware uses
-            # verify_exp=False, revocation is the only server-side way to
-            # release the block after issuance.
-            from shared.impersonation_revocation import is_revoked
-
-            if is_revoked(payload.get("jti")):
-                return await call_next(request)
-
+            # Sprint 840 (S3): an impersonation token is read-only for its whole
+            # life. Sprint 661 released the block once the token was revoked,
+            # which turned "end the session" into "grant write access".
+            # Revocation now ends the session outright (the auth dependency
+            # rejects a revoked jti on every method).
             from starlette.responses import JSONResponse
 
             return JSONResponse(
@@ -915,3 +915,14 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             )
 
         return await call_next(request)
+
+
+def _extract_access_token(request: Request) -> Optional[str]:
+    """Return the access token the auth dependency would use, if any."""
+    from config import ACCESS_COOKIE_NAME
+
+    auth_header = request.headers.get("authorization", "")
+    scheme, _, credentials = auth_header.partition(" ")
+    if scheme.lower() == "bearer" and credentials.strip():
+        return credentials.strip()
+    return request.cookies.get(ACCESS_COOKIE_NAME)

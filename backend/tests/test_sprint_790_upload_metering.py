@@ -420,7 +420,13 @@ def test_sprint_790_migrations_are_the_single_head():
 
     cfg = Config(str(_BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(_BACKEND / "migrations" / "alembic"))
-    assert ScriptDirectory.from_config(cfg).get_heads() == ["f3b81d6e2a47"]
+    script = ScriptDirectory.from_config(cfg)
+    heads = script.get_heads()
+    # One head, with Sprint 790's migration on its chain. (Pinning the head to
+    # f3b81d6e2a47 itself broke on the next migration — Sprint 840's.)
+    assert len(heads) == 1, heads
+    chain = {rev.revision for rev in script.walk_revisions(base="base", head=heads[0])}
+    assert "f3b81d6e2a47" in chain
 
 
 # ---------------------------------------------------------------------------

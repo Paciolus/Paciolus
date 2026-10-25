@@ -409,10 +409,15 @@ def purge_expired_export_shares(db: Any) -> int:
     """Delete expired or revoked export-share rows and their R2 objects.
 
     Sprint 611: rows whose bytes live in R2 also have the bucket object
-    deleted.  R2 deletion is best-effort — a failure here logs and moves
-    on rather than blocking the DB purge, since the next cleanup pass
-    will retry and the object key is hash-deterministic (no orphan
-    proliferation from retries).
+    deleted.
+
+    Sprint 840 (S8): a row is deleted only once R2 has confirmed its object
+    is gone. The first version deleted every row regardless and called the
+    R2 delete "best-effort", so one failed DELETE left the customer's report
+    in the bucket with nothing left that pointed at it — the "retry next
+    pass" its docstring promised could never happen. A row whose delete
+    fails now stays (already expired or revoked, so unservable) and is
+    retried on the next pass.
 
     Module-level (not nested) so the behaviour is directly testable
     without running the full APScheduler wrapper.
@@ -428,14 +433,23 @@ def purge_expired_export_shares(db: Any) -> int:
     if not doomed:
         return 0
 
-    for share in doomed.values():
+    purgeable: list[int] = []
+    retained = 0
+    for share_id, share in doomed.items():
         key = share.object_key
-        if key:
-            export_share_storage.delete(key)  # best-effort; logs on failure
+        if key and not export_share_storage.delete(key):
+            retained += 1
+            continue
+        purgeable.append(share_id)
 
-    db.query(ExportShare).filter(ExportShare.id.in_(doomed.keys())).delete(synchronize_session=False)
+    if retained:
+        logger.warning("Export-share purge: %d row(s) kept for retry — R2 delete not confirmed", retained)
+    if not purgeable:
+        return 0
+
+    db.query(ExportShare).filter(ExportShare.id.in_(purgeable)).delete(synchronize_session=False)
     db.commit()
-    return len(doomed)
+    return len(purgeable)
 
 
 def _job_expired_export_shares() -> None:

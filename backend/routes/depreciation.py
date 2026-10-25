@@ -7,7 +7,6 @@ schedules with optional book-vs-tax timing reconciliation, and a CSV export.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from typing import Literal, Optional
@@ -26,6 +25,7 @@ from depreciation_engine import (
     generate_depreciation_schedule,
 )
 from shared.error_messages import sanitize_error
+from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -142,7 +142,7 @@ def export_depreciation_csv(
         raise HTTPException(status_code=400, detail=str(e))
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
     writer.writerow([f"Asset: {config.asset_name}"])
     writer.writerow([])
     writer.writerow(["BOOK SCHEDULE"])

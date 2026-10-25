@@ -196,7 +196,7 @@ def register(
             db,
             user_data=user_data,
             user_agent=request.headers.get("User-Agent"),
-            request_host=request.client.host if request.client else None,
+            request_host=get_client_ip(request),  # Sprint 840: real client, not the proxy
         )
     except RegistrationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -236,7 +236,7 @@ def login(request: Request, credentials: UserLogin, response: Response, db: Sess
         password=credentials.password,
         client_ip=get_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
-        request_host=request.client.host if request.client else None,
+        request_host=get_client_ip(request),  # Sprint 840: real client, not the proxy
     )
 
     _set_refresh_cookie(response, issuance.raw_refresh_token, credentials.remember_me)

@@ -62,10 +62,18 @@ MAX_ROW_COUNT = 500_000
 MAX_COL_COUNT = 1_000
 MAX_CELL_LENGTH = 100_000
 
-# Archive bomb detection limits (XLSX files are ZIP containers)
+# Archive bomb detection limits (XLSX, ODS and DOCX are ZIP containers)
 MAX_ZIP_ENTRIES = 10_000
-MAX_ZIP_UNCOMPRESSED_BYTES = 1_000 * 1024 * 1024  # 1GB
-MAX_COMPRESSION_RATIO = 100
+# Sprint 840 (S7): the first limits were 1 GB uncompressed at 100:1, so a 10 MB
+# upload could expand to 1 GB of XML before parsing began. Measured on a
+# 50,000-row, 6-column ledger (2026-10-24): openpyxl peaks at ~6x the XLSX's
+# XML size (15 MB -> 98 MB) and real XLSX compresses 10-13:1; odfpy builds a
+# full DOM and peaks at ~19x (37 MB -> 706 MB), and real ODS compresses ~37:1.
+# The caps keep the worst-case parse near 1-1.3 GB on either path.
+MAX_ZIP_UNCOMPRESSED_BYTES = 200 * 1024 * 1024
+MAX_COMPRESSION_RATIO = 50
+MAX_ODS_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
+MAX_ODS_COMPRESSION_RATIO = 100  # ODS legitimately runs near 37:1
 
 # XML bomb detection (billion laughs / entity expansion attacks)
 _XML_HEADER_SCAN_SIZE = 8192
@@ -116,7 +124,10 @@ def _scan_xlsx_xml_for_bombs(zf: zipfile.ZipFile, entries: list[zipfile.ZipInfo]
 
 
 def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
-    """Inspect XLSX ZIP container for archive-bomb indicators."""
+    """Inspect a ZIP container (XLSX/ODS/DOCX) for archive-bomb indicators."""
+    is_ods = filename.lower().endswith(".ods")
+    max_uncompressed = MAX_ODS_UNCOMPRESSED_BYTES if is_ods else MAX_ZIP_UNCOMPRESSED_BYTES
+    max_ratio = MAX_ODS_COMPRESSION_RATIO if is_ods else MAX_COMPRESSION_RATIO
     try:
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
             entries = zf.infolist()
@@ -150,7 +161,7 @@ def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
                 total_compressed += entry.compress_size
                 total_uncompressed += entry.file_size
 
-            if total_uncompressed > MAX_ZIP_UNCOMPRESSED_BYTES:
+            if total_uncompressed > max_uncompressed:
                 log_secure_operation(
                     "archive_bomb_size",
                     f"ZIP uncompressed size {total_uncompressed} exceeds limit",
@@ -162,10 +173,10 @@ def _validate_xlsx_archive(file_bytes: bytes, filename: str) -> None:
 
             if total_compressed > 0:
                 ratio = total_uncompressed / total_compressed
-                if ratio > MAX_COMPRESSION_RATIO:
+                if ratio > max_ratio:
                     log_secure_operation(
                         "archive_bomb_ratio",
-                        f"Compression ratio {ratio:.1f}:1 exceeds limit of {MAX_COMPRESSION_RATIO}:1",
+                        f"Compression ratio {ratio:.1f}:1 exceeds limit of {max_ratio}:1",
                     )
                     raise HTTPException(
                         status_code=400,

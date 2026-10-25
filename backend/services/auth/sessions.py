@@ -112,6 +112,8 @@ def revoke_all_user_sessions(db: Session, user: User) -> int:
     count = _revoke_all_user_tokens(db, user.id)
     log_secure_operation(
         "all_sessions_revoked",
-        f"User {user.id} revoked all {count} sessions",
+        f"Revoked all {count} sessions",
+        db=db,
+        user_id=user.id,
     )
     return count

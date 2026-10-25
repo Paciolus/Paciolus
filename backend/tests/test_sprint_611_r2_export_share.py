@@ -48,6 +48,7 @@ class _FakeR2:
         self.objects: dict[str, bytes] = {}
         self.upload_calls: list[tuple[str, int, str]] = []
         self.delete_calls: list[str] = []
+        self.fail_deletes = False
 
     def upload(self, share_token_hash: str, data: bytes, content_type: str) -> str:
         key = f"shares/{share_token_hash}"
@@ -59,8 +60,13 @@ class _FakeR2:
         return self.objects.get(object_key)
 
     def delete(self, object_key: str) -> bool:
+        # S3 semantics: deleting a missing key succeeds. False means the
+        # DELETE itself errored (network, auth), as in export_share_storage.
         self.delete_calls.append(object_key)
-        return self.objects.pop(object_key, None) is not None
+        if self.fail_deletes:
+            return False
+        self.objects.pop(object_key, None)
+        return True
 
 
 @pytest.fixture
@@ -374,6 +380,41 @@ class TestCleanupSchedulerPurgesR2:
         assert deleted == 1
         assert fake_r2.delete_calls == [f"shares/{token_hash}"]
         assert db_session.query(ExportShare).count() == 0
+
+    def test_failed_r2_delete_keeps_the_row_for_retry(
+        self,
+        db_session: Any,
+        make_user: Any,
+        fake_r2: _FakeR2,
+    ) -> None:
+        """Sprint 840 (S8): never drop the only pointer to an object still in R2."""
+        from cleanup_scheduler import purge_expired_export_shares
+
+        user = make_user(email="sprint840_r2_retry@example.com", tier=UserTier.PROFESSIONAL)
+        token_hash = "d" * 64
+        fake_r2.objects[f"shares/{token_hash}"] = b"bytes"
+        db_session.add(
+            ExportShare(
+                user_id=user.id,
+                share_token_hash=token_hash,
+                tool_name="trial_balance",
+                export_format="pdf",
+                export_data=None,
+                object_key=f"shares/{token_hash}",
+                expires_at=datetime.now(UTC) - timedelta(hours=1),
+            )
+        )
+        db_session.commit()
+
+        fake_r2.fail_deletes = True
+        assert purge_expired_export_shares(db_session) == 0
+        assert db_session.query(ExportShare).count() == 1
+        assert f"shares/{token_hash}" in fake_r2.objects
+
+        fake_r2.fail_deletes = False
+        assert purge_expired_export_shares(db_session) == 1
+        assert db_session.query(ExportShare).count() == 0
+        assert fake_r2.objects == {}
 
     def test_no_rows_no_r2_calls(
         self,

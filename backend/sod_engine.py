@@ -25,12 +25,13 @@ Tier gating (Enterprise) is enforced at the route layer, not in the engine.
 
 from __future__ import annotations
 
-import csv
 import io
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+
+from shared.filenames import safe_csv_writer
 
 
 class SodSeverity(str, Enum):
@@ -471,7 +472,7 @@ def analyze_segregation_of_duties(
 
 def sod_result_to_csv(result: SodResult) -> str:
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
 
     writer.writerow(["USER RISK SUMMARY"])
     writer.writerow(

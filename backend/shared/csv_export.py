@@ -22,7 +22,6 @@ just be a worse callable. Split helpers, same transport boilerplate.
 
 from __future__ import annotations
 
-import csv
 import logging
 from collections.abc import Callable
 from io import StringIO
@@ -33,7 +32,7 @@ from fastapi.responses import StreamingResponse
 
 from shared.error_messages import sanitize_error
 from shared.export_helpers import streaming_csv_response, write_testing_csv_summary
-from shared.filenames import safe_download_filename
+from shared.filenames import safe_csv_writer, safe_download_filename
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ def csv_export_handler(
     """
     try:
         output = StringIO()
-        writer = csv.writer(output)
+        writer = safe_csv_writer(output)
 
         # Header row
         writer.writerow([header for header, _extractor in schema])
@@ -142,7 +141,7 @@ def diagnostic_csv_export(
     """
     try:
         output = StringIO()
-        writer = csv.writer(output)
+        writer = safe_csv_writer(output)
 
         body_writer(writer)
 

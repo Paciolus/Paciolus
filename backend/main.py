@@ -19,6 +19,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from config import (
     API_HOST,
@@ -77,58 +78,34 @@ class DecimalJSONResponse(JSONResponse):
         ).encode("utf-8")
 
 
+# Sprint 840: keep multipart uploads in memory. Starlette spools any part over
+# 1 MB to a temporary file on disk, so every upload above 1 MB was briefly
+# written to /tmp while we told customers files are processed in memory. The
+# request body is already capped at MAX_REQUEST_BODY_BYTES and the route reads
+# the whole file into memory anyway, so raising the spool threshold to that cap
+# changes where the bytes sit during parsing, not how many there are.
+from starlette.formparsers import MultiPartParser  # noqa: E402
+
+from security_middleware import MAX_REQUEST_BODY_BYTES  # noqa: E402
+
+MultiPartParser.spool_max_size = MAX_REQUEST_BODY_BYTES
+
+
 # Sprint 275: Sentry APM — init before app creation, only if DSN configured
 if SENTRY_DSN:
     import sentry_sdk
 
-    _SAFE_EXTRA_KEYS = frozenset(
-        {
-            "sentry_logger",
-            "sys.argv",
-            "celery-job",
-        }
-    )
-    _SAFE_CONTEXT_KEYS = frozenset(
-        {
-            "runtime",
-            "os",
-            "device",
-            "browser",
-            "trace",
-            "threadpool",
-        }
-    )
+    from shared.sentry_scrubber import SENTRY_INIT_OPTIONS, before_send, before_send_transaction
 
-    def _before_send(event: dict, hint: dict) -> dict:
-        """Strip request bodies/query strings/extra/contexts for Zero-Storage."""
-        req = event.get("request")
-        if req:
-            req.pop("data", None)
-            req.pop("query_string", None)
-        extra = event.get("extra")
-        if extra:
-            event["extra"] = {k: v for k, v in extra.items() if k in _SAFE_EXTRA_KEYS}
-        contexts = event.get("contexts")
-        if contexts:
-            event["contexts"] = {k: v for k, v in contexts.items() if k in _SAFE_CONTEXT_KEYS}
-        return event
-
-    def _before_send_transaction(event: dict, hint: dict) -> dict:
-        """Strip query strings from transaction names."""
-        if "transaction" in event:
-            txn = event["transaction"]
-            qidx = txn.find("?")
-            if qidx != -1:
-                event["transaction"] = txn[:qidx]
-        return event
-
+    # Sprint 840 (S2): no frame locals, exception text or breadcrumbs leave the
+    # process — see shared/sentry_scrubber.py for what is kept and why.
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=ENV_MODE,
         traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
-        send_default_pii=False,
-        before_send=_before_send,  # type: ignore[arg-type]
-        before_send_transaction=_before_send_transaction,  # type: ignore[arg-type]
+        before_send=before_send,  # type: ignore[arg-type]
+        before_send_transaction=before_send_transaction,  # type: ignore[arg-type]
+        **SENTRY_INIT_OPTIONS,
     )
     logger.info("Sentry APM initialized (env=%s, traces=%.0f%%)", ENV_MODE, SENTRY_TRACES_SAMPLE_RATE * 100)
 
@@ -295,6 +272,15 @@ app.add_middleware(RequestIdMiddleware)
 
 # HTTP RED metrics + per-request access log (Sprint 516: F-008 + F-017)
 app.add_middleware(HttpMetricsMiddleware)
+
+# Sprint 840: apply the limiter's default (60/minute, per route) to every route
+# without its own @limiter.limit. Without this middleware slowapi only enforces
+# decorated routes, so 52 read endpoints had no limit at all while the Trust
+# page described a global one. Added before RateLimitIdentityMiddleware so it
+# runs inside it — the user-aware key is resolved first. (Not the ASGI variant:
+# slowapi 0.1.9's SlowAPIASGIMiddleware re-sends http.response.start on every
+# body chunk, which breaks any multi-chunk response.)
+app.add_middleware(SlowAPIMiddleware)
 
 # Rate limit identity — resolves user tier from JWT before slowapi checks (Sprint 306)
 app.add_middleware(RateLimitIdentityMiddleware)

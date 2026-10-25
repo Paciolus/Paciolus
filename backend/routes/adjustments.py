@@ -239,7 +239,12 @@ def update_adjustment_status(
 
     # Approval metadata side effects
     if new_status == AdjustmentStatus.APPROVED:
-        entry.approved_by = status_update.reviewed_by or current_user.email
+        # Sprint 840: the approver is whoever is signed in. It used to take
+        # `reviewed_by` from the request body, so an approval could be
+        # attributed to any name. (Self-approval cannot be refused yet: each
+        # adjustment set belongs to one user, so the preparer is the only
+        # possible approver. Separation of duties needs an org-shared set.)
+        entry.approved_by = current_user.email
         entry.approved_at = datetime.now(UTC)
     elif new_status == AdjustmentStatus.POSTED:
         if not entry.approved_by or not entry.approved_at:

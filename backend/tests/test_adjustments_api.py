@@ -229,3 +229,23 @@ class TestClearAdjustments:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.delete("/audit/adjustments")
             assert response.status_code == 401
+
+
+# =============================================================================
+# Sprint 840: the approver is the signed-in user, never a name from the body
+# =============================================================================
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestApproverIdentity:
+    @pytest.mark.asyncio
+    async def test_approved_by_ignores_a_name_in_the_body(self, override_verified):
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            created = (await client.post("/audit/adjustments", json=SAMPLE_ENTRY)).json()
+            entry_id = created.get("entry_id") or created.get("id")
+            response = await client.put(
+                f"/audit/adjustments/{entry_id}/status",
+                json={"status": "approved", "reviewed_by": "Engagement Partner, CPA"},
+            )
+            assert response.status_code == 200, response.text
+            assert response.json()["approved_by"] == override_verified.email

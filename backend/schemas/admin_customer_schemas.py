@@ -154,6 +154,20 @@ class AdminActionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class ImpersonationRequest(BaseModel):
+    # Sprint 840 (S3): the customer route ID is an org ID, or a user ID for a
+    # solo customer, so it alone can name two different people. The caller
+    # states which user it means and the server refuses a mismatch.
+    target_user_id: int = Field(..., ge=1)
+
+
+class ImpersonationStopRequest(BaseModel):
+    # Sprint 840 (S3): the impersonation token travels in the body. The admin
+    # authenticates with their own session; the first version read both from
+    # the same Authorization header, so it could never succeed.
+    token: str = Field(..., min_length=1, max_length=4096)
+
+
 class ImpersonationResponse(BaseModel):
     access_token: str
     expires_at: str

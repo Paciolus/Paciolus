@@ -5,11 +5,20 @@
  *
  * Persistent top banner shown when viewing as a customer.
  * Cannot be dismissed. Shows target email, time remaining, and end session button.
+ *
+ * Sprint 840: "End Session" revokes the token server-side. It used to only
+ * clear sessionStorage, so the token stayed valid for its full 15 minutes.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { apiPost } from '@/utils/apiClient'
 
 export function ImpersonationBanner() {
+  const { token: adminToken } = useAuthSession()
+  // A ref, so the 1-second timer effect below never has to restart for a token refresh.
+  const adminTokenRef = useRef(adminToken)
+  adminTokenRef.current = adminToken
   const [isImpersonating, setIsImpersonating] = useState(false)
   const [email, setEmail] = useState('')
   const [timeRemaining, setTimeRemaining] = useState('')
@@ -42,6 +51,11 @@ export function ImpersonationBanner() {
 
   function endSession() {
     if (typeof window === 'undefined') return
+    const impersonationToken = sessionStorage.getItem('impersonation_token')
+    if (impersonationToken) {
+      // Best-effort: an already-expired token is accepted and closed out too.
+      void apiPost('/internal/admin/impersonate/stop', adminTokenRef.current, { token: impersonationToken })
+    }
     sessionStorage.removeItem('impersonation_token')
     sessionStorage.removeItem('impersonation_email')
     sessionStorage.removeItem('impersonation_expires')

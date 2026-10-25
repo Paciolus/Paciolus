@@ -85,7 +85,7 @@ def parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
     try:
         excel_file = pd.ExcelFile(io.BytesIO(file_bytes), engine="odf")
     except Exception as e:
-        logger.warning("ODS file open failed for '%s': %s", filename, e)
+        logger.warning("ODS file open failed [%s]", type(e).__name__)  # Sprint 840 (S6): no filename/text
         raise HTTPException(
             status_code=400,
             detail="The ODS file could not be opened. Please verify it is a valid OpenDocument Spreadsheet.",
@@ -104,7 +104,7 @@ def parse_ods(file_bytes: bytes, filename: str) -> pd.DataFrame:
         try:
             df = pd.read_excel(excel_file, sheet_name=first_sheet, engine="odf")
         except Exception as e:
-            logger.warning("ODS sheet parse failed for '%s' sheet '%s': %s", filename, first_sheet, e)
+            logger.warning("ODS sheet parse failed [%s]", type(e).__name__)  # Sprint 840 (S6)
             raise HTTPException(
                 status_code=400,
                 detail=f"Could not read sheet '{first_sheet}' from the ODS file. "

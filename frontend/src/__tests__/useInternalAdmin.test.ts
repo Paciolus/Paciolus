@@ -110,11 +110,11 @@ describe('useInternalAdmin', () => {
 
     const { result } = renderHook(() => useInternalAdmin())
     await act(async () => {
-      const res = await result.current.impersonate(1)
+      const res = await result.current.impersonate(1, 7)
       expect(res).toEqual(payload)
     })
 
-    expect(mockApiPost).toHaveBeenCalledWith('/internal/admin/customers/1/impersonate', 'admin-tok', {})
+    expect(mockApiPost).toHaveBeenCalledWith('/internal/admin/customers/1/impersonate', 'admin-tok', { target_user_id: 7 })
   })
 
   it('fetchAuditLog: forwards filters and stores log', async () => {

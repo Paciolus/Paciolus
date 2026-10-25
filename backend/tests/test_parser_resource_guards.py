@@ -248,3 +248,66 @@ class TestZeroDataRowsGuard:
             parse_uploaded_file_by_format(content, "headersonly.csv")
         assert exc_info.value.status_code == 400
         assert "no data rows" in exc_info.value.detail.lower()
+
+
+# =============================================================================
+# Sprint 840 (S7): uncompressed-size and ratio caps per container format
+# =============================================================================
+
+
+def _zip_claiming_uncompressed_size(claimed: int, compressed_payload: int = 4096) -> bytes:
+    """A one-entry ZIP whose central directory claims ``claimed`` uncompressed bytes.
+
+    The payload is random (incompressible), so the compressed size is roughly
+    ``compressed_payload`` and the claimed ratio is ``claimed / compressed_payload``.
+    """
+    import os
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("content.xml", os.urandom(compressed_payload))
+    raw = bytearray(buf.getvalue())
+    eocd = raw.rfind(b"\x50\x4b\x05\x06")
+    cd = int.from_bytes(raw[eocd + 16 : eocd + 20], "little")
+    raw[cd + 24 : cd + 28] = claimed.to_bytes(4, "little")
+    return bytes(raw)
+
+
+class TestSprint840DecompressionCaps:
+    def test_limits_were_tightened(self):
+        from shared.upload_pipeline import (
+            MAX_COMPRESSION_RATIO,
+            MAX_ODS_UNCOMPRESSED_BYTES,
+            MAX_ZIP_UNCOMPRESSED_BYTES,
+        )
+
+        assert MAX_ZIP_UNCOMPRESSED_BYTES <= 200 * 1024 * 1024
+        assert MAX_ODS_UNCOMPRESSED_BYTES <= 50 * 1024 * 1024
+        assert MAX_COMPRESSION_RATIO <= 50
+
+    def test_xlsx_over_200_mb_uncompressed_rejected(self):
+        # 10 MB compressed claiming 210 MB: ratio 21:1 passes, the size cap does not.
+        data = _zip_claiming_uncompressed_size(210 * 1024 * 1024, compressed_payload=10 * 1024 * 1024)
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_xlsx_archive(data, "ledger.xlsx")
+        assert "uncompressed" in exc_info.value.detail.lower()
+
+    def test_xlsx_ratio_over_50_rejected(self):
+        data = _zip_claiming_uncompressed_size(60 * 4096)
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_xlsx_archive(data, "ledger.xlsx")
+        assert "compression ratio" in exc_info.value.detail.lower()
+
+    def test_ods_over_50_mb_uncompressed_rejected(self):
+        data = _zip_claiming_uncompressed_size(60 * 1024 * 1024, compressed_payload=2 * 1024 * 1024)
+        with pytest.raises(HTTPException) as exc_info:
+            _validate_xlsx_archive(data, "ledger.ods")
+        assert "uncompressed" in exc_info.value.detail.lower()
+
+    def test_ods_at_a_realistic_ratio_passes(self):
+        # Real ODS compresses ~37:1 and repetitive sheets go higher; 70:1 is over
+        # the XLSX cap (rejected there) but within the ODS cap.
+        data = _zip_claiming_uncompressed_size(70 * 4096)
+        _validate_xlsx_archive(data, "ledger.ods")
+        with pytest.raises(HTTPException):
+            _validate_xlsx_archive(data, "ledger.xlsx")

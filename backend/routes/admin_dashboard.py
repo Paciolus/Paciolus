@@ -7,7 +7,6 @@ Gated to Professional+ tiers with admin_dashboard entitlement.
 Route group prefix: /admin
 """
 
-import csv
 import io
 import logging
 from datetime import UTC, datetime, timedelta
@@ -23,7 +22,7 @@ from database import get_db
 from models import ActivityLog, User
 from organization_model import Organization, OrganizationMember
 from shared.entitlement_checks import check_admin_dashboard_access
-from shared.filenames import sanitize_csv_value
+from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.organization_schemas import (
     AdminOverviewResponse,
     TeamActivityEntryResponse,
@@ -234,7 +233,7 @@ def export_activity_csv(
     users = {u.id: u for u in db.query(User).filter(User.id.in_(member_ids)).all()}
 
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
     writer.writerow(["Date", "User", "Action", "Tool"])
 
     for act in activities:

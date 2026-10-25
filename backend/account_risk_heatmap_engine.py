@@ -19,13 +19,14 @@ Design:
 
 from __future__ import annotations
 
-import csv
 import io
 import math
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any
+
+from shared.filenames import safe_csv_writer
 
 # =============================================================================
 # Constants
@@ -382,7 +383,7 @@ def build_signals_from_composite_risk(
 def heatmap_to_csv(result: AccountRiskHeatmapResult) -> str:
     """Render the heatmap as a CSV string for export."""
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
     writer.writerow(
         [
             "Rank",

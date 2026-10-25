@@ -31,7 +31,7 @@ from lead_sheet_mapping import (
     LEAD_SHEET_NAMES,
     assign_lead_sheet,
 )
-from shared.filenames import sanitize_csv_value
+from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
@@ -1206,11 +1206,10 @@ def export_movements_csv(
     Returns:
         CSV string content (encode with utf-8-sig for Excel compatibility).
     """
-    import csv
     from io import StringIO
 
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     # Header row
     headers = [
@@ -1260,7 +1259,7 @@ def export_movements_csv(
     writer.writerow([])
 
     # Lead sheet summary rows
-    writer.writerow(["=== LEAD SHEET SUMMARY ==="])
+    writer.writerow(["LEAD SHEET SUMMARY"])  # Sprint 840: no leading "=" (a formula trigger)
     ls_headers = [
         "Lead Sheet",
         "Category",
@@ -1305,7 +1304,7 @@ def export_movements_csv(
 
     # Summary statistics
     writer.writerow([])
-    writer.writerow(["=== SUMMARY STATISTICS ==="])
+    writer.writerow(["SUMMARY STATISTICS"])
     writer.writerow(["Total Accounts", str(summary.total_accounts if hasattr(summary, "total_accounts") else "")])
     mbt = summary.movements_by_type if hasattr(summary, "movements_by_type") else {}
     for mt_key, mt_val in mbt.items() if isinstance(mbt, dict) else []:

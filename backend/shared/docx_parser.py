@@ -75,7 +75,7 @@ def parse_docx(file_bytes: bytes, filename: str) -> pd.DataFrame:
     try:
         doc = Document(io.BytesIO(file_bytes))
     except Exception as e:
-        logger.warning("DOCX file open failed for '%s': %s", filename, e)
+        logger.warning("DOCX file open failed [%s]", type(e).__name__)  # Sprint 840 (S6): no filename/text
         raise HTTPException(
             status_code=400,
             detail="The DOCX file could not be opened. Please verify it is a valid Word document.",

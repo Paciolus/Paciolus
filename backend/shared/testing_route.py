@@ -147,6 +147,6 @@ async def run_single_file_testing(
             # file_tool_scaffold. ArithmeticError covers decimal.InvalidOperation
             # from a malformed amount cell — a user-facing 400, so WARNING, not
             # a Sentry-paging ERROR.
-            logger.warning("%s rejected [%s]: %s", tool_name, type(e).__name__, e, exc_info=True)
+            logger.warning("%s rejected [%s]", tool_name, type(e).__name__)  # Sprint 840 (S6): type only
             maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
             raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", error_key))

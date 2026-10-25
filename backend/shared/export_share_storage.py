@@ -152,10 +152,11 @@ def download(object_key: str) -> bytes | None:
 def delete(object_key: str) -> bool:
     """Best-effort delete of an R2 object.
 
-    Returns False when R2 is not configured or the DELETE errored.
-    Cleanup scheduler logs and moves on — the object will be overwritten
-    on next upload (keys are hash-deterministic) or age out via a bucket
-    lifecycle rule if one is configured.
+    Returns False when R2 is not configured or the DELETE errored. Deleting a
+    key that is already gone succeeds (S3 semantics). Sprint 840: the cleanup
+    scheduler keeps the DB row on False and retries on its next pass, so the
+    row is never dropped while its object may still be in the bucket. A
+    bucket lifecycle rule (CEO console) is the backstop.
     """
     client = _get_client()
     if client is None or _bucket_name is None:

@@ -16,7 +16,6 @@ Audit Standards References:
 confirmation under ISA 505 / AS 2310 is a separate procedure, not this tool.)
 """
 
-import csv
 import math
 import re
 from dataclasses import dataclass, field
@@ -27,7 +26,7 @@ from io import StringIO
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
-from shared.filenames import sanitize_csv_value
+from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 
@@ -1065,7 +1064,7 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     ``sanitize_csv_value`` (CWE-1236).
     """
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     # Section 1: Matched Items
     writer.writerow(["MATCHED ITEMS"])

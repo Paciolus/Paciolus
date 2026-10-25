@@ -8,7 +8,6 @@ so auditors can paste formatted schedules into engagement workpapers.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from datetime import date
@@ -30,6 +29,7 @@ from loan_amortization_engine import (
 )
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
+from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -150,7 +150,7 @@ def export_schedule_csv(
         raise HTTPException(status_code=400, detail=str(e))
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
     writer.writerow(
         [
             "Period",

@@ -198,10 +198,10 @@ def complete_email_verification(db: Session, token: str) -> User:
     user = verification.user
 
     # Sprint 203: pending email swap on verification.
+    email_changed = bool(user.pending_email)
     if user.pending_email:
         user.email = user.pending_email
         user.pending_email = None
-        log_secure_operation("email_changed", f"User {user.id} email swapped from pending")
 
     user.is_verified = True
     user.email_verified_at = datetime.now(UTC)
@@ -213,6 +213,10 @@ def complete_email_verification(db: Session, token: str) -> User:
     ):
         pass
 
+    if email_changed:
+        # Sprint 840: logged after the commit, so the persisted event cannot
+        # commit half of the verification.
+        log_secure_operation("email_changed", "Email swapped from pending", db=db, user_id=user.id)
     log_secure_operation("email_verified", f"User {user.id} email verified")
     return user
 
