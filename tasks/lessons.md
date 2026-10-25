@@ -2980,3 +2980,14 @@ be user-supplied.
   every paragraph raw and sanitized across 1,606 PDF tests and diffed the visible text. The unit
   tests also caught an ordering bug (`</font>` matched the simple-tag rule first) that would have
   silently escaped every coloured span.
+
+## A guard that scans tracked files passes on the file you just created (2026-10-24)
+
+Sprint 841's `test_storage_claims.py` and Sprint 840's CSV-writer guard both enumerate files with
+`git ls-files` — deliberately, so stray scratch trees are not scanned. The consequence: a brand-new file
+is invisible to them until it is staged. `storage-statement.ts` (new in 841) quoted the retired phrases
+in its own doc comment; the guard passed locally and would have failed CI on PR #233. The same thing
+happened again in Sprint 845 with the new DPA.
+
+**Run tracked-file guards after `git add`, not before.** And a document that explains what was wrong
+with old wording should describe it, not quote it — the quote is exactly what the guard looks for.

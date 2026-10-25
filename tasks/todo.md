@@ -510,7 +510,7 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims), 843 (positioning/disclaimers) and 844 (privacy + account deletion) COMPLETE. Next: Sprint 845.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims), 843 (positioning/disclaimers), 844 (privacy + account deletion) and 845 (compliance docs) COMPLETE — all six claims-review sprints are in PRs #232–#237, stacked, awaiting CEO merge.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -677,19 +677,26 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 ---
 
 ### Sprint 845: Honest compliance documents (the repo is public)
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 6. **CEO decision:** repo private or public.
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 6.
 
-- [ ] Rewrite `docs/04-compliance/` as short, accurate solo-operator documents: SOC 2 status ("none performed or
-      scheduled"); no pen test / bug bounty / PGP claims; disclose.io safe-harbor instead of CFAA/CMA/DMCA language;
-      incident response = founder best-effort + 15-minute uptime probe + Sentry; BCP/DR = Neon PITR, independent
-      backups in progress (Sprint 778), no SLA/RTO/RPO promises; audit logging as it actually is; MFA status;
-      Neon not Render.
-- [ ] Code fix the docs depend on: audit-chain write links across users but verifies per user
-      (`routes/activity.py:153-163` vs `shared/audit_chain.py:85-118`) — make them agree; NULL-hash rows; deletion
-      guard on the admin audit log (`main.py:149`).
-- [ ] Fix `dr-test-monthly.yml` / `backup-integrity-check.yml` to target Neon + R2 (overlaps Sprint 778).
-- [ ] If the CEO chooses private: `gh repo edit --visibility private` is a CEO action (it is outward-facing); note the
-      git history still holds the old text for anyone who cloned it.
+- [x] `docs/04-compliance/` rewritten as short, accurate solo-operator documents (Security Policy 3.0, Data Handling
+      Architecture 3.0, Subprocessor List 2.0, Incident Response 2.0, BCP/DR 2.0, Access Control 2.0, Secure SDL 2.0,
+      VDP 2.0, Audit Logging 2.0, DPA 2.0-draft). Each opens with what the old version claimed that was false. SOC 2:
+      "none performed or scheduled"; no pen test / bug bounty / PGP; disclose.io-style safe harbor instead of
+      CFAA/CMA/DMCA "authorization"; incidents = founder best-effort + 15-minute probe + Sentry, no on-call; BCP/DR =
+      Neon PITR only, no SLA/RTO/RPO, independent backup and restore testing not done (778b); audit logging as built
+      (840/845); no in-app MFA; impersonation role described; Neon not Render; branch protection as configured (no
+      required approval). Superseded versions in `archive/` with `_pre-sprint-845` names; stale `.docx` exports
+      removed; index and changelog rewritten.
+- [x] Code the docs depend on: the audit chain now links **and** verifies per user with archived rows included
+      (`shared/audit_chain.previous_chain_hash`), still accepts legacy cross-user links so existing rows verify, and
+      reports unchained (pre-Sprint-461) rows instead of skipping them; the admin audit log is under the deletion
+      guard (ORM + `accounting_policy.toml`).
+- [x] DR workflows: already report honestly (778a — UNVERIFIED rather than false-green); the Neon + R2 rewrite needs
+      credentials and stays in **Sprint 778b**.
+- [ ] **CEO:** repository visibility. Private is the safer default before launch (`gh repo edit --visibility private`
+      is a CEO action — outward-facing); git history keeps the old text for anyone who cloned it. `docs/08-internal/`
+      (SOC 2 evidence drafts, readiness assessment) is also public and was out of this sprint's scope.
 
 **Commit SHA:** TBD.
 

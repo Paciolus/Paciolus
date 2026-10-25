@@ -15,7 +15,7 @@
 
 > **All boxes must be checked (or marked N/A with justification) before this PR can be merged.**
 > This checklist enforces CC8.4 of the SOC 2 Trust Services Criteria.
-> Reference: `docs/04-compliance/SECURE_SDL_CHANGE_MANAGEMENT.md §3.2`
+> Reference: `docs/04-compliance/SECURE_SDL_CHANGE_MANAGEMENT.md`
 
 - [ ] **Input validation verified** — no raw user input reaches the DB or shell without sanitization
 - [ ] **No secrets hardcoded** — no API keys, tokens, or passwords appear in the diff

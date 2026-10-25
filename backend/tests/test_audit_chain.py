@@ -470,3 +470,65 @@ class TestSecretDomainSeparation:
         result_after = verify_audit_chain(db_session, r1.id, r2.id, mock_user.id)
         assert result_after.is_valid, f"Expected valid after rotation, got: {result_after.error_message}"
         assert result_after.records_checked == 2
+
+
+# =============================================================================
+# Sprint 845 (claims review Part 6): one chaining rule for writes and verification
+# =============================================================================
+
+
+def _chain(db_session, record):
+    from shared.audit_chain import previous_chain_hash
+
+    record.chain_hash = compute_chain_hash(previous_chain_hash(db_session, record), record)
+    db_session.flush()
+    return record
+
+
+class TestPerUserChain:
+    def test_interleaved_users_both_verify(self, db_session, make_user):
+        """The bug: writes linked across users, verification walked one user."""
+        alice = make_user(email="chain_alice@example.com")
+        bob = make_user(email="chain_bob@example.com")
+        a1 = _chain(db_session, _make_activity_log(db_session, alice))
+        _chain(db_session, _make_activity_log(db_session, bob))
+        a2 = _chain(db_session, _make_activity_log(db_session, alice))
+        assert verify_audit_chain(db_session, a1.id, a2.id, user_id=alice.id).is_valid
+
+    def test_archiving_a_linked_record_does_not_break_the_chain(self, db_session, make_user):
+        user = make_user(email="chain_archive@example.com")
+        r1 = _chain(db_session, _make_activity_log(db_session, user))
+        r2 = _chain(db_session, _make_activity_log(db_session, user))
+        r3 = _chain(db_session, _make_activity_log(db_session, user))
+        r2.archived_at = datetime.now(UTC)
+        db_session.flush()
+        result = verify_audit_chain(db_session, r1.id, r3.id, user_id=user.id)
+        assert result.is_valid and result.records_checked == 3
+
+    def test_legacy_cross_user_links_still_verify(self, db_session, make_user):
+        """Rows written before Sprint 845 linked to any user's latest record."""
+        alice = make_user(email="chain_legacy_a@example.com")
+        bob = make_user(email="chain_legacy_b@example.com")
+        a1 = _make_activity_log(db_session, alice)
+        a1.chain_hash = compute_chain_hash(GENESIS_HASH, a1)
+        b1 = _make_activity_log(db_session, bob)
+        b1.chain_hash = compute_chain_hash(a1.chain_hash, b1)  # legacy: linked to Alice's row
+        db_session.flush()
+        assert verify_audit_chain(db_session, b1.id, b1.id, user_id=bob.id).is_valid
+
+    def test_tampering_is_still_detected(self, db_session, make_user):
+        user = make_user(email="chain_tamper845@example.com")
+        r1 = _chain(db_session, _make_activity_log(db_session, user))
+        r2 = _chain(db_session, _make_activity_log(db_session, user))
+        r2.record_count = 999
+        db_session.flush()
+        result = verify_audit_chain(db_session, r1.id, r2.id, user_id=user.id)
+        assert not result.is_valid and result.first_broken_id == r2.id
+
+    def test_unchained_rows_are_reported_not_skipped_silently(self, db_session, make_user):
+        user = make_user(email="chain_unchained@example.com")
+        old = _make_activity_log(db_session, user)  # no chain_hash, like pre-Sprint-461 rows
+        r1 = _chain(db_session, _make_activity_log(db_session, user))
+        result = verify_audit_chain(db_session, old.id, r1.id, user_id=user.id)
+        assert result.is_valid and result.unchained_records == 1
+        assert "predate chaining" in (result.error_message or "")

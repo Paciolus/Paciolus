@@ -96,7 +96,9 @@ def db_engine():
     Base.metadata.create_all(bind=engine)
 
     # Sprint 345: Register ORM deletion guard for audit-trail tables (matches main.py)
-    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
+    from admin_audit_model import AdminAuditLog
+
+    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment, AdminAuditLog])
 
     yield engine
 

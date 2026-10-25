@@ -64,6 +64,53 @@ def compute_chain_hash(previous_hash: str, record: Any) -> str:
     return _compute_hash_with_key(AUDIT_CHAIN_SECRET_KEY, previous_hash, record)
 
 
+def previous_chain_hash(db: Any, record: Any) -> str:
+    """The hash a new record links to: the same user's latest chained record.
+
+    Sprint 845 (claims review Part 6): the chain used to link to the latest
+    chained record of *any* user while verification walked one user's records,
+    so the first time two users' activity interleaved, verification reported a
+    break. It also skipped archived rows on both sides, so archiving a record
+    after it was linked broke the chain. Both sides now use the same rule:
+    per user, archived rows included.
+    """
+    from models import ActivityLog  # Avoid circular import
+
+    prev = (
+        db.query(ActivityLog.chain_hash)
+        .filter(
+            ActivityLog.id < record.id,
+            ActivityLog.user_id == record.user_id,
+            ActivityLog.chain_hash.isnot(None),
+        )
+        .order_by(ActivityLog.id.desc())
+        .first()
+    )
+    return prev[0] if prev else GENESIS_HASH
+
+
+def _legacy_previous_hash(db: Any, record: Any) -> str:
+    """Predecessor under the pre-Sprint-845 rule (any user, non-archived).
+
+    Rows written before Sprint 845 were linked this way. Verification accepts
+    either link so those rows still verify; both are keyed HMACs, so accepting
+    two predecessors does not let anyone without the key forge a record.
+    """
+    from models import ActivityLog  # Avoid circular import
+
+    prev = (
+        db.query(ActivityLog.chain_hash)
+        .filter(
+            ActivityLog.id < record.id,
+            ActivityLog.archived_at.is_(None),
+            ActivityLog.chain_hash.isnot(None),
+        )
+        .order_by(ActivityLog.id.desc())
+        .first()
+    )
+    return prev[0] if prev else GENESIS_HASH
+
+
 @dataclass
 class ChainVerificationResult:
     """Result of audit chain verification."""
@@ -72,73 +119,66 @@ class ChainVerificationResult:
     records_checked: int
     first_broken_id: Optional[int] = None
     error_message: Optional[str] = None
+    # Sprint 845: rows in range with no chain hash (pre-Sprint-461) are reported,
+    # not silently skipped.
+    unchained_records: int = 0
+
+
+def _matches(record: Any, previous_hash: str) -> bool:
+    if record.chain_hash == compute_chain_hash(previous_hash, record):
+        return True
+    # Records created before AUDIT_CHAIN_SECRET_KEY was separated from JWT_SECRET_KEY.
+    if AUDIT_CHAIN_SECRET_KEY != JWT_SECRET_KEY:
+        return record.chain_hash == _compute_hash_with_key(JWT_SECRET_KEY, previous_hash, record)
+    return False
 
 
 def verify_audit_chain(db: Any, start_id: int, end_id: int, user_id: int) -> ChainVerificationResult:
-    """Verify the integrity of the audit log chain between two record IDs.
+    """Verify the integrity of one user's audit log chain between two record IDs.
 
-    SECURITY: Scoped to user_id to prevent cross-tenant information leakage.
-    Checks that each record's chain_hash matches the expected HMAC of the
-    previous hash + current record content. Returns verification result.
+    SECURITY: Scoped to user_id — only that user's records are read, and the
+    chain is per user, so verification never depends on another tenant's rows.
+    Archived (soft-deleted) records stay in the chain.
     """
     from models import ActivityLog  # Avoid circular import
 
-    records = (
+    in_range = (
         db.query(ActivityLog)
         .filter(
             ActivityLog.id >= start_id,
             ActivityLog.id <= end_id,
             ActivityLog.user_id == user_id,
-            ActivityLog.archived_at.is_(None),
-            ActivityLog.chain_hash.isnot(None),
         )
         .order_by(ActivityLog.id.asc())
         .all()
     )
+    records = [r for r in in_range if r.chain_hash is not None]
+    unchained = len(in_range) - len(records)
 
     if not records:
         return ChainVerificationResult(
             is_valid=True,
             records_checked=0,
             error_message="No chained records found in the specified range.",
+            unchained_records=unchained,
         )
 
-    # Get the hash of the record immediately before start_id (or genesis)
-    previous_record = (
-        db.query(ActivityLog)
-        .filter(
-            ActivityLog.id < records[0].id,
-            ActivityLog.user_id == user_id,
-            ActivityLog.archived_at.is_(None),
-            ActivityLog.chain_hash.isnot(None),
-        )
-        .order_by(ActivityLog.id.desc())
-        .first()
-    )
-    previous_hash = previous_record.chain_hash if previous_record else GENESIS_HASH
-
-    # Backward-compatible verification: try current AUDIT_CHAIN_SECRET_KEY first,
-    # fall back to JWT_SECRET_KEY for records created before key separation.
-    _fallback_needed = AUDIT_CHAIN_SECRET_KEY != JWT_SECRET_KEY
-
+    previous_hash = previous_chain_hash(db, records[0])
     for idx, record in enumerate(records):
-        expected_hash = compute_chain_hash(previous_hash, record)
-        if record.chain_hash != expected_hash:
-            # Try legacy JWT_SECRET_KEY for pre-rotation records
-            if _fallback_needed:
-                legacy_hash = _compute_hash_with_key(JWT_SECRET_KEY, previous_hash, record)
-                if record.chain_hash == legacy_hash:
-                    previous_hash = record.chain_hash
-                    continue
+        if not (_matches(record, previous_hash) or _matches(record, _legacy_previous_hash(db, record))):
             return ChainVerificationResult(
                 is_valid=False,
                 records_checked=idx + 1,
                 first_broken_id=record.id,
                 error_message=f"Chain broken at record {record.id}: hash mismatch.",
+                unchained_records=unchained,
             )
         previous_hash = record.chain_hash
 
+    message = f"{unchained} record(s) in range predate chaining and were not checked." if unchained else None
     return ChainVerificationResult(
         is_valid=True,
         records_checked=len(records),
+        error_message=message,
+        unchained_records=unchained,
     )
