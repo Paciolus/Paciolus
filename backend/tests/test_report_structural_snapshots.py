@@ -253,8 +253,9 @@ class TestDisclaimerSection:
         build_disclaimer(story, styles, "journal_entry_testing", "ISA 240")
         paragraphs = [f for f in story if isinstance(f, Paragraph)]
         combined_text = " ".join(p.text for p in paragraphs).lower()
-        assert "professional judgment" in combined_text or "does not constitute" in combined_text, (
-            "Disclaimer must reference professional judgment or non-attestation language"
+        # Sprint 843: the standard memo footer ("It is not audit evidence ...").
+        assert "it is not audit evidence" in combined_text, (
+            "Disclaimer must carry the non-attestation language of the standard memo footer"
         )
 
     def test_disclaimer_references_domain(self, styles):
