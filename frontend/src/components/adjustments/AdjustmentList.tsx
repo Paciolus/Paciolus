@@ -17,6 +17,7 @@
 import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CaptureToSumButton } from '@/components/engagement/CaptureToSumButton'
+import { INDEPENDENCE_NOTE } from '@/content/disclaimers'
 import type { AdjustingEntry, AdjustmentStatus } from '@/types/adjustment'
 import {
   ADJUSTMENT_STATUS_COLORS,
@@ -389,6 +390,8 @@ export function AdjustmentList({
 
   return (
     <div className="space-y-4">
+      {/* Sprint 843 (claims review M11) */}
+      <p className="text-xs font-sans text-content-tertiary">{INDEPENDENCE_NOTE}</p>
       {/* Filter Bar */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-content-tertiary uppercase tracking-wider">Filter:</span>

@@ -76,7 +76,7 @@ export function EvidenceBand() {
             Standards-Driven by Design
           </h2>
           <p className="font-sans text-oatmeal-400 text-sm max-w-xl mx-auto mb-4">
-            Every test cites its standard. Every memo follows ISA/PCAOB format.
+            Every test names the rule it applies, or says when a threshold is our own convention.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>

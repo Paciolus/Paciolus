@@ -102,7 +102,7 @@ export default function BookToTaxPage() {
                 </div>
               </div>
 
-              <DisclaimerBox>
+              <DisclaimerBox tax>
                 The M-1 / M-3 reconciliation and provision computed here apply the rates you supply to
                 the adjustments you enter. Classification of an item as permanent versus temporary, and
                 the application of uncertain-tax-position analysis under <span className="font-mono">ASC 740</span>, remain preparer

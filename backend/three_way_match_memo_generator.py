@@ -106,7 +106,7 @@ _MATCH_RATE_THRESHOLDS = [
 
 # Conclusion text by risk tier (4-tier scale) — BUG-002: score-aware
 _RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
-    "low": ("Match rates are satisfactory and no variances exceeding the configured thresholds were detected."),
+    "low": ("No variances exceeding the configured thresholds were detected."),
     "moderate": (
         "Select variances and unmatched documents should be reviewed for proper authorization and documentation."
     ),
@@ -909,7 +909,7 @@ def generate_three_way_match_memo(
         )
 
         # ---- IX. CONCLUSION ----
-        story.append(Paragraph("IX. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph("IX. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         assessment = _build_risk_conclusion(risk_tier, composite.get("score", 0))

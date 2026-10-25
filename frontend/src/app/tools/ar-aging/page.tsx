@@ -8,6 +8,7 @@ import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
@@ -85,7 +86,7 @@ export default function ARAgingPage() {
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
             Upload a trial balance and optional AR sub-ledger for automated receivables
-            testing &mdash; 11-test battery for aging, allowance, and concentration anomaly indicators.
+            testing &mdash; {testCountFor('ar_aging')}-test battery for aging, allowance, and concentration anomaly indicators.
           </p>
         </div>
 
@@ -199,7 +200,7 @@ export default function ARAgingPage() {
                     ) : (
                       <>
                         <p className="font-sans text-sm text-content-secondary mb-1">
-                          Add a sub-ledger for full 11-test analysis
+                          Add a sub-ledger for full {testCountFor('ar_aging')}-test analysis
                         </p>
                         <p className="font-sans text-xs text-content-tertiary">Customer aging detail with invoice dates</p>
                       </>
@@ -217,7 +218,7 @@ export default function ARAgingPage() {
                       Run AR Aging Analysis{slFile ? ' (Full Mode)' : ' (TB-Only)'}
                     </button>
                     <p className="font-sans text-xs text-content-tertiary mt-2">
-                      {slFile ? '11 tests: structural + statistical + advanced' : '4 structural tests (add sub-ledger for full coverage)'}
+                      {slFile ? `${testCountFor('ar_aging')} tests: structural + statistical + advanced` : '4 structural tests (add sub-ledger for full coverage)'}
                     </p>
                   </div>
                 )}
@@ -233,7 +234,7 @@ export default function ARAgingPage() {
                 <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                   <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                   <span className="font-sans text-content-primary">
-                    Running {slFile ? '11-test' : '4-test'} AR aging battery on {tbFile?.name}...
+                    Running {slFile ? `${testCountFor('ar_aging')}-test` : '4-test'} AR aging battery on {tbFile?.name}...
                   </span>
                 </div>
               </div>
@@ -308,7 +309,7 @@ export default function ARAgingPage() {
                   <div className="bg-surface-card-secondary border border-theme rounded-xl p-4">
                     <p className="font-sans text-xs text-content-secondary">
                       <span className="text-content-secondary font-medium">{skippedTests.length} tests skipped</span> &mdash; upload
-                      an AR sub-ledger to enable full 11-test coverage including aging bucket analysis, customer
+                      an AR sub-ledger to enable full {testCountFor('ar_aging')}-test coverage including aging bucket analysis, customer
                       concentration, and credit limit checks.
                     </p>
                   </div>

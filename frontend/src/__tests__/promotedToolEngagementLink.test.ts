@@ -78,7 +78,7 @@ const TOOLS = [
       }),
   },
   {
-    name: 'Form 1099 Preparation',
+    name: '1099 Vendor Threshold Review',
     endpoint: '/audit/form-1099',
     useHook: useForm1099,
     run: (api: ReturnType<typeof useForm1099>) =>

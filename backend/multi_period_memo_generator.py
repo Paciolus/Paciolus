@@ -1243,7 +1243,7 @@ def generate_multi_period_memo(
         # ================================================================
         # CONCLUSION
         # ================================================================
-        story.append(Paragraph(f"{section_num}. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_num}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         assessment = _build_risk_conclusion(risk_tier, risk_score)

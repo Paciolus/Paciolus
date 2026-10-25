@@ -56,7 +56,7 @@ describe('WelcomeModal', () => {
     fireEvent.click(screen.getByText('Next'))
 
     // Step 3 — final step shows CTA instead of Next
-    expect(screen.getByText('Export Audit-Ready Memos')).toBeInTheDocument()
+    expect(screen.getByText('Export Analysis Memos')).toBeInTheDocument()
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
     expect(screen.getByText('Get Started')).toBeInTheDocument()
   })

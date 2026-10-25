@@ -131,7 +131,7 @@ By 2029, Paciolus will be the go-to diagnostic platform for 50,000+ financial pr
 | **Segregation of Duties** | User-role and role-permission matrices against an SoD rule library, with per-user risk ranking (SOC 1, COSO 2013) |
 | **Intercompany Elimination** | Reciprocal balance matching across entities, proposed elimination entries, consolidation worksheet (ASC 810, IFRS 10, ISA 600) |
 | **W-2 / W-3 Reconciliation** | Payroll YTD reconciled to draft W-2s and Form 941 quarterlies before year-end filing (IRC §6051) |
-| **Form 1099 Preparation** | Vendors meeting 1099-NEC / MISC / INT thresholds, with corporate safe-harbour and processor-exemption logic (IRC §6041, Pub 1220) |
+| **1099 Vendor Threshold Review** | Vendors meeting 1099-NEC / MISC / INT thresholds, with corporate safe-harbour and processor-exemption logic (IRC §6041, Pub 1220) |
 | **Book-to-Tax Reconciliation** | Book pretax income bridged to taxable income with Schedule M-1 / M-3 and an ASC 740 deferred-tax roll |
 | **Cash Flow Projector** | 90-day cash position across base / stress / best scenarios with liquidity-breach flagging (ASC 230) |
 

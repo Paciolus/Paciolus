@@ -68,7 +68,7 @@ TOOL_DISPLAY_LABELS: dict[str, str] = {
     "sod_checker": "Segregation of Duties",
     "intercompany_elimination": "Intercompany Elimination",
     "w2_reconciliation": "W-2 / W-3 Reconciliation",
-    "form_1099": "Form 1099 Preparation",
+    "form_1099": "1099 Vendor Threshold Review",
     "book_to_tax": "Book-to-Tax Reconciliation",
     "cash_flow_projector": "Cash Flow Projector",
 }

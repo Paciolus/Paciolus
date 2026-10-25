@@ -216,7 +216,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Paciolus API",
-    description="18-Tool Audit Intelligence Suite for Financial Professionals",
+    description="18-Tool Diagnostic Intelligence Suite for Financial Professionals",
     version=__version__,
     lifespan=lifespan,
     default_response_class=DecimalJSONResponse,

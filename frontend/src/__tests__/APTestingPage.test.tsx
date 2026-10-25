@@ -52,7 +52,7 @@ runStandardToolPageScenarios({
   getToolHookMock: () => useAPTesting as jest.Mock,
   heroText: 'AP Payment Testing',
   uploadPromptPattern: /Upload AP Payment Register/,
-  loadingTextPattern: /Running 13-test battery/,
+  loadingTextPattern: /Running 14-test battery/,
   successTestIds: ['ap-score-card', 'ap-test-grid', 'ap-flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Fraud Indicators'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },

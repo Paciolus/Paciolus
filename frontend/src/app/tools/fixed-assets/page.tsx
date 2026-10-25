@@ -10,6 +10,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
@@ -66,7 +67,7 @@ export default function FixedAssetTestingPage() {
             Fixed Asset Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload a fixed asset register for automated testing &mdash; 9-test battery
+            Upload a fixed asset register for automated testing &mdash; {testCountFor('fixed_asset_testing')}-test battery
             for PP&amp;E anomaly indicators per IAS 16 and ISA 540.
           </p>
         </div>
@@ -134,7 +135,7 @@ export default function FixedAssetTestingPage() {
                 <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                   <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-400 rounded-full animate-spin" />
                   <span className="font-sans text-content-primary">
-                    Running 9-test fixed asset battery on {selectedFile?.name}...
+                    Running {testCountFor('fixed_asset_testing')}-test fixed asset battery on {selectedFile?.name}...
                   </span>
                 </div>
               </div>

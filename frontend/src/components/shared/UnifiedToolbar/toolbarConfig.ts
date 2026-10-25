@@ -59,7 +59,7 @@ const TAX_AND_FILINGS: ToolColumn = {
   heading: 'Tax & Filings',
   items: [
     { label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', toolKey: 'w2_reconciliation' },
-    { label: 'Form 1099 Preparation', href: '/tools/form-1099', toolKey: 'form_1099' },
+    { label: '1099 Vendor Threshold Review', href: '/tools/form-1099', toolKey: 'form_1099' },
     { label: 'Book-to-Tax', href: '/tools/book-to-tax', toolKey: 'book_to_tax' },
   ],
 }

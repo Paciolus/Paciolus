@@ -197,7 +197,7 @@ frontend/
 │   │   │   ├── sod/            # Segregation of Duties
 │   │   │   ├── intercompany/   # Intercompany Elimination
 │   │   │   ├── w2-reconciliation/ # W-2 / W-3 Reconciliation
-│   │   │   ├── form-1099/      # Form 1099 Preparation
+│   │   │   ├── form-1099/      # 1099 Vendor Threshold Review
 │   │   │   ├── book-to-tax/    # Book-to-Tax Reconciliation
 │   │   │   ├── cash-flow-projector/ # Cash Flow Projector
 │   │   │   ├── multi-currency/ # Multi-Currency Conversion (side-car, not one of the 18)
@@ -308,7 +308,7 @@ const MappingContext = createContext<MappingContextType>({
 | `/tools/sod` | `tools/sod/page.tsx` | Verified | Segregation of Duties |
 | `/tools/intercompany` | `tools/intercompany/page.tsx` | Verified | Intercompany Elimination |
 | `/tools/w2-reconciliation` | `tools/w2-reconciliation/page.tsx` | Verified | W-2 / W-3 Reconciliation |
-| `/tools/form-1099` | `tools/form-1099/page.tsx` | Verified | Form 1099 Preparation |
+| `/tools/form-1099` | `tools/form-1099/page.tsx` | Verified | 1099 Vendor Threshold Review |
 | `/tools/book-to-tax` | `tools/book-to-tax/page.tsx` | Verified | Book-to-Tax Reconciliation |
 | `/tools/cash-flow-projector` | `tools/cash-flow-projector/page.tsx` | Verified | Cash Flow Projector |
 | `/tools/multi-currency` | `tools/multi-currency/page.tsx` | Verified | Multi-Currency Conversion (side-car) |

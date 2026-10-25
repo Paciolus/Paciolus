@@ -41,7 +41,7 @@ export const STANDARDS_SPECIMEN: SpecimenEntry[] = [
   },
   {
     code: 'ISA 315',
-    paragraphs: 'Revised 2019, Appendix 1',
+    paragraphs: 'Revised 2019',
     scope: 'Identifying and assessing risks of material misstatement through understanding the entity.',
     body: 'IAASB',
     tools: ['composite_risk', 'account_risk_heatmap', 'trial_balance'],

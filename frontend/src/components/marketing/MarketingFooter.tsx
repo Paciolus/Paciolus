@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { BrandIcon } from '@/components/shared'
+import { SITE_FOOTER_DISCLAIMER } from '@/content/disclaimers'
 
 /**
  * MarketingFooter — Sprint 338 Redesign
@@ -173,9 +174,7 @@ export function MarketingFooter() {
       <div className="border-t border-obsidian-500/15 bg-obsidian-900/90">
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="font-sans text-[11px] text-oatmeal-600 leading-relaxed max-w-2xl">
-            Paciolus is a data analytics tool for financial professionals. It does not perform audits,
-            provide assurance opinions, or generate audit evidence. Professional judgment is required
-            to evaluate all platform outputs.
+            {SITE_FOOTER_DISCLAIMER}
           </p>
           <p className="font-sans text-[11px] text-oatmeal-600 shrink-0">
             &copy; {new Date().getFullYear()} Paciolus, Inc.

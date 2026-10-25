@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { INDEPENDENCE_NOTE } from '@/content/disclaimers'
 import { apiDownload, downloadBlob } from '@/utils/apiClient'
 import { formatCurrency } from '@/utils'
 import { CashFlowTable } from './CashFlowTable'
@@ -96,6 +97,8 @@ export function FinancialStatementsPreview({
 
   return (
     <section className={`mt-8 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      {/* Sprint 843 (claims review M11) */}
+      <p className="text-xs font-sans text-content-tertiary mb-2">{INDEPENDENCE_NOTE}</p>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}

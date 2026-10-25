@@ -53,7 +53,7 @@ runStandardToolPageScenarios({
   getToolHookMock: () => usePayrollTesting as jest.Mock,
   heroText: 'Payroll & Employee Testing',
   uploadPromptPattern: /Upload Payroll Register/,
-  loadingTextPattern: /Running 11-test battery/,
+  loadingTextPattern: /Running 13-test battery/,
   successTestIds: ['payroll-score-card', 'payroll-test-grid', 'payroll-flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Fraud Indicators'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },

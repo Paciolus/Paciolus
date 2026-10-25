@@ -7,6 +7,7 @@ import {
   useTransform,
   animate,
 } from 'framer-motion'
+import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
 import type { MotionValue } from 'framer-motion'
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -17,14 +18,14 @@ export const STEPS: FilmStep[] = ['upload', 'analyze', 'export']
 
 export const STEP_LABELS: Record<FilmStep, string> = {
   upload: 'Drop your file',
-  analyze: 'See the findings',
-  export: 'Take the workpapers',
+  analyze: 'See what’s flagged',
+  export: 'Take the exports',
 }
 
 export const STEP_SUBTITLES: Record<FilmStep, string> = {
   upload: 'One gesture. Instant recognition.',
-  analyze: '108 tests. Your file, read in full.',
-  export: 'Complete engagement package. Yours alone.',
+  analyze: `${TOTAL_AUTOMATED_TESTS} tests. Your file, read in full.`,
+  export: 'Export package. Yours to review.',
 }
 
 // Normalized positions for each step on the 0-1 timeline

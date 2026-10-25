@@ -10,6 +10,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import type { ContractEvidenceLevel } from '@/types/revenueTesting'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
@@ -97,13 +98,13 @@ export default function RevenueTestingPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">ISA 240 Revenue Analysis</span>
+            <span className="text-theme-success-text text-sm font-sans font-medium">References ISA 240 · ASC 606</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Revenue Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload a revenue GL extract for automated testing &mdash; up to 16-test battery
+            Upload a revenue GL extract for automated testing &mdash; up to {testCountFor('revenue_testing')}-test battery
             for revenue recognition anomaly indicators per ISA 240 and ASC 606 / IFRS 15.
           </p>
         </div>

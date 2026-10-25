@@ -10,6 +10,7 @@ import { useAPTesting } from '@/hooks/useAPTesting'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
@@ -76,13 +77,13 @@ export default function APTestingPage() {
           )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">ISA 500 Substantive Testing</span>
+            <span className="text-theme-success-text text-sm font-sans font-medium">References ISA 240 · ISA 500</span>
           </div>
           <h1 className="type-tool-title mb-3">
             AP Payment Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload an AP Payment Register for automated testing &mdash; 13-test battery
+            Upload an AP Payment Register for automated testing &mdash; {testCountFor('ap_testing')}-test battery
             for duplicate payments, vendor anomalies, and fraud indicators.
           </p>
         </div>
@@ -150,7 +151,7 @@ export default function APTestingPage() {
                 <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                   <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                   <span className="font-sans text-content-primary">
-                    Running 13-test battery on {selectedFile?.name}...
+                    Running {testCountFor('ap_testing')}-test battery on {selectedFile?.name}...
                   </span>
                 </div>
               </div>

@@ -10,6 +10,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
@@ -134,7 +135,7 @@ export default function InventoryTestingPage() {
                 <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                   <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                   <span className="font-sans text-content-primary">
-                    Running 9-test inventory battery on {selectedFile?.name}...
+                    Running {testCountFor('inventory_testing')}-test inventory battery on {selectedFile?.name}...
                   </span>
                 </div>
               </div>

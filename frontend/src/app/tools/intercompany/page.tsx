@@ -99,7 +99,7 @@ export default function IntercompanyEliminationPage() {
                 </div>
               </div>
 
-              <DisclaimerBox>
+              <DisclaimerBox independence>
                 The consolidation output applies elimination entries on matched reciprocal intercompany
                 balances per <Citation code="ASC 810" /> and <Citation code="IFRS 10" />. Identification
                 of the reporting group, determination of controlling interests, and accounting policy

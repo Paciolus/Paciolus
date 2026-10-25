@@ -1,5 +1,5 @@
 /**
- * Form 1099 Preparation — Sprint 689e.
+ * 1099 Vendor Threshold Review — Sprint 689e.
  *
  * Shapes mirror backend/routes/form_1099.py Pydantic contracts and
  * backend/form_1099_engine.py dataclasses.

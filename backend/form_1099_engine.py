@@ -1,5 +1,5 @@
 """
-Form 1099 Preparation Engine (Sprint 634).
+1099 Vendor Threshold Review Engine (Sprint 634).
 
 Aggregates AP payments by vendor across a tax year, applies the common
 1099 reporting thresholds (1099-NEC, 1099-MISC, 1099-INT), and produces
@@ -321,7 +321,7 @@ def thresholds_for_year(tax_year: int) -> ThresholdSchedule:
 
 
 class Form1099InputError(ValueError):
-    """Raised for invalid 1099 preparation inputs."""
+    """Raised for invalid 1099 threshold review inputs."""
 
 
 # =============================================================================

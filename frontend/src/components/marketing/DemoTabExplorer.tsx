@@ -4,8 +4,21 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ScanlineOverlay, MechanicalGauge, MarginAnnotation } from '@/components/demo'
 import { Reveal } from '@/components/ui/Reveal'
+import { TOOL_LEDGER } from '@/content/tool-ledger'
 import { AXIS } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
+
+// Sprint 843: test counts come from the tool ledger (they had drifted — AP
+// showed 13 of 14, Revenue 16 of 18, Payroll 11 of 13), and a demo result is
+// "flagged / not flagged", never PASS.
+const testCount = (id: string) => TOOL_LEDGER.find(t => t.id === id)?.testCount ?? 0
+const DEMO_TESTS = [
+  { tool: 'Journal Entry', tests: testCount('journal_entry_testing'), flagged: 3 },
+  { tool: 'AP Payment', tests: testCount('ap_testing'), flagged: 1 },
+  { tool: 'Revenue', tests: testCount('revenue_testing'), flagged: 2 },
+  { tool: 'Payroll', tests: testCount('payroll_testing'), flagged: 0 },
+]
+
 
 /**
  * DemoTabExplorer — Sprint 448
@@ -98,21 +111,15 @@ function TestingTab() {
         </div>
         <div>
           <p className="text-oatmeal-200 text-sm font-serif font-semibold">Composite Diagnostic Score</p>
-          <p className="text-sage-400 text-xs font-sans">Low Risk — 54 tests passed across 4 tools</p>
+          <p className="text-sage-400 text-xs font-sans">Low flag density — {DEMO_TESTS.reduce((n, t) => n + t.flagged, 0)} items flagged across 4 tools</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {[
-          { tool: 'Journal Entry', tests: 19, flagged: 3 },
-          { tool: 'AP Payment',    tests: 13, flagged: 1 },
-          { tool: 'Revenue',       tests: 16, flagged: 2 },
-          { tool: 'Payroll',       tests: 11, flagged: 0 },
-        ].map((test) => (
+        {DEMO_TESTS.map((test) => (
           <div key={test.tool} className="p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
             <div className="flex items-center justify-between mb-2">
               <p className="text-oatmeal-300 text-xs font-sans font-medium">{test.tool}</p>
-              <span className="text-sage-400 text-[10px] font-mono bg-sage-500/10 px-1.5 py-0.5 rounded-sm">PASS</span>
             </div>
             <div className="flex items-baseline gap-1">
               <span className="font-mono text-lg text-oatmeal-200">{test.tests}</span>
@@ -129,7 +136,7 @@ function TestingTab() {
         <svg className="w-4 h-4 text-theme-success-text shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
-        <span className="text-oatmeal-500 text-xs font-sans">ISA 240 / ISA 530 / PCAOB AS 2315 / ASC 606 / IFRS 15</span>
+        <span className="text-oatmeal-500 text-xs font-sans">References ISA 240 · ISA 530 · AS 2315 · ASC 606 · IFRS 15</span>
       </div>
     </div>
   )
@@ -196,9 +203,9 @@ function ReportsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
           {
-            format: 'PDF Workpaper Memo',
-            desc: 'Structured memo with test results, standards citations, and auditor sign-off block. Ready to attach to workpapers.',
-            badge: 'PCAOB AS 1215',
+            format: 'PDF Memo',
+            desc: 'Structured memo of test results with standards references, for your review.',
+            badge: 'PDF',
             icon: '📄',
           },
           {

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Form 1099 Preparation — Sprint 689e.
+ * 1099 Vendor Threshold Review — Sprint 689e.
  *
  * Standalone tool page. Dual CSV upload (vendors + payments),
  * pivoted client-side into the JSON payload; backend returns filing
@@ -35,7 +35,7 @@ export default function Form1099Page() {
               IRS 1099-NEC / 1099-MISC / 1099-INT
             </span>
           </div>
-          <h1 className="type-tool-title mb-3">Form 1099 Preparation</h1>
+          <h1 className="type-tool-title mb-3">1099 Vendor Threshold Review</h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
             Identify vendors that meet 1099-NEC / 1099-MISC / 1099-INT reporting thresholds. Applies
             IRS corporation safe-harbor, processor-reported exemptions, and flags vendors that need a
@@ -44,7 +44,7 @@ export default function Form1099Page() {
         </div>
 
         {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Form 1099 Preparation requires a verified account. Sign in or create an account to continue." />
+          <GuestCTA description="1099 Vendor Threshold Review requires a verified account. Sign in or create an account to continue." />
         )}
 
         {!authLoading && isAuthenticated && !isVerified && <UnverifiedCTA />}
@@ -93,7 +93,7 @@ export default function Form1099Page() {
                 </div>
               </div>
 
-              <DisclaimerBox>
+              <DisclaimerBox tax>
                 Filing candidates surfaced here reflect the IRS monetary thresholds and the corporate /
                 processor safe-harbors under IRC §6041 and §6041A. Final classification of any payment
                 (especially the medical / legal carve-out) and the decision to request a W-9 via Form W-9

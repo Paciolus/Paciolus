@@ -930,7 +930,7 @@ def generate_bank_rec_memo(
         # ──────────────────────────────────────────────────────────────
         # VIII. CONCLUSION
         # ──────────────────────────────────────────────────────────────
-        story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph("VIII. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
@@ -942,8 +942,8 @@ def generate_bank_rec_memo(
         # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
         _bank_rec_suffixes = {
             "low": (
-                "The reconciling difference is immaterial and the match rate is satisfactory. "
-                "No items requiring further investigation were identified."
+                "The reconciling difference is below the materiality you entered, "
+                "and no items exceeded the configured thresholds."
             ),
             "moderate": (
                 "The reconciling difference and outstanding items should be reviewed "

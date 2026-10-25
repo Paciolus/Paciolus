@@ -1024,7 +1024,7 @@ class TestSprint825TwoSidedMemo:
         assert "UEL Derivation (Ratio Estimation)" in text
         assert "$1,000,000.00 × 3.0000 ÷ 20 = $150,000.00" in text
         assert "Paciolus convention" in text
-        assert "FAIL" in text
+        assert "UEL > TM" in text  # Sprint 843: was "FAIL"
 
     def test_legacy_payload_without_understatement_fields_still_renders(self, evaluation_result, design_result):
         """An older client sends no understatement fields: single-bound layout, no $0 bound printed."""

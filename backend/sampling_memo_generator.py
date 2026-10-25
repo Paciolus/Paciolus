@@ -11,7 +11,7 @@ Custom PDF structure (NOT using testing_memo_template — different workflow):
   Evaluation report ("STATISTICAL SAMPLING MEMO — EVALUATION"):
     I. Scope, II. Design Parameters, III. Stratification,
     IV. Evaluation Results (+ Error Details + Summary + UEL Derivation),
-    V. Methodology, VI. Conclusion (PASS/FAIL visual),
+    V. Methodology, VI. Evaluation Result (UEL vs TM visual — Sprint 843, was PASS/FAIL),
     VII. Next Steps (evaluation-phase), Signoff, Disclaimer
 """
 
@@ -157,7 +157,7 @@ _NEXT_STEPS_AR: list[dict[str, str]] = [
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module (SSM Evaluation tab) to compute the Upper "
             "Error Limit (UEL) using the Stringer bound method and obtain a "
-            "PASS / FAIL conclusion. If UEL exceeds Tolerable Misstatement, "
+            "evaluation result (UEL ≤ TM or UEL > TM). If UEL exceeds Tolerable Misstatement, "
             "expand the sample or perform alternative procedures per ISA 530.17."
         ),
     },
@@ -203,7 +203,7 @@ _NEXT_STEPS_AP: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.17."
         ),
     },
 ]
@@ -248,7 +248,7 @@ _NEXT_STEPS_INVENTORY: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.17."
         ),
     },
 ]
@@ -295,7 +295,7 @@ _NEXT_STEPS_REVENUE: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and obtain a PASS / FAIL conclusion per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.17."
         ),
     },
 ]
@@ -318,9 +318,9 @@ _NEXT_STEPS_GENERIC: list[dict[str, str]] = [
         "body": "Evaluate the results using the sampling methodology (e.g., project misstatements).",
     },
     {
-        "title": "Step 5 — Form Conclusion",
+        "title": "Step 5 — Decide on Further Work",
         "body": (
-            "Form a conclusion on whether the account balance or transaction class requires further investigation."
+            "Use the evaluation result, with your other evidence, to decide whether the account balance or transaction class requires further investigation."
         ),
     },
 ]
@@ -377,7 +377,7 @@ def _build_evaluation_next_steps(
                 "Sampling evaluation is complete. " + sides + "The auditor should evaluate this "
                 "result in the context of other audit evidence obtained and the overall "
                 "engagement risk assessment before concluding on the population (ISA 530.14). "
-                "The following actions are required to close out the sampling workpaper:"
+                "Suggested close-out steps for the sampling workpaper:"
             )
         else:
             intro = (
@@ -393,8 +393,8 @@ def _build_evaluation_next_steps(
             f"{conf_level:.0%} confidence level. "
             "The auditor should evaluate this result in the context of other audit evidence "
             "obtained and the overall engagement risk assessment before concluding on the "
-            "population (ISA 530.14). The following actions are required to "
-            "close out the sampling workpaper:"
+            "population (ISA 530.14). Suggested close-out steps for the "
+            "sampling workpaper:"
         )
     else:
         intro = (
@@ -1123,7 +1123,7 @@ def _generate_sampling_memo(
         # ─── 6. Conclusion / Status ───────────────────────────────
         if evaluation_result:
             next_num2 = _roman_after(next_num)
-            story.append(Paragraph(f"{next_num2}. Conclusion", styles["MemoSection"]))
+            story.append(Paragraph(f"{next_num2}. Evaluation Result", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             conclusion = evaluation_result.get("conclusion", "")
@@ -1384,12 +1384,12 @@ def _build_pass_fail_block(
 
     if is_pass:
         symbol = "\u2713"  # checkmark
-        label = "PASS"
+        label = "UEL ≤ TM"
         border_color = ClassicalColors.SAGE
         text_color = ClassicalColors.SAGE
     else:
         symbol = "\u2717"  # X mark
-        label = "FAIL"
+        label = "UEL > TM"
         border_color = ClassicalColors.CLAY
         text_color = ClassicalColors.CLAY
     if under_uel is None:
@@ -1400,7 +1400,7 @@ def _build_pass_fail_block(
             f"Understatement UEL ${under_uel:,.2f}  {_cmp(under_uel)}  TM ${tm:,.2f}"
         )
 
-    conclusion_line = f"SAMPLING CONCLUSION:  {symbol} {label}"
+    conclusion_line = f"EVALUATION RESULT:  {symbol} {label}"
     detail_line = f"Confidence: {confidence_level:.0%}   |   Errors: {errors_found}"
 
     block_data = [
@@ -1856,7 +1856,7 @@ def _build_uel_derivation(
         if label:
             verdict = "within tolerable misstatement" if within else "exceeds tolerable misstatement"
         else:
-            verdict = "PASS" if within else "FAIL"
+            verdict = "UEL ≤ TM" if within else "UEL > TM"
         color = ClassicalColors.SAGE if within else ClassicalColors.CLAY
         operator = "≤" if within else "&gt;"
         story.append(

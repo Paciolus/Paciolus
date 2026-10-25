@@ -1,5 +1,5 @@
 """
-Form 1099 Preparation Routes (Sprint 634).
+1099 Vendor Threshold Review Routes (Sprint 634).
 
 Form-input only — zero-storage. Accepts a vendor list and a payment
 list, returns filing candidates. CSV export is shipped in this sprint;
@@ -139,7 +139,7 @@ def prepare_1099_candidates(
         input_errors=(Form1099InputError,),
         error_key="form_1099_error",
         route_logger=logger,
-        failure_log="1099 preparation failed",
+        failure_log="1099 threshold review failed",
     )
     return result.to_dict()
 

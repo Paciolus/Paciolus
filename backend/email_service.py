@@ -574,7 +574,7 @@ def _dunning_html(title: str, body: str, cta_url: str, cta_text: str) -> str:
 </table>
 </td></tr>
 <tr><td style="padding:16px 32px;background-color:#f5f4f1;border-top:1px solid #e0ddd8;text-align:center;color:#888;font-size:12px">
-Paciolus — Professional Audit Intelligence
+Paciolus — Diagnostic Intelligence for Financial Professionals
 </td></tr>
 </table>
 </td></tr></table>

@@ -39,7 +39,7 @@ describe('Form1099Page', () => {
   it('renders GuestCTA for unauthenticated visitors', () => {
     mockUseAuthSession.mockReturnValue({ user: null, isAuthenticated: false, isLoading: false, token: null })
     render(<Form1099Page />)
-    expect(screen.getByText('Form 1099 Preparation')).toBeInTheDocument()
+    expect(screen.getByText('1099 Vendor Threshold Review')).toBeInTheDocument()
     expect(screen.getByText(/requires a verified account/i)).toBeInTheDocument()
   })
 
@@ -65,7 +65,7 @@ describe('Form1099Page', () => {
       user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, token: 't',
     })
     render(<Form1099Page />)
-    expect(screen.getAllByText('Form 1099 Preparation').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('1099 Vendor Threshold Review').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Upload Vendors and Payments')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Prepare 1099 Candidates/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument()

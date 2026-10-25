@@ -31,7 +31,7 @@ def render_table_of_contents(story: list, styles: dict) -> None:
         "Data Intake Summary",
         "Executive Summary",
         "Population Composition",
-        "Risk Assessment",
+        "Diagnostic Score",
         "Exception Details",
         "Going Concern Indicators",
         "Limitations",
@@ -393,7 +393,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
     from shared.memo_base import RISK_SCALE_LEGEND, RISK_TIER_DISPLAY
     from shared.tb_diagnostic_constants import compute_tb_diagnostic_score, get_diagnostic_tier
 
-    story.append(Paragraph("Risk Assessment", styles["SectionHeader"]))
+    story.append(Paragraph("Diagnostic Score", styles["SectionHeader"]))  # Sprint 843: not a risk assessment
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 6))
 
@@ -471,7 +471,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
 
     # Risk metrics table (Sprint 537: 4-column with informational)
     risk_data = [
-        ["Total Findings", "Material Exceptions", "Minor Observations", "Informational Notes"],
+        ["Items Flagged", "Above Materiality", "Below Materiality", "Informational Notes"],
         [str(total_anomalies), str(high_severity), str(low_severity), str(informational_severity)],
     ]
 
@@ -521,7 +521,7 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
     abnormal_balances = audit_result.get("abnormal_balances", [])
 
     if not abnormal_balances:
-        story.append(Paragraph("No exceptions identified. The trial balance appears sound.", styles["BodyText"]))
+        story.append(Paragraph("No items exceeded the configured thresholds.", styles["BodyText"]))
         return
 
     story.append(Paragraph("Exception Details", styles["SectionHeader"]))
@@ -555,12 +555,12 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
     coverage_findings.sort(key=lambda ab: abs(ab.get("amount", 0)), reverse=True)
 
     if material:
-        story.append(Paragraph(f"Material Exceptions ({len(material)})", styles["SubsectionHeader"]))
+        story.append(Paragraph(f"Items Above Materiality ({len(material)})", styles["SubsectionHeader"]))
         story.append(_create_ledger_table(styles, material, is_material=True))
         story.append(Spacer(1, 10))
 
     if immaterial:
-        story.append(Paragraph(f"Minor Observations ({len(immaterial)})", styles["SubsectionHeader"]))
+        story.append(Paragraph(f"Items Below Materiality ({len(immaterial)})", styles["SubsectionHeader"]))
         story.append(_create_ledger_table(styles, immaterial, is_material=False))
         story.append(Spacer(1, 10))
 
@@ -608,7 +608,7 @@ def render_anomaly_details(story: list, styles: dict, audit_result: dict) -> Non
                 "each account category. These accounts are documented for "
                 "materiality coverage; concentration is not by itself a "
                 "structural anomaly. They are excluded from risk scoring and "
-                "do not appear in Material Exceptions.</i>",
+                "do not appear in Items Above Materiality.</i>",
                 styles["BodyText"],
             )
         )

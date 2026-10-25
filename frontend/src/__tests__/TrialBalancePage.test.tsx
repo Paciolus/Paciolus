@@ -128,7 +128,7 @@ describe('TrialBalancePage', () => {
 
   it('shows ISA 520 badge', () => {
     render(<TrialBalancePage />)
-    expect(screen.getByText('ISA 520 Analytical Procedures')).toBeInTheDocument()
+    expect(screen.getByText('References ISA 520')).toBeInTheDocument()
   })
 
   it('shows upload zone with drop target', () => {

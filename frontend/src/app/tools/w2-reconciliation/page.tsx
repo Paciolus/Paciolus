@@ -97,7 +97,7 @@ export default function W2ReconciliationPage() {
                 </div>
               </div>
 
-              <DisclaimerBox>
+              <DisclaimerBox tax>
                 Discrepancies surfaced here identify candidates for review before filing W-2 / W-3 with
                 SSA and the matching 941 with the IRS. Classification of any error as a material
                 misstatement, or the decision to file Form W-2c / 941-X, remains an auditor or preparer

@@ -40,7 +40,7 @@ TOOL_LABELS = {
     ToolName.SOD_CHECKER: "Segregation of Duties",
     ToolName.INTERCOMPANY_ELIMINATION: "Intercompany Elimination",
     ToolName.W2_RECONCILIATION: "W-2 / W-3 Reconciliation",
-    ToolName.FORM_1099: "Form 1099 Preparation",
+    ToolName.FORM_1099: "1099 Vendor Threshold Review",
     ToolName.BOOK_TO_TAX: "Book-to-Tax Reconciliation",
     ToolName.CASH_FLOW_PROJECTOR: "Cash Flow Projector",
 }
