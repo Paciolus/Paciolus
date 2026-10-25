@@ -363,6 +363,8 @@ SECURITY_EVENTS: frozenset[str] = frozenset(
         "password_reset_reused",
         "email_changed",
         "impersonation_token_created",
+        "account_erased",
+        "account_exported",
         # Request integrity
         "csrf_blocked",
         "csrf_validation_failed",
@@ -402,6 +404,8 @@ PERSISTED_EVENTS: frozenset[str] = frozenset(
         "password_reset_success",
         "email_changed",
         "impersonation_token_created",
+        "account_erased",
+        "account_exported",
     }
 )
 
@@ -425,6 +429,8 @@ DETAIL_SAFE_EVENTS: frozenset[str] = frozenset(
         "impersonation_token_created",
         "rate_limit_fail_closed",
         "rate_limit_degraded",
+        "account_erased",
+        "account_exported",
     }
 )
 

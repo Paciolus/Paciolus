@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
               'We do not keep your uploaded files',
               'We collect only what\u0027s necessary',
               'We never sell your personal information',
-              'You control your data and can delete it anytime'
+              'You can download or delete your data at any time'
             ].map((commitment, idx) => (
               <div key={idx} className="flex items-start gap-3 bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <svg className="w-6 h-6 text-sage-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -128,13 +128,13 @@ export default function PrivacyPolicy() {
               <tbody>
                 <tr className="border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Usage Data</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Feature usage counts, session duration</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Analytics, product improvement</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Which tools you run and how many uploads you make</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Upload allowance, product improvement</td>
                 </tr>
                 <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Device Information</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Browser type, OS, screen resolution</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Compatibility, performance optimization</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Browser and operating system (from your browser&apos;s user-agent)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Listing your active sessions so you can revoke them</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Cookies</td>
@@ -289,7 +289,6 @@ export default function PrivacyPolicy() {
               </p>
               <ul className="list-disc list-inside space-y-2 font-sans text-oatmeal-400">
                 <li>"12 users uploaded trial balances in January 2026"</li>
-                <li>"Average session duration: 18 minutes"</li>
                 <li>"Journal Entry Testing used 347 times this month"</li>
               </ul>
               <p className="font-sans text-oatmeal-300 leading-relaxed mt-3">
@@ -402,13 +401,23 @@ export default function PrivacyPolicy() {
                 </tr>
                 <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Render</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Backend hosting</td>
-                  <td className="p-4 font-sans text-oatmeal-400">API request logs, error traces</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Backend hosting and logs</td>
+                  <td className="p-4 font-sans text-oatmeal-400">API request logs (no uploaded file contents)</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
-                  <td className="p-4 font-sans text-oatmeal-300">PostgreSQL (Render)</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Metadata storage</td>
-                  <td className="p-4 font-sans text-oatmeal-400">User accounts, client metadata</td>
+                  <td className="p-4 font-sans text-oatmeal-300">Render Key Value</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Rate limiting</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Request counters keyed by user or IP</td>
+                </tr>
+                <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
+                  <td className="p-4 font-sans text-oatmeal-300">Neon</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Database (PostgreSQL)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Accounts, client metadata, analysis summaries, engagement entries</td>
+                </tr>
+                <tr className="border-b border-obsidian-700">
+                  <td className="p-4 font-sans text-oatmeal-300">Cloudflare R2</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Shared report storage</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Report files you share by link, up to 48 hours</td>
                 </tr>
                 <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Stripe</td>
@@ -416,9 +425,14 @@ export default function PrivacyPolicy() {
                   <td className="p-4 font-sans text-oatmeal-400">Email, billing address, payment method</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
+                  <td className="p-4 font-sans text-oatmeal-300">SendGrid</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Transactional email</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Email address, message content (verification, password reset, billing notices)</td>
+                </tr>
+                <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Sentry</td>
                   <td className="p-4 font-sans text-oatmeal-400">Error monitoring</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Error logs, stack traces, user ID (anonymized)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Error type and stack location, user ID; no request bodies, local variables or error text</td>
                 </tr>
               </tbody>
             </table>
@@ -458,7 +472,7 @@ export default function PrivacyPolicy() {
                   <strong className="text-oatmeal-200">Right:</strong> GDPR Article 15, CCPA § 1798.100
                 </p>
                 <p className="font-sans text-oatmeal-400 leading-relaxed">
-                  You can request a copy of all personal information we hold about you. We will provide it in a machine-readable format (JSON) within 30 days.
+                  You can download a copy of everything we hold about your account, in a machine-readable format (JSON), at any time from <strong className="text-oatmeal-200">Settings &rarr; Profile &rarr; Your Data</strong>, or request it from privacy@paciolus.com and we will provide it within 30 days.
                 </p>
               </div>
 
@@ -480,18 +494,20 @@ export default function PrivacyPolicy() {
                   <strong className="text-oatmeal-200">Right:</strong> GDPR Article 17, CCPA § 1798.105
                 </p>
                 <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-                  You can delete your account and all associated data at any time. Deletion is <strong className="text-oatmeal-200">immediate and irreversible</strong>.
+                  You can delete your account at any time in <strong className="text-oatmeal-200">Settings &rarr; Profile &rarr; Your Data</strong>, or by emailing <a href="mailto:privacy@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">privacy@paciolus.com</a> (we act on emailed requests within 30 days). Deletion is <strong className="text-oatmeal-200">permanent</strong>. You can download a copy of your data from the same page first.
                 </p>
                 <div className="bg-obsidian-900 border border-obsidian-700 rounded-lg p-4">
                   <p className="font-sans text-sm text-oatmeal-400 mb-2">What gets deleted:</p>
                   <ul className="list-disc list-inside space-y-1 font-sans text-sm text-oatmeal-400">
                     <li>User account record (email, password hash, profile)</li>
                     <li>Client metadata (names, industries, fiscal year-ends)</li>
-                    <li>Engagement records (diagnostic workspace data)</li>
-                    <li>Follow-up items (issue narratives)</li>
+                    <li>Engagement records, analytical expectations and uncorrected misstatements</li>
+                    <li>Follow-up items and comments</li>
+                    <li>Analysis summaries, activity history and shared links</li>
+                    <li>Your subscription (cancelled with Stripe)</li>
                   </ul>
                   <p className="font-sans text-sm text-oatmeal-300 mt-4">
-                    <strong>Note:</strong> Uploaded files are not kept after analysis, so there are none to delete. Analysis summaries and engagement entries are deleted with your account.
+                    <strong>What we keep:</strong> Stripe retains the invoice and payment records the law requires; we keep billing history with your identity removed, and a security-log entry that a deletion happened. Uploaded files are not kept after analysis, so there are none to delete. &ldquo;Clear history&rdquo; in Settings hides history entries (it archives them); deleting your account removes them.
                   </p>
                 </div>
               </div>
@@ -532,10 +548,10 @@ export default function PrivacyPolicy() {
 
             <div className="grid md:grid-cols-2 gap-4 mb-6">
               {[
-                { label: 'TLS 1.3 Encryption', desc: 'All data in transit is encrypted end-to-end' },
+                { label: 'TLS Encryption', desc: 'Data in transit uses TLS 1.2 or higher (1.3 where supported), terminated at Vercel and Render' },
                 { label: 'bcrypt Password Hashing', desc: 'Passwords salted and hashed with 12 rounds' },
                 { label: 'JWT Authentication', desc: 'Stateless token-based session management' },
-                { label: 'Multi-Tenant Isolation', desc: 'User data segregated at database level' },
+                { label: 'Account Isolation', desc: 'Every query is scoped to your account in application code' },
                 { label: 'Uploads Not Kept', desc: 'No uploaded files or ledger rows at rest to expose' },
                 { label: 'Rate Limiting', desc: 'Protection against brute-force attacks' }
               ].map((item, idx) => (
@@ -552,8 +568,8 @@ export default function PrivacyPolicy() {
                 In the unlikely event of a data breach affecting personal information, we will:
               </p>
               <ul className="list-decimal list-inside space-y-2 font-sans text-oatmeal-400 mt-3">
-                <li>Notify affected users via email within <strong className="text-oatmeal-200">72 hours</strong></li>
-                <li>Report to relevant supervisory authorities (EU DPA, California AG)</li>
+                <li>Notify affected users by email without undue delay</li>
+                <li>Notify regulators as the law requires (for example, within 72 hours to an EU supervisory authority under GDPR Article 33)</li>
                 <li>Provide details on the nature of the breach and mitigation steps</li>
               </ul>
             </div>
@@ -582,16 +598,16 @@ export default function PrivacyPolicy() {
                 <tr className="border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Frontend (Vercel)</td>
                   <td className="p-4 font-sans text-oatmeal-400">United States (Virginia)</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Standard Contractual Clauses (SCCs)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Provider&apos;s standard data processing terms</td>
                 </tr>
                 <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Backend (Render)</td>
-                  <td className="p-4 font-sans text-oatmeal-400">United States (Oregon)</td>
-                  <td className="p-4 font-sans text-oatmeal-400">Standard Contractual Clauses (SCCs)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">United States (Virginia)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">Provider&apos;s standard data processing terms</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
-                  <td className="p-4 font-sans text-oatmeal-300">Database (PostgreSQL)</td>
-                  <td className="p-4 font-sans text-oatmeal-400">United States (Oregon)</td>
+                  <td className="p-4 font-sans text-oatmeal-300">Database (Neon PostgreSQL)</td>
+                  <td className="p-4 font-sans text-oatmeal-400">United States (N. Virginia, us-east-1)</td>
                   <td className="p-4 font-sans text-oatmeal-400">Encryption at rest, TLS in transit</td>
                 </tr>
               </tbody>
@@ -774,11 +790,11 @@ export default function PrivacyPolicy() {
             </table>
             </div>
 
-            {/* DPO */}
+            {/* Privacy contact (Sprint 844: there is no appointed DPO) */}
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-6">
-              <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Data Protection Officer (DPO)</h4>
+              <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Privacy Contact</h4>
               <p className="font-sans text-oatmeal-300 leading-relaxed">
-                You can contact our Data Protection Officer at <a href="mailto:privacy@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">privacy@paciolus.com</a> for GDPR-related inquiries.
+                For GDPR and other privacy inquiries, email <a href="mailto:privacy@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">privacy@paciolus.com</a>.
               </p>
             </div>
 
@@ -907,12 +923,14 @@ export default function PrivacyPolicy() {
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
               <h4 className="font-serif text-lg text-oatmeal-100 mb-3">Your California Privacy Rights</h4>
               <p className="font-sans text-oatmeal-300 leading-relaxed mb-3">
-                California residents have the following rights under CCPA:
+                California residents have the following rights under the CCPA as amended by the CPRA:
               </p>
               <ul className="list-disc list-inside space-y-2 font-sans text-oatmeal-400">
                 <li><strong className="text-oatmeal-200">Right to Know:</strong> Request disclosure of PI collected, sources, purposes, and third parties</li>
                 <li><strong className="text-oatmeal-200">Right to Delete:</strong> Request deletion of PI we hold about you</li>
-                <li><strong className="text-oatmeal-200">Right to Opt-Out:</strong> Opt out of sale of PI (not applicable — we don't sell)</li>
+                <li><strong className="text-oatmeal-200">Right to Correct:</strong> Ask us to correct inaccurate PI (most of it you can edit in Settings)</li>
+                <li><strong className="text-oatmeal-200">Right to Opt-Out of Sale or Sharing:</strong> We do not sell PI or share it for cross-context behavioral advertising</li>
+                <li><strong className="text-oatmeal-200">Right to Limit Use of Sensitive PI:</strong> We do not use sensitive PI for purposes that would require this</li>
                 <li><strong className="text-oatmeal-200">Right to Non-Discrimination:</strong> We will not discriminate against you for exercising CCPA rights</li>
               </ul>
               <p className="font-sans text-oatmeal-300 leading-relaxed mt-4">

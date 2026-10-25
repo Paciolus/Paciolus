@@ -63,7 +63,6 @@ function CheckoutContent() {
   const [promoCode, setPromoCode] = useState('')
   const [promoError, setPromoError] = useState<string | null>(null)
   const [promoApplied, setPromoApplied] = useState(false)
-  const [dpaAccepted, setDpaAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error, subscription, fetchSubscription } = useBilling()
   useEffect(() => {
@@ -74,7 +73,7 @@ function CheckoutContent() {
   // then may the disclosure promise "no charge today".
   const trialEligible = subscription === null ? null : !subscription.id || subscription.status === 'canceled'
 
-  const requiresDpa = plan === 'professional' || plan === 'enterprise'
+  const offersDpa = plan === 'professional' || plan === 'enterprise'
 
   const planLabel = getTier(plan)?.name
   const basePriceCents = planPriceCents(plan, interval)
@@ -136,16 +135,13 @@ function CheckoutContent() {
   }
 
   async function handleCheckout() {
-    if (requiresDpa && !dpaAccepted) {
-      return
-    }
     setIsLoading(true)
     const url = await createCheckoutSession(
       plan,
       interval,
       supportsSeats(plan) && additionalSeats > 0 ? additionalSeats : undefined,
       promoApplied ? promoCode.trim().toUpperCase() : undefined,
-      requiresDpa ? dpaAccepted : undefined,
+      undefined,
     )
     if (url) {
       window.location.href = url
@@ -288,31 +284,16 @@ function CheckoutContent() {
           )}
         </div>
 
-        {/* DPA Acceptance (Team / Organization tiers) — Sprint 459 */}
-        {requiresDpa && (
-          <div className="border border-theme rounded-lg p-5 mb-6">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={dpaAccepted}
-                onChange={e => setDpaAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-sage-600"
-                aria-required="true"
-              />
-              <span className="text-sm text-content-secondary leading-relaxed">
-                I accept the{' '}
-                <Link
-                  href="/trust"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sage-600 hover:underline"
-                >
-                  Data Processing Addendum
-                </Link>
-                {' '}(v1.0) on behalf of my organisation. This is required for the Professional or Enterprise plan.
-              </span>
-            </label>
-          </div>
+        {/* Sprint 844: the DPA checkbox linked to a page that called the DPA "planned". Removed until
+            a counsel-reviewed DPA is published at a real URL; organizations can request one meanwhile. */}
+        {offersDpa && (
+          <p className="text-xs text-content-tertiary mb-6">
+            Need a Data Processing Addendum for your organization?{' '}
+            <Link href="/contact?inquiry_type=organization" className="text-sage-600 hover:underline">
+              Request one
+            </Link>
+            .
+          </p>
         )}
 
         {/* API Error */}
@@ -355,7 +336,7 @@ function CheckoutContent() {
 
         <button
           onClick={handleCheckout}
-          disabled={isLoading || (requiresDpa && !dpaAccepted)}
+          disabled={isLoading}
           className="w-full py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Redirecting to payment...' : 'Continue to Checkout'}

@@ -58,7 +58,7 @@ export function ComplianceTimeline() {
 
                 {/* Card */}
                 <div className="bg-obsidian-800/60 border border-obsidian-600 rounded-xl p-5 w-full text-center">
-                  <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-2">{m.year}</div>
+                  {m.year && <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-2">{m.year}</div>}
                   <h3 className="font-serif text-lg text-oatmeal-100 mb-2">{m.label}</h3>
                   <span className={`inline-block font-sans text-xs font-medium px-2.5 py-1 rounded-full border ${s.badge}`}>
                     {s.label}
@@ -119,7 +119,7 @@ export function ComplianceTimeline() {
                       Self-assessed — no third-party audit
                     </div>
                   )}
-                  <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-1">{m.year}</div>
+                  {m.year && <div className="font-mono text-[10px] text-oatmeal-600 tracking-wider mb-1">{m.year}</div>}
                   <p className="font-sans text-xs text-oatmeal-500">{m.detail}</p>
                   {m.artifact && (
                     <Link

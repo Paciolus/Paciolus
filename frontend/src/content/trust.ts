@@ -40,7 +40,8 @@ export interface ComplianceMilestone {
   label: string
   status: ComplianceStatus
   detail: string
-  year: string
+  /** Sprint 844: optional — the "2024 / 2025" years were dates nothing happened on. */
+  year?: string
   artifact?: { label: string; href: string }
   /** Sprint 654: flag this milestone as a self-assessment (not a third-party audit). */
   selfAssessed?: boolean
@@ -74,7 +75,7 @@ export const architectureNodes: ArchitectureNode[] = [
     accent: 'oatmeal',
     boundary: 'ephemeral',
     controls: [
-      { label: 'TLS 1.3 Encryption', detail: 'All data in transit is encrypted with TLS 1.3 end-to-end.' },
+      { label: 'TLS Encryption', detail: 'Data in transit uses TLS 1.2 or higher (1.3 where supported), terminated at Vercel and Render.' },
       { label: 'Rate Limiting', detail: 'Brute-force protection on all authentication and upload endpoints.' },
       { label: 'Body Size Limits', detail: 'Global request body size middleware prevents oversized payload attacks.' },
     ],
@@ -90,7 +91,7 @@ export const architectureNodes: ArchitectureNode[] = [
     controls: [
       { label: 'bcrypt Password Hashing', detail: 'Passwords salted and hashed with 12 rounds of bcrypt.' },
       { label: 'CSRF Protection', detail: 'Stateless HMAC CSRF tokens on all state-changing operations.' },
-      { label: 'Account Lockout', detail: 'Database-backed progressive lockout after failed authentication attempts.' },
+      { label: 'Account Lockout', detail: 'Database-backed lockout: 5 failed attempts lock the account for 15 minutes.' },
     ],
   },
   {
@@ -102,8 +103,8 @@ export const architectureNodes: ArchitectureNode[] = [
     accent: 'sage',
     boundary: 'ephemeral',
     controls: [
-      { label: 'JWT Authentication', detail: 'Short-lived 30-minute access tokens with refresh rotation and reuse detection.' },
-      { label: 'Multi-Tenant Isolation', detail: 'User data segregated at the database level with row-level security.' },
+      { label: 'JWT Authentication', detail: 'Short-lived 15-minute access tokens with refresh rotation and reuse detection.' },
+      { label: 'Account Isolation', detail: 'Every database query is scoped to the signed-in account in application code.' },
       { label: 'Formula Injection Guard', detail: 'CSV/Excel exports sanitized against formula injection attacks.' },
     ],
   },
@@ -117,7 +118,7 @@ export const architectureNodes: ArchitectureNode[] = [
     boundary: 'persistent',
     controls: [
       { label: 'Uploads Not Kept', detail: 'Uploaded files and the ledger rows in them are not saved. Analysis summaries and engagement entries are — see the lists below.' },
-      { label: 'Memory Cleanup', detail: 'Context-managed memory purge after every analysis operation completes.' },
+      { label: 'Memory Cleanup', detail: 'Uploaded data is released from memory after every analysis operation completes.' },
     ],
   },
 ]
@@ -132,23 +133,23 @@ export const controlCategories: { key: ControlCategory; label: string; icon: Bra
 
 export const securityControls: SecurityControl[] = [
   { name: 'bcrypt Password Hashing', description: '12-round salted bcrypt hashing for all stored credentials.', category: 'authentication', standard: 'OWASP ASVS 2.4', active: true },
-  { name: 'JWT Access Tokens', description: '30-minute stateless tokens with jti claim and refresh rotation.', category: 'authentication', standard: 'RFC 7519', active: true },
+  { name: 'JWT Access Tokens', description: '15-minute stateless tokens with jti claim and refresh rotation.', category: 'authentication', standard: 'RFC 7519', active: true },
   { name: 'Refresh Token Rotation', description: '7-day refresh tokens with single-use enforcement and reuse detection.', category: 'authentication', standard: 'OAuth 2.0 BCP', active: true },
   { name: 'CSRF Protection', description: 'Stateless HMAC-based CSRF tokens on all state-changing endpoints.', category: 'authentication', standard: 'OWASP ASVS 4.2', active: true },
-  { name: 'Account Lockout', description: 'Progressive lockout stored in database, surviving server restarts.', category: 'authentication', standard: 'NIST 800-63B', active: true },
+  { name: 'Account Lockout', description: '5 failed attempts lock the account for 15 minutes; stored in the database, surviving restarts.', category: 'authentication', standard: 'NIST 800-63B', active: true },
   { name: 'Email Verification', description: 'Token-based email verification with disposable domain blocking.', category: 'authentication', standard: 'OWASP ASVS 2.1', active: true },
-  { name: 'TLS 1.3 Transport', description: 'End-to-end TLS 1.3 encryption for all client-server communication.', category: 'transport', standard: 'RFC 8446', active: true },
-  { name: 'Rate Limiting', description: 'Per-endpoint and global 60/min rate limits on all routes.', category: 'transport', standard: 'OWASP API4', active: true },
+  { name: 'TLS Transport', description: 'TLS 1.2+ (1.3 where supported) for all client-server communication, terminated at Vercel and Render.', category: 'transport', standard: 'RFC 8446', active: true },
+  { name: 'Rate Limiting', description: 'Every route is rate-limited: 60/min by default, tighter on authentication, upload, export and write endpoints.', category: 'transport', standard: 'OWASP API4', active: true },
   { name: 'Body Size Middleware', description: 'Global request body size limits preventing oversized payload attacks.', category: 'transport', standard: 'OWASP API4', active: true },
   { name: 'CORS Hardening', description: 'Strict origin allowlist with credentialed request support.', category: 'transport', standard: 'OWASP ASVS 14.5', active: true },
-  { name: 'Row-Level Isolation', description: 'Every database query scoped to authenticated user_id. No cross-tenant data leakage.', category: 'tenancy', standard: 'OWASP ASVS 4.1', active: true },
+  { name: 'Account-Scoped Queries', description: 'Every database query is scoped to the authenticated account in application code, designed to prevent cross-account access.', category: 'tenancy', standard: 'OWASP ASVS 4.1', active: true },
   { name: 'Diagnostic Zone Protection', description: 'Tool pages require verified authentication before any data access.', category: 'tenancy', standard: 'OWASP ASVS 4.1', active: true },
   { name: 'Soft-Delete Immutability', description: 'Audit trail records use soft-delete with ORM-level deletion guards.', category: 'tenancy', standard: 'OWASP ASVS 8.3', active: true },
   { name: 'Formula Injection Guard', description: 'All CSV/Excel exports sanitized against =, +, -, @ formula injection.', category: 'export', standard: 'CWE-1236', active: true },
-  { name: 'Export Signing', description: 'Workpaper signoff metadata embedded in every PDF and Excel export.', category: 'export', standard: 'PCAOB AS 1215', active: true },
+  { name: 'Optional Sign-Off Block', description: 'PDF memos can include prepared-by / reviewed-by lines you complete; off by default.', category: 'export', standard: 'PCAOB AS 1215', active: true },
   { name: 'Column & Cell Limits', description: 'Upload validation enforces column count and cell count boundaries.', category: 'export', standard: 'OWASP Input Val.', active: true },
   { name: 'Uploads Not Kept', description: 'Uploaded files and line-level rows are not saved. Analysis summaries, flagged account names and engagement entries are stored.', category: 'data-handling', standard: 'GDPR Art. 25', active: true },
-  { name: 'Memory Cleanup', description: 'Context-managed memory purge after every analysis operation.', category: 'data-handling', standard: 'CWE-401', active: true },
+  { name: 'Memory Cleanup', description: 'Uploaded data released from memory after every analysis operation.', category: 'data-handling', standard: 'CWE-401', active: true },
   { name: 'Structured Logging', description: 'Request-ID correlated logs with sanitized error output. No PII in logs.', category: 'data-handling', standard: 'OWASP ASVS 7.1', active: true },
 ]
 
@@ -156,24 +157,21 @@ export const complianceMilestones: ComplianceMilestone[] = [
   {
     label: 'GDPR',
     status: 'compliant',
-    detail: 'EU General Data Protection Regulation.',
-    year: '2024',
+    detail: 'EU General Data Protection Regulation. Self-assessed against our Privacy Policy; not certified.',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
     selfAssessed: true,
   },
   {
     label: 'CCPA',
     status: 'compliant',
-    detail: 'California Consumer Privacy Act.',
-    year: '2024',
+    detail: 'California Consumer Privacy Act / CPRA. Self-assessed; not certified.',
     artifact: { label: 'Privacy Policy', href: '/privacy' },
     selfAssessed: true,
   },
   {
     label: 'DPA',
     status: 'planned',
-    detail: 'Data Processing Agreement — Organization tier.',
-    year: '2025',
+    detail: 'Data Processing Addendum — being finalized with counsel. Available on request in the meantime.',
     artifact: { label: 'Request DPA', href: '/contact?inquiry_type=organization' },
   },
   {
@@ -181,8 +179,7 @@ export const complianceMilestones: ComplianceMilestone[] = [
     // audit is addressed in the UI rather than left silent.
     label: 'SOC 2 Type II',
     status: 'planned',
-    detail: 'No SOC 2 audit completed — planned for 2026.',
-    year: '2026',
+    detail: 'No SOC 2 audit has been performed and none is currently scheduled.',
   },
 ]
 
@@ -191,11 +188,11 @@ export const playbookPhases: PlaybookPhase[] = [
     title: 'Detection',
     icon: 'warning-triangle',
     accent: 'oatmeal',
-    description: 'Automated monitoring and anomaly detection across infrastructure and application layers.',
+    description: 'Errors go to Sentry and uptime is checked every 15 minutes. There is no 24/7 on-call; incidents are handled by the founder as soon as they are seen.',
     measures: [
       'Structured logging with request-ID correlation',
       'Sentry error tracking with local variables, error text and log breadcrumbs removed',
-      'Rate limit breach alerting',
+      'Uptime probe every 15 minutes',
     ],
   },
   {
@@ -226,18 +223,18 @@ export const playbookPhases: PlaybookPhase[] = [
     accent: 'oatmeal',
     description: 'Transparent disclosure protocol aligned with GDPR Article 33 notification requirements.',
     measures: [
-      '72-hour regulatory notification commitment',
-      'Affected user communication via verified email',
-      'Post-incident report published to Trust page',
+      'Regulators notified as the law requires (72 hours to an EU authority under GDPR Art. 33)',
+      'Affected users told by email without undue delay',
+      'A summary of what happened, for affected customers',
     ],
   },
 ]
 
 export const downloadableArtifacts: DownloadableArtifact[] = [
-  { label: 'Privacy Policy', description: 'Full GDPR/CCPA-compliant privacy disclosure.', href: '/privacy', icon: 'document', type: 'Policy' },
+  { label: 'Privacy Policy', description: 'What we collect, what we keep, and your rights.', href: '/privacy', icon: 'document', type: 'Policy' },
   { label: 'Terms of Service', description: 'Platform usage terms and liability framework.', href: '/terms', icon: 'clipboard-check', type: 'Legal' },
   { label: 'How We Handle Your Data', description: 'What happens to an upload, and exactly what we keep.', href: '/approach', icon: 'shield-check', type: 'Technical' },
-  { label: 'Request DPA', description: 'Data Processing Agreement available for Organization accounts.', href: '/contact?inquiry_type=organization', icon: 'file-download', type: 'Organization' },
+  { label: 'Request DPA', description: 'Data Processing Addendum available on request while counsel finalizes it.', href: '/contact?inquiry_type=organization', icon: 'file-download', type: 'Organization' },
 ]
 
 // Sprint 834 (CEO decision 8, 2026-10-24): these lists must say exactly what
@@ -253,7 +250,7 @@ export const weStore = [
   'Names of accounts a tool flagged (no amounts or entry details)',
   'What you enter in an engagement: materiality, follow-up notes, intercompany account mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount)',
   'Report files you choose to share by link, held encrypted for up to 48 hours and then deleted',
-  'Anonymized usage statistics',
+  'Counts of which tools you run and how many uploads you make (for your upload allowance)',
 ]
 
 export const weNeverStore = [

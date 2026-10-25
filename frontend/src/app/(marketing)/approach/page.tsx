@@ -94,7 +94,7 @@ const weStore = [
   'Names of accounts a tool flagged (no amounts)',
   'What you enter in an engagement, including materiality, analytical expectations and uncorrected misstatements',
   'Report files shared by link, for up to 48 hours',
-  'Usage statistics (anonymized)',
+  'Counts of tool runs and uploads (for your upload allowance)',
 ]
 
 const weNeverStore = [
