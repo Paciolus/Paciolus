@@ -154,3 +154,52 @@ class TestIntercompanyEliminationTierGate:
             assert "intercompany_consolidation.csv" in response.headers.get("content-disposition", "")
         finally:
             app.dependency_overrides.clear()
+
+
+def _payload_with_payable(debit: str, credit: str) -> dict:
+    payload = _valid_payload()
+    payable = payload["entities"][1]["accounts"][0]
+    payable["debit"] = debit
+    payable["credit"] = credit
+    return payload
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestIntercompanyAmountFormats:
+    """Sprint 846 (I5): accounting-format amounts parse; garbage is still a 400.
+
+    The upload page strips ``,`` and ``$`` but passes parentheses through, so a
+    trial balance exported with ``(1,000.00)`` negatives used to fail the whole run.
+    """
+
+    async def _post(self, user, db_session, payload: dict) -> httpx.Response:
+        _override(user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                return await client.post("/audit/intercompany-elimination", json=payload)
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("debit", ["(1000.00)", "(1,000.00)", "$(1,000.00)", "-1,000.00"])
+    async def test_parenthesised_negative_debit_is_a_credit(self, professional_user, db_session, debit):
+        response = await self._post(professional_user, db_session, _payload_with_payable(debit, "0"))
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["summary"]["reconciling_pair_count"] == 1
+        payable = next(line for line in body["intercompany_lines"] if line["entity_id"] == "B")
+        assert payable["debit"] == "0.00"
+        assert payable["credit"] == "1000.00"
+
+    @pytest.mark.asyncio
+    async def test_comma_grouped_credit_parses(self, professional_user, db_session):
+        response = await self._post(professional_user, db_session, _payload_with_payable("0", "1,000.00"))
+        assert response.status_code == 200, response.text
+        assert response.json()["summary"]["reconciling_pair_count"] == 1
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("credit", ["abc", "", "NaN", "Infinity", "10%", "()"])
+    async def test_unparseable_amount_is_still_a_400(self, professional_user, db_session, credit):
+        response = await self._post(professional_user, db_session, _payload_with_payable("0", credit))
+        assert response.status_code == 400
+        assert "credit" in response.json()["detail"]

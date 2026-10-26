@@ -29,6 +29,7 @@ from intercompany_elimination_engine import (
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
+from shared.request_decimal import parse_request_amount
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
 
@@ -66,8 +67,8 @@ def _build_config(payload: IntercompanyEliminationRequest) -> IntercompanyConfig
                 accounts=[
                     EntityAccount(
                         account=a.account,
-                        debit=_to_decimal("debit", a.debit),
-                        credit=_to_decimal("credit", a.credit),
+                        debit=parse_request_amount("debit", a.debit),
+                        credit=parse_request_amount("credit", a.credit),
                         counterparty_entity=a.counterparty_entity,
                     )
                     for a in e.accounts
