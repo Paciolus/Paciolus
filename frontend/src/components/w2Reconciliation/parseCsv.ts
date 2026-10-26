@@ -217,13 +217,14 @@ export function parseForm941Csv(text: string): Form941QuarterRequest[] {
     if (!Number.isFinite(quarter) || quarter < 1 || quarter > 4) {
       throw new W2CsvParseError(`Form 941 row ${i + 2}: quarter must be 1, 2, 3, or 4.`)
     }
-    quarters.push({
-      quarter,
-      total_federal_wages: fedWagesCol !== -1 ? normalizeAmount(fields[fedWagesCol] ?? '') : '0',
-      total_federal_withholding: fedWhCol !== -1 ? normalizeAmount(fields[fedWhCol] ?? '') : '0',
-      total_ss_wages: ssWagesCol !== -1 ? normalizeAmount(fields[ssWagesCol] ?? '') : '0',
-      total_medicare_wages: medWagesCol !== -1 ? normalizeAmount(fields[medWagesCol] ?? '') : '0',
-    })
+    // Sprint 846 (W4): a column the file does not have is left out, not sent
+    // as zero — the engine compares only the figures every quarter states.
+    const row: Form941QuarterRequest = { quarter }
+    if (fedWagesCol !== -1) row.total_federal_wages = normalizeAmount(fields[fedWagesCol] ?? '')
+    if (fedWhCol !== -1) row.total_federal_withholding = normalizeAmount(fields[fedWhCol] ?? '')
+    if (ssWagesCol !== -1) row.total_ss_wages = normalizeAmount(fields[ssWagesCol] ?? '')
+    if (medWagesCol !== -1) row.total_medicare_wages = normalizeAmount(fields[medWagesCol] ?? '')
+    quarters.push(row)
   }
 
   return quarters

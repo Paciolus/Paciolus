@@ -91,6 +91,9 @@ function ScenarioCard({ name, scenario }: { name: string; scenario: ScenarioResu
         <dt className="text-content-tertiary pt-1">AP deferral candidates</dt>
         <dd className="font-mono">{scenario.ap_deferral_candidates.length}</dd>
       </dl>
+      {scenario.ap_deferral_rule && (
+        <p className="mt-3 text-xs font-sans text-content-tertiary">{scenario.ap_deferral_rule}</p>
+      )}
     </div>
   )
 }
