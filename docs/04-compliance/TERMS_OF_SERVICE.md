@@ -192,7 +192,7 @@ Paciolus operates under a **Zero-Storage** model:
 | **User credentials** | Stored | Email, bcrypt password hash |
 | **Client metadata** | Stored | Client names, industries, fiscal year ends |
 | **Activity logs (aggregates)** | Stored (365 days) | "Analyzed 500 rows, balanced, 3 anomalies" |
-| **Trial balance data** | **Never stored** | "Cash: $50,000, A/R: $25,000" |
+| **Trial balance rows from uploads** | **Not kept** | "Cash: $50,000, A/R: $25,000" |
 
 **For full details, see:** [ZERO_STORAGE_ARCHITECTURE.md](./ZERO_STORAGE_ARCHITECTURE.md)
 
@@ -226,7 +226,7 @@ Paciolus operates under a **Zero-Storage** model:
 ### 6.2 User's Intellectual Property
 
 **You retain ownership** of:
-- Your trial balance data (which is never stored on our servers)
+- Your trial balance data (uploaded files are not kept on our servers)
 - Your client metadata
 - Any reports you generate using the Service
 

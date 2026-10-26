@@ -1,7 +1,7 @@
 /**
  * BatchUploadPanel component tests
  *
- * Tests: rendering, title/description props, Zero-Storage notice,
+ * Tests: rendering, title/description props, in-memory notice,
  * and context provider wrapping.
  */
 import { BatchUploadPanel } from '@/components/batch/BatchUploadPanel'
@@ -62,9 +62,9 @@ describe('BatchUploadPanel', () => {
     expect(screen.getByTestId('batch-upload-controls')).toBeInTheDocument()
   })
 
-  it('shows Zero-Storage notice', () => {
+  it('shows in-memory notice', () => {
     render(<BatchUploadPanel />)
-    expect(screen.getByText('Zero-Storage Processing')).toBeInTheDocument()
-    expect(screen.getByText(/Files are processed in memory only/)).toBeInTheDocument()
+    expect(screen.getByText('In-Memory Processing')).toBeInTheDocument()
+    expect(screen.getByText(/Files are processed in memory and not kept/)).toBeInTheDocument()
   })
 })

@@ -13,7 +13,7 @@ export function WorkspaceFooter() {
           2025 Paciolus. Built for Financial Professionals.
         </div>
         <div className="text-content-tertiary text-sm font-sans">
-          Zero-Storage Architecture. Your files stay yours.
+          Uploaded files are not kept after analysis.
         </div>
       </div>
     </footer>

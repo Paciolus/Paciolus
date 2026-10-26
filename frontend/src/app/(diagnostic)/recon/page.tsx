@@ -15,7 +15,7 @@ export default function ReconPage() {
         return (
             <div className="min-h-screen bg-surface-page text-content-primary p-8 flex flex-col items-center justify-center">
                 <h2 className="text-xl font-serif font-bold text-content-secondary mb-4">Reconciliation Scoring</h2>
-                <GuestCTA description="Reconciliation Scoring requires a verified account. Sign in or create an account for Zero-Storage processing." />
+                <GuestCTA description="Reconciliation Scoring requires a verified account. Sign in or create an account to continue." />
             </div>
         );
     }

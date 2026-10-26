@@ -88,12 +88,12 @@ export function MarketingFooter() {
                 />
               </Link>
               <p className="font-sans text-sm text-oatmeal-500 leading-relaxed mb-4">
-                Eighteen tools. Zero file storage. Results in seconds for standard file sizes.
+                Eighteen tools. Uploaded files are not kept. Results in seconds for standard file sizes.
               </p>
-              {/* Zero-Storage badge */}
+              {/* Data-handling badge */}
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-500/20">
                 <BrandIcon name="padlock" className="w-3.5 h-3.5 text-theme-success-text" />
-                <span className="font-sans text-xs text-oatmeal-400">Zero-Storage Architecture</span>
+                <span className="font-sans text-xs text-oatmeal-400">Uploads not kept after analysis</span>
               </div>
             </div>
 

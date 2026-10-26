@@ -277,7 +277,7 @@ export function CurrencyRatePanel({ defaultOpen = false }: CurrencyRatePanelProp
           {/* Help Text */}
           <p className="text-xs text-content-tertiary leading-relaxed">
             Upload exchange rates before your trial balance to enable automatic
-            multi-currency conversion. Rates are session-scoped and never stored.
+            multi-currency conversion. Rates are kept for up to 2 hours, then deleted.
           </p>
         </div>
       )}

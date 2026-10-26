@@ -91,11 +91,10 @@ export default function IntercompanyEliminationPage() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <h3 className="font-serif text-content-primary text-sm mb-2">Zero-Storage</h3>
+                  <h3 className="font-serif text-content-primary text-sm mb-2">Your Data</h3>
                   <p className="font-sans text-content-tertiary text-xs">
                     Uploaded trial balances are parsed in-browser, posted as JSON, consolidated in
-                    memory, and discarded after the response &mdash; consistent with the platform&apos;s
-                    Zero-Storage architecture.
+                    memory, and not kept after the response.
                   </p>
                 </div>
               </div>

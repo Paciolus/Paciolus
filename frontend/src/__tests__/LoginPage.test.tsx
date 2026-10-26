@@ -76,9 +76,9 @@ describe('LoginPage', () => {
     expect(screen.getByText('Enter Vault')).toBeInTheDocument()
   })
 
-  it('shows Zero-Storage Promise badge', () => {
+  it('shows the uploads-not-kept badge', () => {
     render(<LoginPage />)
-    expect(screen.getByText('Zero-Storage Promise')).toBeInTheDocument()
+    expect(screen.getByText('Uploads Not Kept')).toBeInTheDocument()
   })
 
   it('shows register link', () => {

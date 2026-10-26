@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Paciolus',
-  description: 'Privacy Policy for Paciolus. We use zero-storage architecture — your financial data is processed in-memory and never stored at rest.',
+  description: 'Privacy Policy for Paciolus: what we collect, what we keep, and your rights. Uploaded files are processed in memory and not kept after analysis.',
   openGraph: {
     title: 'Privacy Policy — Paciolus',
-    description: 'We use zero-storage architecture — your financial data is never stored at rest.',
+    description: 'What we collect, what we keep, and your rights.',
   },
 }
 

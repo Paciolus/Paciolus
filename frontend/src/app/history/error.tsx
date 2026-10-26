@@ -27,7 +27,7 @@ export default function HistoryError({
           History Error
         </h1>
         <p className="text-content-secondary text-center mb-8 leading-relaxed max-w-md">
-          The activity history encountered an error. Zero-Storage means no diagnostic data was at risk.
+          The activity history encountered an error. Your saved history is unaffected — try again in a moment.
         </p>
 
         {process.env.NODE_ENV === 'development' && (

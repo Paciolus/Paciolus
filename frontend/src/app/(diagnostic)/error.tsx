@@ -41,9 +41,9 @@ export default function DiagnosticError({
         </h1>
 
         <p className="text-content-secondary mb-8 leading-relaxed">
-          An error occurred while running the diagnostic tool. Your data
-          has not been affected &mdash; Zero-Storage processing means
-          nothing was persisted.
+          An error occurred while running the diagnostic tool. Anything you had already saved is unaffected;
+          an upload that was in progress was not kept, so you may need to
+          upload it again.
         </p>
 
         {process.env.NODE_ENV === 'development' && (

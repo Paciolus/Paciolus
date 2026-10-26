@@ -75,15 +75,15 @@ Paciolus processes personal data solely on behalf of and in accordance with the 
 - Assist the Customer in responding to data subject requests
 - Make available all information necessary to demonstrate compliance with this DPA
 
-### 2.3 Zero-Storage Architecture
+### 2.3 Handling of Uploaded Files
 
-Paciolus operates under a Zero-Storage security model for financial data. Uploaded files containing trial balances, general ledgers, payment registers, and other financial data are:
+Uploaded files containing trial balances, general ledgers, payment registers and other financial data are:
 
-- Processed entirely in-memory
-- Never written to disk or database
-- Discarded immediately after analysis completes
+- Processed in memory
+- Not written to disk or to the database
+- Released after analysis completes (a previewed file may be held in memory for up to 10 minutes so the tool can reuse it)
 
-Only aggregate metadata (category totals, financial ratios, row counts) and user account data are persisted. Line-level account names, balances, and individual transaction details are never stored. See the [Zero-Storage Architecture](ZERO_STORAGE_ARCHITECTURE.md) document for the full technical specification.
+Paciolus does persist: user account data; client metadata; a summary of each analysis (category totals, financial ratios, row counts, total debits and credits, and the names of accounts a tool flagged, without amounts); Customer-entered engagement content, including analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount); and, for up to 48 hours, report files the Customer chooses to share by link (Cloudflare R2). Line-level rows from uploads — individual balances and transactions — are not stored. See [ZERO_STORAGE_ARCHITECTURE.md](ZERO_STORAGE_ARCHITECTURE.md) for the technical detail.
 
 ---
 
@@ -139,7 +139,9 @@ Processing continues for the duration of the Agreement. Upon termination, Sectio
 | **Diagnostic metadata** | Aggregate totals, financial ratios, row counts | 365-day retention |
 | **Engagement metadata** | Period, status, materiality threshold | 365-day retention |
 | **Follow-up narratives** | Free-text notes (no amounts, no account numbers) | 365-day retention |
-| **Uploaded financial data** | Trial balances, ledgers, payment registers | **Never stored** (ephemeral) |
+| **Uploaded financial data** | Trial balances, ledgers, payment registers | **Not kept** (in memory for the request only) |
+| **Customer-entered engagement content** | Analytical expectations (expected/actual values), uncorrected misstatements (account, DR/CR, amount), intercompany mappings | Until deleted by the Customer or account closure |
+| **Shared report files** | PDF / Excel / CSV the Customer shares by link | Up to 48 hours (Cloudflare R2) |
 
 ### 4.3 Special Categories
 

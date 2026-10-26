@@ -42,8 +42,8 @@ export default function ToolsError({
         </h1>
 
         <p className="text-content-secondary text-center mb-8 leading-relaxed max-w-md">
-          This diagnostic tool encountered an error. Your data has not been affected
-          &mdash; Zero-Storage processing means nothing was persisted.
+          This diagnostic tool encountered an error. Anything you had already saved is unaffected; an upload that was in progress
+          was not kept, so you may need to upload it again.
         </p>
 
         {process.env.NODE_ENV === 'development' && (

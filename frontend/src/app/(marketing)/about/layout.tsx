@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About Paciolus — The Story Behind Zero-Storage Audit Intelligence',
-  description: 'Built on the legacy of Luca Pacioli, Paciolus brings surgical precision to trial balance diagnostics. Learn how we protect your data with zero-storage architecture.',
+  title: 'About Paciolus — Diagnostic Intelligence for Financial Professionals',
+  description: 'Built on the legacy of Luca Pacioli, Paciolus brings surgical precision to trial balance diagnostics. Uploaded files are processed in memory and not kept after analysis.',
   openGraph: {
-    title: 'About Paciolus — The Story Behind Zero-Storage Audit Intelligence',
+    title: 'About Paciolus — Diagnostic Intelligence for Financial Professionals',
     description: 'Built on the legacy of Luca Pacioli, Paciolus brings surgical precision to trial balance diagnostics.',
   },
 }

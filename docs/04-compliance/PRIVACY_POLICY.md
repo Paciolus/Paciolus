@@ -76,13 +76,15 @@ When you use Paciolus, we automatically collect:
 
 | Data Category | Collection Status | Why |
 |---------------|------------------|-----|
-| **Trial Balance Data** | ❌ Never collected or stored | Zero-Storage architecture (see Section 3) |
-| **Account Balances** | ❌ Never stored | Processed in-memory, discarded after analysis |
-| **Transaction Details** | ❌ Never stored | Ephemeral processing only |
-| **Uploaded Files** | ❌ Never persisted | Exists in memory for \u003c5 seconds |
-| **Specific Anomaly Details** | ❌ Never stored | Only aggregate counts stored |
+| **Trial Balance Rows From Uploads** | ❌ Not kept | Processed in memory (see Section 3) |
+| **Individual Account Balances** | ❌ Not kept | Processed in memory; only analysis totals are saved |
+| **Transaction Details** | ❌ Not kept | Processed in memory only |
+| **Uploaded Files** | ❌ Not kept | Held in memory for the request |
+| **Flag Details** | ❌ Not kept | Anomaly counts and the names of flagged accounts (no amounts) are saved |
+| **Analysis Summaries** | ✅ Stored | Category totals, ratios, row counts, total debits and credits |
+| **Engagement Entries** | ✅ Stored | Materiality, analytical expectations, uncorrected misstatements you enter |
 
-**What this means:** If you upload a trial balance CSV with your client's financial data, that data is **never written to our databases or disks**. It exists only in temporary memory during the analysis (typically 3-5 seconds) and is immediately destroyed.
+**What this means:** If you upload a trial balance CSV, the file and its rows are **not written to our database or disks**. They exist in memory for the duration of the request and are then released. A summary of the result is saved to your history.
 
 ---
 
@@ -167,10 +169,10 @@ Paciolus is fundamentally different from traditional cloud accounting platforms 
 ```
 
 **Key points:**
-- Your trial balance exists on our server for **less than 5 seconds**
-- It's stored in **ephemeral memory**, not on disk or in a database
-- When analysis completes, the data is **immediately destroyed**
-- If you reload the page, the results are gone (no server-side storage)
+- Your uploaded file exists on our server for **the duration of the request**
+- It is held in **memory**, not on disk or in a database
+- When analysis completes, the file is **released and not kept**; a summary of the result is saved
+- Line-level detail is not kept — export the reports you need
 
 **Why we built it this way:**
 - **Security:** Can't leak data we don't have
@@ -192,8 +194,8 @@ Paciolus classifies all data into two categories based on retention behavior:
 
 | Data Class | Default Retention | Deletion Trigger | User-Request Deletion |
 |------------|-------------------|------------------|-----------------------|
-| **Raw trial balance data** | 0 seconds (ephemeral) | Immediate garbage collection after analysis | N/A (never stored) |
-| **Uploaded files** | 0 seconds (ephemeral) | Immediate garbage collection after analysis | N/A (never stored) |
+| **Raw trial balance data** | The request only | Released from memory after analysis | N/A (not kept) |
+| **Uploaded files** | The request only | Released from memory after analysis | N/A (not kept) |
 | **User credentials** | Until account deletion | User-initiated account deletion | Yes |
 | **Client metadata** | Until deletion | User deletes client record or account | Yes |
 | **User settings/preferences** | Until account deletion | User-initiated account deletion | Yes |
@@ -541,7 +543,7 @@ In the past 12 months:
 
 **Legend:**
 - ✅ Collected and stored
-- ⚠️ Processed in-memory, immediately destroyed (Zero-Storage)
+- ⚠️ Processed in memory, not kept after analysis
 - ❌ Never collected or stored
 
 ---

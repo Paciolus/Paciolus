@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
           {/* Commitment Bullets */}
           <div className="grid md:grid-cols-2 gap-4 mb-12">
             {[
-              'We never store your financial data',
+              'We do not keep your uploaded files',
               'We collect only what\u0027s necessary',
               'We never sell your personal information',
               'You control your data and can delete it anytime'
@@ -45,7 +45,7 @@ export default function PrivacyPolicy() {
               {[
                 'Information We Collect',
                 'How We Use Your Information',
-                'Zero-Storage Architecture',
+                'How We Handle Uploaded Files',
                 'Information We Share',
                 'Your Rights and Choices',
                 'Data Security',
@@ -150,13 +150,13 @@ export default function PrivacyPolicy() {
             </table>
             </div>
 
-            {/* 1.3 Information We DO NOT Collect */}
+            {/* 1.3 What We Keep From Your Analyses (Sprint 841) */}
             <h3 className="font-serif text-xl text-oatmeal-200 mb-4">
-              1.3 Information We DO NOT Collect
+              1.3 What We Keep From Your Analyses
             </h3>
-            <div className="bg-clay-500/10 border-l-4 border-clay-500 p-6 rounded-r-lg mb-6">
+            <div className="bg-obsidian-800 border-l-4 border-sage-500 p-6 rounded-r-lg mb-6">
               <p className="font-sans text-oatmeal-300 mb-4">
-                <strong className="text-oatmeal-100">Critical Distinction:</strong> We do NOT store financial data uploaded to our platform.
+                <strong className="text-oatmeal-100">In short:</strong> your uploaded files are processed in memory and not kept after analysis. We do save a summary of each analysis and anything you enter in an engagement.
               </p>
               <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -164,54 +164,70 @@ export default function PrivacyPolicy() {
                   <tr className="bg-obsidian-900 border-b border-obsidian-700">
                     <th className="text-left p-3 font-serif text-oatmeal-100">Category</th>
                     <th className="text-left p-3 font-serif text-oatmeal-100">Examples</th>
-                    <th className="text-center p-3 font-serif text-oatmeal-100">Stored?</th>
+                    <th className="text-center p-3 font-serif text-oatmeal-100">Kept?</th>
+                    <th className="text-left p-3 font-serif text-oatmeal-100">How Long</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b border-obsidian-700">
-                    <td className="p-3 font-sans text-oatmeal-300">Trial Balance Data</td>
-                    <td className="p-3 font-sans text-oatmeal-400">Account names, balances, classifications</td>
-                    <td className="p-3 text-center">
-                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </td>
-                  </tr>
-                  <tr className="bg-obsidian-900/50 border-b border-obsidian-700">
-                    <td className="p-3 font-sans text-oatmeal-300">Account Balances</td>
-                    <td className="p-3 font-sans text-oatmeal-400">Dollar amounts, percentages, ratios</td>
-                    <td className="p-3 text-center">
-                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-obsidian-700">
-                    <td className="p-3 font-sans text-oatmeal-300">Transaction Details</td>
-                    <td className="p-3 font-sans text-oatmeal-400">Journal entries, invoices, payments</td>
-                    <td className="p-3 text-center">
-                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </td>
-                  </tr>
-                  <tr className="bg-obsidian-900/50 border-b border-obsidian-700">
                     <td className="p-3 font-sans text-oatmeal-300">Uploaded Files</td>
-                    <td className="p-3 font-sans text-oatmeal-400">CSV/Excel files, bank statements</td>
+                    <td className="p-3 font-sans text-oatmeal-400">CSV, Excel, PDF and other files you upload</td>
                     <td className="p-3 text-center">
-                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Not kept" role="img">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </td>
+                    <td className="p-3 font-sans text-oatmeal-400">Not kept</td>
+                  </tr>
+                  <tr className="bg-obsidian-900/50 border-b border-obsidian-700">
+                    <td className="p-3 font-sans text-oatmeal-300">Line-Level Rows From Uploads</td>
+                    <td className="p-3 font-sans text-oatmeal-400">Individual accounts and balances, journal entries, invoices, payments, payroll records</td>
+                    <td className="p-3 text-center">
+                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Not kept" role="img">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </td>
+                    <td className="p-3 font-sans text-oatmeal-400">Not kept</td>
                   </tr>
                   <tr className="border-b border-obsidian-700">
-                    <td className="p-3 font-sans text-oatmeal-300">Anomaly Details</td>
-                    <td className="p-3 font-sans text-oatmeal-400">Specific flagged accounts, amounts</td>
+                    <td className="p-3 font-sans text-oatmeal-300">Analysis Summaries</td>
+                    <td className="p-3 font-sans text-oatmeal-400">Category totals, ratios, row counts, total debits and credits for each analysis</td>
                     <td className="p-3 text-center">
-                      <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Kept" role="img">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </td>
+                    <td className="p-3 font-sans text-oatmeal-400">Until you clear history or close your account (archived after the retention period)</td>
+                  </tr>
+                  <tr className="bg-obsidian-900/50 border-b border-obsidian-700">
+                    <td className="p-3 font-sans text-oatmeal-300">Flagged Account Names</td>
+                    <td className="p-3 font-sans text-oatmeal-400">Names of accounts a tool flagged — no amounts or entry details</td>
+                    <td className="p-3 text-center">
+                      <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Kept" role="img">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </td>
+                    <td className="p-3 font-sans text-oatmeal-400">With the analysis summary</td>
+                  </tr>
+                  <tr className="border-b border-obsidian-700">
+                    <td className="p-3 font-sans text-oatmeal-300">What You Enter in an Engagement</td>
+                    <td className="p-3 font-sans text-oatmeal-400">Materiality, follow-up notes, intercompany mappings, analytical expectations (expected and actual values), uncorrected misstatements (account, debit or credit, amount)</td>
+                    <td className="p-3 text-center">
+                      <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Kept" role="img">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </td>
+                    <td className="p-3 font-sans text-oatmeal-400">Until you delete it or close your account</td>
+                  </tr>
+                  <tr className="bg-obsidian-900/50 border-b border-obsidian-700">
+                    <td className="p-3 font-sans text-oatmeal-300">Reports Shared by Link</td>
+                    <td className="p-3 font-sans text-oatmeal-400">The PDF, Excel or CSV file you choose to share</td>
+                    <td className="p-3 text-center">
+                      <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-label="Kept" role="img">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </td>
+                    <td className="p-3 font-sans text-oatmeal-400">Up to 48 hours, then deleted</td>
                   </tr>
                 </tbody>
               </table>
@@ -301,14 +317,16 @@ export default function PrivacyPolicy() {
             </div>
           </article>
 
-          {/* Section 3: Zero-Storage Architecture */}
+          {/* Section 3: How We Handle Uploaded Files (Sprint 841) */}
           <article className="mb-12">
             <h2 id="section-3" className="font-serif text-3xl text-oatmeal-100 mb-6 pt-8">
-              3. Zero-Storage Architecture
+              3. How We Handle Uploaded Files
             </h2>
 
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-6">
-              Paciolus is built on a <strong className="text-oatmeal-200">Zero-Storage architecture</strong> for financial data. This is our core privacy commitment.
+              <strong className="text-oatmeal-200">Your uploaded files are processed in memory and not kept after analysis.</strong>{' '}
+              We do save your account, your client list, a summary of each analysis and anything you enter in an engagement &mdash; Section 1 and the{' '}
+              <a href="/trust#transparency" className="text-sage-400 hover:text-sage-300 underline">Trust page</a> list exactly what.
             </p>
 
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 mb-6">
@@ -320,7 +338,7 @@ export default function PrivacyPolicy() {
                 </li>
                 <li className="flex gap-3">
                   <span className="font-mono text-sage-400 flex-shrink-0">2.</span>
-                  <span>Our server reads the file into ephemeral memory (RAM only)</span>
+                  <span>Our server reads the file into memory (it is not written to disk)</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="font-mono text-sage-400 flex-shrink-0">3.</span>
@@ -332,7 +350,7 @@ export default function PrivacyPolicy() {
                 </li>
                 <li className="flex gap-3">
                   <span className="font-mono text-sage-400 flex-shrink-0">5.</span>
-                  <span className="text-sage-300 font-medium">All data is immediately destroyed when the response completes (typically &lt;5 seconds)</span>
+                  <span className="text-sage-300 font-medium">When the response completes, the uploaded file is released from memory and not kept. A summary of the result (totals, ratios, row counts and the names of any accounts flagged) is saved to your history.</span>
                 </li>
               </ol>
             </div>
@@ -340,20 +358,20 @@ export default function PrivacyPolicy() {
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div className="bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <h5 className="font-serif text-oatmeal-100 mb-2">Security</h5>
-                <p className="font-sans text-sm text-oatmeal-400">No database to breach, no files to leak</p>
+                <p className="font-sans text-sm text-oatmeal-400">No uploaded files or ledger rows at rest to leak</p>
               </div>
               <div className="bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <h5 className="font-serif text-oatmeal-100 mb-2">Privacy</h5>
-                <p className="font-sans text-sm text-oatmeal-400">Zero financial data retention minimizes breach surface</p>
+                <p className="font-sans text-sm text-oatmeal-400">We keep summaries, not your source files</p>
               </div>
               <div className="bg-sage-500/10 border border-sage-500/20 rounded-lg p-4">
                 <h5 className="font-serif text-oatmeal-100 mb-2">Compliance</h5>
-                <p className="font-sans text-sm text-oatmeal-400">Simplifies GDPR/CCPA — no PI to delete</p>
+                <p className="font-sans text-sm text-oatmeal-400">Less personal data held, so less to export or delete</p>
               </div>
             </div>
 
             <p className="font-sans text-oatmeal-400 leading-relaxed">
-              <strong className="text-oatmeal-200">Technical Details:</strong> Uploaded files exist in server memory for the duration of the HTTP request only. We do not write to disk, cache layers, or persistent storage. PDF/Excel exports are generated on-the-fly and streamed directly to your browser.
+              <strong className="text-oatmeal-200">Technical Details:</strong> Uploaded files are held in server memory for the duration of the request and are not written to disk. Two exceptions hold a file a little longer: when you preview a PDF or workbook before running a tool, its contents are kept in memory for up to 10 minutes so the tool can reuse them; and a report you choose to share by link is stored, encrypted, with our storage provider (Cloudflare R2) for up to 48 hours and then deleted. Otherwise PDF, Excel and CSV exports are generated on request and sent to your browser without being saved.
             </p>
           </article>
 
@@ -473,7 +491,7 @@ export default function PrivacyPolicy() {
                     <li>Follow-up items (issue narratives)</li>
                   </ul>
                   <p className="font-sans text-sm text-oatmeal-300 mt-4">
-                    <strong>Note:</strong> Financial data uploaded during active sessions is already deleted per our Zero-Storage architecture.
+                    <strong>Note:</strong> Uploaded files are not kept after analysis, so there are none to delete. Analysis summaries and engagement entries are deleted with your account.
                   </p>
                 </div>
               </div>
@@ -518,7 +536,7 @@ export default function PrivacyPolicy() {
                 { label: 'bcrypt Password Hashing', desc: 'Passwords salted and hashed with 12 rounds' },
                 { label: 'JWT Authentication', desc: 'Stateless token-based session management' },
                 { label: 'Multi-Tenant Isolation', desc: 'User data segregated at database level' },
-                { label: 'Zero-Storage for Financial Data', desc: 'No persistent storage = no data breach risk' },
+                { label: 'Uploads Not Kept', desc: 'No uploaded files or ledger rows at rest to expose' },
                 { label: 'Rate Limiting', desc: 'Protection against brute-force attacks' }
               ].map((item, idx) => (
                 <div key={idx} className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-4">
@@ -949,6 +967,34 @@ export default function PrivacyPolicy() {
                   <td className="p-4 text-center font-sans text-oatmeal-400">Until account deletion</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
+                  <td className="p-4 font-sans text-oatmeal-300">Analysis Summaries (totals, ratios, row counts)</td>
+                  <td className="p-4 text-center">
+                    <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </td>
+                  <td className="p-4 text-center">
+                    <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </td>
+                  <td className="p-4 text-center font-sans text-oatmeal-400">365 days, then archived; deleted with your account</td>
+                </tr>
+                <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
+                  <td className="p-4 font-sans text-oatmeal-300">Engagement Entries (materiality, expectations, misstatements)</td>
+                  <td className="p-4 text-center">
+                    <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </td>
+                  <td className="p-4 text-center">
+                    <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </td>
+                  <td className="p-4 text-center font-sans text-oatmeal-400">Until you delete them or your account</td>
+                </tr>
+                <tr className="border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Usage Statistics (aggregated)</td>
                   <td className="p-4 text-center">
                     <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -974,7 +1020,7 @@ export default function PrivacyPolicy() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </td>
-                  <td className="p-4 text-center font-mono text-clay-300">&lt;5 seconds (ephemeral)</td>
+                  <td className="p-4 text-center font-mono text-clay-300">For the request only (not kept)</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Journal Entries / Invoices</td>
@@ -988,7 +1034,7 @@ export default function PrivacyPolicy() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </td>
-                  <td className="p-4 text-center font-mono text-clay-300">&lt;5 seconds (ephemeral)</td>
+                  <td className="p-4 text-center font-mono text-clay-300">For the request only (not kept)</td>
                 </tr>
                 <tr className="bg-obsidian-800/50 border-b border-obsidian-700">
                   <td className="p-4 font-sans text-oatmeal-300">Uploaded CSV/Excel Files</td>
@@ -1002,21 +1048,21 @@ export default function PrivacyPolicy() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </td>
-                  <td className="p-4 text-center font-mono text-clay-300">&lt;5 seconds (ephemeral)</td>
+                  <td className="p-4 text-center font-mono text-clay-300">For the request only (not kept)</td>
                 </tr>
                 <tr className="border-b border-obsidian-700">
-                  <td className="p-4 font-sans text-oatmeal-300">Anomaly Details (amounts, accounts)</td>
+                  <td className="p-4 font-sans text-oatmeal-300">Flagged Account Names (no amounts)</td>
                   <td className="p-4 text-center">
                     <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </td>
                   <td className="p-4 text-center">
-                    <svg className="w-6 h-6 text-clay-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg className="w-6 h-6 text-sage-400 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </td>
-                  <td className="p-4 text-center font-mono text-clay-300">&lt;5 seconds (ephemeral)</td>
+                  <td className="p-4 text-center font-sans text-oatmeal-400">With the analysis summary</td>
                 </tr>
               </tbody>
             </table>

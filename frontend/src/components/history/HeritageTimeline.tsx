@@ -130,10 +130,10 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
 
           <div className="flex-1">
             <h3 className="text-sage-300 font-serif font-semibold text-sm">
-              Zero-Storage Architecture
+              What History Keeps
             </h3>
             <p className="text-content-secondary font-sans text-sm mt-1">
-              Your financial data was never saved. Only diagnostic metadata is stored.
+              Your uploaded files were not kept. History holds a summary of each run.
             </p>
           </div>
 
@@ -200,7 +200,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    Never Stored
+                    Not Kept
                   </h4>
                   <ul className="space-y-1">
                     {NOT_STORED.map((item) => (

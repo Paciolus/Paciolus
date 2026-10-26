@@ -89,8 +89,8 @@ export default function MultiCurrencyPage() {
                   </div>
                   <h3 className="font-serif text-content-primary text-sm mb-2">Session-Scoped Rates</h3>
                   <p className="font-sans text-content-tertiary text-xs">
-                    Rate tables are stored in the user&apos;s session only and never persisted to long-term
-                    storage, consistent with the Zero-Storage architecture applied to financial data.
+                    Rate tables are saved with your session for up to 2 hours so the next upload can use
+                    them, then deleted.
                   </p>
                 </div>
               </div>

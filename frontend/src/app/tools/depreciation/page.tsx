@@ -3,7 +3,7 @@
 /**
  * Depreciation Calculator (Sprint 626)
  *
- * Form-input only — zero-storage compliant. Generates book and MACRS tax
+ * Form-input only — nothing is uploaded. Generates book and MACRS tax
  * depreciation schedules with a book/tax timing reconciliation.
  */
 
@@ -231,7 +231,7 @@ export default function DepreciationPage() {
           <h1 className="font-serif text-4xl text-obsidian-900 mb-2">Depreciation Calculator</h1>
           <p className="font-sans text-obsidian-700 mb-8">
             Book methods (straight-line, declining balance, SYD, units of production) and MACRS tax depreciation
-            with a book-vs-tax timing reconciliation. Form input — zero-storage.
+            with a book-vs-tax timing reconciliation. Form input — nothing is uploaded.
           </p>
         </Reveal>
 

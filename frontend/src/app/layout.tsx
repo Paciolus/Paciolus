@@ -46,14 +46,14 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-  description: 'Financial Professionals: Eliminate sign errors and misclassifications with automated Close Health Reports. Raw financial files are processed in-memory and not stored at rest.',
+  description: 'Financial Professionals: flags likely sign errors and misclassifications with automated Close Health Reports. Uploaded files are processed in memory and not kept after analysis.',
   icons: {
     icon: '/PaciolusLogo_LightBG.png',
     apple: '/PaciolusLogo_LightBG.png',
   },
   openGraph: {
     title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-    description: 'Upload. Map. Export. Zero-Storage trial balance diagnostics for Financial Professionals.',
+    description: 'Upload. Map. Export. Trial balance diagnostics for Financial Professionals.',
     type: 'website',
     url: 'https://paciolus.com',
     siteName: 'Paciolus',
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-    description: 'Upload. Map. Export. Zero-Storage trial balance diagnostics for Financial Professionals.',
+    description: 'Upload. Map. Export. Trial balance diagnostics for Financial Professionals.',
     images: ['/PaciolusLogo_LightBG.png'],
   },
   metadataBase: new URL('https://paciolus.com'),

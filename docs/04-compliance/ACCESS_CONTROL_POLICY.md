@@ -47,7 +47,7 @@ This document defines Paciolus's access control requirements for employees, cont
 | **Least Privilege** | Grant minimum permissions necessary for job function | Role-based assignments, no standing admin access |
 | **Need to Know** | Access limited to data required for specific tasks | Database access restricted by role; no developer access to production DB |
 | **Separation of Duties** | Critical operations require multiple approvals | Production deployments require PR approval; secret rotation requires two engineers |
-| **Zero-Storage Guarantee** | No employee can access customer financial data | Financial data is never persisted — access is architecturally impossible |
+| **Uploads not kept** | Uploaded files cannot be retrieved later by anyone | Uploaded files are not saved. Analysis summaries and engagement entries are stored and are reachable by the platform operator (see superadmin access below) |
 | **Accountability** | All access actions are logged and attributable | Structured logging with request ID correlation, SSH session logging |
 
 ---

@@ -10,10 +10,10 @@
 
 ## Welcome to Paciolus
 
-Paciolus is a diagnostic intelligence platform for financial professionals. Eighteen specialized tools. Ten supported file formats. Zero data retention. Upload your financial data, receive structured diagnostics and report-ready exports — your client's files are processed in-memory and never written to disk.
+Paciolus is a diagnostic intelligence platform for financial professionals. Eighteen specialized tools. Ten supported file formats. Upload your financial data and receive structured diagnostics and exports — your uploaded files are processed in memory and not kept after analysis.
 
 **What makes Paciolus different:**
-- **Zero-Storage Architecture:** Client data is processed in-memory and immediately discarded. Nothing written to disk. Nothing retained between sessions.
+- **Uploads not kept:** Uploaded files are processed in memory and not kept after analysis. Paciolus saves your account, client list, analysis summaries and anything you enter in an engagement — Section 22 lists exactly what.
 - **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
   - Sections 3–20 below walk through all eighteen in detail, one chapter each.
 - **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
@@ -1109,25 +1109,21 @@ To manage payment methods, view invoices, or cancel, click **"Manage Billing"** 
 
 ---
 
-## 22. Data Handling Guarantees
+## 22. Data Handling Commitments
 
-### 22.1 Zero-Storage Architecture
+### 22.1 What Happens to Your Uploads
 
-Your uploaded financial data is never stored.
+Your uploaded files are processed in memory and not kept after analysis. Paciolus does keep your account, your client list, a summary of each analysis and anything you enter in an engagement:
 
-Raw uploaded financial data is never persisted to disk or retained between sessions. Paciolus retains only aggregate, non-attributable usage metadata in accordance with our retention policy. No line-level financial data is ever written to storage.
-
-Paciolus operates under a Zero-Storage security model for the data you upload:
-
-- **Your uploaded files are never stored.** Files are processed entirely in-memory and discarded immediately after analysis
-- **No line-level data from your uploads is persisted.** Trial balance rows, journal entries, invoices, payments and payroll records are never written to disk or database
+- **Your uploaded files are not kept.** Files are processed in memory and released after analysis. (If you preview a PDF or workbook first, its contents are held in memory for up to 10 minutes so the tool can reuse them.)
+- **Line-level data from your uploads is not saved.** Trial balance rows, journal entries, invoices, payments and payroll records are not written to disk or to the database
 - **Aggregate results are retained.** Category totals, financial ratios, row counts, total debits and credits, and the names of accounts a tool flagged (without amounts) are stored for your activity history and workspace continuity
 - **What you type into an engagement is retained.** Materiality, follow-up notes, intercompany account mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount) are workpaper content you enter, and they are stored so the engagement persists
 - **Shared report links are temporary.** When you share a report by link, the generated file is held encrypted for up to 48 hours and then deleted
 
 ### 22.2 What Is Stored vs. What Is Not
 
-| Stored | Never Stored |
+| Stored | Not Kept |
 |--------|--------------|
 | Your user credentials (hashed) | Raw uploaded files |
 | Client names and industry settings | Line-level trial balance rows from uploads |
@@ -1144,9 +1140,9 @@ Paciolus operates under a Zero-Storage security model for the data you upload:
 
 - **Always export detailed results before closing.** Line-level analysis detail (flagged entries, individual transactions) exists only during your session. Download PDF/Excel/CSV reports before navigating away. Aggregate summaries and workspace metadata persist across sessions.
 - **No raw data retrieval.** Paciolus cannot recover your uploaded financial files or line-level detail from a prior session. Your activity history shows aggregate metadata only (dates, row counts, ratios)
-- **A smaller data footprint.** Because Paciolus never stores your uploaded files or their line-level data, what it holds is limited to the aggregates and engagement content listed above
+- **A smaller data footprint.** Because Paciolus does not keep your uploaded files or their line-level data, what it holds is limited to the aggregates and engagement content listed above
 
-For the complete technical specification, see the [Zero-Storage Architecture](https://paciolus.com/trust) document on our Trust page.
+For the full list, see [what we keep](https://paciolus.com/trust#transparency) on our Trust page.
 
 ---
 
@@ -1294,7 +1290,7 @@ Commands for tools outside your current plan are visible but will show an upgrad
 
 ### 27.3 Recency
 
-Recently used commands appear higher in results. Recency data is stored in your browser session (Zero-Storage compliant — nothing sent to the server).
+Recently used commands appear higher in results. Recency data is stored in your browser session only — nothing is sent to the server.
 
 ---
 
@@ -1303,11 +1299,11 @@ Recently used commands appear higher in results. Recency data is stored in your 
 **Route:** `/history`
 
 Shows a chronological list of all diagnostics run:
-- Date/time, truncated filename (first 12 characters), row count
-- Balanced status, anomaly count
-- **No account names or balances stored** (Zero-Storage compliant)
+- Date/time, the first characters of the filename, row count
+- Balanced status, anomaly count, total debits and credits
+- Individual account balances from the upload are not stored
 
-**Clear History:** Settings > Privacy > "Clear All Activity History" (GDPR Right to Erasure)
+**Clear History:** Settings > Privacy > "Clear All Activity History" removes the entries from your history view. They are archived rather than deleted; to have your data deleted, email privacy@paciolus.com.
 
 ---
 
@@ -1349,7 +1345,7 @@ Free plans allow 10 uploads per month; Solo allows 100. Professional and Enterpr
 ## 30. FAQ
 
 **Q: Is my data safe?**
-A: Yes. Zero-Storage architecture means your financial data is processed in-memory and never stored. See Section 16 and our [Trust page](https://paciolus.com/trust) for details.
+A: Your uploaded files are processed in memory and not kept after analysis. We do save your account, client list, analysis summaries and engagement entries, protected as described on our [Trust page](https://paciolus.com/trust). Section 22 lists exactly what is kept.
 
 **Q: Can I recover results from last week?**
 A: "Ephemeral" refers specifically to your uploaded financial data. Workspace metadata — including analysis results, findings summaries, and report history — is retained so you can return to your work. However, line-level detail (individual flagged entries, transaction lists) exists only during your active session. Always export detailed reports to PDF/Excel/CSV before closing the browser.

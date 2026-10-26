@@ -147,25 +147,25 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Zero-Storage Badge */}
+          {/* Data-handling badge */}
           <div
             className="px-8 py-4 bg-obsidian-700/30 border-b border-obsidian-700"
           >
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
               <span className="text-sage-300 text-sm font-sans font-medium">
-                Zero-Storage Promise
+                Uploads Not Kept
               </span>
               <div className="group relative">
                 <button
                   type="button"
-                  aria-label="What is Zero-Storage?"
+                  aria-label="What do you keep?"
                   className="w-4 h-4 rounded-full bg-obsidian-600 text-oatmeal-400 text-xs flex items-center justify-center hover:bg-obsidian-500 transition-colors"
                 >
                   ?
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-xs text-oatmeal-300 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 font-sans">
-                  Your financial data is processed in server memory only — never written to disk or database. Credentials are stored securely.
+                  Uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and what you enter in an engagement.
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-obsidian-500"></div>
                 </div>
               </div>

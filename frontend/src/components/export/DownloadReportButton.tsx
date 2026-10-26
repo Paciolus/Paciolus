@@ -253,7 +253,7 @@ export function DownloadReportButton({
             PDF — full diagnostic memo
           </p>
           <p className="text-content-tertiary text-xs font-sans">
-            Zero-Storage: Summary generated on-demand, never stored
+            Generated on demand; the file is not kept
           </p>
         </>
       )}

@@ -11,7 +11,7 @@
  * - Fuzzy search across all commands (static + scoped)
  * - Grouped results by category
  * - Arrow Up/Down keyboard navigation, Enter to execute, Escape to close
- * - Recency tracking (sessionStorage, Zero-Storage compliant)
+ * - Recency tracking (sessionStorage, this browser tab only)
  * - Guard status: tier_blocked → navigate to /pricing, unverified → /verification-pending
  * - Focus trap (WCAG compliance)
  * - framer-motion enter/exit animation

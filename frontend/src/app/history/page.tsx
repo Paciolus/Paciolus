@@ -91,7 +91,7 @@ export default function HistoryPage() {
         <div className="max-w-3xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between text-xs font-sans text-content-tertiary">
             <span>Paciolus - Surgical Precision for Trial Balance Diagnostics</span>
-            <span>Zero-Storage Architecture</span>
+            <span>Summaries only — uploaded files are not kept</span>
           </div>
         </div>
       </footer>

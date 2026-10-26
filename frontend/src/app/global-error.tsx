@@ -120,8 +120,8 @@ export default function GlobalError({
               lineHeight: 1.6,
             }}
           >
-            Paciolus encountered a critical error. Your data has not been affected
-            &mdash; Zero-Storage processing means nothing was persisted.
+            Paciolus encountered a critical error. Anything you had already saved is unaffected; an upload that was in progress
+            was not kept, so you may need to upload it again.
           </p>
 
           {process.env.NODE_ENV === 'development' && (

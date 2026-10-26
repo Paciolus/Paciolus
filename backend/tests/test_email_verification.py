@@ -305,8 +305,9 @@ class TestEmailService:
         # Should contain user greeting
         assert "Test User" in html
 
-        # Should contain Zero-Storage messaging
-        assert "Zero-Storage" in html or "never stored" in html
+        # Sprint 841: the footer says what is true of uploads, not "never stored"
+        assert "not kept after analysis" in html
+        assert "never stored" not in html
 
         # Should contain expiration notice
         assert "24 hours" in html

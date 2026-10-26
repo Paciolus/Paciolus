@@ -66,9 +66,9 @@ describe('MarketingFooter', () => {
     expect(link.closest('a')).toHaveAttribute('href', '/login')
   })
 
-  it('renders Zero-Storage Architecture badge', () => {
+  it('renders the uploads-not-kept badge', () => {
     render(<MarketingFooter />)
-    expect(screen.getByText('Zero-Storage Architecture')).toBeInTheDocument()
+    expect(screen.getByText('Uploads not kept after analysis')).toBeInTheDocument()
   })
 
   it('renders Pacioli motto', () => {

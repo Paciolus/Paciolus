@@ -92,12 +92,12 @@ describe('ProfileDropdown', () => {
     expect(screen.getByText('Practice Settings')).toBeInTheDocument()
   })
 
-  it('shows Zero-Storage Active badge', async () => {
+  it('shows the uploads-not-kept badge', async () => {
     const user = userEvent.setup()
     render(<ProfileDropdown {...defaultProps} />)
     await user.click(screen.getByRole('button'))
 
-    expect(screen.getByText('Zero-Storage Active')).toBeInTheDocument()
+    expect(screen.getByText('Uploads Not Kept')).toBeInTheDocument()
   })
 
   // ─── Logout ─────────────────────────────────────────────────────────

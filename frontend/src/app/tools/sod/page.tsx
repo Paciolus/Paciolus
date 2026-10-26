@@ -103,10 +103,9 @@ export default function SODPage() {
                   </p>
                 </div>
                 <div className="theme-card p-6">
-                  <h3 className="font-serif text-content-primary text-sm mb-2">Zero-Storage</h3>
+                  <h3 className="font-serif text-content-primary text-sm mb-2">Your Data</h3>
                   <p className="font-sans text-content-tertiary text-xs">
-                    Matrices are processed in-memory and discarded after analysis &mdash; consistent
-                    with the platform&apos;s Zero-Storage architecture for privileged access data.
+                    Matrices are processed in memory and not kept after analysis.
                   </p>
                 </div>
               </div>

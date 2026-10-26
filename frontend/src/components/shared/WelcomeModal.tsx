@@ -31,7 +31,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: 'Upload a Trial Balance',
-    description: 'Start by uploading any trial balance file — CSV, Excel, or 8 other formats. Your data is processed in-memory and never stored.',
+    description: 'Start by uploading any trial balance file — CSV, Excel, or 8 other formats. Your file is processed in memory and not kept after analysis.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />

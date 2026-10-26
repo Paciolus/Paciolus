@@ -152,9 +152,9 @@ describe('TrialBalancePage', () => {
     expect(screen.getByText(/or click to browse/)).toBeInTheDocument()
   })
 
-  it('shows zero-storage message', () => {
+  it('shows the upload-handling message', () => {
     render(<TrialBalancePage />)
-    expect(screen.getByText(/never saved to any disk or server/)).toBeInTheDocument()
+    expect(screen.getByText(/processed in memory and not kept after analysis/)).toBeInTheDocument()
   })
 
   it('shows error state with try again', () => {

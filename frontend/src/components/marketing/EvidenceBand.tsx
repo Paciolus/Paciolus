@@ -13,7 +13,7 @@ import { staggerContainerTight, fadeUp } from '@/lib/motion'
  *
  * Static credential strip on the homepage. Four cells surface the
  * platform's auditor-relevant differentiators: test depth, standards
- * coverage, a memo mock, and Zero-Storage architecture.
+ * coverage, a memo mock, and upload handling.
  */
 
 interface EvidenceCell {
@@ -41,9 +41,9 @@ const CELLS: EvidenceCell[] = [
   },
   {
     icon: 'padlock',
-    stat: 'Zero',
-    label: 'Lines Stored',
-    sub: 'Client data never written to disk',
+    stat: 'None',
+    label: 'Uploaded Files Kept',
+    sub: 'Files are processed in memory, then released',
     accent: 'sage',
   },
   {

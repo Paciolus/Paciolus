@@ -28,7 +28,7 @@ const flowSteps = [
   },
   {
     label: 'Process',
-    description: 'Raw data in RAM only — never written to disk',
+    description: 'The uploaded file is parsed in memory',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
@@ -45,8 +45,8 @@ const flowSteps = [
     ),
   },
   {
-    label: 'Destroyed',
-    description: 'Raw financial data purged from memory',
+    label: 'Released',
+    description: 'The uploaded file is released from memory; a summary is saved',
     icon: (
       <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -60,29 +60,29 @@ const howItWorksSteps = [
   'Our server reads the file into ephemeral memory (RAM only)',
   'Analytics run: anomaly detection, ratio analysis, test batteries',
   'Results stream back to your browser in real-time',
-  'Raw financial data is immediately destroyed when the response completes — only aggregate metadata (category totals, ratios, row counts) is persisted',
+  'When the response completes the uploaded file is released from memory and not kept — a summary (category totals, ratios, row counts, flagged account names) is saved to your history',
 ]
 
 const comparisonRows = [
   {
     aspect: 'Data Storage',
     traditional: 'Persistent database',
-    paciolus: 'Raw data RAM-only; aggregate metadata persisted',
+    paciolus: 'Uploaded files in memory only; summaries and engagement entries saved',
   },
   {
     aspect: 'Breach Risk',
     traditional: 'Database is attack target',
-    paciolus: 'No financial data in database to breach',
+    paciolus: 'No uploaded files or ledger rows at rest; summaries and engagement entries are stored',
   },
   {
     aspect: 'Data Retention',
     traditional: 'Months or years',
-    paciolus: 'Seconds (raw data); metadata per retention policy',
+    paciolus: 'Uploaded file: the length of the request; summaries per retention policy',
   },
   {
     aspect: 'Deletion Requests',
     traditional: 'Complex, error-prone',
-    paciolus: 'Raw data auto-destroyed; metadata cleaned on schedule',
+    paciolus: 'Uploaded files are never kept; summaries are archived on schedule, and deleted on request',
   },
   {
     aspect: 'Compliance (GDPR/CCPA)',
@@ -114,13 +114,13 @@ const securityAdvantages = [
   'No uploaded files or line-level ledger data at rest to breach',
   'No backup tapes with uploaded client data',
   'No data migration risks for uploaded data during updates',
-  'Simplified incident response — line-level financial data was never stored',
+  'Simplified incident response — uploaded ledger rows were never kept',
 ]
 
 const tradeOffs = [
-  'No cross-session trending (you must re-upload each session)',
-  'No saved analysis history (exports are your permanent record)',
-  'Re-upload required for each diagnostic session',
+  'History keeps summaries only — to re-run a test you upload the file again',
+  'Line-level detail (individual flagged entries) lives in your exports, not in Paciolus',
+  'Trend views use saved summary totals, not your original files',
 ]
 
 export default function ApproachPage() {
@@ -135,10 +135,10 @@ export default function ApproachPage() {
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-oatmeal-100 mb-6">
-            Why Zero-Storage Matters
+            How We Handle Your Data
           </h1>
           <p className="font-sans text-lg md:text-xl text-oatmeal-400 max-w-2xl mx-auto leading-relaxed">
-            Your raw financial data never touches our database. By design, not by policy.
+            Your uploaded files are processed in memory and not kept after analysis. Here is exactly what we do save.
           </p>
         </div>
       </motion.section>
@@ -251,7 +251,7 @@ export default function ApproachPage() {
       >
         <div className="max-w-4xl mx-auto">
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center">
-            Traditional SaaS vs Paciolus Zero-Storage
+            Traditional SaaS vs Paciolus
           </h2>
 
           <div className="overflow-x-auto">
@@ -404,7 +404,7 @@ export default function ApproachPage() {
                   Trade-Offs
                 </h2>
                 <p className="font-sans text-oatmeal-400 leading-relaxed">
-                  We believe in transparency. Zero-Storage has real trade-offs:
+                  We believe in transparency. Not keeping your uploads has real trade-offs:
                 </p>
               </div>
             </div>

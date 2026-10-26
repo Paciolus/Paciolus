@@ -78,7 +78,7 @@ describe('W2ReconciliationPage', () => {
     expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument()
     expect(screen.getByText('Per-Box Reconciliation')).toBeInTheDocument()
     expect(screen.getByText('Form 941 Tie-Out')).toBeInTheDocument()
-    expect(screen.getByText('Zero-Storage')).toBeInTheDocument()
+    expect(screen.getByText('Your Data')).toBeInTheDocument()
     expect(screen.getByText(/candidates for review before filing W-2/i)).toBeInTheDocument()
   })
 

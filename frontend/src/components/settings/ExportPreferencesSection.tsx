@@ -63,7 +63,7 @@ export function ExportPreferencesSection({
             />
             <div>
               <span className="text-content-primary font-sans font-medium">Auto-save diagnostic summaries</span>
-              <p className="text-content-tertiary text-xs">Automatically store aggregate totals for trend analysis (Zero-Storage compliant)</p>
+              <p className="text-content-tertiary text-xs">Automatically save aggregate totals (debits, credits, ratios) for trend analysis</p>
             </div>
           </label>
         </div>
