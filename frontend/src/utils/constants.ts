@@ -47,11 +47,14 @@ export const ANALYSIS_MAX_SECONDS = 5
 /** Row count ceiling for the performance claim */
 export const ANALYSIS_MAX_ROWS = 10_000
 
+// Sprint 842: the 3-second figure is a p95 *alert threshold*, not a measured
+// average, so the copy below no longer quotes it as one.
+
 /** Short stat-badge label (e.g., evidence bands, hero speed indicators) */
-export const ANALYSIS_LABEL_SHORT = `< ${ANALYSIS_TYPICAL_SECONDS}s`
+export const ANALYSIS_LABEL_SHORT = 'Seconds'
 
 /** Standard marketing label (mid-length) */
-export const ANALYSIS_LABEL_STANDARD = 'under three seconds for standard file sizes'
+export const ANALYSIS_LABEL_STANDARD = 'seconds for most standard files'
 
 /** Fully qualified, auditable claim for detailed copy */
-export const ANALYSIS_LABEL_QUALIFIED = `typically under three seconds for files up to ${ANALYSIS_MAX_ROWS.toLocaleString()} rows in a standard cloud environment`
+export const ANALYSIS_LABEL_QUALIFIED = `usually a few seconds for files up to ${ANALYSIS_MAX_ROWS.toLocaleString()} rows`

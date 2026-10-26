@@ -363,7 +363,7 @@
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprint 841 (storage wording) COMPLETE. Next: Sprint 842.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprint 841 (storage wording) and 842 (billing claims) COMPLETE. Next: Sprint 843.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -410,21 +410,28 @@
 ---
 
 ### Sprint 842: Billing, pricing and business claims
-**Status:** PENDING. **Priority:** P1 (trial/auto-renewal disclosure is the legal-risk item). **Source:** report Part 3.
+**Status:** COMPLETE 2026-10-24. **Priority:** P1 (trial/auto-renewal disclosure is the legal-risk item). **Source:** report Part 3.
 
-- [ ] Trial: remove "no credit card required"; disclose card required + charge amount + date on the pricing page and
-      `(auth)/checkout/page.tsx`; replace the non-existent day-8 read-only flow description.
-- [ ] Remove "Most Popular" (or "Recommended for teams").
-- [ ] One refund policy across website Terms and the markdown copy, current tier names (CEO decision pending).
-- [ ] Row limit "up to 500,000 rows and 100 MB"; billing anchor "monthly from your start date"; invoicing "contact
-      us"; downgrade FAQ (exports aren't stored).
-- [ ] One support promise everywhere (pricing tiers, contact page/meta, USER_GUIDE); drop "dedicated account
-      manager", "custom SLA", "8 hr response" unless the CEO wants to keep and staff them.
-- [ ] Test counts and speed claims: derive "N automated tests" from the registry (97 today), drop "140+", "108 tests",
-      "under 3 seconds average", "days now takes seconds"; demo "overview of all 18 tools", fix "of 12".
-- [ ] USER_GUIDE prices/limits/seats/upload counts; "optionally passcode-protected"; "(.xlsx/.xls)"; "Branded" only
-      for Enterprise.
-- [ ] Consistency test pinning pricing copy numbers to `domain/pricing.ts` / `shared/entitlements.py`.
+- [x] Trial: "no credit card required" removed (pricing page, FAQ, homepage hero); checkout shows a "Trial and
+      renewal" box before the card is collected — card required, the amount and the date of the first charge
+      (today + `TRIAL_DAYS`), then the renewal amount per month/year until cancelled. The non-existent day-8
+      read-only flow is replaced by what happens: the card is charged; on failure, emails + retries + 7-day grace,
+      then cancellation to Free.
+- [x] "Most Popular" removed.
+- [x] Refund clause: tier names fixed (Solo, Professional, Enterprise) and "issued manually"; the markdown Terms now
+      match the website wording. **The policy itself is still the open CEO decision** (`ceo-actions.md` item 2).
+- [x] Row limit "100 MB and 500,000 rows"; billing "monthly from your start date"; invoicing "contact us";
+      downgrade FAQ (exports aren't stored by Paciolus).
+- [x] One support promise (CEO default): "Email support (reply within 1–2 business days)" on every tier, contact page
+      and meta, User Guide. Dedicated account manager, custom SLA, priority support, 8 hr / next-business-day gone.
+- [x] Test counts derived: `TOTAL_AUTOMATED_TESTS` in `tool-ledger.ts` (97) feeds EvidenceBand and BottomProof.
+      Speed: the 3 s figure is a p95 alert threshold, so the copy now says "seconds"/"usually a few seconds";
+      "days now takes seconds" gone; demo "overview of all 18 tools"; "of 12" → "of 18".
+- [x] USER_GUIDE seats ($65 up to 20 / $45 up to 100), 100 MB, Professional 500 uploads, ODS "Solo and above";
+      Subprocessor List "optionally passcode-protected" (done in 841); "Branded" only on Enterprise; "(.xlsx/.xls)".
+- [x] `backend/tests/test_pricing_copy_consistency.py` pins trial days, ledger test total vs registry, upload limits
+      vs entitlements, seat configs vs price_config, file limits vs upload_pipeline, User Guide seat prices, and the
+      retired billing phrases. Checkout disclosure has its own frontend tests.
 
 **Commit SHA:** TBD.
 

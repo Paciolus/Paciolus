@@ -11,8 +11,9 @@ import { render, screen, fireEvent, waitFor } from '@/test-utils'
 // ── Mocks ─────────────────────────────────────────────────────────
 
 const mockCreateCheckoutSession = jest.fn()
-const mockUseBilling = {
-  subscription: null,
+const mockUseBilling: { subscription: { id?: number; tier: string; status: string } | null; [k: string]: unknown } = {
+  // No subscription yet: the backend answers {tier, status: 'active'} with no id.
+  subscription: { tier: 'free', status: 'active' },
   usage: null,
   isLoading: false,
   error: null,
@@ -287,5 +288,41 @@ describe('PricingLaunchCheckout', () => {
     mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
     render(<CheckoutPage />)
     expect(screen.getByText(/1 seat included/)).toBeInTheDocument()
+  })
+
+  // Sprint 842: trial + auto-renewal terms before the card is collected
+  it('discloses card required, the charge amount and the charge date', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-24T12:00:00Z'))
+    mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
+    render(<CheckoutPage />)
+    const box = screen.getByTestId('trial-disclosure')
+    expect(box).toHaveTextContent(/A card is required/)
+    expect(box).toHaveTextContent(/October 31, 2026/)
+    expect(box).toHaveTextContent(/\$100/)
+    expect(box).toHaveTextContent(/every month until you cancel/)
+    jest.useRealTimers()
+  })
+
+  it('existing subscribers are told there is no trial (PR #234 review)', () => {
+    mockUseBilling.subscription = { id: 9, tier: 'solo', status: 'active' }
+    mockSearchParams = new URLSearchParams('plan=professional&interval=monthly')
+    render(<CheckoutPage />)
+    const box = screen.getByTestId('trial-disclosure')
+    expect(box).toHaveTextContent(/there is no free trial/)
+    expect(box).not.toHaveTextContent(/won.t be charged today/)
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('shows nothing definite while the subscription is loading', () => {
+    mockUseBilling.subscription = null
+    render(<CheckoutPage />)
+    expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/Checking your billing terms/)
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('states the annual renewal interval', () => {
+    mockSearchParams = new URLSearchParams('plan=solo&interval=annual')
+    render(<CheckoutPage />)
+    expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/every year until you cancel/)
   })
 })

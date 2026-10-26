@@ -7,6 +7,7 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { EngravedStat } from '@/components/marketing/EngravedStat'
 import { StandardsSpecimen } from '@/components/marketing/StandardsSpecimen'
 import { Reveal } from '@/components/ui/Reveal'
+import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
 import { VIEWPORT } from '@/utils/marketingMotion'
 import { fadeUp } from '@/lib/motion'
 
@@ -29,10 +30,10 @@ interface ClosingMetric {
 
 const CLOSING_METRICS: ClosingMetric[] = [
   {
-    target: 140,
-    suffix: '+',
+    target: TOTAL_AUTOMATED_TESTS,
+    suffix: '',
     label: 'Automated Tests',
-    sub: 'Across all 18 diagnostic tools',
+    sub: 'Across the testing tools',
   },
   {
     target: 18,

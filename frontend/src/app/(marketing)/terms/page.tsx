@@ -643,7 +643,7 @@ export default function TermsPage() {
               8.3 Refund Policy
             </h3>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              We offer a 30-day money-back guarantee for first-time paid subscribers (Solo, Team, or Organization). To request a refund, contact{' '}
+              We offer a 30-day money-back guarantee for first-time paid subscribers (Solo, Professional or Enterprise). Refunds are issued manually. To request a refund, contact{' '}
               <Link href="mailto:support@paciolus.com" className="text-sage-400 hover:text-sage-300 underline">
                 support@paciolus.com
               </Link>

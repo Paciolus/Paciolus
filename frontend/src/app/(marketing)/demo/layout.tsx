@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Platform Demo — Explore Paciolus Diagnostic Tools',
-  description: 'Interactive demo of all 18 audit diagnostic tools. See trial balance analysis, journal entry testing, revenue testing, and more — no account required.',
+  description: 'An interactive demo and an overview of all 18 diagnostic tools. See trial balance analysis, journal entry testing, revenue testing and more — no account required.',
   openGraph: {
     title: 'Platform Demo — Explore Paciolus Diagnostic Tools',
-    description: 'Interactive demo of all 18 audit diagnostic tools. No account required.',
+    description: 'An interactive demo and an overview of all 18 diagnostic tools. No account required.',
   },
 }
 

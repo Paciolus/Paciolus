@@ -9,11 +9,11 @@
  * URL params: ?plan=solo|professional|enterprise&interval=monthly|annual&seats=N
  */
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
-import { baseSeats, getTier, maxAdditionalSeats, seatPriceDollars, tierPriceDollars } from '@/domain/pricing'
+import { baseSeats, getTier, maxAdditionalSeats, seatPriceDollars, tierPriceDollars, TRIAL_DAYS, trialChargeDate } from '@/domain/pricing'
 
 // Sprint 818: every price, seat count and seat limit comes from
 // `@/domain/pricing` — the same source the pricing page renders.
@@ -65,7 +65,14 @@ function CheckoutContent() {
   const [promoApplied, setPromoApplied] = useState(false)
   const [dpaAccepted, setDpaAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { createCheckoutSession, error } = useBilling()
+  const { createCheckoutSession, error, subscription, fetchSubscription } = useBilling()
+  useEffect(() => {
+    void fetchSubscription()
+  }, [fetchSubscription])
+  // PR #234 review: mirror backend/billing/checkout_orchestrator.py — only a
+  // new subscription (none yet, or a cancelled one) gets the trial, so only
+  // then may the disclosure promise "no charge today".
+  const trialEligible = subscription === null ? null : !subscription.id || subscription.status === 'canceled'
 
   const requiresDpa = plan === 'professional' || plan === 'enterprise'
 
@@ -160,8 +167,7 @@ function CheckoutContent() {
             </span>
           </div>
           <p className="text-sm text-content-secondary">
-            {interval === 'annual' ? 'Billed annually' : 'Billed monthly'}.
-            {' '}Cancel anytime.
+            {interval === 'annual' ? 'Billed annually' : 'Billed monthly'} from your start date until you cancel.
           </p>
           <p className="text-sm text-content-tertiary mt-1">
             {includedSeats} seat{includedSeats > 1 ? 's' : ''} included
@@ -317,6 +323,36 @@ function CheckoutContent() {
         )}
 
         {/* Checkout Button */}
+        {/* Sprint 842: trial and auto-renewal terms, stated before the card is collected */}
+        <div className="border border-theme rounded-lg p-5 mb-6" data-testid="trial-disclosure">
+          <h2 className="font-serif text-base text-content-primary mb-2">{trialEligible === false ? 'Charge and renewal' : 'Trial and renewal'}</h2>
+          {trialEligible === null && (
+            <p className="text-sm text-content-secondary">Checking your billing terms…</p>
+          )}
+          {trialEligible === true && (
+            <p className="text-sm text-content-secondary leading-relaxed">
+              A card is required. This subscription starts with a {TRIAL_DAYS}-day free trial, so you
+              won&apos;t be charged today. On{' '}
+              <strong className="text-content-primary">{trialChargeDate(new Date()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</strong>{' '}
+              we will charge <strong className="font-mono text-content-primary">{formatCents(subtotal)}</strong>
+              {promoApplied ? ' less your promo discount' : ''}, then{' '}
+              <span className="font-mono">{formatCents(subtotal)}</span> every {interval === 'annual' ? 'year' : 'month'} until you cancel.
+              Cancel before then and you won&apos;t be charged.
+            </p>
+          )}
+          {trialEligible === false && (
+            <p className="text-sm text-content-secondary leading-relaxed">
+              You already have a subscription, so there is no free trial. The new price of{' '}
+              <strong className="font-mono text-content-primary">{formatCents(subtotal)}</strong>
+              {promoApplied ? ' (less your promo discount)' : ''} per {interval === 'annual' ? 'year' : 'month'} may be
+              charged today, then every {interval === 'annual' ? 'year' : 'month'} until you cancel.
+            </p>
+          )}
+          <p className="text-xs text-content-tertiary mt-2">
+            You can cancel at any time in Settings &rarr; Billing.
+          </p>
+        </div>
+
         <button
           onClick={handleCheckout}
           disabled={isLoading || (requiresDpa && !dpaAccepted)}

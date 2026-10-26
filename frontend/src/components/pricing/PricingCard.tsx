@@ -35,8 +35,8 @@ export default function PricingCard({
       className={`relative rounded-2xl p-6 flex flex-col border transition-all duration-200 bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1 ${isHighlighted ? 'md:-translate-y-2 shadow-xl shadow-brass-400/10 ring-1 ring-brass-400/25' : ''}`}
     >
       {/* Sprint 708 — brass "Most Popular" foil badge.
-          Rendered only when tier.badge is set; only Professional
-          currently has the badge, and the brass token is
+          Rendered only when tier.badge is set; no tier
+          currently sets one (Sprint 842 removed "Most Popular"), and the brass token is
           scarcity-scoped per tailwind.config. */}
       {tier.badge && (
         <span
