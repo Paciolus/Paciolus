@@ -2921,3 +2921,26 @@ sprint, fixed in one test and not its neighbour.
   Five months of local green said nothing about it.
 - And the first instinct — "my changes didn't touch models, so this isn't mine" — was correct
   about attribution and useless as an action. The failure was in the PR; the PR needed it fixed.
+
+## A test that exercises a copy of the code proves nothing about the code (2026-10-24)
+
+Sprint 840 (claims review S2). `tests/test_sentry_integration.py` "verified" the Sentry
+`before_send` scrubber — against a function it had hand-copied from `main.py` "for test isolation".
+The real scrubber sat inline inside `if SENTRY_DSN:` and could not be imported, so nothing tested
+it, and the copy was free to stay correct while the original drifted. Neither copy dropped frame
+locals, exception messages or breadcrumbs, which is what the claims review found.
+
+Same sprint, same shape: the internal-metrics auth tests overrode `require_verified_user`, but the
+fix switched the routes to `require_superadmin`, which calls `require_verified_user` *directly*
+rather than through `Depends` — so the override would never have reached it. The rewritten tests
+mint real tokens instead.
+
+**The transferable parts:**
+
+- If the code under test can't be imported, the fix is to make it importable (here:
+  `shared/sentry_scrubber.py`), not to copy it into the test.
+- `dependency_overrides` only replaces what FastAPI resolves. A dependency that calls another
+  dependency as a plain function is invisible to the override; test it with a real credential.
+- **Check a filename is free before `Write`.** I created `tests/test_rate_limit_coverage.py` for
+  the new default-limit tests without looking; one already existed (the mutating-endpoint audit)
+  and was overwritten. `git status` showed `M` rather than `??`, which is how it was caught.

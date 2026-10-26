@@ -164,5 +164,5 @@ def complete_password_reset(db: Session, token: str, new_password: str) -> User:
     ):
         pass  # all mutations above are flushed by db.commit() inside the context
 
-    log_secure_operation("password_reset_success", f"Password reset completed for user {user.id}")
+    log_secure_operation("password_reset_success", "Password reset completed", db=db, user_id=user.id)
     return user

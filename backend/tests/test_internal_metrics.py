@@ -6,7 +6,7 @@ Tests cover:
 - Churn metrics: logo churn, revenue churn, involuntary churn
 - Trial funnel: signups, conversions, median conversion time
 - Revenue history: daily/weekly/monthly granularity
-- Authorization: owner-only access (403 for non-owners, 401 for unauthenticated)
+- Authorization: superadmin-only access (403 for every customer, 401 for unauthenticated)
 - Edge cases: empty state, annual plans, mixed intervals
 """
 
@@ -20,7 +20,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from auth import require_verified_user
+from auth import create_access_token, require_superadmin
 from database import get_db
 from main import app
 from models import ActivityLog, User, UserTier
@@ -159,38 +159,45 @@ def free_user(db_session):
 
 
 @pytest.fixture
-def override_owner(db_session, owner_user):
-    """Override auth for org owner."""
-    app.dependency_overrides[require_verified_user] = lambda: owner_user
+def superadmin_user(db_session):
+    """Platform superadmin — the only role allowed to read internal metrics (Sprint 840)."""
+    user = User(
+        email="metrics_superadmin@example.com",
+        name="Superadmin",
+        hashed_password="$2b$12$fakehashvalue",
+        tier=UserTier.FREE,
+        is_active=True,
+        is_verified=True,
+        is_superadmin=True,
+    )
+    db_session.add(user)
+    db_session.flush()
+    return user
+
+
+@pytest.fixture
+def real_auth(db_session):
+    """Authenticate with a real access token, so `require_superadmin` actually runs.
+
+    Overriding `require_verified_user` would not reach it: `require_superadmin`
+    calls the function directly, not through `Depends`.
+    """
     app.dependency_overrides[get_db] = lambda: db_session
-    yield owner_user
+
+    def headers_for(user: User) -> dict[str, str]:
+        token, _ = create_access_token(user.id, user.email)
+        return {"Authorization": f"Bearer {token}"}
+
+    yield headers_for
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def override_member(db_session, member_user):
-    """Override auth for org member."""
-    app.dependency_overrides[require_verified_user] = lambda: member_user
+def override_superadmin(db_session, superadmin_user):
+    """Override auth with a superadmin for the response-shape tests."""
+    app.dependency_overrides[require_superadmin] = lambda: superadmin_user
     app.dependency_overrides[get_db] = lambda: db_session
-    yield member_user
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def override_solo(db_session, solo_owner):
-    """Override auth for solo owner."""
-    app.dependency_overrides[require_verified_user] = lambda: solo_owner
-    app.dependency_overrides[get_db] = lambda: db_session
-    yield solo_owner
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def override_free(db_session, free_user):
-    """Override auth for free user."""
-    app.dependency_overrides[require_verified_user] = lambda: free_user
-    app.dependency_overrides[get_db] = lambda: db_session
-    yield free_user
+    yield superadmin_user
     app.dependency_overrides.clear()
 
 
@@ -275,37 +282,36 @@ class TestAuthorization:
                 response = await client.get(endpoint)
                 assert response.status_code == 401, f"Expected 401 for {endpoint}"
 
-    @pytest.mark.asyncio
-    async def test_owner_access_allowed(self, override_owner):
-        """Org owner gets 200."""
+    async def _statuses(self, headers: dict[str, str]) -> dict[str, int]:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            for endpoint in self.ENDPOINTS:
-                response = await client.get(endpoint)
-                assert response.status_code == 200, f"Expected 200 for {endpoint}, got {response.status_code}"
+            return {endpoint: (await client.get(endpoint, headers=headers)).status_code for endpoint in self.ENDPOINTS}
 
     @pytest.mark.asyncio
-    async def test_member_access_denied(self, override_member):
-        """Non-owner org member gets 403."""
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            for endpoint in self.ENDPOINTS:
-                response = await client.get(endpoint)
-                assert response.status_code == 403, f"Expected 403 for {endpoint}"
+    async def test_superadmin_allowed(self, real_auth, superadmin_user):
+        statuses = await self._statuses(real_auth(superadmin_user))
+        assert set(statuses.values()) == {200}, statuses
 
     @pytest.mark.asyncio
-    async def test_solo_owner_allowed(self, override_solo):
-        """Solo subscriber with active subscription gets 200."""
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            for endpoint in self.ENDPOINTS:
-                response = await client.get(endpoint)
-                assert response.status_code == 200, f"Expected 200 for {endpoint}"
+    async def test_org_owner_denied(self, real_auth, owner_user):
+        """Sprint 840 (S1): an org owner is a customer, not the founder."""
+        statuses = await self._statuses(real_auth(owner_user))
+        assert set(statuses.values()) == {403}, statuses
 
     @pytest.mark.asyncio
-    async def test_free_user_denied(self, override_free):
-        """Free user with no subscription gets 403."""
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            for endpoint in self.ENDPOINTS:
-                response = await client.get(endpoint)
-                assert response.status_code == 403, f"Expected 403 for {endpoint}"
+    async def test_member_access_denied(self, real_auth, member_user):
+        statuses = await self._statuses(real_auth(member_user))
+        assert set(statuses.values()) == {403}, statuses
+
+    @pytest.mark.asyncio
+    async def test_paying_solo_user_denied(self, real_auth, solo_owner):
+        """Sprint 840 (S1): a $100 Solo subscriber read company-wide MRR/ARR/churn."""
+        statuses = await self._statuses(real_auth(solo_owner))
+        assert set(statuses.values()) == {403}, statuses
+
+    @pytest.mark.asyncio
+    async def test_free_user_denied(self, real_auth, free_user):
+        statuses = await self._statuses(real_auth(free_user))
+        assert set(statuses.values()) == {403}, statuses
 
 
 # =============================================================================
@@ -856,7 +862,7 @@ class TestRevenueEndpoint:
     """Integration tests for GET /internal/metrics/revenue."""
 
     @pytest.mark.asyncio
-    async def test_revenue_response_shape(self, override_owner):
+    async def test_revenue_response_shape(self, override_superadmin):
         """Response matches RevenueMetricsResponse schema."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/revenue")
@@ -877,7 +883,7 @@ class TestChurnEndpoint:
     """Integration tests for GET /internal/metrics/churn."""
 
     @pytest.mark.asyncio
-    async def test_churn_response_shape(self, override_owner):
+    async def test_churn_response_shape(self, override_superadmin):
         """Response matches ChurnMetricsResponse schema."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/churn")
@@ -895,7 +901,7 @@ class TestTrialFunnelEndpoint:
     """Integration tests for GET /internal/metrics/trial-funnel."""
 
     @pytest.mark.asyncio
-    async def test_trial_funnel_response_shape(self, override_owner):
+    async def test_trial_funnel_response_shape(self, override_superadmin):
         """Response matches TrialFunnelResponse schema."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/trial-funnel")
@@ -913,7 +919,7 @@ class TestRevenueHistoryEndpoint:
     """Integration tests for GET /internal/metrics/revenue/history."""
 
     @pytest.mark.asyncio
-    async def test_history_response_shape(self, override_owner):
+    async def test_history_response_shape(self, override_superadmin):
         """Response is a list of RevenueHistoryPoint objects."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/revenue/history?granularity=weekly")
@@ -929,14 +935,14 @@ class TestRevenueHistoryEndpoint:
             assert "active_subscribers" in point
 
     @pytest.mark.asyncio
-    async def test_history_invalid_granularity(self, override_owner):
+    async def test_history_invalid_granularity(self, override_superadmin):
         """Invalid granularity returns 422."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/revenue/history?granularity=hourly")
             assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_history_with_date_range(self, override_owner):
+    async def test_history_with_date_range(self, override_superadmin):
         """Custom date range filters results."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get(
@@ -947,7 +953,7 @@ class TestRevenueHistoryEndpoint:
             assert len(data) <= 12  # ~10 days + possible end cap
 
     @pytest.mark.asyncio
-    async def test_history_bad_date_format(self, override_owner):
+    async def test_history_bad_date_format(self, override_superadmin):
         """Malformed date returns 400."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/internal/metrics/revenue/history?start_date=not-a-date")

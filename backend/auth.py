@@ -57,6 +57,22 @@ def hash_password(password: str) -> str:
     return _bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
+_DUMMY_HASH: Optional[bytes] = None
+
+
+def _burn_password_check(password: str) -> None:
+    """Spend one bcrypt check's worth of time on a password with no account.
+
+    Sprint 840: an unknown email returned before any bcrypt work, so a login
+    for a registered address took ~250 ms longer than one for an unregistered
+    address — an account-enumeration oracle behind a uniform 401.
+    """
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = _bcrypt.hashpw(b"paciolus-dummy-password", _bcrypt.gensalt(rounds=BCRYPT_ROUNDS))
+    _bcrypt.checkpw(password.encode("utf-8"), _DUMMY_HASH)
+
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against its hash.
@@ -107,6 +123,8 @@ class TokenData(BaseModel):
     user_id: Optional[int] = None
     email: Optional[str] = None
     password_changed_at: Optional[datetime] = None  # Sprint 199: pwd_at claim
+    impersonation: bool = False  # Sprint 840: `imp` claim
+    jti: Optional[str] = None
 
 
 def create_access_token(
@@ -217,7 +235,13 @@ def decode_access_token(token: str) -> Optional[TokenData]:
         pwd_at_epoch = payload.get("pwd_at")
         pwd_at = datetime.fromtimestamp(pwd_at_epoch, tz=UTC) if pwd_at_epoch is not None else None
 
-        return TokenData(user_id=int(user_id), email=email, password_changed_at=pwd_at)
+        return TokenData(
+            user_id=int(user_id),
+            email=email,
+            password_changed_at=pwd_at,
+            impersonation=bool(payload.get("imp")),
+            jti=payload.get("jti"),
+        )
 
     except PyJWTError as e:
         log_secure_operation("token_decode_failed", f"{type(e).__name__}: token validation failed")
@@ -236,8 +260,13 @@ def decode_access_token(token: str) -> Optional[TokenData]:
 # `require_current_user`'s checks if a route ever needs it.
 
 
+_MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
 def require_current_user(
-    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
+    request: Request,
+    token: Annotated[Optional[str], Depends(resolve_access_token)],
+    db: Session = Depends(get_db),
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication.
@@ -261,6 +290,24 @@ def require_current_user(
     token_data = decode_access_token(token)
     if token_data is None or token_data.user_id is None:
         raise credentials_exception
+
+    # Sprint 840 (S3): impersonation tokens are read-only, and a revoked one is
+    # dead. Enforced here — on the token this dependency actually resolved —
+    # rather than only in ImpersonationMiddleware, so no header spelling or
+    # cookie path can reach a write as the impersonated user.
+    if token_data.impersonation is True:
+        from shared.impersonation_revocation import is_revoked
+
+        if not token_data.jti or is_revoked(token_data.jti):
+            raise credentials_exception
+        if request.method.upper() in _MUTATING_METHODS:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "IMPERSONATION_READ_ONLY",
+                    "message": "Impersonation sessions are read-only.",
+                },
+            )
 
     user = db.query(User).filter(User.id == token_data.user_id).first()
 
@@ -296,7 +343,9 @@ def require_current_user(
 
 
 def require_verified_user(
-    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
+    request: Request,
+    token: Annotated[Optional[str], Depends(resolve_access_token)],
+    db: Session = Depends(get_db),
 ) -> User:
     """
     FastAPI dependency that REQUIRES authentication AND email verification.
@@ -310,7 +359,7 @@ def require_verified_user(
     Use this for protected routes that require verified accounts.
     """
     # First, require basic authentication
-    user = require_current_user(token, db)
+    user = require_current_user(request, token, db)
 
     # Then check email verification
     if not user.is_verified:
@@ -326,14 +375,16 @@ def require_verified_user(
 
 
 def require_superadmin(
-    token: Annotated[Optional[str], Depends(resolve_access_token)], db: Session = Depends(get_db)
+    request: Request,
+    token: Annotated[Optional[str], Depends(resolve_access_token)],
+    db: Session = Depends(get_db),
 ) -> User:
     """FastAPI dependency that REQUIRES superadmin platform-level access.
 
     Sprint 590: Separate from org-level RBAC — this is platform-level.
     Raises HTTPException 403 if user is not a superadmin.
     """
-    user = require_verified_user(token, db)
+    user = require_verified_user(request, token, db)
 
     if not getattr(user, "is_superadmin", False):
         raise HTTPException(
@@ -515,11 +566,12 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     user = get_user_by_email(db, email)
 
     if user is None:
-        log_secure_operation("auth_failed", f"Unknown email: {mask_email(email)}")
+        _burn_password_check(password)
+        log_secure_operation("auth_failed", f"Unknown email: {mask_email(email)}", db=db)
         return None
 
     if not verify_password(password, user.hashed_password):
-        log_secure_operation("auth_failed", f"Invalid password for: {mask_email(email)}")
+        log_secure_operation("auth_failed", "Invalid password", db=db, user_id=user.id)
         return None
 
     # Update last login timestamp
@@ -620,7 +672,7 @@ def change_user_password(db: Session, user: User, current_password: str, new_pas
 
     db.commit()
 
-    log_secure_operation("password_changed", f"Password changed for user {user.id}, all tokens revoked")
+    log_secure_operation("password_changed", "All tokens revoked", db=db, user_id=user.id)
     return True
 
 
@@ -704,7 +756,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
         count = _revoke_all_user_tokens(db, db_token.user_id)
         log_secure_operation(
             "refresh_token_reuse_detected",
-            f"Revoked token reused for user_id={db_token.user_id}. All {count} active tokens revoked.",
+            f"Revoked token reused. All {count} active tokens revoked.",
+            db=db,
+            user_id=db_token.user_id,
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -745,7 +799,9 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
         count = _revoke_all_user_tokens(db, db_token.user_id)
         log_secure_operation(
             "refresh_token_race_detected",
-            f"Concurrent rotation detected for user_id={db_token.user_id}. All {count} active tokens revoked.",
+            f"Concurrent rotation detected. All {count} active tokens revoked.",
+            db=db,
+            user_id=db_token.user_id,
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

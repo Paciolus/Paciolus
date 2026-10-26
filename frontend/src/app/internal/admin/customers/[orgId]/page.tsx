@@ -364,7 +364,7 @@ export default function CustomerDetailPage() {
                     <button disabled={actionLoading} onClick={async () => {
                       setActionLoading(true)
                       try {
-                        const result = await impersonate(orgId)
+                        const result = await impersonate(orgId, d.user_id)
                         success('Impersonation token generated')
                         setActiveModal(null)
                         // Store impersonation state

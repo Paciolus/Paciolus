@@ -88,8 +88,10 @@ export function useInternalAdmin() {
     throw new Error(error ?? 'Failed to cancel subscription')
   }, [token])
 
-  const impersonate = useCallback(async (orgId: number) => {
-    const { data, ok, error } = await apiPost<ImpersonationResponse>(`/internal/admin/customers/${orgId}/impersonate`, token, {})
+  // Sprint 840: the route ID is an org ID, or a user ID for a solo customer,
+  // so the target user is named explicitly and the server refuses a mismatch.
+  const impersonate = useCallback(async (orgId: number, targetUserId: number) => {
+    const { data, ok, error } = await apiPost<ImpersonationResponse>(`/internal/admin/customers/${orgId}/impersonate`, token, { target_user_id: targetUserId })
     if (ok && data) return data
     throw new Error(error ?? 'Failed to start impersonation')
   }, [token])

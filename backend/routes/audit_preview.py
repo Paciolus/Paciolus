@@ -75,7 +75,7 @@ async def preview_pdf_endpoint(
             # Cache file bytes so the audit endpoint can reuse them
             from shared.preflight_cache import preflight_cache
 
-            token = preflight_cache.put(file_bytes, filename)
+            token = preflight_cache.put(file_bytes, filename, owner_id=current_user.id)
 
             return {  # type: ignore[return-value]
                 "filename": filename,

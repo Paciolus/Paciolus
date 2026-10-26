@@ -68,9 +68,8 @@ async def audit_trial_balance(
     # Check preflight cache — reuse file bytes from a prior preview/inspect call
     from shared.preflight_cache import preflight_cache
 
-    cached_entry = preflight_cache.get(preflight_token) if preflight_token else None
-    if cached_entry:
-        preflight_cache.remove(preflight_token)  # type: ignore[arg-type]  # one-time consumption
+    # Sprint 840: one-time, owner-bound consumption.
+    cached_entry = preflight_cache.take(preflight_token, current_user.id) if preflight_token else None
 
     # AUDIT-06 FIX 4: Dedup check — prevent rapid double-submissions
     from sqlalchemy import text

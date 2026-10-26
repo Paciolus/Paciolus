@@ -423,7 +423,7 @@ def parse_ofx(file_bytes: bytes, filename: str) -> pd.DataFrame:
     try:
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
-        logger.warning("OFX XML parse failed for '%s': %s", filename, e)
+        logger.warning("OFX XML parse failed [%s]", type(e).__name__)  # Sprint 840 (S6): no filename/text
         raise HTTPException(
             status_code=400,
             detail=f"The OFX/QBO file '{filename}' could not be parsed. Please verify it is a valid OFX file.",

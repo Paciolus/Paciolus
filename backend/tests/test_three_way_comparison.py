@@ -311,10 +311,10 @@ class TestCsvExportTwoWay:
         next(reader)  # Skip header
         data_rows = []
         for row in reader:
-            if row and row[0] and not row[0].startswith("==="):
-                data_rows.append(row)
-            elif row and row[0].startswith("==="):
+            if row and row[0] == "LEAD SHEET SUMMARY":
                 break
+            if row and row[0]:
+                data_rows.append(row)
         assert len(data_rows) == summary.total_accounts
 
     def test_csv_has_lead_sheet_summary(self, prior, current):

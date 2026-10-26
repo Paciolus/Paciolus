@@ -3,7 +3,8 @@ Sprint 275: Sentry APM Integration Tests
 
 Validates:
 - Sentry is not initialized when DSN is empty
-- before_send strips request bodies (Zero-Storage compliance)
+- before_send strips request bodies, frame locals, exception text and breadcrumbs
+  (Sprint 840 — claims review S2)
 - Config loads SENTRY_DSN and SENTRY_TRACES_SAMPLE_RATE correctly
 """
 
@@ -25,23 +26,13 @@ class TestSentryNotInitWithoutDSN:
         assert client.dsn is None or str(client.dsn) == ""
 
 
-_SAFE_EXTRA_KEYS = frozenset({"sentry_logger", "sys.argv", "celery-job"})
-_SAFE_CONTEXT_KEYS = frozenset({"runtime", "os", "device", "browser", "trace", "threadpool"})
-
-
-def _before_send(event: dict, hint: dict) -> dict:
-    """Mirror of main.py _before_send for test isolation."""
-    req = event.get("request")
-    if req:
-        req.pop("data", None)
-        req.pop("query_string", None)
-    extra = event.get("extra")
-    if extra:
-        event["extra"] = {k: v for k, v in extra.items() if k in _SAFE_EXTRA_KEYS}
-    contexts = event.get("contexts")
-    if contexts:
-        event["contexts"] = {k: v for k, v in contexts.items() if k in _SAFE_CONTEXT_KEYS}
-    return event
+# Sprint 840: test the real scrubber, not a hand-copied mirror of it.
+from shared.sentry_scrubber import (  # noqa: E402
+    REDACTED,
+    SENTRY_INIT_OPTIONS,
+    before_send_transaction,
+)
+from shared.sentry_scrubber import before_send as _before_send  # noqa: E402
 
 
 class TestBeforeSendStripsBody:
@@ -95,3 +86,95 @@ class TestBeforeSendStripsBody:
         }
         result = _before_send(event, {})
         assert set(result["contexts"].keys()) == {"runtime", "os"}
+
+
+class TestSprint840Scrubbing:
+    """Sprint 840 (S2): nothing from a customer's file reaches Sentry."""
+
+    def test_sdk_options_turn_off_locals_and_breadcrumbs(self):
+        assert SENTRY_INIT_OPTIONS["include_local_variables"] is False
+        assert SENTRY_INIT_OPTIONS["send_default_pii"] is False
+        assert SENTRY_INIT_OPTIONS["max_breadcrumbs"] == 0
+        assert SENTRY_INIT_OPTIONS["max_value_length"] <= 1024
+
+    def test_sdk_accepts_every_option(self):
+        import sentry_sdk
+
+        # An unknown keyword raises TypeError — so a renamed SDK option fails here.
+        sentry_sdk.Client(dsn=None, **SENTRY_INIT_OPTIONS)
+
+    def test_main_passes_the_options_to_init(self):
+        from pathlib import Path
+
+        source = (Path(__file__).parent.parent / "main.py").read_text(encoding="utf-8")
+        assert "**SENTRY_INIT_OPTIONS" in source
+        assert "before_send=before_send" in source
+
+    def test_drops_frame_locals_and_source(self):
+        event = {
+            "exception": {
+                "values": [
+                    {
+                        "type": "ValueError",
+                        "value": "could not convert 'Acme Holdings 4,210.55' to float",
+                        "stacktrace": {
+                            "frames": [
+                                {
+                                    "function": "upload",
+                                    "lineno": 12,
+                                    "vars": {"file_bytes": "b'Account,Debit'"},
+                                    "context_line": "df = parse(file_bytes)",
+                                }
+                            ]
+                        },
+                    }
+                ]
+            }
+        }
+        result = _before_send(event, {})
+        value = result["exception"]["values"][0]
+        assert value["type"] == "ValueError"
+        assert value["value"] == REDACTED
+        frame = value["stacktrace"]["frames"][0]
+        assert "vars" not in frame and "context_line" not in frame
+        assert frame["function"] == "upload" and frame["lineno"] == 12
+
+    def test_drops_thread_frame_locals(self):
+        event = {"threads": {"values": [{"stacktrace": {"frames": [{"vars": {"df": "..."}}]}}]}}
+        result = _before_send(event, {})
+        assert "vars" not in result["threads"]["values"][0]["stacktrace"]["frames"][0]
+
+    def test_drops_breadcrumbs(self):
+        event = {"breadcrumbs": {"values": [{"message": "Parsing client_tb_acme.xlsx"}]}}
+        assert "breadcrumbs" not in _before_send(event, {})
+
+    def test_keeps_log_template_drops_arguments(self):
+        event = {
+            "logentry": {
+                "message": "Upload failed for %s",
+                "params": ["acme_tb.xlsx"],
+                "formatted": "Upload failed for acme_tb.xlsx",
+            },
+            "message": "Upload failed for acme_tb.xlsx",
+        }
+        result = _before_send(event, {})
+        assert result["logentry"] == {"message": "Upload failed for %s"}
+        assert result["message"] == "Upload failed for %s"
+
+    def test_drops_cookies_and_auth_headers(self):
+        event = {
+            "request": {
+                "cookies": {"paciolus_access": "jwt"},
+                "headers": {"Authorization": "Bearer x", "User-Agent": "ua", "X-CSRF-Token": "t"},
+            }
+        }
+        result = _before_send(event, {})
+        assert "cookies" not in result["request"]
+        assert result["request"]["headers"] == {"User-Agent": "ua"}
+
+    def test_transaction_strips_query_and_body(self):
+        event = {"transaction": "/audit/x?client=acme", "request": {"data": "rows"}, "breadcrumbs": {}}
+        result = before_send_transaction(event, {})
+        assert result["transaction"] == "/audit/x"
+        assert "data" not in result["request"]
+        assert "breadcrumbs" not in result

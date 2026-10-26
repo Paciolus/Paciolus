@@ -22,6 +22,7 @@ TTL_SECONDS = 600  # 10 minutes
 class PreflightEntry:
     file_bytes: bytes
     filename: str
+    owner_id: int | None = None
     created_at: float = field(default_factory=time.monotonic)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -33,12 +34,24 @@ class PreflightCache:
         self._max_entries = max_entries
         self._ttl = ttl_seconds
 
-    def put(self, file_bytes: bytes, filename: str, metadata: dict[str, Any] | None = None) -> str:
-        """Cache file data and return a preflight token (UUID hex)."""
+    def put(
+        self,
+        file_bytes: bytes,
+        filename: str,
+        metadata: dict[str, Any] | None = None,
+        *,
+        owner_id: int | None = None,
+    ) -> str:
+        """Cache file data and return a preflight token (UUID hex).
+
+        Sprint 840: pass ``owner_id`` so only the uploading user can consume
+        the token (see :meth:`take`).
+        """
         token = uuid.uuid4().hex
         entry = PreflightEntry(
             file_bytes=file_bytes,
             filename=filename,
+            owner_id=owner_id,
             metadata=metadata or {},
         )
 
@@ -61,6 +74,26 @@ class PreflightCache:
             if time.monotonic() - entry.created_at > self._ttl:
                 del self._store[token]
                 return None
+            return entry
+
+    def take(self, token: str, owner_id: int) -> PreflightEntry | None:
+        """Atomically remove and return the entry, if ``owner_id`` uploaded it.
+
+        Sprint 840: the audit route used ``get`` then ``remove`` — two lock
+        acquisitions, so two concurrent requests could both consume one token
+        — and never checked who the bytes belonged to. A token presented by
+        anyone other than its owner returns None and leaves the entry alone.
+        """
+        with self._lock:
+            entry = self._store.get(token)
+            if entry is None:
+                return None
+            if time.monotonic() - entry.created_at > self._ttl:
+                del self._store[token]
+                return None
+            if entry.owner_id != owner_id:
+                return None
+            del self._store[token]
             return entry
 
     def remove(self, token: str) -> None:

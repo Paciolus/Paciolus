@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from auth import (
+    _burn_password_check,
     authenticate_user,
     create_access_token,
     create_refresh_token,
@@ -40,7 +41,6 @@ from security_middleware import (
     check_ip_blocked,
     check_lockout_status,
     generate_csrf_token,
-    hash_ip_address,
     record_failed_login,
     record_ip_failure,
     reset_failed_attempts,
@@ -92,7 +92,7 @@ def authenticate_login(
     semantics on the refresh cookie).
     """
     if check_ip_blocked(client_ip):
-        log_secure_operation("ip_blocked", f"IP {hash_ip_address(client_ip)} blocked: threshold exceeded")
+        log_secure_operation("ip_blocked", "Threshold exceeded", db=db, ip_address=client_ip)
         raise_invalid_credentials()
 
     existing_user = get_user_by_email(db, email)
@@ -100,6 +100,9 @@ def authenticate_login(
     if existing_user is not None:
         is_locked, _locked_until, _remaining = check_lockout_status(db, existing_user.id)
         if is_locked:
+            # Sprint 840: same bcrypt cost as a real check, so a locked
+            # account is not distinguishable by response time.
+            _burn_password_check(password)
             record_ip_failure(client_ip)
             raise_invalid_credentials()
 

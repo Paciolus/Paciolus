@@ -7,7 +7,6 @@ functions for trial_balance, anomalies, preflight_issues, population_profile,
 expense_category, and accrual_completeness — all the "diagnostic" CSV flavors.
 """
 
-import csv
 from io import StringIO
 
 from shared.export_schemas import (
@@ -16,7 +15,7 @@ from shared.export_schemas import (
     PopulationProfileCSVInput,
     PreFlightCSVInput,
 )
-from shared.filenames import sanitize_csv_value
+from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.schemas import AuditResultInput
 
 
@@ -32,7 +31,7 @@ def serialize_trial_balance_csv(audit_result: AuditResultInput) -> bytes:
     confidence from classification_summary when available, plus a TOTALS footer.
     """
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     writer.writerow(["Reference", "Account", "Debit", "Credit", "Net Balance", "Category", "Classification Confidence"])
 
@@ -96,7 +95,7 @@ def serialize_anomalies_csv(audit_result: AuditResultInput) -> bytes:
     Includes SUMMARY and optional RISK BREAKDOWN footer sections.
     """
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     writer.writerow(
         [
@@ -159,7 +158,7 @@ def serialize_anomalies_csv(audit_result: AuditResultInput) -> bytes:
 def serialize_preflight_issues_csv(pf_input: PreFlightCSVInput) -> bytes:
     """Serialize pre-flight quality issues into CSV bytes."""
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     writer.writerow(["Category", "Severity", "Message", "Affected Count", "Remediation"])
 
@@ -181,7 +180,7 @@ def serialize_preflight_issues_csv(pf_input: PreFlightCSVInput) -> bytes:
 def serialize_population_profile_csv(pp_input: PopulationProfileCSVInput) -> bytes:
     """Serialize population profile statistics, magnitude distribution, and top accounts into CSV bytes."""
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     # Summary section
     writer.writerow(["TB POPULATION PROFILE"])
@@ -240,7 +239,7 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
     Adapts layout based on whether prior-period comparison data is available.
     """
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     # Summary section
     writer.writerow(["EXPENSE CATEGORY ANALYTICAL PROCEDURES"])
@@ -301,7 +300,7 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
 def serialize_accrual_completeness_csv(ac_input: AccrualCompletenessCSVInput) -> bytes:
     """Serialize accrual completeness estimator data into CSV bytes."""
     output = StringIO()
-    writer = csv.writer(output)
+    writer = safe_csv_writer(output)
 
     # Summary section
     writer.writerow(["ACCRUAL COMPLETENESS ESTIMATOR"])

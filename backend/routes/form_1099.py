@@ -8,7 +8,6 @@ PDF is deferred to the downstream section framework follow-up.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from typing import Literal, Optional
@@ -32,6 +31,7 @@ from form_1099_engine import (
 )
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access
@@ -185,7 +185,7 @@ def export_1099_csv(
         raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
     writer.writerow(
         [
             "Tax Year",

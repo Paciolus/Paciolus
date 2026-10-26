@@ -2,6 +2,7 @@
 
 import gc
 import io
+import logging
 import re
 from collections.abc import Callable, Generator
 from functools import wraps
@@ -318,23 +319,170 @@ def dataframe_to_bytes(df: pd.DataFrame, format: str = "csv") -> bytes:
     return result
 
 
-# Audit trail for security compliance (in-memory only)
-_security_log: list[dict] = []
+# =============================================================================
+# Security event logging (Sprint 840 — claims review S5)
+# =============================================================================
+#
+# This used to append to a 1,000-entry in-memory list per worker that nothing
+# ever read, so failed logins, lockouts, CSRF blocks, upload-bomb detections
+# and refresh-token reuse alerts were discarded. Now:
+#
+# * SECURITY_EVENTS go to the ``paciolus.security`` logger at WARNING — stdout,
+#   so Render's log stream and Loki (when enabled) keep them. Details pass
+#   through ``_redact_details`` first: quoted text (filenames, archive entry
+#   names) is removed and emails are masked.
+# * PERSISTED_EVENTS are also written to ``security_events`` when the caller
+#   passes its DB session, so they survive restarts and log rotation.
+# * Every other operation name (routine "pdf_generate_start" style tracing) is
+#   logged at DEBUG with **no details**, because many of those detail strings
+#   name the uploaded file.
+
+_security_logger = logging.getLogger("paciolus.security")
+
+SECURITY_EVENTS: frozenset[str] = frozenset(
+    {
+        # Authentication and sessions
+        "auth_failed",
+        "login_failed",
+        "account_locked",
+        "lockout_expired",
+        "lockout_reset",
+        "ip_blocked",
+        "auth_register_blocked",
+        "refresh_token_reuse_detected",
+        "refresh_token_race_detected",
+        "all_sessions_revoked",
+        "all_tokens_revoked",
+        "session_revoked",
+        "password_changed",
+        "password_change_failed",
+        "password_reset_request",
+        "password_reset_success",
+        "password_reset_invalid",
+        "password_reset_expired",
+        "password_reset_reused",
+        "email_changed",
+        "impersonation_token_created",
+        # Request integrity
+        "csrf_blocked",
+        "csrf_validation_failed",
+        "rate_limit_fail_closed",
+        "rate_limit_degraded",
+        # Hostile or malformed uploads
+        "archive_bomb_entries",
+        "archive_bomb_ratio",
+        "archive_bomb_size",
+        "xml_bomb_detected",
+        "nested_archive_detected",
+        "magic_byte_mismatch",
+        "content_sniff_rejected",
+        "content_type_rejected",
+        "file_type_rejected",
+        "request_body_too_large",
+        "streaming_body_too_large",
+        "malformed_content_length",
+        "negative_content_length",
+        # Infrastructure posture
+        "db_tls_enforcement_failure",
+        "db_tls_override",
+        "config_contradiction",
+    }
+)
+
+PERSISTED_EVENTS: frozenset[str] = frozenset(
+    {
+        "auth_failed",
+        "login_failed",
+        "account_locked",
+        "ip_blocked",
+        "refresh_token_reuse_detected",
+        "refresh_token_race_detected",
+        "all_sessions_revoked",
+        "password_changed",
+        "password_reset_success",
+        "email_changed",
+        "impersonation_token_created",
+    }
+)
+
+# PR #232 review: quote-stripping alone was not enough — some call sites put
+# the filename unquoted ("... for file: {file.filename}"). Details are now
+# written only for events whose call sites build them from IDs, counts and
+# masked emails; every other security event is logged by name alone.
+DETAIL_SAFE_EVENTS: frozenset[str] = frozenset(
+    {
+        "auth_failed",
+        "login_failed",
+        "account_locked",
+        "ip_blocked",
+        "refresh_token_reuse_detected",
+        "refresh_token_race_detected",
+        "all_sessions_revoked",
+        "all_tokens_revoked",
+        "password_changed",
+        "password_reset_success",
+        "email_changed",
+        "impersonation_token_created",
+        "rate_limit_fail_closed",
+        "rate_limit_degraded",
+    }
+)
+
+_QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
+_EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_MAX_DETAIL_CHARS = 500
 
 
-def log_secure_operation(operation: str, details: str = "") -> None:
-    """Log a security-relevant operation (in-memory only)."""
-    from datetime import UTC, datetime
+def _redact_details(details: str) -> str:
+    from shared.log_sanitizer import mask_email
 
-    _security_log.append({"timestamp": datetime.now(UTC).isoformat(), "operation": operation, "details": details})
-    # Keep only last 1000 entries in memory
-    if len(_security_log) > 1000:
-        _security_log.pop(0)
+    redacted = _QUOTED.sub("'[redacted]'", details)
+    redacted = _EMAIL.sub(lambda m: mask_email(m.group(0)), redacted)
+    return redacted[:_MAX_DETAIL_CHARS]
 
 
-def get_security_log() -> list[dict]:
-    """Retrieve the in-memory security log."""
-    return _security_log.copy()
+def log_secure_operation(
+    operation: str,
+    details: str = "",
+    *,
+    db: Any = None,
+    user_id: int | None = None,
+    ip_address: str | None = None,
+) -> None:
+    """Record a security-relevant operation.
+
+    ``db``/``user_id``/``ip_address`` are used only for PERSISTED_EVENTS. The
+    raw IP is never stored or logged — only its hash. A failure to persist is
+    logged and swallowed: losing one row must never turn a failed login into a
+    500.
+    """
+    if operation not in SECURITY_EVENTS:
+        _security_logger.debug("security_op %s", operation)
+        return
+
+    safe_details = _redact_details(details) if details and operation in DETAIL_SAFE_EVENTS else ""
+    ip_hash = None
+    if ip_address:
+        from security_middleware import hash_ip_address
+
+        ip_hash = hash_ip_address(ip_address)
+    _security_logger.warning(
+        "security_event %s user_id=%s ip_hash=%s %s", operation, user_id or "-", ip_hash or "-", safe_details
+    )
+
+    if db is None or operation not in PERSISTED_EVENTS:
+        return
+    try:
+        from security_event_model import SecurityEvent
+
+        db.add(SecurityEvent(event_type=operation, user_id=user_id, ip_hash=ip_hash, details=safe_details or None))
+        db.commit()
+    except Exception as exc:  # noqa: BLE001 — never fail the request over the log row
+        _security_logger.error("security_event persist failed [%s] for %s", type(exc).__name__, operation)
+        try:
+            db.rollback()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def process_tb_in_memory(file_bytes: bytes, filename: str = "") -> pd.DataFrame:

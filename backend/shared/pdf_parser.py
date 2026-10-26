@@ -334,7 +334,7 @@ def extract_pdf_tables(
     try:
         pdf_handle = pdfplumber.open(io.BytesIO(file_bytes))
     except (PdfminerException, Exception) as e:
-        logger.warning("PDF open failed for '%s': %s", filename, e)
+        logger.warning("PDF open failed [%s]", type(e).__name__)  # Sprint 840 (S6): no filename/text
         raise HTTPException(
             status_code=400,
             detail=f"The PDF file '{filename}' is corrupted or not a valid PDF document. "

@@ -276,7 +276,7 @@ async def sampling_design(
         # Sprint 814: a malformed amount in the uploaded sample raises
         # decimal.InvalidOperation, which fell through to an unhandled 500.
         # Not passthrough — the decimal module's message is not user copy.
-        logger.warning("Sampling input rejected [%s]: %s", type(e).__name__, e, exc_info=True)
+        logger.warning("Sampling input rejected [%s]", type(e).__name__)  # Sprint 840 (S6): type only
         raise HTTPException(
             status_code=422,
             detail=sanitize_error(e, "analysis", "sampling_design_validation"),
@@ -369,7 +369,7 @@ async def sampling_evaluate(
         # Sprint 814: a malformed amount in the uploaded sample raises
         # decimal.InvalidOperation, which fell through to an unhandled 500.
         # Not passthrough — the decimal module's message is not user copy.
-        logger.warning("Sampling input rejected [%s]: %s", type(e).__name__, e, exc_info=True)
+        logger.warning("Sampling input rejected [%s]", type(e).__name__)  # Sprint 840 (S6): type only
         raise HTTPException(
             status_code=422,
             detail=sanitize_error(e, "analysis", "sampling_evaluate_validation"),

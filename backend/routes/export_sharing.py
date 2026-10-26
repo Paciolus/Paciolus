@@ -30,6 +30,7 @@ from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
 from models import User
+from security_middleware import get_client_ip
 from shared import export_share_storage
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
@@ -361,7 +362,8 @@ def create_share(
         try:
             object_key = export_share_storage.upload(token_hash, export_bytes, content_type)
         except Exception as exc:
-            logger.error("R2 upload failed: %s", type(exc).__name__, exc_info=exc)
+            # Sprint 840 (S2/S6): type only — no traceback, whose frames hold export_bytes.
+            logger.error("R2 upload failed: %s", type(exc).__name__)
             raise HTTPException(
                 status_code=503,
                 detail="Export storage is temporarily unavailable. Please try again.",
@@ -518,9 +520,10 @@ def download_share_with_passcode(
 
     if share.passcode_hash:
         # Sprint 698: thread the client IP so per-IP throttle can fire.
-        client_ip = None
-        if request is not None and getattr(request, "client", None) is not None:
-            client_ip = request.client.host
+        # Sprint 840: the real client, not the proxy — behind Render every
+        # request shares the proxy's address, so the per-IP throttle was one
+        # global bucket that any one guesser could fill for everyone.
+        client_ip = get_client_ip(request) if request is not None else None
         _verify_passcode_or_raise(share, body.passcode, db, client_ip=client_ip)
 
     return _finalize_download(share, request, db)

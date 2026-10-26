@@ -25,7 +25,9 @@ from schemas.admin_customer_schemas import (
     CustomerDetailResponse,
     CustomerListResponse,
     ForceCancelRequest,
+    ImpersonationRequest,
     ImpersonationResponse,
+    ImpersonationStopRequest,
     PlanOverrideRequest,
     RefundRequest,
     TrialExtensionRequest,
@@ -311,6 +313,7 @@ def resolve_dunning(
 def impersonate_customer(
     request: Request,
     org_id: int,
+    body: ImpersonationRequest,
     admin: Annotated[User, Depends(require_superadmin)],
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
@@ -328,6 +331,17 @@ def impersonate_customer(
 
     if not target_user:
         raise HTTPException(status_code=404, detail="Customer not found.")
+
+    # Sprint 840 (S3): an org ID that does not exist used to fall back silently
+    # to the user with that ID — a different customer. Refuse unless the
+    # resolved user is the one the admin said they meant.
+    if target_user.id != body.target_user_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Customer ID does not resolve to the requested user. Reload the customer and try again.",
+        )
+    if getattr(target_user, "is_superadmin", False):
+        raise HTTPException(status_code=403, detail="Superadmin accounts cannot be impersonated.")
 
     token, expires = create_impersonation_token(
         target_user_id=target_user.id,
@@ -360,16 +374,17 @@ def impersonate_customer(
 @limiter.limit(RATE_LIMIT_WRITE)
 def stop_impersonation(
     request: Request,
+    body: ImpersonationStopRequest,
     admin: Annotated[User, Depends(require_superadmin)],
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Revoke an active impersonation token (Sprint 661).
+    """Revoke an active impersonation token (Sprint 661; reachable since Sprint 840).
 
-    The admin POSTs the impersonation token they received from
-    ``/customers/{org_id}/impersonate``. The token's ``jti`` is added to the
-    revocation set so ImpersonationMiddleware stops treating it as read-only.
-    The token is decoded with ``verify_exp=False`` so already-expired sessions
-    can still be explicitly closed out.
+    The admin, authenticated with their own session, POSTs the impersonation
+    token they received from ``/customers/{org_id}/impersonate`` in the body.
+    The token's ``jti`` is added to the revocation set, after which the auth
+    dependency rejects the token on every request. Decoded with
+    ``verify_exp=False`` so an already-expired session can still be closed out.
     """
     import jwt as _jwt
 
@@ -378,13 +393,9 @@ def stop_impersonation(
     from config import JWT_ALGORITHM, JWT_SECRET_KEY
     from shared.impersonation_revocation import revoke
 
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=400, detail="Missing bearer token.")
-
     try:
         payload = _jwt.decode(
-            auth_header[7:],
+            body.token,
             JWT_SECRET_KEY or "",
             algorithms=[JWT_ALGORITHM],
             options={"verify_exp": False},

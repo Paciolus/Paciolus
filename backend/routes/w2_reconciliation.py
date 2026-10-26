@@ -8,7 +8,6 @@ Form 941 mismatches. CSV export ships now; PDF deferred.
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from decimal import Decimal
@@ -23,7 +22,7 @@ from auth import User, require_verified_user
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
-from shared.filenames import sanitize_csv_value
+from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access
@@ -308,7 +307,7 @@ def export_reconciliation_csv(
         raise HTTPException(status_code=400, detail="An amount is too large to process.")
 
     buffer = io.StringIO()
-    writer = csv.writer(buffer)
+    writer = safe_csv_writer(buffer)
 
     writer.writerow(["Employee Discrepancies"])
     writer.writerow(

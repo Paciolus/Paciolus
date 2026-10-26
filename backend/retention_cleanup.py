@@ -116,6 +116,22 @@ def cleanup_legacy_passcode_shares(db: Session) -> int:
         return 0
 
 
+def purge_old_security_events(db: Session, *, cutoff: datetime | None = None) -> int:
+    """Hard-delete security events older than the retention window (Sprint 840).
+
+    ``security_events`` is an operational security log, not an audit-trail
+    table, so rows past retention are deleted rather than archived.
+    """
+    from security_event_model import SECURITY_EVENT_RETENTION_DAYS, SecurityEvent
+
+    if cutoff is None:
+        cutoff = datetime.now(UTC) - timedelta(days=SECURITY_EVENT_RETENTION_DAYS)
+    deleted = db.query(SecurityEvent).filter(SecurityEvent.created_at < cutoff).delete(synchronize_session=False)
+    if deleted:
+        db.commit()
+    return int(deleted)
+
+
 def run_retention_cleanup(db: Session) -> dict[str, int]:
     """Run all retention cleanup tasks.  Called from app lifespan.
 
@@ -127,15 +143,17 @@ def run_retention_cleanup(db: Session) -> dict[str, int]:
     results["activity_logs"] = cleanup_expired_activity_logs(db)
     results["diagnostic_summaries"] = cleanup_expired_diagnostic_summaries(db)
     results["legacy_passcode_shares"] = cleanup_legacy_passcode_shares(db)
+    results["security_events"] = purge_old_security_events(db)
 
     total = sum(results.values())
     if total > 0:
         logger.info(
             "Retention cleanup: archived %d activity_logs, %d diagnostic_summaries, "
-            "revoked %d legacy-passcode shares (retention=%d days)",
+            "revoked %d legacy-passcode shares, deleted %d security events (retention=%d days)",
             results["activity_logs"],
             results["diagnostic_summaries"],
             results["legacy_passcode_shares"],
+            results["security_events"],
             RETENTION_DAYS,
         )
     return results

@@ -8,6 +8,7 @@ Covers:
 4. Valid impersonation token (imp: true) on mutation → 403 with IMPERSONATION_READ_ONLY code.
 5. Malformed JWT on mutation → pass through to downstream (auth dependency handles it).
 6. Expired impersonation token still blocks mutations (verify_exp=False in middleware).
+7. Sprint 840: revoked tokens, any-case "bearer" and the access cookie are all blocked.
 """
 
 import os
@@ -185,12 +186,16 @@ class TestImpersonationMiddleware:
         assert r.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_revoked_imp_token_stops_blocking_mutations(self):
-        """Sprint 661: revoking the jti releases the mutation block."""
+    async def test_revoked_imp_token_still_blocks_mutations(self):
+        """Sprint 840 (S3): revoking a session must never grant it write access.
+
+        Sprint 661 released the block on revocation — "end the session" became
+        "the session can now write". A revoked token is now rejected outright by
+        the auth dependency; the middleware keeps blocking it regardless.
+        """
         from shared.impersonation_revocation import _reset_for_tests, revoke
 
         _reset_for_tests()
-
         jti = "revoked-jti-abc"
         token = _encode(
             {
@@ -201,6 +206,7 @@ class TestImpersonationMiddleware:
                 "exp": int(time.time()) + 3600,
             }
         )
+        revoke(jti, ttl_seconds=3600)
 
         middleware = _build_middleware()
         async with httpx.AsyncClient(
@@ -210,13 +216,32 @@ class TestImpersonationMiddleware:
             r = await client.post("/anything", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 403
 
-        revoke(jti, ttl_seconds=3600)
+        _reset_for_tests()
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("scheme", ["bearer", "BEARER", "Bearer  "])
+    async def test_any_case_bearer_scheme_is_blocked(self, scheme):
+        """Sprint 840 (S3): the auth layer accepts any-case "bearer"; so must the block."""
+        token = _encode({"sub": "42", "imp": True, "jti": "j", "exp": int(time.time()) + 3600})
+        middleware = _build_middleware()
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=middleware),
             base_url="http://test",
         ) as client:
-            r = await client.post("/anything", headers={"Authorization": f"Bearer {token}"})
-        assert r.status_code == 200
+            r = await client.post("/anything", headers={"Authorization": f"{scheme} {token}"})
+        assert r.status_code == 403
 
-        _reset_for_tests()
+    @pytest.mark.asyncio
+    async def test_imp_token_in_access_cookie_is_blocked(self):
+        """Sprint 840 (S3): the browser path sends the token as a cookie, not a header."""
+        from config import ACCESS_COOKIE_NAME
+
+        token = _encode({"sub": "42", "imp": True, "jti": "j", "exp": int(time.time()) + 3600})
+        middleware = _build_middleware()
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=middleware),
+            base_url="http://test",
+            cookies={ACCESS_COOKIE_NAME: token},
+        ) as client:
+            r = await client.post("/anything")
+        assert r.status_code == 403

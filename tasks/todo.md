@@ -353,7 +353,6 @@
 > **Before accepting an inherited blocker, check what the work actually reads.**
 > Sprints 812–831 archived to `tasks/archive/sprints-812-831-details.md`.
 > Sprints 790–835 archived to `tasks/archive/sprints-790-835-details.md`.
-
 > **▶ NEXT SESSION — START HERE (written 2026-10-24).** The CEO asked for a legal-and-security claims review
 > and approved fixing everything it found. **Full findings with file:line for every item:**
 > [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md) (CEO-readable version:
@@ -362,8 +361,9 @@
 > correct wrong facts now, including in the Terms/Privacy pages; **counsel reviews the Terms, Privacy and DPA once
 > the website is finalized** (CEO action in `ceo-actions.md`), so don't block on counsel.
 >
-> **Before the first `Sprint N:` commit:** Active Phase has 4 COMPLETE sprints (836–839), so marking one more
-> COMPLETE trips the archival gate — run `sh scripts/archive_sprints.sh` first.
+> **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
+> `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Next: Sprint 841.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -376,34 +376,7 @@
 > base branch closes it), and CI only runs on PRs into `main`; `rmdir` a worktree's `frontend/node_modules`
 > junction *before* `git worktree remove --force`, or the main checkout's node_modules is wiped; run the full backend
 > suite locally (~13 min) before pushing; every automated review thread must be fixed, replied to and resolved.
-
-### Sprint 840: Security defects found by the claims review
-**Status:** PENDING. **Priority:** P0 (S1, S2) / P1 — fix before launch; several honest claims depend on these.
-**Source:** `reports/claims-review-2026-10-24.md` Part 1 (file:line for each).
-
-- [ ] **S1** `/internal/metrics/*` (`routes/internal_metrics.py:38-70`) lets any paying owner read company-wide
-      MRR/ARR/churn/revenue history → `Depends(require_superadmin)`. Test: a Solo owner gets 403.
-- [ ] **S2** Sentry (`main.py:102-131`): `include_local_variables=False`, `max_value_length≈1024`; `before_send` drops
-      exception values, frame vars and breadcrumbs; check `routes/export_sharing.py:363` `exc_info`. Test the scrubber.
-- [ ] **S3** Impersonation truly read-only: refuse tokens with `imp` on mutating methods inside
-      `require_current_user` (covers lowercase `bearer` and the cookie path), refuse revoked token IDs, remove the
-      "revoked = allowed" branch (`security_middleware.py:871-904`); make the stop endpoint reachable; fix org-ID
-      fallback (`internal_admin.py:323-327`).
-- [ ] **S4** One shared formula-escaped CSV writer for every export; fix the six unescaped ones (heatmap, SoD, 1099,
-      intercompany, book-to-tax, lease) + a guard test that scans export code.
-- [ ] **S5** `log_secure_operation` → real `logging` to stdout/Loki; persist auth failures, lockouts, token reuse
-      and impersonation events to a DB table (Alembic migration; single head).
-- [ ] **S6** Log exception type names only, never filenames or raw exception text (8 call sites listed).
-- [ ] **S7** Decompression limits ~100–200 MB uncompressed, ratio ~20 (`upload_pipeline.py:66-68`).
-- [ ] **S8** Delete the share row only after R2 confirms (`cleanup_scheduler.py:431-437`); CEO adds an R2 lifecycle rule.
-- [ ] **Lows:** dummy bcrypt for unknown emails + uniform registration response; rate-limit coverage (middleware or
-      decorators) and a test; `get_client_ip()` for the passcode throttle; bind/pop the preflight cache token; decide
-      on the >1 MB `/tmp` spool (keep in memory within the 100 MB cap, or disclose); approver from the session and no
-      self-approval for adjustments; (MFA is its own future sprint — note only).
-
-**Commit SHA:** TBD.
-
----
+> Sprints 836–840 archived to `tasks/archive/sprints-836-840-details.md`.
 
 ### Sprint 841: One honest storage statement everywhere
 **Status:** PENDING. **Priority:** P1. **Source:** report Part 2 (A1–A26 + Medium list).
@@ -512,108 +485,6 @@
       git history still holds the old text for anyone who cloned it.
 
 **Commit SHA:** TBD.
-
----
-
-### Sprint 837: Citation corrections; 1099 thresholds by tax year
-**Status:** COMPLETE 2026-10-24 — found by the Sprint 835 catalog; practitioner confirmation items below.
-**Priority:** P1 — customer-visible text cited standards for things they do not say.
-
-- [x] **About 40 citation corrections**, each to the strength the source supports and without
-      unconfirmed paragraph numbers. Highlights: weekend/after-hours/holiday tests labelled Paciolus
-      conventions (ISA 240 / AS 2401 do not name them); Benford's 300-entry minimum is ours (Nigrini's
-      MAD bands stay attributed); unverifiable statistics removed from customer text (ACFE "26%" and
-      "~19%", "BLS 2023 ~17%"); an "AICPA Audit Guide for Receivables §5.11" reference removed;
-      "allowance required under IFRS 9 / ASC 326" corrected (the standards require ECL measurement, not
-      a named account); bank rec and three-way match no longer presented as ISA 505 / AS 2310
-      confirmations (they reconcile client records, ISA 500); ISA 501 no longer cited for cut-off or for
-      inventory tests that involve no count; ISA 570 "¶16" references removed; SoD no longer "required
-      for SOC 1"; ASC 230 no longer cited for a forecast; sampling no longer claims classical-variables
-      and attribute methods; multi-period no longer claims reclassification detection; W-2 941
-      comparison described as what the code does (payroll YTD); benchmark figures no longer attributed
-      to RMA / SEC EDGAR; revenue RT-01/06/07/14/15/16/17 text made to match the code (RT-17 renamed
-      "Contract Data Completeness"). Seven memo intros now say "with reference to" rather than "in
-      accordance with" professional auditing standards.
-- [x] **1099 thresholds by year** (`form_1099_engine.thresholds_for_year`): through 2025 NEC and MISC
-      boxes $600; **2026 NEC and MISC boxes 1/3/6 $2,000** (2025 legislation, per secondary sources —
-      confirm against the IRS instructions); box 10 attorney proceeds kept at $600 (unclear whether the
-      change reaches it; the lower figure cannot miss a filing); royalties and interest $10. 2027+ uses
-      the 2026 figures with a notice that the indexed figure must be confirmed. Payees from $600 up to
-      the year's threshold are listed as "not required, shown for review" (API, CSV, results view) and
-      the result states every threshold applied and its basis.
-
-**For a practitioner to confirm:** the 2026 1099 figures and their statutory basis, box 10, the ASC 606
-paragraph numbers that were kept (606-10-25-12, -25-13, -25-30), and the benchmark sample sizes still
-returned by the benchmarks API (unverifiable; not changed).
-
-**Commit SHA:** 4ed14103 (PR #228).
-
----
-
-### Sprint 836: Saved testing thresholds are applied, and disclosed
-**Status:** COMPLETE 2026-10-24 — found during Sprint 831.
-**Priority:** P1 — a customer who changed a threshold in the tool settings drawer saw no effect.
-
-- [x] `shared/saved_testing_config.py` builds each engine's config from the saved practice settings:
-      known fields only, type- and range-checked (finite, non-negative, 0–1 shares, 0–23 hours); anything
-      else is reported in `settings_ignored` and never fails a run.
-- [x] Wired into JE (per-run holiday calendar stays on top), AP, Payroll and Three-Way Match (a value
-      supplied for the run replaces the saved one, and says so).
-- [x] Transparency: each result reports `settings_applied` (only values that differ from the engine
-      default) and `settings_ignored`; a notice on all four results views; memos gain a "Thresholds from
-      saved settings" table (setting, this run, Paciolus default).
-- [x] **Settings-screen drift fixed:** JE `benford_min_entries` defaulted to 500 in the frontend vs 300
-      in the engine (a saved hidden 500 is reported as ignored, not applied); **five Payroll toggles were
-      saved under names the engine never read** (`check_gap_enabled`, `benford_enabled`, `ghost_enabled`,
-      `duplicate_bank_enabled`, `duplicate_tax_enabled`) — renamed to the engine names, old names still
-      accepted; Payroll `ghost_min_indicators` default 2 vs engine 1 aligned. Tests now fail if the
-      frontend defaults drift from the engine again.
-- [x] `methodology-sources.ts`: 33 rules marked configurable.
-
-**Effect to know:** old saved values now take effect, and are disclosed on every result (e.g. an old
-Payroll "Standard" save shows "Ghost employee min indicators: 2 (default 1)").
-
-**Commit SHA:** 66693307 (PR #229).
-
----
-
-### Sprint 838: Loose ends from the methodology sweep
-**Status:** COMPLETE 2026-10-24.
-
-- [x] Bank-rec CSV now includes split matches (a section grouped per bank item, each bank amount counted
-      once), marks bank-only items whose split search was capped, and escapes every user cell. The export
-      route had also been discarding `ledger_txns` / `split_search_limited` from the browser's JSON.
-- [x] `BankRecResponse` declares `suggested_journal_entries`, which FastAPI had been dropping.
-- [x] W-2 CSV escapes employee IDs, names and messages against spreadsheet-formula injection.
-- [x] Memo descriptions added for AP-T14, RT-09b and RT-17; a test now fails if any engine test ships
-      without a memo description.
-- [x] USER_GUIDE §17 callout rewritten for per-year statutory limits and the catch-up "check not run" notice.
-- [x] Admin customer views show the window-aware upload count (Sprint 790) instead of the raw counter.
-
-**Commit SHA:** 66693307 (PR #229).
-
----
-
-### Sprint 839: API inputs with no path from the app
-**Status:** COMPLETE 2026-10-24 — found in Sprint 838. Column-mapping UI for bank rec / TWM still needs its own design.
-
-- [x] **Bank rec:** per-run materiality and performance materiality in a "Run settings" panel (validated
-      in the app and the route — `nan`/`inf` now refused); a "Thresholds applied" card shows each figure and
-      whether it was entered for the run or is the Paciolus default (`active_thresholds.threshold_sources`;
-      the old single `materiality_source` called a defaulted performance materiality "caller").
-- [x] **Three-Way Match:** per-run panel for all seven tolerances, prefilled from saved settings, sending
-      only changed values; per-run values disclosed in `settings_run_overrides` (results notice + memo
-      table); `fuzzy_composite_threshold` added to the frontend config. PO / invoice / receipt column
-      mappings are now applied to detection (400 on bad JSON, unknown fields or missing columns) instead of
-      being parsed and ignored.
-- [x] **W-2:** public `GET /audit/w2-reconciliation/supported-years`; the page states the supported years
-      before upload and blocks an unsupported year with a plain message. No override form (2026 figures
-      await Sprint 793b).
-- [ ] Column-mapping UI for bank rec and TWM (the TB `ColumnMappingModal` is hard-wired to
-      account/debit/credit). The bank-rec memo does not print `active_thresholds` although a comment says it
-      does.
-
-**Commit SHA:** 5f82d818 (PR #230).
 
 ---
 

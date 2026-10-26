@@ -435,7 +435,10 @@ class TestImpersonation:
         """Impersonation returns a token with target user info."""
         org_id = customer_with_org["org"].id
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post(f"/internal/admin/customers/{org_id}/impersonate")
+            response = await client.post(
+                f"/internal/admin/customers/{org_id}/impersonate",
+                json={"target_user_id": customer_with_org["owner"].id},
+            )
             assert response.status_code == 200
             data = response.json()
             assert data["is_impersonation"] is True
@@ -455,8 +458,26 @@ class TestImpersonation:
     async def test_impersonation_not_found(self, override_superadmin):
         """Non-existent org returns 404."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post("/internal/admin/customers/99999/impersonate")
+            response = await client.post("/internal/admin/customers/99999/impersonate", json={"target_user_id": 1})
             assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_impersonation_refuses_a_mismatched_target(self, override_superadmin, customer_with_org):
+        """Sprint 840: the route ID must resolve to the user the admin named."""
+        org_id = customer_with_org["org"].id
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                f"/internal/admin/customers/{org_id}/impersonate",
+                json={"target_user_id": customer_with_org["member"].id},
+            )
+            assert response.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_impersonation_requires_a_target_user(self, override_superadmin, customer_with_org):
+        org_id = customer_with_org["org"].id
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(f"/internal/admin/customers/{org_id}/impersonate", json={})
+            assert response.status_code == 422
 
 
 # =============================================================================
