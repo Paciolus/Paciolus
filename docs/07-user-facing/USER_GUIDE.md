@@ -816,7 +816,7 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 - Mismatched Social Security and Medicare wages between payroll and the draft W-2
 - Mis-applied Social Security wage base caps
 - Over-contributions to HSAs and retirement plans
-- Quarterly 941 totals that do not agree to the payroll year-to-date totals
+- Quarterly 941 totals that do not agree to the payroll year-to-date totals or to the W-3
 
 > **Statutory limits are selected by tax year — and only 2025 is tabulated today.** The engine
 > keeps one table of limits per tax year (Social Security wage base and rates, Additional Medicare
@@ -842,16 +842,18 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 ### 17.3 Reading the Output
 
 - **Employee discrepancies** — per-employee differences between payroll and the draft W-2.
-- **Form 941 mismatches** — an **annual aggregate** comparison. The engine sums every quarter
-  you supply and compares that sum against the full-year payroll totals; it does not compute
-  per-quarter differences, and each finding is reported without a quarter attached.
+- **Form 941 mismatches** — an **annual aggregate** comparison. The engine sums the four
+  quarters and compares that sum with the full-year payroll totals and, when you supply draft
+  W-2s, with the W-3 totals of those drafts. Each finding says which of the two it was compared
+  with; it does not compute per-quarter differences.
 
-  > **Supply all four quarters or none.** Because the comparison is against *annual* payroll,
-  > supplying only Q1 compares one quarter's totals to the whole year and reports a large
-  > mismatch that means nothing. This is a limitation of the current implementation, not a
-  > finding about your data.
-- **W-3 totals** — the computed summary of the draft W-2s, reported for review (the 941 check
-  compares the 941s with payroll year-to-date totals, not with the W-3).
+  > **The tie-out needs exactly one 941 for each quarter.** If a quarter is missing or supplied
+  > twice, the comparison is not run and **Checks Not Run** names the quarters — a partial year
+  > compared with annual payroll would only report a mismatch that means nothing. A figure your
+  > 941 file does not include (for example, no Medicare wages column) is not compared, and
+  > **Checks Not Run** says which.
+- **W-3 totals** — the computed summary of the draft W-2s. With no draft W-2s there is no W-3,
+  and the result says so instead of showing zero totals.
 
 **The engine flags discrepancies; it does not decide which number is right.** When payroll and the draft W-2 disagree, determining the correct figure is a practitioner judgment about the underlying facts.
 

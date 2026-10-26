@@ -198,7 +198,7 @@ TOOLS: Final[tuple[Tool, ...]] = (
         standards=("IRC §6051", "Form W-2", "Form W-3", "Form 941"),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
-        summary="Reconcile payroll YTD to draft W-2s, and Form 941 quarterlies to payroll YTD, before year-end filing.",
+        summary="Reconcile payroll YTD to draft W-2s, and Form 941 quarterlies to payroll YTD and the W-3, before year-end filing.",
     ),
     Tool(
         slug="form_1099",

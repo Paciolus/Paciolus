@@ -6,8 +6,14 @@ and the four quarterly Forms 941 to catch the discrepancies that
 produce amended filings and IRS notices: mismatched Social Security
 and Medicare wages, mis-applied wage base caps, over-contributions to
 HSAs and retirement plans, and 941 totals that do not agree to the payroll
-year-to-date totals. (The four-quarter 941 sum is compared with payroll YTD,
-not with the W-3; the W-3 totals are computed and reported alongside. Sprint 837.)
+year-to-date totals or to the W-3.
+
+The four-quarter 941 sum is compared with payroll YTD and, when draft W-2s are
+supplied, with the W-3 totals of those drafts (Sprint 846, W4). Both annual
+comparisons run only when exactly one 941 is supplied for each of Q1-Q4, and
+only for the 941 fields every quarter supplies; otherwise the result's
+``checks_not_run`` says what was missing (W9). With no draft W-2s there is no
+W-3, and ``w3_totals`` is ``None`` rather than a row of zeros (W8).
 
 Zero-storage: form-input only. The engine is a diagnostic tool that
 flags discrepancies for practitioner review — it does not determine
@@ -358,10 +364,13 @@ class Form941Quarter:
     """A single Form 941 quarterly filing (employer side of the check)."""
 
     quarter: int  # 1-4
-    total_federal_wages: Decimal = ZERO  # 941 line 2
-    total_federal_withholding: Decimal = ZERO  # 941 line 3
-    total_ss_wages: Decimal = ZERO  # 941 line 5a col 1
-    total_medicare_wages: Decimal = ZERO  # 941 line 5c col 1
+    # Sprint 846 (W4): ``None`` means "not supplied" and the field is left out
+    # of the comparison. A missing CSV column used to arrive as zero and draw a
+    # HIGH mismatch for a figure the 941 never stated.
+    total_federal_wages: Decimal | None = None  # 941 line 2
+    total_federal_withholding: Decimal | None = None  # 941 line 3
+    total_ss_wages: Decimal | None = None  # 941 line 5a col 1
+    total_medicare_wages: Decimal | None = None  # 941 line 5c col 1
 
     def __post_init__(self) -> None:
         if self.quarter not in (1, 2, 3, 4):
@@ -510,17 +519,20 @@ class Discrepancy:
 
 @dataclass
 class Form941Mismatch:
-    quarter: int | None  # None when comparing the 4-quarter sum to W-3
+    quarter: int | None  # None when comparing the 4-quarter sum
     kind: DiscrepancyKind
     severity: DiscrepancySeverity
-    expected: Decimal  # Payroll / W-2 side
+    expected: Decimal  # Payroll / W-3 side
     actual: Decimal  # 941 side
     difference: Decimal
     message: str
+    # Sprint 846 (W4): what the 941 sum was compared with — "payroll_ytd" or "w3".
+    compared_with: str = "payroll_ytd"
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "quarter": self.quarter,
+            "compared_with": self.compared_with,
             "kind": self.kind.value,
             "severity": self.severity.value,
             "expected": str(self.expected),
@@ -559,7 +571,8 @@ class W2ReconciliationResult:
     tax_year: int
     employee_discrepancies: list[Discrepancy]
     form_941_mismatches: list[Form941Mismatch]
-    w3_totals: W3Totals
+    # Sprint 846 (W8): None when no draft W-2s were supplied — there is no W-3.
+    w3_totals: W3Totals | None
     summary: dict[str, Any]
     # Sprint 811 (A-7): which statutory set actually produced these findings.
     # `statutory_basis` is the year whose table was used, or None when the
@@ -580,7 +593,7 @@ class W2ReconciliationResult:
             "tax_year": self.tax_year,
             "employee_discrepancies": [d.to_dict() for d in self.employee_discrepancies],
             "form_941_mismatches": [m.to_dict() for m in self.form_941_mismatches],
-            "w3_totals": self.w3_totals.to_dict(),
+            "w3_totals": self.w3_totals.to_dict() if self.w3_totals is not None else None,
             "summary": self.summary,
             "statutory_basis": self.statutory_basis,
             "statutory_basis_source": self.statutory_basis_source,
@@ -1173,61 +1186,115 @@ def _check_employee(
     return issues
 
 
+# (941 / W-3 field, payroll field, kind, label). The 941 and W-3 dataclasses
+# share field names for the four figures a 941 states.
+_FORM_941_FIELDS: tuple[tuple[str, str, DiscrepancyKind, str], ...] = (
+    ("total_federal_wages", "federal_wages", DiscrepancyKind.FEDERAL_WAGES, "federal wages"),
+    ("total_federal_withholding", "federal_withholding", DiscrepancyKind.FEDERAL_WITHHOLDING, "federal withholding"),
+    ("total_ss_wages", "ss_wages", DiscrepancyKind.SS_WAGES, "Social Security wages"),
+    ("total_medicare_wages", "medicare_wages", DiscrepancyKind.MEDICARE_WAGES, "Medicare wages"),
+)
+
+
+def _form_941_quarter_coverage(quarters: list[Form941Quarter]) -> tuple[list[int], list[int]]:
+    """Sprint 846 (W9): (missing quarters, duplicated quarters). No 941s at all is not a finding."""
+    if not quarters:
+        return [], []
+    counts: dict[int, int] = defaultdict(int)
+    for q in quarters:
+        counts[q.quarter] += 1
+    missing = [n for n in (1, 2, 3, 4) if counts[n] == 0]
+    duplicated = sorted(n for n, c in counts.items() if c > 1)
+    return missing, duplicated
+
+
 def _check_form_941(
     employees: list[EmployeePayroll],
+    w3: W3Totals | None,
     quarters: list[Form941Quarter],
     tolerance: Decimal,
-) -> list[Form941Mismatch]:
-    """Compare the sum of all 4 quarterly 941s to the payroll YTD totals."""
+) -> tuple[list[Form941Mismatch], list[dict[str, Any]]]:
+    """
+    Compare the four-quarter 941 sum with payroll YTD and, when there is a W-3,
+    with the W-3 (Sprint 846, W4). Returns the mismatches and any
+    ``checks_not_run`` notices.
+
+    Both comparisons are annual, so they run only with exactly one 941 per
+    quarter (W9): three quarters against a year of payroll is a guaranteed
+    "mismatch" whose real cause is the absent return. A figure is compared only
+    when every quarter states it.
+    """
     if not quarters:
-        return []
+        return [], []
 
-    total_941_fed_wages = sum((q.total_federal_wages for q in quarters), ZERO)
-    total_941_fed_withhold = sum((q.total_federal_withholding for q in quarters), ZERO)
-    total_941_ss_wages = sum((q.total_ss_wages for q in quarters), ZERO)
-    total_941_medicare_wages = sum((q.total_medicare_wages for q in quarters), ZERO)
-
-    total_payroll_fed_wages = sum((e.federal_wages for e in employees), ZERO)
-    total_payroll_fed_withhold = sum((e.federal_withholding for e in employees), ZERO)
-    total_payroll_ss_wages = sum((e.ss_wages for e in employees), ZERO)
-    total_payroll_medicare = sum((e.medicare_wages for e in employees), ZERO)
+    missing, duplicated = _form_941_quarter_coverage(quarters)
+    if missing or duplicated:
+        problems = []
+        if missing:
+            problems.append("no Form 941 for " + ", ".join(f"Q{n}" for n in missing))
+        if duplicated:
+            problems.append("more than one Form 941 for " + ", ".join(f"Q{n}" for n in duplicated))
+        return [], [
+            {
+                "check": "form_941_annual_tieout",
+                "reason": "form_941_quarters_incomplete",
+                "employee_ids": [],
+                "message": (
+                    "Form 941 annual tie-out not run — "
+                    + "; ".join(problems)
+                    + ". The four-quarter totals are compared with payroll year-to-date and the W-3 only "
+                    "when exactly one return is supplied for each quarter."
+                ),
+            }
+        ]
 
     mismatches: list[Form941Mismatch] = []
+    not_supplied: list[str] = []
+    for field_name, payroll_field, kind, label in _FORM_941_FIELDS:
+        values = [getattr(q, field_name) for q in quarters]
+        if any(v is None for v in values):
+            not_supplied.append(label)
+            continue
+        actual = sum(values, ZERO)
 
-    for kind, expected, actual, label in (
-        (DiscrepancyKind.FEDERAL_WAGES, total_payroll_fed_wages, total_941_fed_wages, "federal wages"),
-        (
-            DiscrepancyKind.FEDERAL_WITHHOLDING,
-            total_payroll_fed_withhold,
-            total_941_fed_withhold,
-            "federal withholding",
-        ),
-        (DiscrepancyKind.SS_WAGES, total_payroll_ss_wages, total_941_ss_wages, "Social Security wages"),
-        (
-            DiscrepancyKind.MEDICARE_WAGES,
-            total_payroll_medicare,
-            total_941_medicare_wages,
-            "Medicare wages",
-        ),
-    ):
-        diff = actual - expected
-        if abs(diff) > tolerance:
-            mismatches.append(
-                Form941Mismatch(
-                    quarter=None,
-                    kind=kind,
-                    severity=DiscrepancySeverity.HIGH if abs(diff) > tolerance * 100 else DiscrepancySeverity.MEDIUM,
-                    expected=_quantise(expected),
-                    actual=_quantise(actual),
-                    difference=_quantise(diff),
-                    message=(
-                        f"Sum of 4 quarters of Form 941 {label} (${actual:,.2f}) "
-                        f"disagrees with payroll YTD (${expected:,.2f})."
-                    ),
+        comparisons = [("payroll_ytd", sum((getattr(e, payroll_field) for e in employees), ZERO), "payroll YTD")]
+        if w3 is not None:
+            comparisons.append(("w3", getattr(w3, field_name), "the W-3 total of the draft W-2s"))
+
+        for compared_with, expected, description in comparisons:
+            diff = actual - expected
+            if abs(diff) > tolerance:
+                mismatches.append(
+                    Form941Mismatch(
+                        quarter=None,
+                        kind=kind,
+                        severity=(
+                            DiscrepancySeverity.HIGH if abs(diff) > tolerance * 100 else DiscrepancySeverity.MEDIUM
+                        ),
+                        expected=_quantise(expected),
+                        actual=_quantise(actual),
+                        difference=_quantise(diff),
+                        message=(
+                            f"Sum of 4 quarters of Form 941 {label} (${actual:,.2f}) "
+                            f"disagrees with {description} (${expected:,.2f})."
+                        ),
+                        compared_with=compared_with,
+                    )
                 )
-            )
 
-    return mismatches
+    notices: list[dict[str, Any]] = []
+    if not_supplied:
+        notices.append(
+            {
+                "check": "form_941_annual_tieout",
+                "reason": "form_941_field_not_supplied",
+                "employee_ids": [],
+                "message": (
+                    f"Form 941 {', '.join(not_supplied)} not compared — the figure was not supplied for every quarter."
+                ),
+            }
+        )
+    return mismatches, notices
 
 
 # =============================================================================
@@ -1299,18 +1366,25 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         )
 
     # --- W-3 totals (sum of every W-2) ---
-    w3 = W3Totals(
-        total_federal_wages=_quantise(sum((w.box_1_federal_wages for w in config.w2_drafts), ZERO)),
-        total_federal_withholding=_quantise(sum((w.box_2_federal_withholding for w in config.w2_drafts), ZERO)),
-        total_ss_wages=_quantise(sum((w.box_3_ss_wages for w in config.w2_drafts), ZERO)),
-        total_ss_tax_withheld=_quantise(sum((w.box_4_ss_tax_withheld for w in config.w2_drafts), ZERO)),
-        total_medicare_wages=_quantise(sum((w.box_5_medicare_wages for w in config.w2_drafts), ZERO)),
-        total_medicare_tax_withheld=_quantise(sum((w.box_6_medicare_tax_withheld for w in config.w2_drafts), ZERO)),
-        employee_count=len(config.w2_drafts),
-    )
+    # Sprint 846 (W8): with no drafts there is no W-3. Six zero totals and an
+    # employee count of 0 read as a real, empty W-3.
+    w3: W3Totals | None = None
+    if config.w2_drafts:
+        w3 = W3Totals(
+            total_federal_wages=_quantise(sum((w.box_1_federal_wages for w in config.w2_drafts), ZERO)),
+            total_federal_withholding=_quantise(sum((w.box_2_federal_withholding for w in config.w2_drafts), ZERO)),
+            total_ss_wages=_quantise(sum((w.box_3_ss_wages for w in config.w2_drafts), ZERO)),
+            total_ss_tax_withheld=_quantise(sum((w.box_4_ss_tax_withheld for w in config.w2_drafts), ZERO)),
+            total_medicare_wages=_quantise(sum((w.box_5_medicare_wages for w in config.w2_drafts), ZERO)),
+            total_medicare_tax_withheld=_quantise(sum((w.box_6_medicare_tax_withheld for w in config.w2_drafts), ZERO)),
+            employee_count=len(config.w2_drafts),
+        )
 
     # --- Form 941 check ---
-    form_941_mismatches = _check_form_941(config.employees, config.form_941_quarters, config.tolerance)
+    form_941_mismatches, form_941_notices = _check_form_941(
+        config.employees, w3, config.form_941_quarters, config.tolerance
+    )
+    quarters_missing, quarters_duplicated = _form_941_quarter_coverage(config.form_941_quarters)
 
     # --- Summary ---
     by_kind: dict[str, int] = defaultdict(int)
@@ -1335,6 +1409,9 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
             1 for d in employee_discrepancies if d.kind == DiscrepancyKind.ADDITIONAL_MEDICARE
         ),
         "total_form_941_mismatches": len(form_941_mismatches),
+        "form_941_quarters_missing": quarters_missing,
+        "form_941_quarters_duplicated": quarters_duplicated,
+        "w3_status": None if w3 is not None else "No draft W-2s supplied — there is no W-3 to total.",
         "discrepancies_by_kind": dict(by_kind),
     }
 
@@ -1346,5 +1423,5 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         summary=summary,
         statutory_basis=config.statutory_year,
         statutory_basis_source=config.statutory_source,
-        checks_not_run=_checks_not_run(config.employees, config, age_unknown_ids),
+        checks_not_run=_checks_not_run(config.employees, config, age_unknown_ids) + form_941_notices,
     )

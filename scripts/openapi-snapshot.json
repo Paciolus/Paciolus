@@ -13198,28 +13198,52 @@
             "type": "integer"
           },
           "total_federal_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Federal Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Federal Wages"
           },
           "total_federal_withholding": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Federal Withholding",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Federal Withholding"
           },
           "total_medicare_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Medicare Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Medicare Wages"
           },
           "total_ss_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Ss Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Ss Wages"
           }
         },
         "required": [

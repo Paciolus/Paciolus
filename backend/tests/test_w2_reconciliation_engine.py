@@ -293,15 +293,19 @@ class TestForm941:
         assert result.form_941_mismatches == []
 
     def test_941_totals_diverging_flags_high_severity(self):
+        # Sprint 846 (W9): this used to supply Q1 alone, which only "diverged"
+        # because three returns were missing. Now four quarters, Q1 understated.
         emp = _clean_employee()
+        q = Decimal("15000")
         quarters = [
             Form941Quarter(
-                quarter=1,
-                total_federal_wages=Decimal("50000"),  # Wrong — payroll has 60k
-                total_federal_withholding=Decimal("5000"),
-                total_ss_wages=Decimal("60000"),
-                total_medicare_wages=Decimal("60000"),
-            ),
+                quarter=i,
+                total_federal_wages=Decimal("5000") if i == 1 else q,  # Wrong — payroll has 60k
+                total_federal_withholding=Decimal("1500"),
+                total_ss_wages=q,
+                total_medicare_wages=q,
+            )
+            for i in range(1, 5)
         ]
         cfg = W2ReconciliationConfig(
             tax_year=2025,
