@@ -39,9 +39,9 @@
 # =============================================================================
 
 fastapi==0.136.1
-uvicorn[standard]==0.45.0
-pydantic[email]==2.13.3
-pandas==3.0.6
+uvicorn[standard]==0.54.0
+pydantic[email]==2.14.1
+pandas==3.1.0
 openpyxl==3.1.5
 # Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
 # PYSEC-2026-3039 (unbounded multipart part-header count/size -> CPU DoS),
@@ -89,7 +89,7 @@ limits>=5.8.0
 redis>=5.0.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.58.0
+sentry-sdk[fastapi]==2.73.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
