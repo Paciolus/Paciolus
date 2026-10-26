@@ -55,3 +55,55 @@ describe('W2Results — checks not run', () => {
     expect(screen.queryByRole('status', { name: 'Checks not run' })).not.toBeInTheDocument()
   })
 })
+
+describe('W2Results — Sprint 846 W-3 and Form 941 tie-out', () => {
+  it('says there is no W-3 instead of showing zero totals', () => {
+    render(<W2Results result={{ ...baseResult, w3_totals: null, summary: { employee_count: 3 } }} />)
+    expect(screen.getByText(/No draft W-2s supplied/)).toBeInTheDocument()
+    expect(screen.queryByText('Federal wages')).not.toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+  })
+
+  it('labels each 941 mismatch with what it was compared with', () => {
+    render(
+      <W2Results
+        result={{
+          ...baseResult,
+          form_941_mismatches: [
+            {
+              quarter: null,
+              compared_with: 'w3',
+              kind: 'federal_wages',
+              severity: 'high',
+              expected: '90000.00',
+              actual: '100000.00',
+              difference: '10000.00',
+              message: 'Sum of 4 quarters of Form 941 federal wages disagrees with the W-3 total of the draft W-2s.',
+            },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByText(/4-quarter total vs W-3/)).toBeInTheDocument()
+  })
+
+  it('omits the catch-up sentence when only a 941 check did not run', () => {
+    render(
+      <W2Results
+        result={{
+          ...baseResult,
+          checks_not_run: [
+            {
+              check: 'form_941_annual_tieout',
+              reason: 'form_941_quarters_incomplete',
+              employee_ids: [],
+              message: 'Form 941 annual tie-out not run — no Form 941 for Q4.',
+            },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByText(/no Form 941 for Q4/)).toBeInTheDocument()
+    expect(screen.queryByText(/excess contributions/)).not.toBeInTheDocument()
+  })
+})
