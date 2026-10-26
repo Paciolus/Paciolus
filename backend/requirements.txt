@@ -104,7 +104,7 @@ python-docx>=1.1.0
 defusedxml>=0.7.1
 
 # Prometheus Metrics (Sprint 435)
-prometheus_client>=0.25.0
+prometheus_client>=0.26.0
 
 # Background Scheduler (Sprint 307)
 APScheduler==3.11.3
