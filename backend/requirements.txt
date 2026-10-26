@@ -53,7 +53,7 @@ python-multipart==0.0.32
 python-dotenv==1.2.4
 
 # PDF Generation (Day 12)
-reportlab==4.4.10
+reportlab==5.1.0
 
 # Authentication (Day 13)
 # Sprint-774-era CVE sweep (2026-10-19): 2.12.1 carried 5 advisories
