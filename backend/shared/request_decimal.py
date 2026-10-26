@@ -12,6 +12,8 @@ from decimal import Decimal, InvalidOperation
 
 from fastapi import HTTPException
 
+from shared.parsing_helpers import safe_decimal
+
 
 def parse_request_decimal(field_name: str, raw: str) -> Decimal:
     """Parse a decimal string, rejecting anything the engines cannot arithmetic on.
@@ -27,6 +29,24 @@ def parse_request_decimal(field_name: str, raw: str) -> Decimal:
         value = Decimal(raw)
     except (InvalidOperation, ValueError, TypeError):
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
+    if not value.is_finite():
+        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
+    return value
+
+
+def parse_request_amount(field_name: str, raw: str) -> Decimal:
+    """Parse a trial-balance amount cell, accepting accounting formats.
+
+    Sprint 846 (I5): ``(1,000.00)``, ``$(1,000.00)``, ``1,000.00`` and ``1000-``
+    are how exported trial balances write amounts, and the upload page forwards
+    the parentheses. Normalisation is the shared ``safe_decimal`` the file-based
+    engines already use; unlike that helper, an unparseable cell is a 400 here
+    rather than a silent zero. A percent sign is refused — ``safe_decimal`` would
+    strip it, and ``10%`` is not an amount.
+    """
+    if "%" in raw:
+        raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
+    value = safe_decimal(raw, default=Decimal("NaN"))
     if not value.is_finite():
         raise HTTPException(status_code=400, detail=f"Invalid numeric value for {field_name}: {raw!r}")
     return value
