@@ -122,3 +122,36 @@ class TestCashFlowProjectorTierGate:
             assert response.headers["content-type"].startswith("text/csv")
         finally:
             app.dependency_overrides.clear()
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestCashFlowProjectorSprint846Inputs:
+    @pytest.mark.asyncio
+    async def test_overdrawn_opening_balance_is_projected(self, professional_user, db_session):
+        """C6: an overdrawn opening balance was a 400."""
+        _override(professional_user, db_session)
+        payload = {**_valid_payload(), "opening_balance": "-2500.00"}
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/cash-flow-projector", json=payload)
+            assert response.status_code == 200
+            body = response.json()
+            assert body["inputs"]["opening_balance"] == "-2500.00"
+            assert "ap_deferral_rule" in body["scenarios"]["base"]
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_negative_aging_bucket_is_a_400_on_both_routes(self, professional_user, db_session):
+        """C5: a negative bucket was netted into ar_total but ignored by the projection."""
+        _override(professional_user, db_session)
+        payload = _valid_payload()
+        payload["ar_aging"]["days_31_60"] = "-500"
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                for path in ("/audit/cash-flow-projector", "/audit/cash-flow-projector/export.csv"):
+                    response = await client.post(path, json=payload)
+                    assert response.status_code == 400, path
+                    assert "cannot be negative" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
