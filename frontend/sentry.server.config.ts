@@ -19,8 +19,20 @@ if (dsn) {
       process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE || "0.1"
     ),
 
-    // No PII collection
-    sendDefaultPii: false,
+    // No PII collection. Sentry v11 removed `sendDefaultPii` and its
+    // replacement, `dataCollection`, collects every category by default — so
+    // each one is switched off here explicitly (available since v10.76).
+    dataCollection: {
+      userInfo: false,
+      cookies: false,
+      httpHeaders: false,
+      httpBodies: [],
+      urlQueryParams: false,
+      databaseQueryData: false,
+      stackFrameVariables: false,
+      graphQL: { document: false, variables: false },
+      genAI: { inputs: false, outputs: false },
+    },
 
     // Strip request bodies before sending
     beforeSend(event) {
