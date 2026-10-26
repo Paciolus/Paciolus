@@ -702,6 +702,22 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 
 ---
 
+### Sprint 846: Tool-correctness loose ends from Sprints 826/827
+**Status:** IN PROGRESS (2026-10-26). Branched on the unmerged 845 stack.
+**Scope:** every open 826/827 item that needs no practitioner figure, CEO policy call or locale decision
+(register: `reports/sprint-823-discovery-2026-10-23.md`). Reproduce each before fixing.
+Out of scope, unchanged: F5 + figures (793b), B1 (NOL scope), B2 (combined-rate method), D2 tiering of
+degenerate custom rules, A6 FA-03 contra call, P-3 locale, I4 investment/payable pairing.
+
+- [ ] **A4** — DD/MM/YYYY registers no longer read as MM/DD (fixed assets).
+- [ ] **A5** — half-year convention actually absorbed by FA-T11.
+- [ ] **A8** — `Useful Life (Months)` columns read as months.
+- [ ] **C2** — AP a scenario leaves unpaid is deferred, not dropped (cash flow projector).
+- [ ] **C3 / C5 / C6** — displayed rows foot to the cent; negative aging buckets handled consistently;
+      overdrawn opening balance accepted.
+- [ ] **W4 / W8 / W9** — W-3 compared with the 941s; W-3 with no drafts; duplicate/missing 941 quarters.
+- [ ] **I5** — `(1,000.00)` amounts accepted; negative debits handled (intercompany).
+
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
 **Status:** PARTIAL — Trust/Approach lists and USER_GUIDE §22 corrected 2026-10-24 (PR #225). **Superseded by Sprints 841 and 844**, which fix every remaining storage sentence, the Terms and Privacy included (CEO 2026-10-24: correct wrong facts now; counsel reviews the finished legal pages at website-final).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.
