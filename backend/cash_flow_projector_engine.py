@@ -29,6 +29,24 @@ ZERO = Decimal("0")
 FORECAST_DAYS = 90  # Fixed horizon — sprint spec: 30 / 60 / 90 day windows
 HORIZON_BUCKETS: tuple[int, ...] = (30, 60, 90)
 
+# Sprint 846 (C2): AP a scenario leaves unpaid on schedule is deferred, not
+# forgiven. The unpaid share is paid evenly over this many days immediately
+# after the bucket's scheduled payment window.
+AP_DEFERRAL_DAYS = 30
+AP_DEFERRAL_RULE = (
+    "AP not paid on schedule in this scenario is deferred, not forgiven: the unpaid share of each "
+    f"aging bucket is paid evenly over the {AP_DEFERRAL_DAYS} days after that bucket's scheduled payment window."
+)
+
+# Scheduled payment window per AP bucket: (first day, number of days).
+_AP_WINDOWS: dict[str, tuple[int, int]] = {
+    "current": (10, 30),
+    "1-30": (0, 15),
+    "31-60": (0, 10),
+    "61-90": (0, 7),
+    "over-90": (0, 5),
+}
+
 
 class ScenarioName(str, Enum):
     BASE = "base"
@@ -223,6 +241,7 @@ class ScenarioResult:
     breach_min_safe_cash: bool
     collection_priorities: list[CollectionPriority]
     ap_deferral_candidates: list[dict[str, Any]]
+    ap_deferral_rule: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -234,6 +253,7 @@ class ScenarioResult:
             "breach_min_safe_cash": self.breach_min_safe_cash,
             "collection_priorities": [p.to_dict() for p in self.collection_priorities],
             "ap_deferral_candidates": self.ap_deferral_candidates,
+            "ap_deferral_rule": self.ap_deferral_rule,
         }
 
 
@@ -293,38 +313,52 @@ def _ar_inflow_schedule(ar: AgingBuckets, assumptions: ScenarioAssumptions) -> d
     return schedule
 
 
+def _ap_rows(ap: AgingBuckets, assumptions: ScenarioAssumptions) -> list[tuple[str, Decimal, Decimal]]:
+    return [
+        ("current", ap.current, assumptions.ap_current_payment),
+        ("1-30", ap.days_1_30, assumptions.ap_1_30_payment),
+        ("31-60", ap.days_31_60, assumptions.ap_31_60_payment),
+        ("61-90", ap.days_61_90, assumptions.ap_61_90_payment),
+        ("over-90", ap.days_over_90, assumptions.ap_over_90_payment),
+    ]
+
+
 def _ap_outflow_schedule(ap: AgingBuckets, assumptions: ScenarioAssumptions) -> dict[int, Decimal]:
     """Spread AP payments across the 90-day horizon.
 
-    Heuristic:
+    Heuristic (``_AP_WINDOWS``):
       * ``current`` AP pays linearly across days 10–40 (the 30-day
         term window after the balance date).
       * ``1–30`` AP pays linearly across days 0–15.
       * ``31–60`` AP pays linearly across days 0–10.
       * ``61–90`` AP pays linearly across days 0–7 (more urgent).
       * ``over 90`` AP pays linearly across days 0–5.
+
+    The scenario's payment rate sets the share paid in that window. Sprint 846
+    (C2): the rest is paid over the ``AP_DEFERRAL_DAYS`` that follow, rather
+    than never — dropping it overstated ending cash by every deferred dollar.
     """
     schedule: dict[int, Decimal] = {d: ZERO for d in range(FORECAST_DAYS)}
 
-    def _spread(total: Decimal, rate: Decimal, start: int, days: int) -> None:
-        if total <= ZERO or rate <= ZERO or days <= 0:
+    def _spread(amount: Decimal, start: int, days: int) -> None:
+        if amount <= ZERO or days <= 0:
             return
-        expected = total * rate
-        per_day = expected / Decimal(days)
         end = min(start + days, FORECAST_DAYS)
         actual_days = end - start
         if actual_days <= 0:
             return
-        # Re-scale per_day if the horizon cuts off the tail.
-        adjusted = expected / Decimal(actual_days) if days > actual_days else per_day
+        # Re-scale if the horizon cuts off the tail, so the whole amount lands.
+        per_day = amount / Decimal(actual_days)
         for d in range(start, end):
-            schedule[d] += adjusted
+            schedule[d] += per_day
 
-    _spread(ap.current, assumptions.ap_current_payment, 10, 30)
-    _spread(ap.days_1_30, assumptions.ap_1_30_payment, 0, 15)
-    _spread(ap.days_31_60, assumptions.ap_31_60_payment, 0, 10)
-    _spread(ap.days_61_90, assumptions.ap_61_90_payment, 0, 7)
-    _spread(ap.days_over_90, assumptions.ap_over_90_payment, 0, 5)
+    for name, total, rate in _ap_rows(ap, assumptions):
+        if total <= ZERO:
+            continue
+        start, days = _AP_WINDOWS[name]
+        paid_share = min(max(rate, ZERO), Decimal("1"))
+        _spread(total * paid_share, start, days)
+        _spread(total * (Decimal("1") - paid_share), start + days, AP_DEFERRAL_DAYS)
 
     return schedule
 
@@ -384,10 +418,14 @@ def _run_scenario(
     rec_schedule = _recurring_schedule(config.recurring_flows, config.start_date)
 
     daily: list[DailyPoint] = []
-    balance = config.opening_balance
+    # Sprint 846 (C3): every displayed figure foots. Each component is shown as
+    # the change in its rounded running total, so per-day rounding residuals
+    # carry forward instead of accumulating, and the net change and balance are
+    # built from those displayed cents. The opening balance is rounded once.
+    balance = _quantise(config.opening_balance)
     goes_negative = False
     first_negative_day: int | None = None
-    lowest_balance = config.opening_balance
+    lowest_balance = balance
     lowest_balance_day = 0
     breach_min_safe_cash = False
 
@@ -395,10 +433,19 @@ def _run_scenario(
     cumulative_out = ZERO
     horizon: dict[int, HorizonSummary] = {}
 
+    exact_totals = {"ar": ZERO, "ap": ZERO, "rec": ZERO}
+    shown_totals = {"ar": ZERO, "ap": ZERO, "rec": ZERO}
+
+    def _displayed(key: str, amount: Decimal) -> Decimal:
+        exact_totals[key] += amount
+        shown = _quantise(exact_totals[key]) - shown_totals[key]
+        shown_totals[key] += shown
+        return shown
+
     for d in range(FORECAST_DAYS):
-        ar_in = ar_schedule.get(d, ZERO)
-        ap_out = ap_schedule.get(d, ZERO)
-        rec_net = rec_schedule.get(d, ZERO)
+        ar_in = _displayed("ar", ar_schedule.get(d, ZERO))
+        ap_out = _displayed("ap", ap_schedule.get(d, ZERO))
+        rec_net = _displayed("rec", rec_schedule.get(d, ZERO))
 
         net_change = ar_in - ap_out + rec_net
         balance += net_change
@@ -428,21 +475,21 @@ def _run_scenario(
         point = DailyPoint(
             day_index=d,
             day_date=config.start_date + timedelta(days=d),
-            ar_inflow=_quantise(ar_in),
-            ap_outflow=_quantise(ap_out),
-            recurring_net=_quantise(rec_net),
-            net_change=_quantise(net_change),
-            ending_balance=_quantise(balance),
+            ar_inflow=ar_in,
+            ap_outflow=ap_out,
+            recurring_net=rec_net,
+            net_change=net_change,
+            ending_balance=balance,
         )
         daily.append(point)
 
         if (d + 1) in HORIZON_BUCKETS:
             horizon[d + 1] = HorizonSummary(
                 day=d + 1,
-                cumulative_inflow=_quantise(cumulative_in),
-                cumulative_outflow=_quantise(cumulative_out),
-                ending_balance=_quantise(balance),
-                lowest_balance=_quantise(lowest_balance),
+                cumulative_inflow=cumulative_in,
+                cumulative_outflow=cumulative_out,
+                ending_balance=balance,
+                lowest_balance=lowest_balance,
                 lowest_balance_day=lowest_balance_day,
             )
 
@@ -458,6 +505,7 @@ def _run_scenario(
         breach_min_safe_cash=breach_min_safe_cash,
         collection_priorities=collection_priorities,
         ap_deferral_candidates=ap_deferral_candidates,
+        ap_deferral_rule=AP_DEFERRAL_RULE if ap_deferral_candidates else None,
     )
 
 
@@ -500,24 +548,23 @@ def _ap_deferral_candidates(ap: AgingBuckets, scenario: ScenarioName) -> list[di
     """
     if scenario == ScenarioName.STRESS:
         return []
-    assumptions = SCENARIOS[scenario]
-    rows = [
-        ("current", ap.current, assumptions.ap_current_payment),
-        ("1-30", ap.days_1_30, assumptions.ap_1_30_payment),
-        ("31-60", ap.days_31_60, assumptions.ap_31_60_payment),
-        ("61-90", ap.days_61_90, assumptions.ap_61_90_payment),
-        ("over-90", ap.days_over_90, assumptions.ap_over_90_payment),
-    ]
     candidates: list[dict[str, Any]] = []
-    for name, total, rate in rows:
+    for name, total, rate in _ap_rows(ap, SCENARIOS[scenario]):
         if total > ZERO and rate < Decimal("1.0"):
             deferred = total * (Decimal("1.0") - rate)
+            start, days = _AP_WINDOWS[name]
+            deferred_start = start + days
             candidates.append(
                 {
                     "bucket": name,
                     "outstanding": str(_quantise(total)),
                     "defer_amount": str(_quantise(deferred)),
                     "defer_rate": str(Decimal("1.0") - rate),
+                    # Sprint 846 (C2): the days on which the projection pays the deferred share.
+                    "paid_between_days": [
+                        min(deferred_start, FORECAST_DAYS - 1),
+                        min(deferred_start + AP_DEFERRAL_DAYS, FORECAST_DAYS) - 1,
+                    ],
                 }
             )
     candidates.sort(key=lambda r: Decimal(r["defer_amount"]), reverse=True)
@@ -531,8 +578,29 @@ def _ap_deferral_candidates(ap: AgingBuckets, scenario: ScenarioName) -> list[di
 
 def project_cash_flow(config: CashFlowConfig) -> CashFlowForecast:
     """Run the 30 / 60 / 90-day forecast across all three scenarios."""
-    if config.opening_balance < ZERO:
-        raise CashFlowInputError("Opening balance cannot be negative.")
+    # Sprint 846 (C6): an overdrawn opening balance is accepted — that is when a
+    # cash forecast matters most. The projection starts below zero and
+    # ``goes_negative`` reports it.
+    #
+    # Sprint 846 (C5): aging buckets must not be negative. A negative bucket was
+    # netted into ``ar_total``/``ap_total`` but skipped by the projection, so the
+    # stated total and the projected cash disagreed. A bucket that nets to a
+    # credit (unapplied cash, a vendor credit) carries no payment date this
+    # engine could schedule, so the caller offsets it against the bucket it
+    # belongs to instead.
+    for side, aging in (("AR", config.ar_aging), ("AP", config.ap_aging)):
+        for bucket, amount in (
+            ("current", aging.current),
+            ("1-30", aging.days_1_30),
+            ("31-60", aging.days_31_60),
+            ("61-90", aging.days_61_90),
+            ("over-90", aging.days_over_90),
+        ):
+            if amount < ZERO:
+                raise CashFlowInputError(
+                    f"{side} aging bucket '{bucket}' cannot be negative. Offset a credit balance "
+                    "(unapplied cash, a vendor credit) against the bucket it belongs to."
+                )
 
     scenarios: dict[str, ScenarioResult] = {}
     for name in (ScenarioName.BASE, ScenarioName.STRESS, ScenarioName.BEST):
