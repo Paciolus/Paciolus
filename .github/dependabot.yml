@@ -19,6 +19,15 @@ updates:
         update-types:
           - "minor"
           - "patch"
+        # These three break the app on their own minors (FastAPI 0.16x hides
+        # included routers from `app.routes`; SQLAlchemy 2.1 maps a plain
+        # `postgresql://` URL to psycopg 3, which is not installed). Kept out of
+        # the group so they arrive as separate PRs and cannot hold the safe
+        # updates hostage — see Sprint 786b in tasks/todo.md.
+        exclude-patterns:
+          - "fastapi"
+          - "sqlalchemy"
+          - "alembic"
     open-pull-requests-limit: 10
 
   # JavaScript (npm) — frontend
@@ -32,6 +41,14 @@ updates:
       - "security"
     commit-message:
       prefix: "deps(npm):"
+    ignore:
+      # Pinned to the Node 22 runtime on purpose (PR #197).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint does not support the next TypeScript major yet;
+      # take it by hand once it does.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types:
