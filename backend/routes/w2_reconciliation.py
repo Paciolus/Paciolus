@@ -76,11 +76,14 @@ class EmployeeW2DraftRequest(BaseModel):
 
 
 class Form941QuarterRequest(BaseModel):
+    # Sprint 846 (W4): an omitted figure is "not supplied" and is not compared.
+    # It used to default to "0", so a 941 file without a Medicare column drew a
+    # HIGH mismatch for a figure the return never stated.
     quarter: int = Field(..., ge=1, le=4)
-    total_federal_wages: str = Field(default="0", max_length=24)
-    total_federal_withholding: str = Field(default="0", max_length=24)
-    total_ss_wages: str = Field(default="0", max_length=24)
-    total_medicare_wages: str = Field(default="0", max_length=24)
+    total_federal_wages: Optional[str] = Field(default=None, max_length=24)
+    total_federal_withholding: Optional[str] = Field(default=None, max_length=24)
+    total_ss_wages: Optional[str] = Field(default=None, max_length=24)
+    total_medicare_wages: Optional[str] = Field(default=None, max_length=24)
 
 
 class StatutoryLimitOverrides(BaseModel):
@@ -187,13 +190,17 @@ def _build_config(payload: W2ReconciliationRequest) -> W2ReconciliationConfig:
         )
         for w in payload.w2_drafts
     ]
+
+    def _optional_decimal(label: str, raw: Optional[str]) -> Optional[Decimal]:
+        return None if raw is None or not raw.strip() else _to_decimal(label, raw)
+
     form_941 = [
         Form941Quarter(
             quarter=q.quarter,
-            total_federal_wages=_to_decimal("941 fed wages", q.total_federal_wages),
-            total_federal_withholding=_to_decimal("941 fed withholding", q.total_federal_withholding),
-            total_ss_wages=_to_decimal("941 ss wages", q.total_ss_wages),
-            total_medicare_wages=_to_decimal("941 medicare wages", q.total_medicare_wages),
+            total_federal_wages=_optional_decimal("941 fed wages", q.total_federal_wages),
+            total_federal_withholding=_optional_decimal("941 fed withholding", q.total_federal_withholding),
+            total_ss_wages=_optional_decimal("941 ss wages", q.total_ss_wages),
+            total_medicare_wages=_optional_decimal("941 medicare wages", q.total_medicare_wages),
         )
         for q in payload.form_941_quarters
     ]
@@ -322,11 +329,12 @@ def export_reconciliation_csv(
 
     writer.writerow([])
     writer.writerow(["Form 941 Mismatches"])
-    writer.writerow(["Quarter", "Kind", "Severity", "Expected", "Actual", "Difference", "Message"])
+    writer.writerow(["Quarter", "Compared With", "Kind", "Severity", "Expected", "Actual", "Difference", "Message"])
     for m in result.form_941_mismatches:
         writer.writerow(
             [
                 m.quarter if m.quarter is not None else "ALL",
+                "W-3" if m.compared_with == "w3" else "Payroll YTD",
                 m.kind.value,
                 m.severity.value,
                 str(m.expected),
@@ -339,13 +347,17 @@ def export_reconciliation_csv(
     writer.writerow([])
     writer.writerow(["W-3 Totals"])
     w3 = result.w3_totals
-    writer.writerow(["Employee Count", w3.employee_count])
-    writer.writerow(["Total Federal Wages", str(w3.total_federal_wages)])
-    writer.writerow(["Total Federal Withholding", str(w3.total_federal_withholding)])
-    writer.writerow(["Total SS Wages", str(w3.total_ss_wages)])
-    writer.writerow(["Total SS Tax Withheld", str(w3.total_ss_tax_withheld)])
-    writer.writerow(["Total Medicare Wages", str(w3.total_medicare_wages)])
-    writer.writerow(["Total Medicare Tax Withheld", str(w3.total_medicare_tax_withheld)])
+    if w3 is None:
+        # Sprint 846 (W8): no drafts, no W-3 — not a row of zeros.
+        writer.writerow([result.summary["w3_status"]])
+    else:
+        writer.writerow(["Employee Count", w3.employee_count])
+        writer.writerow(["Total Federal Wages", str(w3.total_federal_wages)])
+        writer.writerow(["Total Federal Withholding", str(w3.total_federal_withholding)])
+        writer.writerow(["Total SS Wages", str(w3.total_ss_wages)])
+        writer.writerow(["Total SS Tax Withheld", str(w3.total_ss_tax_withheld)])
+        writer.writerow(["Total Medicare Wages", str(w3.total_medicare_wages)])
+        writer.writerow(["Total Medicare Tax Withheld", str(w3.total_medicare_tax_withheld)])
 
     # Sprint 826 (W1/W2): the export must carry the same "not run" disclosure as
     # the screen, or a workpaper built from it would read as fully checked.
