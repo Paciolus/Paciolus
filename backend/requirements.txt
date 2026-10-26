@@ -122,5 +122,5 @@ psutil>=7.0.0
 cryptography>=46.0.7  # CVE-2026-26007
 pillow>=12.2.0  # CVE-2026-25990
 werkzeug>=3.1.8  # CVE-2026-27199
-pyasn1>=0.6.3  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
+pyasn1>=0.6.4  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
 pypdf>=6.10.0  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)
