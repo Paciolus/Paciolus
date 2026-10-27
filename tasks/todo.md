@@ -1503,8 +1503,16 @@ and covered by the suite: `Numeric(19,2)` Decimal round-trips, `use_alter` FKs, 
 SQLite `PRAGMA foreign_keys=ON` listeners, soft-delete guards. Autoflush-on-every-execution and
 `Select.filter_by` ambiguity checks produced no failures.
 
-**Verification:** full backend suite on SQLite green (see Alembic paragraph for final count);
-the PostgreSQL 15 path is verified by CI's `Backend Tests (PostgreSQL 15)` job only — no local
+**Alembic 1.18.4 → 1.20.1:** no `env.py` API change needed. Added `path_separator = os` to
+`alembic.ini` — the 1.16+ key, whose absence emitted a `DeprecationWarning` on every Alembic run
+(seen in `test_alembic_models_parity`). `alembic upgrade head` on a fresh SQLite DB is clean with
+`-W error::DeprecationWarning`. Compared old stack (2.0.49 + 1.18.4) against new on fresh
+databases: `alembic check` reports the **identical** pre-existing autogenerate drift (142 ops,
+nullable/index differences already allow-listed by the parity test — not touched here), and the
+migrated DDL differs only in the order of `FOREIGN KEY` clauses inside batch-recreated tables.
+
+**Verification:** full backend suite on SQLite **9,947 passed / 0 failed** on 2.1.6 + 1.20.1, no
+SQLAlchemy deprecation warnings; `pip-audit` gate CLEAN (69 packages); ruff clean. The PostgreSQL 15 path is verified by CI's `Backend Tests (PostgreSQL 15)` job only — no local
 Postgres. **After merge: confirm on the Render deploy that `/health/ready` returns 200 with the
 database dependency healthy** — the production URL path is the one thing no test here exercises
 against the real host.
