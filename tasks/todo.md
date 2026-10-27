@@ -580,7 +580,7 @@ unknown engagement — and pass after); `test_internal_admin.py` requests now na
 ---
 
 ### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
-**Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (items 3 and 5) not yet done.
+**Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (item 3) done 2026-10-27; item 5 is 10/11 (multi-period remains); the CEO usefulness judgement remains.
 **Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
 surface in the product. The full-spectrum review found three P1s in its first hour of doing
 exactly this, on fewer than 70 synthetic accounts.
@@ -621,11 +621,29 @@ product, reached through a UI that presents them identically to the mature eleve
       (the pattern used for `W2ReconciliationConfig` in Sprint 811)
 - [x] Drive each of the seven engines end-to-end and record the output, not just the absence
       of an exception — A-5 returned `0.0` happily for the life of the product
-- [ ] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
+- [x] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
       `COVERAGE_MAP.md`, which `test_coverage_map.py` already enforces
+      **Done 2026-10-27.** The registry was TB-only (`ANOMALY_REGISTRY` injects into a TB
+      DataFrame), so non-TB generators could not join it. Added `TOOL_GENERATOR_REGISTRY`
+      (all 18 slugs → their generator lists) and `CONFIG_TOOL_HARNESSES`; a new
+      "Per-Tool Generator Coverage" table in `COVERAGE_MAP.md` with a row per tool;
+      `test_coverage_map.py` now requires registry == map == `tools_registry` catalog, counts equal,
+      names unique. **28 new generators** for the six config-shaped tools (SoD 5, intercompany 4,
+      W-2 5, 1099 5, book-to-tax 5, cash flow 4) in `generators/*_generators.py`, baselines in
+      `fixtures/base_config_tools.py`, run by `test_config_tool_anomaly_detected` — each asserts
+      **clean on baseline, detected after injection**. Reverting Sprint 827 D1 (role rows overwrite)
+      fails 2 of them. **Correction:** FA was never generator-less — `fa_generators.py` (9) predates
+      823; it is now registered, so the uncovered count was six, not seven. **Found:** 16
+      `requires_large_population` generators (AP 2, revenue 3, AR 4, payroll 3, FA 2, inventory 2)
+      are registered but never parametrized — only JE runs its large-population set; recorded as
+      PARTIAL in the map, not fixed. Book-to-tax is a calculator, so its five are known-answer
+      checks rather than detections.
 - [x] File each abnormal output as a finding with its measurement, in the A-1…A-6 style
 - [ ] Then the remaining eleven, which have generators but whose *application* was never
       exercised end-to-end either
+      **10 of 11 done:** Sprint 829 (discovery round 2, PR #218 `106c5782`) drove JE, AP, payroll,
+      revenue, AR, inventory, TB, bank rec and three-way match; statistical sampling was driven by
+      823 itself (S1–S9). **Multi-period comparison was driven by neither** — it is the one left.
 - [ ] **CEO, after the engineering half:** judge whether the output is professionally useful
       to a practitioner. That part is not mechanisable and is the half the action item was
       really asking for.

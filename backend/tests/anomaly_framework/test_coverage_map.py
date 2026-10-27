@@ -93,3 +93,69 @@ def test_coverage_map_has_no_orphan_entries():
         f"COVERAGE_MAP.md contains entries not in the registry: {orphans}. "
         "Remove stale entries or add the corresponding generator to the registry."
     )
+
+
+# --- Per-tool generator coverage (Sprint 823 item 3) -------------------------
+
+
+def _parse_tool_table() -> dict[str, dict[str, str]]:
+    """Parse the per-tool table (first header cell ``Tool``) into {slug: row}."""
+    lines = COVERAGE_MAP_PATH.read_text(encoding="utf-8").splitlines()
+    header_idx = next(
+        (i for i, line in enumerate(lines) if line.startswith("|") and line.split("|")[1].strip() == "Tool"),
+        None,
+    )
+    assert header_idx is not None, "COVERAGE_MAP.md has no per-tool table (header row starting '| Tool |')"
+    header = [c.strip() for c in lines[header_idx].strip().strip("|").split("|")]
+    rows: dict[str, dict[str, str]] = {}
+    for line in lines[header_idx + 2 :]:
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        row = dict(zip(header, cells))
+        rows[row["Tool"].strip("`")] = row
+    return rows
+
+
+def test_every_marketing_tool_has_a_generator_registry_and_a_map_row():
+    """All eighteen tools — not only the trial balance — are registered and mapped.
+
+    Sprint 823 found six of the eighteen had never been exercised by the
+    framework, invisibly: nothing tied the framework to the catalog.
+    """
+    from tests.anomaly_framework.registry import TOOL_GENERATOR_REGISTRY
+    from tools_registry import marketing_audit_tools
+
+    catalog = {t.slug for t in marketing_audit_tools()}
+    rows = _parse_tool_table()
+
+    assert set(TOOL_GENERATOR_REGISTRY) == catalog, (
+        f"registry vs catalog — missing: {catalog - set(TOOL_GENERATOR_REGISTRY)}, "
+        f"unknown: {set(TOOL_GENERATOR_REGISTRY) - catalog}"
+    )
+    assert set(rows) == catalog, f"map vs catalog — missing: {catalog - set(rows)}, unknown: {set(rows) - catalog}"
+    empty = [slug for slug, generators in TOOL_GENERATOR_REGISTRY.items() if not generators]
+    assert not empty, f"tools registered with no generators: {empty}"
+
+
+def test_tool_table_generator_counts_match_the_registry():
+    from tests.anomaly_framework.registry import TOOL_GENERATOR_REGISTRY
+
+    rows = _parse_tool_table()
+    wrong = {
+        slug: (rows[slug]["Generators"], len(generators))
+        for slug, generators in TOOL_GENERATOR_REGISTRY.items()
+        if slug in rows and rows[slug]["Generators"] != str(len(generators))
+    }
+    assert not wrong, f"COVERAGE_MAP.md generator counts (map, registry) disagree: {wrong}"
+    for slug, row in rows.items():
+        assert row.get("Coverage status"), f"{slug}: blank coverage status"
+        assert row.get("Engine entry point"), f"{slug}: blank engine entry point"
+
+
+def test_generator_names_are_unique_across_all_tools():
+    from tests.anomaly_framework.registry import TOOL_GENERATOR_REGISTRY
+
+    names = [g.name for generators in TOOL_GENERATOR_REGISTRY.values() for g in generators]
+    duplicates = sorted({n for n in names if names.count(n) > 1})
+    assert not duplicates, f"generator names reused across tools: {duplicates}"

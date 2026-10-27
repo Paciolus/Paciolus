@@ -17,17 +17,46 @@ from classification_rules import (
 )
 from shared.monetary import BALANCE_TOLERANCE
 from tests.anomaly_framework.generators.abnormal_balance import AbnormalBalanceGenerator
+from tests.anomaly_framework.generators.ap_generators import AP_REGISTRY
+from tests.anomaly_framework.generators.ar_generators import AR_REGISTRY
 from tests.anomaly_framework.generators.asset_concentration import AssetConcentrationGenerator
 from tests.anomaly_framework.generators.balance_sheet_imbalance import BalanceSheetImbalanceGenerator
+from tests.anomaly_framework.generators.bank_rec_generators import BANK_REC_REGISTRY
+from tests.anomaly_framework.generators.book_to_tax_generators import (
+    BOOK_TO_TAX_HARNESS,
+    BOOK_TO_TAX_REGISTRY,
+)
+from tests.anomaly_framework.generators.cash_flow_generators import (
+    CASH_FLOW_HARNESS,
+    CASH_FLOW_REGISTRY,
+)
 from tests.anomaly_framework.generators.duplicate_entry import DuplicateEntryGenerator
 from tests.anomaly_framework.generators.equity_signal import EquitySignalGenerator
 from tests.anomaly_framework.generators.expense_concentration import ExpenseConcentrationGenerator
+from tests.anomaly_framework.generators.fa_generators import FA_REGISTRY
+from tests.anomaly_framework.generators.form_1099_generators import (
+    FORM_1099_HARNESS,
+    FORM_1099_REGISTRY,
+)
+from tests.anomaly_framework.generators.intercompany_generators import (
+    INTERCOMPANY_HARNESS,
+    INTERCOMPANY_REGISTRY,
+)
+from tests.anomaly_framework.generators.inv_generators import INV_REGISTRY
+from tests.anomaly_framework.generators.je_generators import JE_REGISTRY
 from tests.anomaly_framework.generators.liability_concentration import LiabilityConcentrationGenerator
 from tests.anomaly_framework.generators.missing_offset import MissingOffsetGenerator
+from tests.anomaly_framework.generators.multi_period_generators import MULTI_PERIOD_REGISTRY
+from tests.anomaly_framework.generators.payroll_generators import PAYROLL_REGISTRY
 from tests.anomaly_framework.generators.related_party_activity import RelatedPartyActivityGenerator
 from tests.anomaly_framework.generators.revenue_concentration import RevenueConcentrationGenerator
+from tests.anomaly_framework.generators.revenue_generators import REVENUE_REGISTRY
 from tests.anomaly_framework.generators.round_number import RoundNumberGenerator
+from tests.anomaly_framework.generators.sampling_generators import SAMPLING_REGISTRY
+from tests.anomaly_framework.generators.sod_generators import SOD_HARNESS, SOD_REGISTRY
 from tests.anomaly_framework.generators.suspense_account import SuspenseAccountGenerator
+from tests.anomaly_framework.generators.twm_generators import TWM_REGISTRY
+from tests.anomaly_framework.generators.w2_generators import W2_HARNESS, W2_REGISTRY
 from tests.anomaly_framework.generators.weekend_posting import WeekendPostingGenerator
 
 ANOMALY_REGISTRY: list = [
@@ -168,6 +197,56 @@ ANOMALY_REGISTRY_META: dict = {
             "See audit/rules/concentration.py :: detect_concentration_risk()."
         ),
     },
+}
+
+
+# =============================================================================
+# Per-tool generator registry (Sprint 823 item 3)
+# =============================================================================
+#
+# ``ANOMALY_REGISTRY`` above is the trial-balance set: every entry injects into a
+# TB DataFrame and is parametrized by ``test_anomaly_detection.py``. The other
+# seventeen tools take other inputs, so their generators live in per-tool
+# registries next to their generator modules and are parametrized by
+# ``tests/test_tool_anomaly_detection.py``. This map collects all of them under
+# the ``tools_registry`` slug so ``test_coverage_map.py`` can require a
+# COVERAGE_MAP.md row — with a matching generator count — for every one of the
+# eighteen marketing tools.
+#
+# The six config-shaped tools (Sprint 689b–g) also need a harness — a clean
+# baseline and an engine adapter — because their input is an engine dataclass
+# rather than rows; see ``generators/config_tool_base.py``.
+
+TOOL_GENERATOR_REGISTRY: dict[str, list] = {
+    "trial_balance": ANOMALY_REGISTRY,
+    "multi_period": MULTI_PERIOD_REGISTRY,
+    "bank_reconciliation": BANK_REC_REGISTRY,
+    "three_way_match": TWM_REGISTRY,
+    "journal_entry_testing": JE_REGISTRY,
+    "ap_testing": AP_REGISTRY,
+    "revenue_testing": REVENUE_REGISTRY,
+    "ar_aging": AR_REGISTRY,
+    "payroll_testing": PAYROLL_REGISTRY,
+    "fixed_asset_testing": FA_REGISTRY,
+    "inventory_testing": INV_REGISTRY,
+    "statistical_sampling": SAMPLING_REGISTRY,
+    "sod_checker": SOD_REGISTRY,
+    "intercompany_elimination": INTERCOMPANY_REGISTRY,
+    "w2_reconciliation": W2_REGISTRY,
+    "form_1099": FORM_1099_REGISTRY,
+    "book_to_tax": BOOK_TO_TAX_REGISTRY,
+    "cash_flow_projector": CASH_FLOW_REGISTRY,
+}
+
+# Config-shaped tools: (harness, generators). Parametrized by
+# ``test_tool_anomaly_detection.py::test_config_tool_anomaly_detected``.
+CONFIG_TOOL_HARNESSES: dict[str, tuple] = {
+    "sod_checker": (SOD_HARNESS, SOD_REGISTRY),
+    "intercompany_elimination": (INTERCOMPANY_HARNESS, INTERCOMPANY_REGISTRY),
+    "w2_reconciliation": (W2_HARNESS, W2_REGISTRY),
+    "form_1099": (FORM_1099_HARNESS, FORM_1099_REGISTRY),
+    "book_to_tax": (BOOK_TO_TAX_HARNESS, BOOK_TO_TAX_REGISTRY),
+    "cash_flow_projector": (CASH_FLOW_HARNESS, CASH_FLOW_REGISTRY),
 }
 
 

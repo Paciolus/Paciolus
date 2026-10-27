@@ -483,3 +483,38 @@ def test_currency_anomaly_detected(generator):
             f"Unconverted count: {unconverted_count}, items: {unconverted}, "
             f"rejected_at_construction: {rejected_at_construction}"
         )
+
+
+# =============================================================================
+# 13–18. Config-shaped tools — SoD, intercompany, W-2/W-3, Form 1099,
+# book-to-tax, cash flow projector (Sprint 823 item 3)
+# =============================================================================
+
+from tests.anomaly_framework.registry import CONFIG_TOOL_HARNESSES
+
+_CONFIG_TOOL_CASES = [
+    (harness, generator) for harness, generators in CONFIG_TOOL_HARNESSES.values() for generator in generators
+]
+
+
+@pytest.mark.parametrize(
+    "harness, generator", _CONFIG_TOOL_CASES, ids=[f"{h.tool}-{g.name}" for h, g in _CONFIG_TOOL_CASES]
+)
+def test_config_tool_anomaly_detected(harness, generator):
+    """Clean baseline reads clean; the injected departure is detected.
+
+    The negative half matters as much as the positive one: a check that
+    reports the condition on the clean baseline would pass the positive half
+    against an engine that flags everything.
+    """
+    baseline = harness.baseline()
+    assert not generator.detected(harness.run(baseline)), (
+        f"[{generator.name}] reported on the clean baseline — the check is not specific to the injection"
+    )
+    mutated, records = generator.inject(baseline, seed=42)
+    assert records and records[0].anomaly_type == generator.name
+    assert generator.detected(harness.run(mutated)), (
+        f"[{generator.name}] not detected. Injected at: {generator.injected_at}"
+    )
+    # inject() must not mutate the baseline it was given.
+    assert not generator.detected(harness.run(baseline)), f"[{generator.name}] inject() mutated its input"
