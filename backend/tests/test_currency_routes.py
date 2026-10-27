@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from currency_engine import CurrencyRateTable, ExchangeRate
@@ -28,6 +30,7 @@ from routes.currency import (
 # =============================================================================
 # DB-Backed Session Storage (Sprint 262)
 # =============================================================================
+
 
 class TestSessionStorage:
     """Tests for DB-backed currency rate session storage."""
@@ -104,21 +107,25 @@ class TestSessionStorage:
 # Route Registration
 # =============================================================================
 
+
 class TestRouteRegistration:
     def test_currency_routes_registered(self):
         from main import app
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/currency-rates" in route_paths
         assert "/audit/currency-rate" in route_paths
 
     def test_currency_router_tags(self):
         from routes.currency import router
+
         assert "currency" in router.tags
 
 
 # =============================================================================
 # Response Models
 # =============================================================================
+
 
 class TestResponseModels:
     def test_rate_table_upload_response(self):
@@ -161,6 +168,7 @@ class TestResponseModels:
 # =============================================================================
 # Request Validation
 # =============================================================================
+
 
 class TestRequestValidation:
     def test_single_rate_request_valid(self):

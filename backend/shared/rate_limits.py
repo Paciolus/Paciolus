@@ -58,10 +58,18 @@ Storage Outage Behavior (Sprint 774):
 """
 
 import logging
+from collections.abc import Callable, Sequence
 from contextvars import ContextVar
+from typing import Any
 
+from fastapi.routing import iter_route_contexts
 from slowapi import Limiter
+from slowapi.middleware import SlowAPIMiddleware, _should_exempt, sync_check_limits
+from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import BaseRoute, Match
+from starlette.types import Scope
 
 from security_middleware import get_client_ip as _canonical_get_client_ip
 
@@ -468,3 +476,61 @@ RATE_LIMIT_DEFAULT = TieredLimit("default", "60/minute")
 RATE_LIMIT_WEBHOOK = "10/minute"  # AUDIT-07: unauthenticated, signature-verified
 RATE_LIMIT_HEALTH = "60/minute"  # AUDIT-07: health probes
 RATE_LIMIT_METRICS = "30/minute"  # AUDIT-07: Prometheus scrape endpoint
+
+
+# ---------------------------------------------------------------------------
+# Default-limit middleware (Sprint 840, made FastAPI 0.137+ aware in 786b)
+# ---------------------------------------------------------------------------
+
+
+def _find_route_handler(routes: Sequence[BaseRoute], scope: Scope) -> Callable[..., Any] | None:
+    """Return the endpoint that will serve ``scope``, searching included routers too.
+
+    Replaces ``slowapi.middleware._find_route_handler``, which iterates
+    ``app.routes`` flat. Since FastAPI 0.137 ``app.routes`` holds one
+    ``_IncludedRouter`` node per ``include_router`` call — a node that matches
+    but has no ``endpoint`` — so slowapi resolves *no* handler for any route
+    registered through a router (all of ours), treats the request as exempt,
+    and the default limit silently stops applying. ``iter_route_contexts`` is
+    FastAPI's public replacement for iterating ``router.routes``; each context
+    matches against its prefixed path and exposes the original endpoint.
+
+    One deliberate departure: the *first* FULL match wins, as in Starlette's
+    own dispatch. slowapi keeps the last, so a static path shadowed by a later
+    parameterised one (``/clients/industries`` vs ``/clients/{client_id}``) was
+    limited — or exempted — as the wrong endpoint.
+    """
+    for route in iter_route_contexts(routes):
+        match, _ = route.matches(scope)
+        if match == Match.FULL and route.endpoint is not None:
+            return route.endpoint
+    return None
+
+
+class DefaultLimitMiddleware(SlowAPIMiddleware):
+    """``SlowAPIMiddleware`` with a route lookup that sees included routers.
+
+    Identical to slowapi 0.1.10's ``SlowAPIMiddleware.dispatch`` except for the
+    handler lookup. Decorated routes are still exempted here and enforced by
+    their own ``@limiter.limit``; everything else gets ``default_limits``.
+    """
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        app = request.app
+        app_limiter: Limiter = app.state.limiter
+
+        if not app_limiter.enabled:
+            return await call_next(request)
+
+        handler = _find_route_handler(app.routes, request.scope)
+        if _should_exempt(app_limiter, handler):
+            return await call_next(request)
+
+        error_response, should_inject_headers = sync_check_limits(app_limiter, request, handler, app)
+        if error_response is not None:
+            return error_response
+
+        response = await call_next(request)
+        if should_inject_headers:
+            response = app_limiter._inject_headers(response, request.state.view_rate_limit)
+        return response

@@ -20,6 +20,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_verified_user
@@ -74,15 +76,15 @@ class TestAdjustmentRouteRegistration:
     """Verify adjustment routes are registered."""
 
     def test_create_adjustment_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/adjustments" in paths
 
     def test_types_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/adjustments/types" in paths
 
     def test_statuses_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/adjustments/statuses" in paths
 
 

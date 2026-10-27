@@ -15,6 +15,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user, require_verified_user
@@ -68,15 +70,15 @@ class TestMultiPeriodRouteRegistration:
     """Verify multi-period routes are registered."""
 
     def test_compare_periods_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/compare-periods" in paths
 
     def test_compare_three_way_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/compare-three-way" in paths
 
     def test_export_movements_csv_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/movements" in paths
 
 

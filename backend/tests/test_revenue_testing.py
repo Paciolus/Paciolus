@@ -78,6 +78,7 @@ from shared.column_detector import match_column as _match_column
 # Aliased imports to avoid pytest collection of test_* functions
 from shared.parsing_helpers import parse_date, safe_float, safe_str
 from shared.testing_enums import RiskTier, Severity, TestTier
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURE HELPERS
@@ -1702,7 +1703,7 @@ class TestRevenueTestingRoute:
     def test_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/revenue-testing" in paths
 
     def test_engagement_model_has_revenue(self):

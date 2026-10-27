@@ -40,6 +40,7 @@ from shared.upload_pipeline import (
     parse_uploaded_file_by_format,
     validate_file_size,
 )
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # HELPERS — Mock UploadFile
@@ -407,7 +408,7 @@ class TestRateLimitWiring:
         from main import app
 
         export_routes = []
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and "/export/" in route.path:
                 export_routes.append(route.path)
 
@@ -434,7 +435,7 @@ class TestAuthClassification:
         from main import app
 
         engagement_export_routes = []
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and "export" in route.path and "engagement" in route.path:
                 engagement_export_routes.append(route.path)
 

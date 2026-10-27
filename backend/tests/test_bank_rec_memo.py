@@ -21,6 +21,7 @@ import inspect
 import pytest
 
 from bank_reconciliation_memo_generator import generate_bank_rec_memo
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURES
@@ -650,7 +651,7 @@ class TestBankRecMemoExportRoute:
         from main import app
 
         routes = []
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path"):
                 routes.append(route.path)
         assert "/export/bank-rec-memo" in routes
@@ -658,7 +659,7 @@ class TestBankRecMemoExportRoute:
     def test_bank_rec_memo_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/bank-rec-memo":
                 assert "POST" in route.methods
                 break

@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from revenue_testing_memo_generator import (
@@ -695,19 +697,19 @@ class TestRevenueExportRoutes:
     def test_pdf_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/revenue-testing-memo" in paths
 
     def test_csv_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/revenue-testing" in paths
 
     def test_pdf_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/revenue-testing-memo":
                 assert "POST" in route.methods
                 break
@@ -717,7 +719,7 @@ class TestRevenueExportRoutes:
     def test_csv_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/csv/revenue-testing":
                 assert "POST" in route.methods
                 break

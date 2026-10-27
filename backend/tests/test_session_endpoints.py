@@ -16,6 +16,8 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, "..")
 
 from auth import hash_password, require_current_user
@@ -255,9 +257,9 @@ class TestSessionRouteRegistration:
     """Verify session routes are registered."""
 
     def test_get_sessions_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/sessions" in paths
 
     def test_delete_session_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/sessions/{session_id}" in paths

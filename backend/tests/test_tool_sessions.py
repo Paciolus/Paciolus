@@ -19,6 +19,8 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from adjusting_entries import (
@@ -71,9 +73,7 @@ class TestToolSessionSaveAndLoad:
         loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"v": 2}
         # Verify only one row exists
-        count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="currency_rates"
-        ).count()
+        count = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="currency_rates").count()
         assert count == 1
 
     def test_different_tools_separate(self, db_session, make_user):
@@ -151,9 +151,7 @@ class TestToolSessionTTL:
 
         load_tool_session(db_session, user.id, "adjustments")
 
-        count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
-        ).count()
+        count = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="adjustments").count()
         assert count == 0
 
     def test_currency_rates_ttl_different(self, db_session, make_user):
@@ -227,9 +225,7 @@ class TestIsExpired:
 class TestAdjustmentSetRoundTrip:
     """Verify AdjustmentSet survives JSON serialization round-trip."""
 
-    def _make_entry(
-        self, ref="AJE-001", desc="Test", debit_acct="Cash", credit_acct="Revenue", amount="100.00"
-    ):
+    def _make_entry(self, ref="AJE-001", desc="Test", debit_acct="Cash", credit_acct="Revenue", amount="100.00"):
         return AdjustingEntry(
             reference=ref,
             description=desc,
@@ -314,11 +310,13 @@ class TestAdjustmentSetRoundTrip:
         """100+ adjusting entries should round-trip correctly."""
         original = AdjustmentSet()
         for i in range(120):
-            original.add_entry(self._make_entry(
-                ref=f"AJE-{i:03d}",
-                desc=f"Entry number {i}",
-                amount=f"{(i + 1) * 10.50:.2f}",
-            ))
+            original.add_entry(
+                self._make_entry(
+                    ref=f"AJE-{i:03d}",
+                    desc=f"Entry number {i}",
+                    amount=f"{(i + 1) * 10.50:.2f}",
+                )
+            )
         data = original.to_dict()
         json_str = json.dumps(data)
         assert len(json_str) > 10_000  # Sanity check: payload is large
@@ -420,14 +418,20 @@ class TestCurrencyRateTableRoundTrip:
     def test_many_currency_pairs(self):
         """Table with many pairs should round-trip."""
         pairs = [
-            ("EUR", "1.05"), ("GBP", "1.27"), ("JPY", "0.0067"), ("CHF", "1.12"),
-            ("CAD", "0.74"), ("AUD", "0.65"), ("NZD", "0.61"), ("CNY", "0.14"),
-            ("INR", "0.012"), ("BRL", "0.17"), ("MXN", "0.058"), ("ZAR", "0.055"),
+            ("EUR", "1.05"),
+            ("GBP", "1.27"),
+            ("JPY", "0.0067"),
+            ("CHF", "1.12"),
+            ("CAD", "0.74"),
+            ("AUD", "0.65"),
+            ("NZD", "0.61"),
+            ("CNY", "0.14"),
+            ("INR", "0.012"),
+            ("BRL", "0.17"),
+            ("MXN", "0.058"),
+            ("ZAR", "0.055"),
         ]
-        rates = [
-            ExchangeRate(date(2026, 1, 31), code, "USD", Decimal(rate))
-            for code, rate in pairs
-        ]
+        rates = [ExchangeRate(date(2026, 1, 31), code, "USD", Decimal(rate)) for code, rate in pairs]
         table = CurrencyRateTable(rates=rates, presentation_currency="USD")
         restored = CurrencyRateTable.from_storage_dict(table.to_storage_dict())
         assert len(restored.rates) == 12
@@ -497,14 +501,13 @@ class TestDialectAwareUpsert:
         save_tool_session(db_session, user.id, "currency_rates", {"v": 2})
         loaded = load_tool_session(db_session, user.id, "currency_rates")
         assert loaded == {"v": 2}
-        count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="currency_rates"
-        ).count()
+        count = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="currency_rates").count()
         assert count == 1
 
     def test_postgresql_dialect_importable(self):
         """PostgreSQL dialect insert should be importable for the pg path."""
         from sqlalchemy.dialects.postgresql import insert as pg_insert
+
         assert pg_insert is not None
 
     def test_fallback_insert_new_row(self, db_session, make_user):
@@ -523,9 +526,7 @@ class TestDialectAwareUpsert:
         _save_fallback(db_session, user.id, "adjustments", json.dumps({"v": 2}), now)
         loaded = load_tool_session(db_session, user.id, "adjustments")
         assert loaded == {"v": 2}
-        count = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
-        ).count()
+        count = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="adjustments").count()
         assert count == 1
 
     def test_fallback_dispatched_for_unknown_dialect(self, db_session, make_user):
@@ -563,16 +564,12 @@ class TestUpsertBehavior:
         """Upsert should update updated_at."""
         user = make_user(email="upsert2@test.com")
         save_tool_session(db_session, user.id, "adjustments", {"v": 1})
-        row1 = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
-        ).first()
+        row1 = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="adjustments").first()
         ts1 = row1.updated_at
 
         save_tool_session(db_session, user.id, "adjustments", {"v": 2})
         db_session.expire_all()
-        row2 = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments"
-        ).first()
+        row2 = db_session.query(ToolSession).filter_by(user_id=user.id, tool_name="adjustments").first()
         # updated_at should be >= ts1 (may be equal due to fast execution)
         assert row2.updated_at >= ts1
 
@@ -587,7 +584,8 @@ class TestRouteRegistration:
 
     def test_adjustment_routes_registered(self):
         from main import app
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/adjustments" in paths
         assert "/audit/adjustments/types" in paths
         assert "/audit/adjustments/statuses" in paths
@@ -596,7 +594,8 @@ class TestRouteRegistration:
 
     def test_currency_routes_registered(self):
         from main import app
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/currency-rates" in paths
         assert "/audit/currency-rate" in paths
 
@@ -612,30 +611,32 @@ class TestFinancialDataSanitization:
     def _make_adjustment_data(self):
         """Return a typical AdjustmentSet.to_dict() payload with financial content."""
         return {
-            "entries": [{
-                "id": "entry-001",
-                "reference": "AJE-001",
-                "description": "Accrue unbilled revenue",
-                "adjustment_type": "accrual",
-                "status": "proposed",
-                "lines": [
-                    {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0, "description": None},
-                    {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0, "description": None},
-                ],
-                "total_debits": 5000.0,
-                "total_credits": 5000.0,
-                "entry_total": 5000.0,
-                "is_balanced": True,
-                "account_count": 2,
-                "prepared_by": "auditor@test.com",
-                "reviewed_by": None,
-                "approved_by": None,
-                "approved_at": None,
-                "created_at": "2026-02-16T10:00:00+00:00",
-                "updated_at": None,
-                "notes": "Q4 year-end",
-                "is_reversing": False,
-            }],
+            "entries": [
+                {
+                    "id": "entry-001",
+                    "reference": "AJE-001",
+                    "description": "Accrue unbilled revenue",
+                    "adjustment_type": "accrual",
+                    "status": "proposed",
+                    "lines": [
+                        {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0, "description": None},
+                        {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0, "description": None},
+                    ],
+                    "total_debits": 5000.0,
+                    "total_credits": 5000.0,
+                    "entry_total": 5000.0,
+                    "is_balanced": True,
+                    "account_count": 2,
+                    "prepared_by": "auditor@test.com",
+                    "reviewed_by": None,
+                    "approved_by": None,
+                    "approved_at": None,
+                    "created_at": "2026-02-16T10:00:00+00:00",
+                    "updated_at": None,
+                    "notes": "Q4 year-end",
+                    "is_reversing": False,
+                }
+            ],
             "total_adjustments": 1,
             "proposed_count": 1,
             "approved_count": 0,
@@ -693,10 +694,8 @@ class TestFinancialDataSanitization:
         user = make_user(email="sanitize_curr@test.com")
         rate_data = {
             "rates": [
-                {"effective_date": "2026-01-31", "from_currency": "EUR",
-                 "to_currency": "USD", "rate": "1.0523"},
-                {"effective_date": "2026-01-31", "from_currency": "GBP",
-                 "to_currency": "USD", "rate": "1.2650"},
+                {"effective_date": "2026-01-31", "from_currency": "EUR", "to_currency": "USD", "rate": "1.0523"},
+                {"effective_date": "2026-01-31", "from_currency": "GBP", "to_currency": "USD", "rate": "1.2650"},
             ],
             "uploaded_at": "2026-02-15T10:00:00+00:00",
             "presentation_currency": "USD",
@@ -753,9 +752,14 @@ class TestFinancialDataSanitization:
         user = make_user(email="sanitize_multi@test.com")
         data = {
             "entries": [
-                {"id": f"e-{i}", "reference": f"AJE-{i:03d}", "status": "proposed",
-                 "lines": [{"account_name": f"Acct-{i}", "debit": float(i * 100), "credit": 0.0}],
-                 "total_debits": float(i * 100), "entry_total": float(i * 100)}
+                {
+                    "id": f"e-{i}",
+                    "reference": f"AJE-{i:03d}",
+                    "status": "proposed",
+                    "lines": [{"account_name": f"Acct-{i}", "debit": float(i * 100), "credit": 0.0}],
+                    "total_debits": float(i * 100),
+                    "entry_total": float(i * 100),
+                }
                 for i in range(5)
             ],
         }
@@ -774,15 +778,17 @@ class TestFinancialDataSanitization:
         """Full AdjustmentSet → save → load → from_dict: entries have no lines."""
         user = make_user(email="sanitize_model_rt@test.com")
         adj_set = AdjustmentSet(period_label="FY2025")
-        adj_set.add_entry(AdjustingEntry(
-            reference="AJE-001",
-            description="Accrue revenue",
-            adjustment_type=AdjustmentType.ACCRUAL,
-            lines=[
-                AdjustmentLine(account_name="AR", debit=Decimal("1000.00")),
-                AdjustmentLine(account_name="Revenue", credit=Decimal("1000.00")),
-            ],
-        ))
+        adj_set.add_entry(
+            AdjustingEntry(
+                reference="AJE-001",
+                description="Accrue revenue",
+                adjustment_type=AdjustmentType.ACCRUAL,
+                lines=[
+                    AdjustmentLine(account_name="AR", debit=Decimal("1000.00")),
+                    AdjustmentLine(account_name="Revenue", credit=Decimal("1000.00")),
+                ],
+            )
+        )
 
         # Save through the session layer (sanitized)
         save_tool_session(db_session, user.id, "adjustments", adj_set.to_dict())
@@ -811,18 +817,22 @@ class TestLegacySessionCleanup:
         from tool_session_model import sanitize_existing_sessions
 
         user = make_user(email="legacy_san1@test.com")
-        legacy_data = json.dumps({
-            "entries": [{
-                "id": "old-entry",
-                "reference": "AJE-001",
-                "status": "proposed",
-                "lines": [{"account_name": "Cash", "debit": 1000, "credit": 0}],
-                "total_debits": 1000.0,
-                "total_credits": 1000.0,
-                "entry_total": 1000.0,
-            }],
-            "total_adjustment_amount": 1000.0,
-        })
+        legacy_data = json.dumps(
+            {
+                "entries": [
+                    {
+                        "id": "old-entry",
+                        "reference": "AJE-001",
+                        "status": "proposed",
+                        "lines": [{"account_name": "Cash", "debit": 1000, "credit": 0}],
+                        "total_debits": 1000.0,
+                        "total_credits": 1000.0,
+                        "entry_total": 1000.0,
+                    }
+                ],
+                "total_adjustment_amount": 1000.0,
+            }
+        )
         ts = ToolSession(
             user_id=user.id,
             tool_name="adjustments",
@@ -845,9 +855,11 @@ class TestLegacySessionCleanup:
         from tool_session_model import sanitize_existing_sessions
 
         user = make_user(email="legacy_san2@test.com")
-        clean_data = json.dumps({
-            "entries": [{"id": "clean-entry", "reference": "AJE-001", "status": "proposed"}],
-        })
+        clean_data = json.dumps(
+            {
+                "entries": [{"id": "clean-entry", "reference": "AJE-001", "status": "proposed"}],
+            }
+        )
         ts = ToolSession(
             user_id=user.id,
             tool_name="adjustments",
@@ -871,9 +883,11 @@ class TestLegacySessionCleanup:
             ts = ToolSession(
                 user_id=user.id,
                 tool_name="adjustments",
-                session_data=json.dumps({
-                    "entries": [{"lines": [{"account_name": "Cash", "debit": 100}]}],
-                }),
+                session_data=json.dumps(
+                    {
+                        "entries": [{"lines": [{"account_name": "Cash", "debit": 100}]}],
+                    }
+                ),
                 updated_at=datetime.now(UTC),
             )
             db_session.add(ts)
@@ -899,9 +913,11 @@ class TestLegacySessionCleanup:
         ts = ToolSession(
             user_id=user.id,
             tool_name="adjustments",
-            session_data=json.dumps({
-                "entries": [{"lines": [{"account_name": "AR", "debit": 500}]}],
-            }),
+            session_data=json.dumps(
+                {
+                    "entries": [{"lines": [{"account_name": "AR", "debit": 500}]}],
+                }
+            ),
             updated_at=datetime.now(UTC),
         )
         db_session.add(ts)
@@ -936,30 +952,32 @@ class TestAllowlistEnforcement:
     def _make_full_payload(self):
         """Return a fully-populated AdjustmentSet.to_dict()-shaped payload."""
         return {
-            "entries": [{
-                "id": "entry-001",
-                "reference": "AJE-001",
-                "description": "Accrue unbilled revenue",
-                "adjustment_type": "accrual",
-                "status": "proposed",
-                "lines": [
-                    {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0},
-                    {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0},
-                ],
-                "total_debits": 5000.0,
-                "total_credits": 5000.0,
-                "entry_total": 5000.0,
-                "is_balanced": True,
-                "account_count": 2,
-                "prepared_by": "auditor@test.com",
-                "reviewed_by": None,
-                "approved_by": None,
-                "approved_at": None,
-                "created_at": "2026-02-16T10:00:00+00:00",
-                "updated_at": None,
-                "notes": "Q4 year-end",
-                "is_reversing": False,
-            }],
+            "entries": [
+                {
+                    "id": "entry-001",
+                    "reference": "AJE-001",
+                    "description": "Accrue unbilled revenue",
+                    "adjustment_type": "accrual",
+                    "status": "proposed",
+                    "lines": [
+                        {"account_name": "Accounts Receivable", "debit": 5000.0, "credit": 0.0},
+                        {"account_name": "Revenue", "debit": 0.0, "credit": 5000.0},
+                    ],
+                    "total_debits": 5000.0,
+                    "total_credits": 5000.0,
+                    "entry_total": 5000.0,
+                    "is_balanced": True,
+                    "account_count": 2,
+                    "prepared_by": "auditor@test.com",
+                    "reviewed_by": None,
+                    "approved_by": None,
+                    "approved_at": None,
+                    "created_at": "2026-02-16T10:00:00+00:00",
+                    "updated_at": None,
+                    "notes": "Q4 year-end",
+                    "is_reversing": False,
+                }
+            ],
             "total_adjustments": 1,
             "proposed_count": 1,
             "approved_count": 0,
@@ -976,9 +994,14 @@ class TestAllowlistEnforcement:
         user = make_user(email="allowlist_raw@test.com")
         save_tool_session(db_session, user.id, "adjustments", self._make_full_payload())
 
-        row = db_session.query(ToolSession).filter_by(
-            user_id=user.id, tool_name="adjustments",
-        ).first()
+        row = (
+            db_session.query(ToolSession)
+            .filter_by(
+                user_id=user.id,
+                tool_name="adjustments",
+            )
+            .first()
+        )
         raw = json.loads(row.session_data)
 
         # Top-level keys are exactly the allowlist
@@ -1063,18 +1086,16 @@ class TestAllowlistEnforcement:
         entry_financial_keys = _ADJUSTMENT_ENTRY_STRIP_KEYS
         entry_non_financial = entry_model_keys - entry_financial_keys
         entry_missing = entry_non_financial - ALLOWED_ADJUSTMENT_ENTRY_KEYS
-        assert entry_missing == set(), (
-            f"Entry non-financial keys missing from allowlist: {entry_missing}"
-        )
+        assert entry_missing == set(), f"Entry non-financial keys missing from allowlist: {entry_missing}"
 
         # --- Set-level check ---
         adj_set = AdjustmentSet(
-            entries=[entry], period_label="FY2025", client_name="Test Corp",
+            entries=[entry],
+            period_label="FY2025",
+            client_name="Test Corp",
         )
         set_model_keys = set(adj_set.to_dict().keys())
         set_financial_keys = _ADJUSTMENT_SET_STRIP_KEYS
         set_non_financial = set_model_keys - set_financial_keys
         set_missing = set_non_financial - ALLOWED_ADJUSTMENT_SET_KEYS
-        assert set_missing == set(), (
-            f"Set non-financial keys missing from allowlist: {set_missing}"
-        )
+        assert set_missing == set(), f"Set non-financial keys missing from allowlist: {set_missing}"

@@ -24,6 +24,7 @@ from accrual_completeness_engine import (
     compute_accrual_completeness,
     run_accrual_completeness,
 )
+from tests.helpers.route_inventory import all_routes
 
 # ═══════════════════════════════════════════════════════════════
 # Test Account Classification (Sprint 513)
@@ -713,7 +714,7 @@ class TestRouteRegistration:
     def setup_app(self):
         from main import app
 
-        self.routes = [r.path for r in app.routes if hasattr(r, "path")]
+        self.routes = [r.path for r in all_routes(app) if hasattr(r, "path")]
 
     def test_accrual_completeness_route(self):
         assert "/audit/accrual-completeness" in self.routes

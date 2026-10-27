@@ -18,6 +18,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import create_access_token, require_superadmin
@@ -241,19 +243,19 @@ class TestInternalMetricsRouteRegistration:
     """Verify internal metrics routes are registered."""
 
     def test_revenue_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/internal/metrics/revenue" in paths
 
     def test_churn_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/internal/metrics/churn" in paths
 
     def test_trial_funnel_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/internal/metrics/trial-funnel" in paths
 
     def test_revenue_history_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/internal/metrics/revenue/history" in paths
 
 

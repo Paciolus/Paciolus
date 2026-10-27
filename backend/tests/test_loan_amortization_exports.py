@@ -16,6 +16,7 @@ from loan_amortization_engine import (
 )
 from loan_amortization_excel import build_amortization_workbook
 from pdf.sections.loan_amortization import build_amortization_pdf
+from tests.helpers.route_inventory import all_routes
 
 
 def _baseline_result(**overrides):
@@ -140,6 +141,6 @@ class TestRouteRegistration:
     def test_xlsx_and_pdf_routes_registered(self):
         from routes.loan_amortization import router
 
-        paths = {route.path for route in router.routes}
+        paths = {route.path for route in all_routes(router)}
         assert "/audit/loan-amortization/export.xlsx" in paths
         assert "/audit/loan-amortization/export.pdf" in paths

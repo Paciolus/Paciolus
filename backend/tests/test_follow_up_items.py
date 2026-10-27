@@ -13,6 +13,8 @@ import pytest
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engagement_manager import EngagementManager
@@ -75,10 +77,15 @@ class TestFollowUpItemSchema:
         inspector = sa_inspect(db_engine)
         columns = {c["name"] for c in inspector.get_columns("follow_up_items")}
         prohibited = {
-            "account_number", "account_name",
-            "amount", "debit", "credit",
-            "transaction_id", "entry_id",
-            "vendor_name", "employee_name",
+            "account_number",
+            "account_name",
+            "amount",
+            "debit",
+            "credit",
+            "transaction_id",
+            "entry_id",
+            "vendor_name",
+            "employee_name",
         }
         assert columns.isdisjoint(prohibited), f"Prohibited columns found: {columns & prohibited}"
 
@@ -87,10 +94,16 @@ class TestFollowUpItemSchema:
         inspector = sa_inspect(db_engine)
         columns = {c["name"] for c in inspector.get_columns("follow_up_items")}
         expected = {
-            "id", "engagement_id", "tool_run_id",
-            "description", "tool_source", "severity",
-            "disposition", "auditor_notes",
-            "created_at", "updated_at",
+            "id",
+            "engagement_id",
+            "tool_run_id",
+            "description",
+            "tool_source",
+            "severity",
+            "disposition",
+            "auditor_notes",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(columns), f"Missing columns: {expected - columns}"
 
@@ -114,8 +127,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -139,8 +154,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         tr = eng_mgr.record_tool_run(eng.id, ToolName.AP_TESTING, ToolRunStatus.COMPLETED, 85.0)
 
@@ -160,8 +177,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -181,8 +200,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user1)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user1.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user1.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -199,8 +220,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -217,8 +240,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -235,8 +260,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -254,8 +281,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -271,8 +300,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -287,8 +318,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -302,8 +335,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -322,8 +357,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -346,8 +383,10 @@ class TestFollowUpItemCRUD:
         client = make_client(user=user1)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user1.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user1.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -368,8 +407,10 @@ class TestFollowUpItemFiltering:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         mgr = FollowUpItemsManager(db_session)
 
@@ -437,8 +478,10 @@ class TestFollowUpItemPagination:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         mgr = FollowUpItemsManager(db_session)
         for i in range(10):
@@ -474,8 +517,10 @@ class TestFollowUpItemPagination:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         mgr = FollowUpItemsManager(db_session)
         for i in range(5):
@@ -492,8 +537,10 @@ class TestFollowUpItemPagination:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         mgr = FollowUpItemsManager(db_session)
         mgr.create_item(user.id, eng.id, "AP item", "ap_testing")
@@ -516,8 +563,10 @@ class TestFollowUpItemAggregation:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         mgr = FollowUpItemsManager(db_session)
 
@@ -561,8 +610,10 @@ class TestFollowUpItemAggregation:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -578,8 +629,10 @@ class TestFollowUpItemAggregation:
         client = make_client(user=user1)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user1.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user1.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -591,8 +644,10 @@ class TestFollowUpItemAggregation:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
 
         mgr = FollowUpItemsManager(db_session)
@@ -625,8 +680,10 @@ class TestAutoPopulation:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         tr = eng_mgr.record_tool_run(eng.id, ToolName.AP_TESTING, ToolRunStatus.COMPLETED, 72.5)
         return user, eng, tr
@@ -710,23 +767,33 @@ class TestAutoPopulation:
         client = make_client(user=user)
         eng_mgr = EngagementManager(db_session)
         eng = eng_mgr.create_engagement(
-            user.id, client.id,
-            datetime(2025, 1, 1, tzinfo=UTC), datetime(2025, 12, 31, tzinfo=UTC),
+            user.id,
+            client.id,
+            datetime(2025, 1, 1, tzinfo=UTC),
+            datetime(2025, 12, 31, tzinfo=UTC),
         )
         tr1 = eng_mgr.record_tool_run(eng.id, ToolName.AP_TESTING, ToolRunStatus.COMPLETED)
         tr2 = eng_mgr.record_tool_run(eng.id, ToolName.PAYROLL_TESTING, ToolRunStatus.COMPLETED)
 
         mgr = FollowUpItemsManager(db_session)
-        mgr.auto_populate_from_tool_run(eng.id, tr1.id, "ap_testing", [
-            {"description": "AP finding", "severity": "high"},
-        ])
-        mgr.auto_populate_from_tool_run(eng.id, tr2.id, "payroll_testing", [
-            {"description": "Payroll finding", "severity": "medium"},
-        ])
+        mgr.auto_populate_from_tool_run(
+            eng.id,
+            tr1.id,
+            "ap_testing",
+            [
+                {"description": "AP finding", "severity": "high"},
+            ],
+        )
+        mgr.auto_populate_from_tool_run(
+            eng.id,
+            tr2.id,
+            "payroll_testing",
+            [
+                {"description": "Payroll finding", "severity": "medium"},
+            ],
+        )
 
-        items = db_session.query(FollowUpItem).filter(
-            FollowUpItem.engagement_id == eng.id
-        ).all()
+        items = db_session.query(FollowUpItem).filter(FollowUpItem.engagement_id == eng.id).all()
         assert len(items) == 2
         sources = {i.tool_source for i in items}
         assert sources == {"ap_testing", "payroll_testing"}
@@ -735,10 +802,7 @@ class TestAutoPopulation:
         user, eng, tr = self._setup(db_session, make_user, make_client)
         mgr = FollowUpItemsManager(db_session)
 
-        findings = [
-            {"description": f"Finding {i}", "severity": "medium"}
-            for i in range(25)
-        ]
+        findings = [{"description": f"Finding {i}", "severity": "medium"} for i in range(25)]
 
         items = mgr.auto_populate_from_tool_run(eng.id, tr.id, "ap_testing", findings)
         assert len(items) == 25
@@ -855,7 +919,7 @@ class TestRouteRegistration:
     def test_follow_up_routes_registered(self):
         from main import app
 
-        route_paths = {r.path for r in app.routes if hasattr(r, "path")}
+        route_paths = {r.path for r in all_routes(app) if hasattr(r, "path")}
 
         expected_paths = {
             "/engagements/{engagement_id}/follow-up-items",
@@ -918,7 +982,9 @@ class TestAssignment:
         assert updated is not None
         assert updated.assigned_to is None
 
-    def test_assign_to_nonexistent_user_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_assign_to_nonexistent_user_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="assignbad@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -928,7 +994,9 @@ class TestAssignment:
         with pytest.raises(ValueError, match="Assigned user not found"):
             manager.update_item(user_id=user.id, item_id=item.id, assigned_to=99999)
 
-    def test_default_assigned_to_unchanged(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_default_assigned_to_unchanged(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         """assigned_to=-1 (default) should leave the field unchanged."""
         user = make_user(email="nochange@test.com")
         client = make_client(user=user)
@@ -940,7 +1008,8 @@ class TestAssignment:
         manager.update_item(user_id=user.id, item_id=item.id, assigned_to=user.id)
         # Update disposition only — assigned_to should remain
         updated = manager.update_item(
-            user_id=user.id, item_id=item.id,
+            user_id=user.id,
+            item_id=item.id,
             disposition=FollowUpDisposition.INVESTIGATED_NO_ISSUE,
         )
         assert updated.assigned_to == user.id
@@ -993,7 +1062,9 @@ class TestAssignment:
         assert len(unassigned) == 1
         assert unassigned[0].description == "Free"
 
-    def test_get_unassigned_all_assigned(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_get_unassigned_all_assigned(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="allassigned@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -1030,6 +1101,6 @@ class TestAssignment:
     def test_assignment_routes_registered(self):
         from main import app
 
-        route_paths = {r.path for r in app.routes if hasattr(r, "path")}
+        route_paths = {r.path for r in all_routes(app) if hasattr(r, "path")}
         assert "/engagements/{engagement_id}/follow-up-items/my-items" in route_paths
         assert "/engagements/{engagement_id}/follow-up-items/unassigned" in route_paths

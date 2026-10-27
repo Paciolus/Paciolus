@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engagement_manager import EngagementManager
@@ -190,5 +192,5 @@ class TestToolRunTrendsRouteRegistration:
     def test_endpoint_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/tool-run-trends" in paths

@@ -14,6 +14,7 @@ from preflight_engine import (
     ScoreComponent,
     run_preflight,
 )
+from tests.helpers.route_inventory import all_routes
 
 
 class TestPreflightCleanFile:
@@ -214,19 +215,19 @@ class TestPreflightRouteRegistration:
     def test_route_exists(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/preflight" in route_paths
 
     def test_export_memo_route_exists(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/preflight-memo" in route_paths
 
     def test_export_csv_route_exists(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/preflight-issues" in route_paths
 
 

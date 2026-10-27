@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 # Ensure backend is on the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -265,5 +267,5 @@ class TestWorkpaperIndexEndpoint:
         """GET /engagements/{id}/workpaper-index is registered."""
         from main import app
 
-        routes = [route.path for route in app.routes]
+        routes = [route.path for route in all_routes(app)]
         assert "/engagements/{engagement_id}/workpaper-index" in routes

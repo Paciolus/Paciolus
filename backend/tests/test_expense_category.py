@@ -17,6 +17,7 @@ from expense_category_engine import (
     compute_expense_categories,
     run_expense_category_analytics,
 )
+from tests.helpers.route_inventory import all_routes
 
 # ═══════════════════════════════════════════════════════════════
 # Test Sub-Category Classification
@@ -247,7 +248,7 @@ class TestRouteRegistration:
     def setup_app(self):
         from main import app
 
-        self.routes = [r.path for r in app.routes if hasattr(r, "path")]
+        self.routes = [r.path for r in all_routes(app) if hasattr(r, "path")]
 
     def test_expense_category_analytics_route(self):
         assert "/audit/expense-category-analytics" in self.routes

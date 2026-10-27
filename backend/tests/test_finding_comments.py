@@ -21,6 +21,8 @@ from zipfile import ZipFile
 import pytest
 from sqlalchemy import inspect as sa_inspect
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engagement_export import EngagementExporter
@@ -46,8 +48,13 @@ class TestCommentSchema:
         inspector = sa_inspect(db_engine)
         columns = {c["name"] for c in inspector.get_columns("follow_up_item_comments")}
         expected = {
-            "id", "follow_up_item_id", "user_id", "comment_text",
-            "parent_comment_id", "created_at", "updated_at",
+            "id",
+            "follow_up_item_id",
+            "user_id",
+            "comment_text",
+            "parent_comment_id",
+            "created_at",
+            "updated_at",
         }
         assert expected.issubset(columns)
 
@@ -56,9 +63,17 @@ class TestCommentSchema:
         inspector = sa_inspect(db_engine)
         columns = {c["name"] for c in inspector.get_columns("follow_up_item_comments")}
         prohibited = {
-            "account_number", "account_name", "amount", "debit", "credit",
-            "transaction_id", "entry_id", "vendor_name", "employee_name",
-            "balance", "invoice_number",
+            "account_number",
+            "account_name",
+            "amount",
+            "debit",
+            "credit",
+            "transaction_id",
+            "entry_id",
+            "vendor_name",
+            "employee_name",
+            "balance",
+            "invoice_number",
         }
         overlap = columns & prohibited
         assert overlap == set(), f"Prohibited columns found: {overlap}"
@@ -82,8 +97,10 @@ class TestCommentSchema:
         item = make_follow_up_item()
         parent = make_comment(follow_up_item=item, user=user, comment_text="Parent")
         reply = make_comment(
-            follow_up_item=item, user=user,
-            comment_text="Reply", parent_comment_id=parent.id,
+            follow_up_item=item,
+            user=user,
+            comment_text="Reply",
+            parent_comment_id=parent.id,
         )
         d = reply.to_dict()
         assert d["parent_comment_id"] == parent.id
@@ -135,13 +152,16 @@ class TestCommentManagerCreate:
         manager = FollowUpItemsManager(db_session)
         parent = manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Parent")
         reply = manager.create_comment(
-            user_id=user.id, item_id=item.id,
+            user_id=user.id,
+            item_id=item.id,
             comment_text="Reply to parent",
             parent_comment_id=parent.id,
         )
         assert reply.parent_comment_id == parent.id
 
-    def test_create_comment_strips_whitespace(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_create_comment_strips_whitespace(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="strip@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -151,7 +171,9 @@ class TestCommentManagerCreate:
         comment = manager.create_comment(user_id=user.id, item_id=item.id, comment_text="  trimmed  ")
         assert comment.comment_text == "trimmed"
 
-    def test_create_comment_empty_text_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_create_comment_empty_text_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="empty@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -161,7 +183,9 @@ class TestCommentManagerCreate:
         with pytest.raises(ValueError, match="Comment text is required"):
             manager.create_comment(user_id=user.id, item_id=item.id, comment_text="")
 
-    def test_create_comment_whitespace_only_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_create_comment_whitespace_only_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="ws@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -178,7 +202,9 @@ class TestCommentManagerCreate:
         with pytest.raises(ValueError, match="not found or access denied"):
             manager.create_comment(user_id=user.id, item_id=99999, comment_text="Test")
 
-    def test_create_comment_wrong_user_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_create_comment_wrong_user_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         owner = make_user(email="owner@test.com")
         other = make_user(email="other@test.com")
         client = make_client(user=owner)
@@ -189,7 +215,9 @@ class TestCommentManagerCreate:
         with pytest.raises(ValueError, match="not found or access denied"):
             manager.create_comment(user_id=other.id, item_id=item.id, comment_text="Snoop")
 
-    def test_create_comment_invalid_parent_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_create_comment_invalid_parent_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="badparent@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -198,12 +226,19 @@ class TestCommentManagerCreate:
         manager = FollowUpItemsManager(db_session)
         with pytest.raises(ValueError, match="Parent comment not found"):
             manager.create_comment(
-                user_id=user.id, item_id=item.id,
-                comment_text="Reply", parent_comment_id=99999,
+                user_id=user.id,
+                item_id=item.id,
+                comment_text="Reply",
+                parent_comment_id=99999,
             )
 
     def test_create_comment_parent_from_different_item_raises(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="crossitem@test.com")
         client = make_client(user=user)
@@ -216,8 +251,10 @@ class TestCommentManagerCreate:
 
         with pytest.raises(ValueError, match="Parent comment not found"):
             manager.create_comment(
-                user_id=user.id, item_id=item2.id,
-                comment_text="Cross-item reply", parent_comment_id=parent.id,
+                user_id=user.id,
+                item_id=item2.id,
+                comment_text="Cross-item reply",
+                parent_comment_id=parent.id,
             )
 
 
@@ -239,7 +276,9 @@ class TestCommentManagerRead:
         comments = manager.get_comments(user_id=user.id, item_id=item.id)
         assert comments == []
 
-    def test_get_comments_ordered_by_created_at(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_get_comments_ordered_by_created_at(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="readorder@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -255,7 +294,9 @@ class TestCommentManagerRead:
         assert comments[0].comment_text == "First"
         assert comments[2].comment_text == "Third"
 
-    def test_get_comments_includes_replies(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_get_comments_includes_replies(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="readreply@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -264,8 +305,10 @@ class TestCommentManagerRead:
         manager = FollowUpItemsManager(db_session)
         parent = manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Top level")
         reply = manager.create_comment(
-            user_id=user.id, item_id=item.id,
-            comment_text="Reply", parent_comment_id=parent.id,
+            user_id=user.id,
+            item_id=item.id,
+            comment_text="Reply",
+            parent_comment_id=parent.id,
         )
 
         comments = manager.get_comments(user_id=user.id, item_id=item.id)
@@ -274,7 +317,9 @@ class TestCommentManagerRead:
         assert "Top level" in texts
         assert "Reply" in texts
 
-    def test_get_comments_wrong_user_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_get_comments_wrong_user_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         owner = make_user(email="owner2@test.com")
         other = make_user(email="other2@test.com")
         client = make_client(user=owner)
@@ -285,7 +330,9 @@ class TestCommentManagerRead:
         with pytest.raises(ValueError, match="not found or access denied"):
             manager.get_comments(user_id=other.id, item_id=item.id)
 
-    def test_get_comments_for_engagement(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_get_comments_for_engagement(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="engcomments@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -323,7 +370,9 @@ class TestCommentManagerUpdate:
         assert updated is not None
         assert updated.comment_text == "Edited"
 
-    def test_update_comment_strips_whitespace(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_update_comment_strips_whitespace(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="upstrip@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -334,7 +383,9 @@ class TestCommentManagerUpdate:
         updated = manager.update_comment(user_id=user.id, comment_id=comment.id, comment_text="  After  ")
         assert updated.comment_text == "After"
 
-    def test_update_comment_empty_raises(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_update_comment_empty_raises(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="upempty@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -353,7 +404,12 @@ class TestCommentManagerUpdate:
         assert result is None
 
     def test_update_comment_wrong_author_raises(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         """Only the comment author can edit their comment."""
         owner = make_user(email="comowner@test.com")
@@ -423,7 +479,9 @@ class TestCommentManagerDelete:
 class TestCommentCascadeDelete:
     """Verify cascade delete behavior."""
 
-    def test_deleting_item_archives_comments(self, db_session, make_user, make_client, make_engagement, make_follow_up_item):
+    def test_deleting_item_archives_comments(
+        self, db_session, make_user, make_client, make_engagement, make_follow_up_item
+    ):
         user = make_user(email="cascade@test.com")
         client = make_client(user=user)
         eng = make_engagement(client=client)
@@ -440,23 +498,32 @@ class TestCommentCascadeDelete:
         manager.delete_item(user.id, item.id)
 
         # Comments should be archived (still physically present but archived_at set)
-        all_comments = db_session.query(FollowUpItemComment).filter(
-            FollowUpItemComment.follow_up_item_id == item.id
-        ).all()
+        all_comments = (
+            db_session.query(FollowUpItemComment).filter(FollowUpItemComment.follow_up_item_id == item.id).all()
+        )
         assert len(all_comments) == 2
         for c in all_comments:
             assert c.archived_at is not None
             assert c.archive_reason == "parent_archived"
 
         # Active-only query returns none
-        active = db_session.query(FollowUpItemComment).filter(
-            FollowUpItemComment.follow_up_item_id == item.id,
-            FollowUpItemComment.archived_at.is_(None),
-        ).all()
+        active = (
+            db_session.query(FollowUpItemComment)
+            .filter(
+                FollowUpItemComment.follow_up_item_id == item.id,
+                FollowUpItemComment.archived_at.is_(None),
+            )
+            .all()
+        )
         assert len(active) == 0
 
     def test_deleting_parent_comment_cascades_replies(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="cascade_reply@test.com")
         client = make_client(user=user)
@@ -466,8 +533,10 @@ class TestCommentCascadeDelete:
         manager = FollowUpItemsManager(db_session)
         parent = manager.create_comment(user_id=user.id, item_id=item.id, comment_text="Parent")
         manager.create_comment(
-            user_id=user.id, item_id=item.id,
-            comment_text="Reply", parent_comment_id=parent.id,
+            user_id=user.id,
+            item_id=item.id,
+            comment_text="Reply",
+            parent_comment_id=parent.id,
         )
 
         assert len(manager.get_comments(user_id=user.id, item_id=item.id)) == 2
@@ -490,7 +559,7 @@ class TestCommentRoutes:
     def test_routes_registered(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
 
         assert "/follow-up-items/{item_id}/comments" in route_paths
         assert "/comments/{comment_id}" in route_paths
@@ -498,7 +567,7 @@ class TestCommentRoutes:
     def test_comment_create_endpoint_method(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/follow-up-items/{item_id}/comments":
                 assert "POST" in route.methods or "GET" in route.methods
                 break
@@ -506,7 +575,7 @@ class TestCommentRoutes:
     def test_comment_update_endpoint_method(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/comments/{comment_id}":
                 methods = route.methods
                 assert "PATCH" in methods or "DELETE" in methods
@@ -522,7 +591,12 @@ class TestCommentExport:
     """Verify comments are included in engagement ZIP export."""
 
     def test_export_includes_comments_markdown(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="export@test.com", name="Auditor One")
         client = make_client(user=user, name="Export Corp")
@@ -531,14 +605,15 @@ class TestCommentExport:
 
         manager = FollowUpItemsManager(db_session)
         manager.create_comment(
-            user_id=user.id, item_id=item.id,
+            user_id=user.id,
+            item_id=item.id,
             comment_text="Investigated — appears seasonal",
         )
 
         exporter = EngagementExporter(db_session)
         zip_bytes, filename = exporter.generate_zip(user.id, eng.id)
 
-        with ZipFile(BytesIO(zip_bytes), 'r') as zf:
+        with ZipFile(BytesIO(zip_bytes), "r") as zf:
             names = zf.namelist()
             assert "follow_up_comments.md" in names
 
@@ -548,7 +623,11 @@ class TestCommentExport:
             assert "Auditor One" in md_content
 
     def test_export_excludes_comments_when_none(
-        self, db_session, make_user, make_client, make_engagement,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
     ):
         user = make_user(email="nocomments@test.com")
         client = make_client(user=user, name="Empty Corp")
@@ -557,12 +636,17 @@ class TestCommentExport:
         exporter = EngagementExporter(db_session)
         zip_bytes, filename = exporter.generate_zip(user.id, eng.id)
 
-        with ZipFile(BytesIO(zip_bytes), 'r') as zf:
+        with ZipFile(BytesIO(zip_bytes), "r") as zf:
             names = zf.namelist()
             assert "follow_up_comments.md" not in names
 
     def test_export_comments_contain_disclaimer(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="disclaimer@test.com")
         client = make_client(user=user, name="Disc Corp")
@@ -575,13 +659,18 @@ class TestCommentExport:
         exporter = EngagementExporter(db_session)
         zip_bytes, _ = exporter.generate_zip(user.id, eng.id)
 
-        with ZipFile(BytesIO(zip_bytes), 'r') as zf:
+        with ZipFile(BytesIO(zip_bytes), "r") as zf:
             md_content = zf.read("follow_up_comments.md").decode("utf-8")
             assert "DISCLAIMER" in md_content
             assert "does not constitute" in md_content
 
     def test_export_manifest_includes_comments_file(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="manifest@test.com")
         client = make_client(user=user, name="Manifest Corp")
@@ -594,13 +683,18 @@ class TestCommentExport:
         exporter = EngagementExporter(db_session)
         zip_bytes, _ = exporter.generate_zip(user.id, eng.id)
 
-        with ZipFile(BytesIO(zip_bytes), 'r') as zf:
+        with ZipFile(BytesIO(zip_bytes), "r") as zf:
             manifest = json.loads(zf.read("manifest.json"))
             filenames = [f["filename"] for f in manifest["files"]]
             assert "follow_up_comments.md" in filenames
 
     def test_export_threaded_comments_formatted(
-        self, db_session, make_user, make_client, make_engagement, make_follow_up_item,
+        self,
+        db_session,
+        make_user,
+        make_client,
+        make_engagement,
+        make_follow_up_item,
     ):
         user = make_user(email="thread_export@test.com", name="Lead Auditor")
         client = make_client(user=user, name="Thread Corp")
@@ -609,11 +703,13 @@ class TestCommentExport:
 
         manager = FollowUpItemsManager(db_session)
         parent = manager.create_comment(
-            user_id=user.id, item_id=item.id,
+            user_id=user.id,
+            item_id=item.id,
             comment_text="Flagged for review",
         )
         manager.create_comment(
-            user_id=user.id, item_id=item.id,
+            user_id=user.id,
+            item_id=item.id,
             comment_text="Reviewed and cleared",
             parent_comment_id=parent.id,
         )
@@ -621,7 +717,7 @@ class TestCommentExport:
         exporter = EngagementExporter(db_session)
         zip_bytes, _ = exporter.generate_zip(user.id, eng.id)
 
-        with ZipFile(BytesIO(zip_bytes), 'r') as zf:
+        with ZipFile(BytesIO(zip_bytes), "r") as zf:
             md_content = zf.read("follow_up_comments.md").decode("utf-8")
             assert "Flagged for review" in md_content
             assert "Reviewed and cleared" in md_content
@@ -640,10 +736,17 @@ class TestCommentZeroStorage:
     def test_comment_model_has_no_amount_fields(self):
         """Comment model stores only narrative text, no financial data."""
         import inspect
+
         source = inspect.getsource(FollowUpItemComment)
         prohibited_terms = [
-            "account_number", "account_name", "debit", "credit",
-            "balance", "invoice_amount", "vendor_name", "employee_name",
+            "account_number",
+            "account_name",
+            "debit",
+            "credit",
+            "balance",
+            "invoice_amount",
+            "vendor_name",
+            "employee_name",
         ]
         for term in prohibited_terms:
             assert term not in source, f"Prohibited term '{term}' found in FollowUpItemComment source"

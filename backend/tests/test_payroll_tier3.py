@@ -38,6 +38,7 @@ from payroll_testing_engine import (
     parse_hr_master_rows,
     run_payroll_testing,
 )
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # TestGhostEmployeeIndicators (PR-T9)
@@ -599,13 +600,13 @@ class TestAPIRouteRegistration:
     def test_route_registered_in_app(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/payroll-testing" in route_paths
 
     def test_route_method(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/audit/payroll-testing":
                 assert "POST" in route.methods
                 break

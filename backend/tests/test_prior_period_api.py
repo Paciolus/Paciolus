@@ -15,6 +15,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user, require_verified_user
@@ -102,11 +104,11 @@ class TestPriorPeriodRouteRegistration:
     """Verify prior period routes are registered."""
 
     def test_save_period_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/clients/{client_id}/periods" in paths
 
     def test_compare_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/compare" in paths
 
 

@@ -32,10 +32,12 @@ from bank_reconciliation import (
 from shared.column_detector import match_column as _match_bank_column
 from shared.parsing_helpers import parse_date as _parse_date
 from shared.parsing_helpers import safe_float as _safe_float
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # DATE PARSING
 # =============================================================================
+
 
 class TestDateParsing:
     """Tests for _parse_date helper."""
@@ -69,6 +71,7 @@ class TestDateParsing:
 # SAFE FLOAT
 # =============================================================================
 
+
 class TestSafeFloat:
     """Tests for _safe_float helper."""
 
@@ -98,6 +101,7 @@ class TestSafeFloat:
 # =============================================================================
 # COLUMN DETECTION
 # =============================================================================
+
 
 class TestColumnDetection:
     """Tests for detect_bank_columns."""
@@ -154,6 +158,7 @@ class TestColumnDetection:
 # =============================================================================
 # TRANSACTION PARSING
 # =============================================================================
+
 
 class TestTransactionParsing:
     """Tests for parse_bank_transactions and parse_ledger_transactions."""
@@ -219,6 +224,7 @@ class TestTransactionParsing:
 # =============================================================================
 # EXACT MATCHING
 # =============================================================================
+
 
 class TestExactMatching:
     """Tests for match_transactions."""
@@ -339,6 +345,7 @@ class TestExactMatching:
 # SUMMARY CALCULATION
 # =============================================================================
 
+
 class TestSummaryCalculation:
     """Tests for calculate_summary."""
 
@@ -439,14 +446,19 @@ class TestSummaryCalculation:
 # CSV EXPORT
 # =============================================================================
 
+
 class TestCsvExport:
     """Tests for export_reconciliation_csv."""
 
     def test_basic_export(self):
         matches = [
             ReconciliationMatch(
-                bank_txn=BankTransaction(date="2025-01-15", description="Deposit", amount=1000.0, reference="DEP001", row_number=1),
-                ledger_txn=LedgerTransaction(date="2025-01-15", description="Cash receipt", amount=1000.0, reference="JE001", row_number=1),
+                bank_txn=BankTransaction(
+                    date="2025-01-15", description="Deposit", amount=1000.0, reference="DEP001", row_number=1
+                ),
+                ledger_txn=LedgerTransaction(
+                    date="2025-01-15", description="Cash receipt", amount=1000.0, reference="JE001", row_number=1
+                ),
                 match_type=MatchType.MATCHED,
                 match_confidence=1.0,
             ),
@@ -494,6 +506,7 @@ class TestCsvExport:
 # =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
+
 
 class TestMainEntry:
     """Tests for reconcile_bank_statement."""
@@ -566,17 +579,20 @@ class TestMainEntry:
 # API ROUTE REGISTRATION
 # =============================================================================
 
+
 class TestAPIRoute:
     """Tests for route registration."""
 
     def test_route_registered(self):
         from main import app
-        paths = [r.path for r in app.routes]
+
+        paths = [r.path for r in all_routes(app)]
         assert "/audit/bank-reconciliation" in paths
 
     def test_route_method_is_post(self):
         from main import app
-        for route in app.routes:
+
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/audit/bank-reconciliation":
                 assert "POST" in route.methods
                 break
@@ -585,17 +601,20 @@ class TestAPIRoute:
 
     def test_export_route_registered(self):
         from main import app
-        paths = [r.path for r in app.routes]
+
+        paths = [r.path for r in all_routes(app)]
         assert "/export/csv/bank-rec" in paths
 
     def test_route_has_tag(self):
         from routes.bank_reconciliation import router
+
         assert "bank_reconciliation" in router.tags
 
 
 # =============================================================================
 # MATCH COLUMN HELPER
 # =============================================================================
+
 
 class TestMatchColumn:
     """Tests for _match_bank_column."""

@@ -14,6 +14,8 @@ import pytest
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import IntegrityError
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from engagement_manager import EngagementManager
@@ -729,7 +731,7 @@ class TestRouteRegistration:
     def test_engagement_routes_registered(self):
         from main import app
 
-        route_paths = {r.path for r in app.routes if hasattr(r, "path")}
+        route_paths = {r.path for r in all_routes(app) if hasattr(r, "path")}
 
         expected_paths = {
             "/engagements",
