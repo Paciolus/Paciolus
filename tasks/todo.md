@@ -611,7 +611,7 @@ users share one bucket.
 
 **Verification:** ruff clean; targeted 89 passed; full backend suite 9,974 passed (on `main`, before stacking).
 
-**Commit SHA:** TBD.
+**Commit SHA:** `2733c8f1` (stacked on PR #278).
 ---
 
 ### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)
