@@ -1087,8 +1087,9 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
   hit with `--legacy-peer-deps` — and 15 are the `@testing-library/dom` subtree becoming `dev`.
   Nothing unexpected.
 
-**Verification (2026-10-27):** see the Sprint 786 "typescript 7" entry's verification line — run on
-this branch with both changes.
+**Verification (2026-10-27):** backend full suite 9,979 passed / 0 failed; frontend tsc, eslint,
+2,072 Jest tests and `npm run build` (65 `ƒ` routes + Proxy) all clean. Full detail is in the Sprint 786
+"typescript 6 → 7" entry. **Commit SHA:** 2a6504e4.
 
 ---
 
@@ -1531,8 +1532,10 @@ binding to lowercase and break the current production database, which holds name
 
 ### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
 **Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI),
-**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PENDING** (the reviewed minors and majors;
-`stripe` 16 done in PR — see "786b — stripe 15 → 16").
+**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PARTIAL** — merged: `stripe` 16,
+`fastapi` 0.162, SQLAlchemy 2.1 + Alembic 1.20, `jest-dom` 7; `framer-motion` 14 in PR #269;
+**`@types/node` 26 is not on `main`** (lockfile still resolves 22.20.5, though the note below calls it
+done); **`typescript` 7 BLOCKED** until typescript-eslint supports it (see "typescript 6 → 7").
 **Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
 **Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
 
@@ -1696,9 +1699,49 @@ baseline.
 false green this sprint has spent its time removing — CI would install from it happily and the lint
 job would then fail for an unrelated-looking reason.
 
-**Still pending in step 3:** `typescript` 7 and `framer-motion` 14 (12 → 14, two majors). Both are
+**Still pending in step 3** *(2026-10-27: typescript 7 tried and blocked by typescript-eslint;
+framer-motion 14 is PR #269)*: `typescript` 7 and `framer-motion` 14 (12 → 14, two majors). Both are
 independent of jest-dom, so the npm bug does not block them unless it proves to be general rather
 than peer-set specific.
+
+#### 786b step 3 — typescript 6 → 7: BLOCKED by typescript-eslint (not forced)
+
+Tried 2026-10-27 on `typescript@7.0.2` (`latest`; 7.1 is still beta). **`tsc --noEmit` passes on
+TS 7 with zero errors** — the codebase itself is ready. What blocks it is the toolchain:
+
+- **ESLint cannot load.** `@typescript-eslint/eslint-plugin` 8.72.1 (latest; the 8.72.2 canary is the
+  same) declares `typescript >=4.8.4 <6.1.0` and hard-throws `typescript-eslint does not support
+  TS 7.0.` at import. TS 7 is the native port: `require('typescript')` exports only `version` /
+  `versionMajorMinor` — there is no JS compiler API for typescript-eslint to call. Upstream tracks
+  support for TS ≥ 7.1 in typescript-eslint#10940. `npm install` does not catch this (it only warns
+  the peer is `invalid`), so a lockfile bump would look green until the lint job ran.
+- **Everything else passes on TS 7.** `next build` (16.4.3) succeeds — 65 `ƒ` routes + `ƒ Proxy
+  (Middleware)` — and its type-check step went 103 s → 2.2 s. That speed was checked rather than
+  trusted: a deliberate `const x: number = "string"` probe fails the TS 7 build with TS2322, so Next
+  really type-checks under TS 7. Jest (SWC, no `typescript` dependency) 208 suites / 2,072 tests.
+  The lockfile also grew 39 entries — the native per-platform binaries plus duplicated nested
+  typescript-eslint trees npm created because the peer range no longer resolves.
+
+**Reverted, nothing committed.** `package.json`/lockfile are back on `typescript ^6.0.2` (6.0.3).
+
+**What would unblock it**, in preference order:
+1. Wait for typescript-eslint's TS 7.1 support (#10940), then bump both together.
+2. Run side by side, as the TS 7 release notes suggest: keep the TS 6 JS API for the tools that
+   need it (`"typescript": "npm:@typescript/typescript6@6.0.2"`, which typescript-eslint and Next
+   resolve) and add TS 7 under another name for `tsc`. That is two compilers in the toolchain and
+   a CI change — a decision, not a version bump.
+
+`framer-motion` 14 is in PR #269, untouched here.
+
+**Verification (2026-10-27, branch `sprint-817-786-cleanup`: Sprint 817 plus the reverted TS 7 trial):**
+backend full suite **9,979 passed / 0 failed** (31 min serial); ruff clean on touched files. Frontend
+on TS 6.0.3: `tsc --noEmit` 0, `eslint src --max-warnings 0` 0, Jest 208 suites / 2,072 tests,
+`npm run build` 65 `ƒ (Dynamic)` routes + `ƒ Proxy (Middleware)` (static only `/icon.png`,
+`/sitemap.xml`). *Local-only quirk:* in this `.claude\worktrees\…` path Jest's `<rootDir>`
+ignore patterns break on Windows (the `\.claude` segment is mis-escaped), so plain `npm test`
+also collects `e2e/` and `__tests__/helpers/` and reports 3 "failed" suites with 0 failed tests.
+Runs were made with explicit `--testPathIgnorePatterns`. Not a repo defect: the main checkout and
+Linux CI are unaffected.
 
 #### 786b step 2 — the patch batch: COMPLETE
 
