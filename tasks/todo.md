@@ -581,34 +581,37 @@ clean on the 4 touched Python files; mypy clean on `shared/pdf_parser.py` + `sha
 ---
 
 ### Sprint 851: Client IP derivation behind Render's proxy (M2)
-**Status:** BLOCKED on CEO console check. **Priority:** P1 once unblocked. **Source:** security review M2.
+**Status:** COMPLETE 2026-10-27 (code; pending CI + merge) — **one CEO step after deploy** (below). **Priority:** P1. **Source:** security review M2.
 
-**CEO action first** (also in `ceo-actions.md`): in the Render dashboard → paciolus-api → Environment, report the
-values (or absence) of `TRUSTED_PROXY_IPS` and `FORWARDED_ALLOW_IPS`.
+**Unblocked because** the code fix is correct whatever `TRUSTED_PROXY_IPS` currently holds; only the post-deploy
+setting needs the console. Checked via the Render API 2026-10-27: paciolus-api is a Docker service with an empty
+`dockerCommand` (it runs the Dockerfile `CMD`, which passes no `--forwarded-allow-ips`), so uvicorn's
+`request.client.host` is the Render proxy. The API can't read env-var values, so whether `TRUSTED_PROXY_IPS` is
+set is still unknown.
 
-**Defect:** `security_middleware.py:835-851` `get_client_ip` returns `X-Forwarded-For.split(",")[0]` (the
-**leftmost**) when the peer is a trusted proxy. Render's proxy *appends* the real client IP, so the leftmost entry
-is attacker-controlled.
-- **If `TRUSTED_PROXY_IPS` is set:** rotating spoofed XFF values bypasses the per-IP login failure block (20 per
-  15 min, `services/auth/identity.py:94`), every slowapi IP limit, and the register and forgot-password limits.
-- **If it is unset** (`config.py:279` default): every request's peer is Render's proxy, so all users share one
-  bucket. About 20 bad logins in 15 minutes then 429s login for **everyone**.
+**Defect:** `get_client_ip` returned the **leftmost** `X-Forwarded-For` entry when the peer was a trusted proxy.
+Render's proxy *appends* the real client IP, so the leftmost entry is attacker-controlled. If `TRUSTED_PROXY_IPS` is
+set, rotating spoofed values bypasses every per-IP limit; if it is unset, every request's peer is the proxy and all
+users share one bucket.
 
-- [ ] Rewrite `get_client_ip`:
-  - Only when the direct peer is trusted, walk `X-Forwarded-For` **right to left**, skipping entries that are
-    themselves trusted proxies, and return the first untrusted entry.
-  - Fall back to the peer when the header is absent or malformed.
-  - Validate each entry with `ipaddress.ip_address`.
-- [ ] Tests: spoofed leftmost entry ignored; a multi-hop chain resolves correctly; untrusted peer → XFF ignored
-      entirely; garbage values are skipped.
-- [ ] After deploy, the CEO (or Claude via the Render API, if a key exists) sets `TRUSTED_PROXY_IPS` to Render's
-      internal proxy range. Confirm in logs that the hashed client IPs vary per user.
-- [ ] **Never set `FORWARDED_ALLOW_IPS='*'`.** Uvicorn would rewrite `request.client.host` from the leftmost XFF,
-      and `X-Forwarded-For: 127.0.0.1` would pass the loopback-only gate on `/metrics` (`routes/metrics.py:44-45`).
-      Add a comment saying this next to that gate.
+- [x] `get_client_ip` (the single implementation; `shared/rate_limits._get_client_ip` delegates to it) walks
+      `X-Forwarded-For` right to left when the peer is trusted, skips trusted-proxy hops and entries that are not
+      valid IPs (`ipaddress.ip_address`), and returns the first untrusted entry. No usable entry → the peer.
+- [x] Tests (`test_transport_hardening.py`, +7): spoofed leftmost ignored; rotating it keeps one bucket; multi-hop;
+      untrusted peer ignores XFF; garbage skipped; IPv6; all-trusted → peer. 4 fail on the old code.
+      `test_rate_limit_tiered.py::test_proxy_aware_extraction_exact_ip` encoded the leftmost behaviour; its expected
+      value is now the entry the trusted proxy appended.
+- [x] Comment at the `/metrics` loopback gate: never set `FORWARDED_ALLOW_IPS='*'` / `--forwarded-allow-ips='*'`.
+- [ ] **CEO, after this deploys** (also in `ceo-actions.md`): Render dashboard → paciolus-api → Environment → set
+      `TRUSTED_PROXY_IPS` to the address range Render's proxy connects from (confirm with Render support; it is
+      not something to guess). Trusting a whole private range is safe with the right-to-left walk, because a client
+      cannot append entries after the proxy's. **Never** set `FORWARDED_ALLOW_IPS='*'`. Then confirm in logs that
+      hashed client IPs vary per user. Until it is set, behaviour is unchanged from today (all traffic shares the
+      proxy's bucket).
+
+**Verification:** ruff clean; targeted 89 passed; full backend suite 9,974 passed (on `main`, before stacking).
 
 **Commit SHA:** TBD.
-
 ---
 
 ### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)

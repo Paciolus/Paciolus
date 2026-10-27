@@ -166,6 +166,40 @@ class TestGetClientIpMiddleware:
             ip = get_client_ip(req)
         assert ip == "127.0.0.1"
 
+    # -----------------------------------------------------------------------
+    # Sprint 851 (security review M2): the proxy appends, so read right to left
+    # -----------------------------------------------------------------------
+
+    def _ip(self, peer: str, xff: str, trusted: frozenset[str]) -> str:
+        with patch("config.TRUSTED_PROXY_IPS", trusted):
+            return get_client_ip(self._make_request(peer, xff=xff))
+
+    def test_spoofed_leftmost_entry_is_ignored(self):
+        """The client sent 'X-Forwarded-For: 1.2.3.4'; the proxy appended the real address."""
+        assert self._ip("10.0.2.15", "1.2.3.4, 198.51.100.7", frozenset({"10.0.0.0/8"})) == "198.51.100.7"
+
+    def test_rotating_the_spoofed_entry_does_not_change_the_bucket(self):
+        trusted = frozenset({"10.0.0.0/8"})
+        seen = {self._ip("10.0.2.15", f"203.0.113.{n}, 198.51.100.7", trusted) for n in range(1, 20)}
+        assert seen == {"198.51.100.7"}
+
+    def test_multi_hop_chain_skips_trusted_hops(self):
+        xff = "1.2.3.4, 198.51.100.7, 10.0.5.5, 10.0.9.9"
+        assert self._ip("10.0.2.15", xff, frozenset({"10.0.0.0/8"})) == "198.51.100.7"
+
+    def test_untrusted_peer_ignores_xff_entirely(self):
+        assert self._ip("198.51.100.7", "1.2.3.4", frozenset({"10.0.0.0/8"})) == "198.51.100.7"
+
+    def test_garbage_entries_are_skipped(self):
+        xff = "198.51.100.7, not-an-ip, , 999.1.1.1"
+        assert self._ip("10.0.2.15", xff, frozenset({"10.0.0.0/8"})) == "198.51.100.7"
+
+    def test_ipv6_client(self):
+        assert self._ip("10.0.2.15", "2001:db8::1", frozenset({"10.0.0.0/8"})) == "2001:db8::1"
+
+    def test_only_trusted_or_garbage_entries_fall_back_to_peer(self):
+        assert self._ip("10.0.2.15", "garbage, 10.0.3.3", frozenset({"10.0.0.0/8"})) == "10.0.2.15"
+
 
 # ===========================================================================
 # 3. _get_client_ip() — shared/rate_limits (CIDR path)

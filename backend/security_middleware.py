@@ -840,6 +840,14 @@ def get_client_ip(request: Request) -> str:
     Sprint 279: Only trusts X-Forwarded-For when the direct peer is
     in TRUSTED_PROXY_IPS.  Prevents IP spoofing via header injection.
     CIDR ranges and exact IPs are both supported (is_trusted_proxy).
+
+    Sprint 851 (security review M2): the header is read **right to left**.
+    A proxy appends the address it received the request from, so only the
+    entries a trusted proxy added are trustworthy; everything to their left —
+    the leftmost entry included — is whatever the client chose to send. The
+    first entry that is not itself a trusted proxy is the client. Entries
+    that are not valid IP addresses are skipped; with no usable entry the
+    peer is returned.
     """
     from config import TRUSTED_PROXY_IPS
 
@@ -848,7 +856,14 @@ def get_client_ip(request: Request) -> str:
     if is_trusted_proxy(peer_ip, TRUSTED_PROXY_IPS):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
-            return forwarded.split(",")[0].strip()
+            for entry in reversed(forwarded.split(",")):
+                candidate = entry.strip()
+                try:
+                    ipaddress.ip_address(candidate)
+                except ValueError:
+                    continue
+                if not is_trusted_proxy(candidate, TRUSTED_PROXY_IPS):
+                    return candidate
 
     return peer_ip
 

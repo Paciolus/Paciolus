@@ -247,7 +247,10 @@ class TestRateLimitKeyFunction:
 
         with patch("config.TRUSTED_PROXY_IPS", frozenset({"127.0.0.1"})):
             key = _get_rate_limit_key(request)
-        assert key == "203.0.113.50"
+        # Sprint 851: read right to left — 10.0.0.1 is not a trusted proxy, so it
+        # is the address the trusted proxy received the request from; the
+        # leftmost entry is client-supplied.
+        assert key == "10.0.0.1"
 
     def test_proxy_aware_extraction_cidr(self):
         """X-Forwarded-For honored when peer IP falls inside a trusted CIDR."""
