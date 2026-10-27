@@ -110,7 +110,7 @@ def export_<tool>_<format>(
 
 - **Standard memos** are entries in `_STANDARD_REGISTRY` (16 today). `_register_standard_routes()` factory-loops the list, generating one handler per `MemoRegistryEntry` and registering it via `router.post(...)`. New standard memos add a single `MemoRegistryEntry` row — no decorator boilerplate.
 - **Non-standard memos** that need custom Pydantic-payload preprocessing (e.g., the sampling-evaluation memo's `design_result` pop, the flux-expectations memo's nested sub-model serialization) get an explicit `@router.post(...)` decorator that calls the shared `_memo_export_handler` with a `CustomPreprocessor`. Today: 2 such routes.
-- Both branches converge on `_memo_export_handler` for: input-model dump, common workpaper kwargs (`filename`, `client_name`, `period_tested`, etc.), Sprint 679 PDF branding ContextVar, `track_memo_memory` instrumentation, error sanitization, and `streaming_pdf_response`.
+- Both branches converge on `_memo_export_handler` for: input-model dump, common workpaper kwargs (`filename`, `client_name`, `period_tested`, etc.), Sprint 679 PDF branding ContextVar, `track_memo_memory` instrumentation, error sanitization, and `pdf_response`.
 
 When does a memo get the registry vs the explicit treatment? **Default to registry.** Use the explicit branch only when the Pydantic input requires preprocessing that cannot be expressed as `payload.model_dump()` — i.e., the registry's standard preprocessor is insufficient. The mixed-style pattern is intentional, not drift.
 

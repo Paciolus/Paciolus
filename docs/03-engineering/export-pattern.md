@@ -65,7 +65,7 @@ return diagnostic_csv_export(
 ```
 
 The helper handles `StringIO` setup, UTF-8-BOM encoding, `safe_download_filename`,
-the `streaming_csv_response` transport, and exception handling. The route only
+the `csv_response` transport, and exception handling. The route only
 writes its body.
 
 ## What both helpers handle for you
@@ -75,7 +75,7 @@ writes its body.
 | `StringIO` + `csv.writer` setup | ✅ |
 | UTF-8 with BOM (`utf-8-sig`) encoding | ✅ |
 | `safe_download_filename` (sanitization + extension) | ✅ |
-| `streaming_csv_response` transport (Content-Disposition, MIME) | ✅ |
+| `csv_response` transport (Content-Disposition, MIME) | ✅ |
 | `try/except` for `ValueError`/`KeyError`/`TypeError`/`UnicodeEncodeError` | ✅ |
 | `logger.exception` on failure with the configured prefix | ✅ |
 | `HTTPException(500, sanitize_error(...))` with the error code | ✅ |
@@ -98,8 +98,8 @@ Do not:
 ## What's NOT covered by these helpers
 
 - **PDF/Excel exports** (e.g., `/export/pdf`, `/export/excel`,
-  `/export/leadsheets`). Those use `streaming_pdf_response` /
-  `streaming_excel_response` directly. A future sprint can collapse those
+  `/export/leadsheets`). Those use `pdf_response` /
+  `excel_response` directly. A future sprint can collapse those
   with their own helper if duplication accumulates.
 - **Authenticated route metadata** (rate limit, entitlement check, dependency
   injection). Those live on the FastAPI route decorators above the helper
