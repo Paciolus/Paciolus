@@ -426,7 +426,7 @@ unknown engagement — and pass after); `test_internal_admin.py` requests now na
 
 **Verification:** ruff clean; frontend `tsc` + eslint clean, `useInternalAdmin` 10/10; full backend suite 9,990 passed (before stacking on 847–852); after stacking, the auth, admin, branding, impersonation, 847 and 849 test files pass (117). The branding test uploads a real 4×4 PNG, because Sprint 852's logo-dimension check opens the image with Pillow. OpenAPI snapshot regenerated (`target_user_id`, `RevokeSessionsRequest`).
 
-**Commit SHA:** TBD.
+**Commit SHA:** `5a9df962` (stacked on PR #280).
 ---
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)
