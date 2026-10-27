@@ -386,6 +386,12 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
 def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
     """Downgrade all org members (including the owner) to FREE tier.
 
+    Sprint 849 (Codex review on PR #277): a non-owner member who pays for an
+    ACTIVE/TRIALING subscription of their own keeps it — the org's plan
+    ending must not switch off a separately billed one. Their entitlements
+    follow their own row (``get_effective_entitlements``), which reads
+    ``User.tier``, so their tier is left as is.
+
     Returns the number of members downgraded.
     """
     from organization_model import Organization, OrganizationMember
@@ -404,10 +410,21 @@ def _downgrade_org_members_to_free(db: Session, user_id: int) -> int:
     member_users = db.query(User).filter(User.id.in_(member_user_ids)).all()
     users_by_id = {u.id: u for u in member_users}
 
+    independently_paid = {
+        row.user_id
+        for row in db.query(Subscription.user_id).filter(
+            Subscription.user_id.in_(member_user_ids),
+            Subscription.user_id != user_id,
+            Subscription.status.in_((SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING)),
+        )
+    }
+
     count = 0
     for member in members:
         member_user = users_by_id.get(member.user_id)
-        if member_user and member_user.tier != UserTier.FREE:
+        if member_user is None or member_user.id in independently_paid:
+            continue
+        if member_user.tier != UserTier.FREE:
             member_user.tier = UserTier.FREE
             count += 1
 

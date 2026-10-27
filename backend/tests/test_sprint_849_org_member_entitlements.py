@@ -180,6 +180,32 @@ class TestAdminImmediateForceCancel:
         assert member.tier == UserTier.FREE
         assert enterprise_org["owner"].tier == UserTier.FREE
 
+    def test_member_with_their_own_subscription_keeps_it(self, db_session, enterprise_org, make_user):
+        """Codex review on PR #277: the org's plan ending must not switch off a separately paid plan."""
+        from billing.admin_customers import admin_force_cancel
+
+        org = enterprise_org["org"]
+        payer = make_user(email="payer849c@firm.com", tier=UserTier.SOLO)
+        db_session.add(OrganizationMember(organization_id=org.id, user_id=payer.id, role=OrgRole.MEMBER))
+        payer.organization_id = org.id
+        db_session.add(
+            Subscription(
+                user_id=payer.id,
+                tier="solo",
+                status=SubscriptionStatus.ACTIVE,
+                billing_interval=BillingInterval.MONTHLY,
+            )
+        )
+        db_session.flush()
+
+        admin = make_user(email="admin849c@paciolus.com")
+        admin_force_cancel(db_session, org.id, reason="Sprint 849", immediate=True, admin_user_id=admin.id)
+
+        assert payer.tier == UserTier.SOLO
+        assert _effective(payer, db_session) == get_entitlements(UserTier.SOLO)
+        assert enterprise_org["member"].tier == UserTier.FREE
+        assert enterprise_org["owner"].tier == UserTier.FREE
+
     def test_cancel_at_period_end_leaves_member_paid(self, db_session, enterprise_org, make_user):
         from billing.admin_customers import admin_force_cancel
 
