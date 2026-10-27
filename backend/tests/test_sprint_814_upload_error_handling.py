@@ -166,3 +166,67 @@ async def test_sampling_rejects_non_finite_form_values(override_auth_verified, p
         )
     assert response.status_code == 422, response.text
     assert "finite" in response.text
+
+
+def _float_form_fields(handler) -> list[str]:
+    """Every parameter on ``handler`` annotated ``float`` or ``Optional[float]``."""
+    import inspect
+    import typing
+
+    fields = []
+    for name, param in inspect.signature(handler).parameters.items():
+        hint = param.annotation
+        if hint is float or float in typing.get_args(hint):
+            fields.append(name)
+    return fields
+
+
+_SAMPLING_BASE_FORMS = {
+    "/audit/sampling/design": ("sampling_design", {"method": "mus", "tolerable_misstatement": "1000"}),
+    "/audit/sampling/evaluate": (
+        "sampling_evaluate",
+        {"method": "mus", "population_value": "10000", "sample_size": "5", "tolerable_misstatement": "1000"},
+    ),
+}
+
+
+def _every_float_field_case() -> list[tuple[str, str, str]]:
+    import routes.sampling as sampling_routes
+
+    cases = []
+    for path, (handler_name, _form) in _SAMPLING_BASE_FORMS.items():
+        for field_name in _float_form_fields(getattr(sampling_routes, handler_name)):
+            for bad in ("nan", "inf", "-inf"):
+                cases.append((path, field_name, bad))
+    return cases
+
+
+def test_both_sampling_routes_have_float_form_fields_to_guard():
+    """Non-vacuity for the sweep below: design has 4 float fields, evaluate 5."""
+    import routes.sampling as sampling_routes
+
+    assert len(_float_form_fields(sampling_routes.sampling_design)) == 4
+    assert len(_float_form_fields(sampling_routes.sampling_evaluate)) == 5
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+@pytest.mark.parametrize("path, field_name, bad", _every_float_field_case())
+async def test_every_float_form_field_on_both_sampling_routes_rejects_non_finite(
+    override_auth_verified, path, field_name, bad
+):
+    """Sprint 814 (filed observation, fixed in Sprint 824): the four cases above
+    pin the fields the review happened to try. This sweeps every float form
+    field on both routes, derived from the handler signatures, so a field added
+    later — or dropped from ``_require_finite`` — cannot accept nan/inf."""
+    import httpx
+
+    from main import app
+
+    form = {**_SAMPLING_BASE_FORMS[path][1], field_name: bad}
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            path, data=form, files={"file": ("s.csv", b"item_id,recorded_amount,audited_amount\nA,1,1\n", "text/csv")}
+        )
+    assert response.status_code == 422, response.text
+    assert field_name in response.text, response.text

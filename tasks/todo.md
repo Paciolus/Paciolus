@@ -888,6 +888,11 @@ matching is the likely fix; it needs a sweep of real column names first.
 
 **Also observed:** both sampling routes accept `nan`/`inf` form floats (Pydantic's default) and
 return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family as above; filed here.
+- [x] **Done — fixed in Sprint 824 (S9, PR #205 `40044bc7`, `routes/sampling.py::_require_finite`), and now
+  swept.** 2026-10-27: re-verified both routes return 422; the four Sprint 824 cases only pinned the
+  fields the review tried, so `test_every_float_form_field_on_both_sampling_routes_rejects_non_finite`
+  derives every float form field from the two handler signatures (4 + 5) × `nan`/`inf`/`-inf`.
+  Removing `stratification_threshold` from the guard fails 3 of the new cases and none of the old four.
 
 **Commit SHA:** 91753ba2 (PR #202).
 
