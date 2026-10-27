@@ -41,7 +41,6 @@ from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
 from shared.testing_enums import (
-    SEVERITY_WEIGHTS,  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
@@ -695,6 +694,7 @@ def assess_ap_data_quality(
 # =============================================================================
 
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER as AP_ROUND_AMOUNT_PATTERNS  # noqa: E402
+from shared.round_amounts import keep_most_severe, match_round_amount  # noqa: E402
 
 # =============================================================================
 # TIER 1 TESTS
@@ -926,32 +926,31 @@ def test_round_dollar_amounts(
         if amt < config.round_amount_threshold:
             continue
 
-        for divisor, name, severity in AP_ROUND_AMOUNT_PATTERNS:
-            d = Decimal(str(divisor))
-            if amt >= d and amt % d == 0:
-                flagged.append(
-                    FlaggedPayment(
-                        entry=p,
-                        test_name="Round Dollar Amounts",
-                        test_key="round_dollar_amounts",
-                        test_tier=TestTier.STRUCTURAL,
-                        severity=severity,
-                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                        confidence=0.70,
-                        details={"amount": amt, "pattern": name, "divisor": divisor},
-                    )
-                )
-                break  # Only flag the largest pattern match
+        match = match_round_amount(amt, AP_ROUND_AMOUNT_PATTERNS)  # largest pattern only
+        if match is None:
+            continue
+        divisor, name, severity = match
+        flagged.append(
+            FlaggedPayment(
+                entry=p,
+                test_name="Round Dollar Amounts",
+                test_key="round_dollar_amounts",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                confidence=0.70,
+                details={"amount": amt, "pattern": name, "divisor": divisor},
+            )
+        )
 
-    # Sprint 829: count every round amount, then keep the largest for display.
-    # Sprint 831 (PR #225 review): most severe first, then largest, so a large
-    # LOW match can never push a HIGH one out of the kept list (the severity
-    # floors read only the kept flags).
-    # The loop used to stop at the cap in file order, so a $500K round entry
-    # after fifty $10K ones was never seen and the count stopped at 50.
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
-    total_flagged = len(flagged)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 829/831: count every round amount, keep the most severe then the
+    # largest (shared helper since Sprint 819 item 3).
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: f.severity,
+        amount_of=lambda f: abs(f.entry.amount),
+        cap=config.round_amount_max_flags,
+    )
 
     flag_rate = total_flagged / max(len(payments), 1)
     return APTestResult(

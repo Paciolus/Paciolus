@@ -28,10 +28,9 @@ from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
-from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
+from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER, keep_most_severe, match_round_amount
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
-    SEVERITY_WEIGHTS,
     RiskTier,
     Severity,
     TestTier,
@@ -944,30 +943,32 @@ def test_round_revenue_amounts(
         if amt < config.round_amount_threshold:
             continue
 
-        for divisor, name, severity in ROUND_AMOUNT_PATTERNS_4TIER:
-            d = Decimal(str(divisor))
-            if amt >= d and amt % d == 0:
-                flagged.append(
-                    FlaggedRevenue(
-                        entry=e,
-                        test_name="Round Revenue Amounts",
-                        test_key="round_revenue_amounts",
-                        test_tier=TestTier.STRUCTURAL,
-                        severity=severity,
-                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                        confidence=0.70,
-                        details={"amount": amt, "pattern": name, "divisor": divisor},
-                    )
-                )
-                break
+        match = match_round_amount(amt, ROUND_AMOUNT_PATTERNS_4TIER)  # largest pattern only
+        if match is None:
+            continue
+        divisor, name, severity = match
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Round Revenue Amounts",
+                test_key="round_revenue_amounts",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                confidence=0.70,
+                details={"amount": amt, "pattern": name, "divisor": divisor},
+            )
+        )
 
-    # Sprint 831 (Sprint 819 item 3): count every round amount, then keep the
-    # most severe, then the largest — the same order as JE and AP (the severity
-    # floors read only the kept flags). The loop used to stop at the cap in
-    # file order, so a large round entry late in the file was never seen.
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
-    total_flagged = len(flagged)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 831: count every round amount, keep the most severe then the
+    # largest, the same order as JE, AP and Payroll (shared helper since
+    # Sprint 819 item 3).
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: f.severity,
+        amount_of=lambda f: abs(f.entry.amount),
+        cap=config.round_amount_max_flags,
+    )
 
     flag_rate = total_flagged / max(len(entries), 1)
     return RevenueTestResult(

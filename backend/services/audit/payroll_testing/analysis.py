@@ -39,6 +39,7 @@ from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.fuzzy_match import similarity_at_least
 from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
+from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER, keep_most_severe, match_round_amount
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 
 # =============================================================================
@@ -1173,32 +1174,16 @@ def _test_round_salary_amounts(
     """PR-T3: Round Salary Amounts — $100K/$50K/$25K/$10K patterns."""
     flagged: list[FlaggedEmployee] = []
 
-    # Sort by amount descending for consistent flagging. Sprint 831 (Sprint 819
-    # item 3): every round amount is counted; only the largest are kept for display.
-    sorted_entries = sorted(entries, key=lambda e: abs(e.gross_pay), reverse=True)
-    total_flagged = 0
-
-    for entry in sorted_entries:
+    # Same $100K/$50K (HIGH), $25K (MEDIUM), $10K (LOW) tiers as AP and Revenue.
+    # Payroll keeps its own issue wording and string severity (API contract).
+    for entry in entries:
         amount = abs(entry.gross_pay)
         if amount < config.round_amount_threshold:
             continue
-
-        if amount >= 100000 and amount % 100000 == 0:
-            severity = Severity.HIGH
-            issue = f"Round amount: ${amount:,.0f} (multiple of $100K)"
-        elif amount >= 50000 and amount % 50000 == 0:
-            severity = Severity.HIGH
-            issue = f"Round amount: ${amount:,.0f} (multiple of $50K)"
-        elif amount >= 25000 and amount % 25000 == 0:
-            severity = Severity.MEDIUM
-            issue = f"Round amount: ${amount:,.0f} (multiple of $25K)"
-        elif amount >= 10000 and amount % 10000 == 0:
-            severity = Severity.LOW
-            issue = f"Round amount: ${amount:,.0f} (multiple of $10K)"
-        else:
+        match = match_round_amount(amount, ROUND_AMOUNT_PATTERNS_4TIER)
+        if match is None:
             continue
-
-        total_flagged += 1
+        divisor, _name, severity = match
         flagged.append(
             FlaggedEmployee(
                 entry=entry,
@@ -1206,16 +1191,22 @@ def _test_round_salary_amounts(
                 test_key="PR-T3",
                 test_tier=TestTier.STRUCTURAL.value,
                 severity=severity.value,
-                issue=issue,
+                issue=f"Round amount: ${amount:,.0f} (multiple of ${int(divisor) // 1000}K)",
                 confidence=0.70,
                 details={"amount": float(amount)},
             )
         )
 
-    # Most severe first, then largest, so the severity floors (which read only
-    # the kept flags) never lose a HIGH match to a larger LOW one (PR #225 review).
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[Severity(f.severity)], abs(f.entry.gross_pay)), reverse=True)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 831: count every round amount, keep the most severe then the
+    # largest (shared helper since Sprint 819 item 3). The sort is stable, so
+    # equal flags stay in file order, which is what the old pre-sort by
+    # amount also produced.
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: Severity(f.severity),
+        amount_of=lambda f: abs(f.entry.gross_pay),
+        cap=config.round_amount_max_flags,
+    )
 
     total = len(entries)
     return PayrollTestResult(
