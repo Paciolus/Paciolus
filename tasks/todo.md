@@ -718,7 +718,14 @@ every IC revenue/expense pair.
       now produce 0 flags (every asset was flagged HIGH).
 - [x] **A2** — expected accumulation capped at the depreciable base.
 - [x] **A3** — FA-T11 uses the shared `parse_date`, so Excel date cells and `YYYY/MM/DD` are
-      tested rather than silently skipped. (`01-Jan-2019` is still outside the shared parser.)
+      tested rather than silently skipped. ~~(`01-Jan-2019` is still outside the shared parser.)~~
+      **Remainder closed 2026-10-27 — no code change needed:** Sprint 829 (D-2, PR #218 `106c5782`)
+      had already added `%d-%b-%Y`, `%d %b %Y` and `%b %d, %Y` to the shared `parse_date` *for every
+      caller*, so FA-T11 reads `01-Jan-2019` today. So the "widen it only for FA" constraint is moot:
+      it was widened globally, and FA needs no per-call format. Pinned by
+      `test_day_month_name_dates_are_tested_not_skipped` (4 forms; all 4 fail with those three
+      formats removed). **Sprint 819 item 4 interaction:** its optional `formats=` parameter on
+      `parse_date` must keep these three in the *default* list, or this test fails — FA passes none.
 - [x] **A6** — FA-T11 compares magnitudes, so contra-negative accumulated depreciation no longer
       flags every row. FA-03 still flags negative accumulated depreciation; whether a contra
       presentation is "negative" there is a product call.
