@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import * as motion from 'framer-motion/client'
 import { BrandIcon } from '@/components/shared'
 import { ArchitectureDiagram } from '@/components/trust/ArchitectureDiagram'
 import { ComplianceTimeline } from '@/components/trust/ComplianceTimeline'
@@ -8,13 +7,14 @@ import { CountUp } from '@/components/trust/CountUp'
 import { ModuleSection } from '@/components/trust/ModuleSection'
 import { PlaybookPreview } from '@/components/trust/PlaybookPreview'
 import { containerVariants, fadeUp, listItem } from '@/components/trust/variants'
+import * as motion from '@/components/ui/motionClient'
 import { downloadableArtifacts, weNeverStore, weStore } from '@/content/trust'
 
 /**
  * Trust Center — server component (Sprint 820). Data lives in
  * `content/trust.ts`; the interactive blocks (architecture diagram, control
  * matrix, playbook tabs, count-up) are client components in
- * `components/trust/`. Mount animations use `framer-motion/client` elements.
+ * `components/trust/`. Mount animations use `components/ui/motionClient` elements.
  */
 export default function TrustAndSecurity() {
   return (

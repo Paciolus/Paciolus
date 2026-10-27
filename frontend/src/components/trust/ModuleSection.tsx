@@ -1,4 +1,4 @@
-import * as motion from 'framer-motion/client'
+import * as motion from '@/components/ui/motionClient'
 
 /** Section wrapper with consistent heading pattern */
 export function ModuleSection({

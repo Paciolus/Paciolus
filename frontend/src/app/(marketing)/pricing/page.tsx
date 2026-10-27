@@ -7,6 +7,7 @@ import PricingComparison from '@/components/pricing/PricingComparison'
 import PricingEstimator from '@/components/pricing/PricingEstimator'
 import { type BillingInterval, faqItems, getPromoCopy, tiers } from '@/domain/pricing'
 import { trackEvent } from '@/utils/telemetry'
+import { marketingFadeUpSoft } from '@/lib/motion'
 
 // Sprint 818: tiers, seat pricing, the estimator, the FAQ and the promo copy
 // all come from `@/domain/pricing`. This page used to redefine every one of
@@ -81,14 +82,6 @@ const containerVariants = {
   },
 } as const
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
-  },
-} as const
 
 /* ────────────────────────────────────────────────
    Page component
@@ -150,7 +143,7 @@ export default function PricingPage() {
       {/* -- Billing Toggle -------------------- */}
       <section className="pb-12 px-6">
         <motion.div
-          variants={fadeUp}
+          variants={marketingFadeUpSoft}
           initial="hidden"
           animate="visible"
         >
@@ -202,7 +195,7 @@ export default function PricingPage() {
         />
         <div className="max-w-6xl mx-auto relative z-10">
           <motion.div
-            variants={fadeUp}
+            variants={marketingFadeUpSoft}
             initial="hidden"
             animate="visible"
           >
@@ -227,7 +220,7 @@ export default function PricingPage() {
       <section className="pb-24 px-6">
         <div className="max-w-3xl mx-auto">
           <motion.div
-            variants={fadeUp}
+            variants={marketingFadeUpSoft}
             initial="hidden"
             animate="visible"
           >

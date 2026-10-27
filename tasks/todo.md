@@ -1210,7 +1210,7 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    existing tests pass unchanged.)*
 3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
    each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout
-   done 2026-10-27: server components; the motion elements are `framer-motion/client` elements with
+   done 2026-10-27: server components; the motion elements are client motion elements (`components/ui/motionClient`) with
    the same props, so nothing animates differently (About's `custom`-function variant became a
    per-card static variant with the same delay). Page-only chunk About 12.6 → 0.4 KB, Approach
    17.5 → 0.4 KB; route first-load JS About 957,024 → 942,098, Approach 962,082 → 942,098 bytes;
@@ -1220,7 +1220,7 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 4. [x] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
    *(Done 2026-10-27: data + types in `content/trust.ts`; `ArchitectureDiagram`, `ControlMatrix`,
    `PlaybookPreview`, `CountUp` are client components, `ComplianceTimeline` / `ModuleSection` and the
-   page are server components using `framer-motion/client` elements, so the mount animations are
+   page are server components using client motion elements (`components/ui/motionClient`), so the mount animations are
    unchanged. Page-only client chunk 37.6 → 22.6 KB (8.8 → 6.2 KB gz); route first-load JS
    982,652 → 967,248 bytes. `test_citation_consistency.py` now scans the two new locations.)*
 5. [x] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
@@ -1231,8 +1231,16 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 6. [x] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
    *(Done 2026-10-27: `BaseDataQuality` is the 3 shared fields, the six row-based tools extend
    `RowDataQuality` (+`total_rows`), all six `*ColumnDetection` extend `BaseColumnDetection`. Types only.)*
-7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
+7. [x] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
    `fadeUp` copies → `lib/motion.ts:71`.
+   *(Done 2026-10-27. Measured with `next experimental-analyze`: framer-motion + motion-dom is
+   145.8 KB raw on every marketing route and 139.3 KB on tool/auth routes — ~12% of client JS.
+   **LazyMotion not adopted:** it only pays once all 139 importers move from `motion` to `m` (one
+   `motion` import anywhere pulls the full feature set back in), so it is a sweep plus a lint rule,
+   not a sprint item — the saving is bounded by that ~140 KB. The five `fadeUp` copies are
+   `marketingFadeUp` / `marketingFadeUpAt` / `marketingFadeUpSoft` in `lib/motion.ts`, values
+   unchanged. Server pages use `components/ui/motionClient` (7 re-exported elements) instead of
+   `framer-motion/client`, whose 170-element module had put +2.4 KB on every route.)*
 
 **Commit SHA:** 391f1c14 (PR #211).
 

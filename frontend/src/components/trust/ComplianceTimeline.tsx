@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import * as motion from 'framer-motion/client'
 import { BrandIcon } from '@/components/shared'
+import * as motion from '@/components/ui/motionClient'
 import { complianceMilestones, type ComplianceStatus } from '@/content/trust'
 import { containerVariants, lineGrow, scaleIn, vertLineGrow } from './variants'
 

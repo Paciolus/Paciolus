@@ -3,15 +3,8 @@
 
 import { motion } from 'framer-motion'
 import { type CellValue, comparisonRows } from '@/domain/pricing'
+import { marketingFadeUpSoft } from '@/lib/motion'
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
-  },
-} as const
 
 /* ────────────────────────────────────────────────
    Cell renderer
@@ -38,7 +31,7 @@ function CellContent({ value }: { value: CellValue }) {
 export default function PricingComparison() {
   return (
     <motion.div
-      variants={fadeUp}
+      variants={marketingFadeUpSoft}
       initial="hidden"
       animate="visible"
     >

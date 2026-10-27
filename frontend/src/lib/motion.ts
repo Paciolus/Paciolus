@@ -80,6 +80,38 @@ export const fadeUp: Variants = {
   },
 }
 
+// Sprint 820: the marketing pages kept five local `fadeUp` copies with a
+// larger lift and a plain 0.5s easeOut. They live here now, values unchanged.
+// Plain objects (no function variants), so server components can pass them
+// to `components/ui/motionClient` elements.
+
+/** Marketing entrance — 24px lift, 0.5s easeOut (trust, about, approach). */
+export const marketingFadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: 'easeOut' as const },
+  },
+} satisfies Variants
+
+/** `marketingFadeUp` with a per-item delay of `index * 0.1`s (about cards). */
+export function marketingFadeUpAt(index: number) {
+  return {
+    hidden: marketingFadeUp.hidden,
+    visible: {
+      ...marketingFadeUp.visible,
+      transition: { delay: index * 0.1, ...marketingFadeUp.visible.transition },
+    },
+  } satisfies Variants
+}
+
+/** Marketing entrance, softer — 20px lift, 0.5s easeOut (pricing). */
+export const marketingFadeUpSoft = {
+  hidden: { opacity: 0, y: 20 },
+  visible: marketingFadeUp.visible,
+} satisfies Variants
+
 /**
  * Stagger container — loose (0.1s) for hero/marketing sections.
  * Children must use variant-based animations (e.g. fadeUp).

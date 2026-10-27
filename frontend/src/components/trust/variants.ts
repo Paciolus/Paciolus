@@ -1,6 +1,6 @@
 /**
  * Trust page animation variants (Sprint 820). Plain objects, so server
- * components can pass them to `framer-motion/client` elements.
+ * components can pass them to `components/ui/motionClient` elements.
  */
 
 export const containerVariants = {
@@ -11,14 +11,7 @@ export const containerVariants = {
   },
 } as const
 
-export const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
-  },
-} as const
+export { marketingFadeUp as fadeUp } from '@/lib/motion'
 
 export const scaleIn = {
   hidden: { opacity: 0, scale: 0.92 },
