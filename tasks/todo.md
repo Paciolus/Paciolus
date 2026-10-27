@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-27] (this PR): `@testing-library/jest-dom` 6.9.1→7.0.1 (Dependabot #248) and `lint-staged` 16.4.0→17.6.0 (#252), both unblocked by upgrading the dev machine to Node 22.23.4 / npm 10.9.9 — the arborist `edgesOut` crash no longer reproduces, and lint-staged 17 needs Node ≥ 22.22.1. `npm audit fix` cleared 2 high (`brace-expansion` 1.1.14→1.1.21, `zod` 4.3.6→4.6.7); in-range patches for `@typescript-eslint/*` 8.72.1, `postcss` 8.5.32, `framer-motion` 12.43.0. Lockfile audited, not trusted: 0 added, 24 removed — all lint-staged 16's own terminal-UI deps (`listr2`, `log-update`, …), no peer-derived entries lost. Verified: build (all pages `ƒ`), 208 suites / 2,072 tests, `tsc`, eslint, 0 audit findings (frontend/package.json, frontend/package-lock.json)
 - [2026-10-24] (this PR): claims-review backlog — full findings saved to `reports/claims-review-2026-10-24.md`; Sprints 840–845 filed with a next-session start block; merge SHAs recorded for 836–839; Sprint 834 marked superseded; `ceo-actions.md` and `SESSION_STATE.md` refreshed (tasks/todo.md, tasks/ceo-actions.md, SESSION_STATE.md, reports/)
 - [2026-10-23] (this PR): record the 2026-10-23 merges — statuses and commit SHAs for Sprints 812–829; SESSION_STATE refreshed (tasks/todo.md, SESSION_STATE.md)
 - [2026-10-23] Sprint 797 follow-up — `test_alembic_head_matches_base_metadata_foreign_keys` ran in-process and was therefore measuring another fixture's dialect. First push of this branch went green on both SQLite jobs and **red on PostgreSQL 15**, reporting `organizations.subscription_id`, `tool_activities.engagement_id` and `users.organization_id` as "in Alembic but not in model". **The drift was never real.** Those three are the ORM's `use_alter=True` FKs (they break the organizations → users → subscriptions cycle), and `use_alter` changes how `create_all()` emits a constraint per dialect: SQLite inlines it because it cannot `ALTER TABLE ADD CONSTRAINT`, PostgreSQL emits a separate ALTER. `Base.metadata` is process-global, so the session `db_engine` fixture's `create_all()` against Postgres left the shared metadata in a state where the test's *own* SQLite `create_all()` stopped emitting all three — and both halves of the test use SQLite, so only the models half lost them. Reproduced locally with a mock PG engine (no server): the old test fails with the three CI errors verbatim, the fixed one passes. Now runs in a clean subprocess, for the same reason — and with the same docstring warning — that `test_init_db_alone_creates_every_table` beside it already did. Sprint 797 learned that lesson for one test and not its neighbour. Files: `backend/tests/test_alembic_models_parity.py`, `tasks/todo.md`, `tasks/lessons.md`.
@@ -1425,6 +1426,11 @@ binding to lowercase and break the current production database, which holds name
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
 
 #### 786b step 3 — @types/node 26 shipped; jest-dom 7 is BLOCKED by an npm bug
+
+> **Update 2026-10-27: unblocked and shipped** (see Hotfixes). Option 1 below — on Node 22.23.4 /
+> npm 10.9.9 a plain `npm install -D @testing-library/jest-dom@7.0.1` completes with no crash and no
+> lost lockfile entries. CI's `setup-node` already takes the latest 22.x. The text below is the
+> original note.
 
 **`@types/node` 25.6.0 → 26.6.5: done.** A major the canonical sequence does not list — it names
 three frontend majors, `npm outdated` reports four. Type-only, so no runtime surface, and verified
