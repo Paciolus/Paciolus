@@ -465,12 +465,38 @@ def _three_way_case() -> dict:
                     "Receipt Date": (d + timedelta(days=rng.randrange(0, 20))).isoformat(),
                 }
             )
-    result = run_three_way_match(
-        parse_purchase_orders(pos, detect_po_columns(po_cols)),
-        parse_invoices(invs, detect_invoice_columns(inv_cols)),
-        parse_receipts(recs, detect_receipt_columns(rec_cols)),
-    )
-    return result.to_dict()
+    from three_way_match_engine import ThreeWayMatchConfig
+
+    po_objs = parse_purchase_orders(pos, detect_po_columns(po_cols))
+    inv_objs = parse_invoices(invs, detect_invoice_columns(inv_cols))
+    out: dict[str, Any] = {
+        "default": run_three_way_match(
+            po_objs, inv_objs, parse_receipts(recs, detect_receipt_columns(rec_cols))
+        ).to_dict()
+    }
+
+    # Receipts linked only through the invoice reference (no PO number on the
+    # receipt), multi-line POs sharing a number, and fuzzy matching switched off.
+    rec_cols2 = [*rec_cols, "Invoice Ref"]
+    recs2 = [
+        {**r, "PO Number": "", "Invoice Ref": f"I-{r['Receipt Number'][2:]}"}
+        if k % 3 == 0
+        else {**r, "Invoice Ref": ""}
+        for k, r in enumerate(recs)
+    ]
+    pos2 = [{**p, "PO Number": "PO-0001"} if k in (2, 3) else p for k, p in enumerate(pos)]
+    for label, cfg in (
+        ("inv_ref", ThreeWayMatchConfig()),
+        ("no_fuzzy", ThreeWayMatchConfig(enable_fuzzy_matching=False)),
+    ):
+        out[label] = run_three_way_match(
+            parse_purchase_orders(pos2, detect_po_columns(po_cols)),
+            inv_objs,
+            parse_receipts(recs2, detect_receipt_columns(rec_cols2)),
+            cfg,
+        ).to_dict()
+    out["empty"] = run_three_way_match([], [], []).to_dict()
+    return out
 
 
 def _currency_case() -> dict:
