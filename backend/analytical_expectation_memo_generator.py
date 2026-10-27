@@ -36,7 +36,7 @@ from analytical_expectations_model import (
 )
 from engagement_model import Engagement
 from models import Client
-from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import create_memo_styles
 from shared.report_chrome import (
@@ -86,7 +86,7 @@ _TAG_LABEL = {
 
 
 def _generate_reference() -> str:
-    return generate_reference_number().replace("PAC-", "AEM-")
+    return generate_reference_number("AEM")
 
 
 def _format_money(value: Any) -> str:

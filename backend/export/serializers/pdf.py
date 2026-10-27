@@ -6,7 +6,7 @@ underlying PDF generator modules (generate_audit_report, generate_financial_stat
 Each function accepts a typed payload and returns raw PDF bytes.
 """
 
-from pdf_generator import generate_audit_report, generate_financial_statements_pdf
+from pdf import generate_audit_report, generate_financial_statements_pdf
 from shared.export_schemas import FinancialStatementsInput
 from shared.schemas import AuditResultInput
 

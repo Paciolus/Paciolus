@@ -18,7 +18,7 @@ from collections.abc import Iterable
 from reportlab.lib.units import inch
 
 # Re-export ClassicalColors for convenience (single import path)
-from pdf_generator import ClassicalColors
+from pdf import ClassicalColors
 
 # =============================================================================
 # Font families

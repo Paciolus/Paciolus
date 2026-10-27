@@ -9,6 +9,7 @@ Each memo generator imports these functions and provides only
 domain-specific content (title, test descriptions, conclusion text).
 """
 
+import functools
 from typing import Any, Optional
 from xml.sax.saxutils import escape as xml_escape
 
@@ -17,7 +18,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -165,7 +166,19 @@ def format_risk_tier_label(composite: dict) -> tuple[str, Any]:
 
 
 def create_memo_styles() -> dict:
-    """Create the standard memo style set used by all testing memos."""
+    """Return the standard memo style set used by all memos.
+
+    Sprint 813: built once per process and cached — every memo render used
+    to rebuild ~25 ``ParagraphStyle`` objects and a sample stylesheet. Each
+    call returns a fresh dict, so a caller adding a key cannot leak it into
+    the next memo; the styles themselves are shared and must be treated as
+    read-only (derive with ``ParagraphStyle(..., parent=styles[name])``).
+    """
+    return dict(_memo_styles())
+
+
+@functools.cache
+def _memo_styles() -> dict:
     styles = getSampleStyleSheet()
 
     memo_styles = [
@@ -818,7 +831,7 @@ def build_limitations_section(
 
     Fix 10: Upgrade disclaimer language.
     """
-    from pdf_generator import LedgerRule
+    from pdf import LedgerRule
 
     story.append(Spacer(1, 16))
     story.append(Paragraph("Limitations", styles.get("MemoSection", styles.get("SectionHeader", styles["MemoBody"]))))

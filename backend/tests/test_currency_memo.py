@@ -278,7 +278,7 @@ class TestReferenceNumber:
         # and that the reference is correctly formatted in the code
         from pdf_generator import generate_reference_number
 
-        ref = generate_reference_number().replace("PAC-", "MCY-")
+        ref = generate_reference_number("MCY")
         assert ref.startswith("MCY-")
         assert not ref.startswith("PAC-")
 

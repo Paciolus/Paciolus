@@ -381,32 +381,31 @@ def _measure_xlsx(data: bytes) -> dict[str, Any]:
     return {"sheet_order": wb.sheetnames, "sheets": sheets}
 
 
-def _tb_audit_result() -> dict[str, Any]:
+def _tb_audit_result(monkeypatch) -> dict[str, Any]:
     """The audit result the TB diagnostic sample renders, captured in flight."""
     import generate_sample_reports as samples
+    import pdf
     import pdf_generator
 
     captured: dict[str, Any] = {}
-    original_report, original_save = pdf_generator.generate_audit_report, samples.save_pdf
 
     def capture(audit_result, *args, **kwargs):
         captured["audit_result"] = audit_result
         return b""
 
-    pdf_generator.generate_audit_report = capture
-    samples.save_pdf = lambda *_a: None
-    try:
-        samples.gen_tb_diagnostic()
-    finally:
-        pdf_generator.generate_audit_report, samples.save_pdf = original_report, original_save
+    # The sample imports it from ``pdf`` (Sprint 813) — patch the shim too.
+    monkeypatch.setattr(pdf, "generate_audit_report", capture)
+    monkeypatch.setattr(pdf_generator, "generate_audit_report", capture)
+    monkeypatch.setattr(samples, "save_pdf", lambda *_a: None)
+    samples.gen_tb_diagnostic()
     return captured["audit_result"]
 
 
-def test_excel_workpaper_renders_identically(snapshot):
+def test_excel_workpaper_renders_identically(snapshot, monkeypatch):
     from excel_generator import generate_workpaper
 
     with freeze_time(FROZEN_AT):
-        actual = _measure_xlsx(generate_workpaper(_tb_audit_result(), "meridian_tb.xlsx"))
+        actual = _measure_xlsx(generate_workpaper(_tb_audit_result(monkeypatch), "meridian_tb.xlsx"))
     key = "excel_workpaper"
     if UPDATE:
         _recorded[key] = actual

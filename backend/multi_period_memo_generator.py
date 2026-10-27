@@ -24,7 +24,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
@@ -981,7 +981,7 @@ def generate_multi_period_memo(
 
     styles = create_memo_styles()
     buffer = io.BytesIO()
-    reference = generate_reference_number().replace("PAC-", "APC-")
+    reference = generate_reference_number("APC")
 
     doc = SimpleDocTemplate(
         buffer,

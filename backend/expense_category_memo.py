@@ -17,7 +17,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -337,7 +337,7 @@ def generate_expense_category_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
-    reference = generate_reference_number().replace("PAC-", "ECA-")
+    reference = generate_reference_number("ECA")
 
     # ── Cover Page (diagonal color bands) ──
     logo_path = find_logo()

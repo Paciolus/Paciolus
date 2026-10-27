@@ -17,7 +17,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -86,7 +86,7 @@ def generate_accrual_completeness_memo(
 
     buffer = io.BytesIO()
 
-    reference = generate_reference_number().replace("PAC-", "ACE-")
+    reference = generate_reference_number("ACE")
 
     doc = SimpleDocTemplate(
         buffer,

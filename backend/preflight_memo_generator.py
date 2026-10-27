@@ -18,7 +18,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     build_disclaimer,
@@ -96,7 +96,7 @@ def generate_preflight_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
-    reference = generate_reference_number().replace("PAC-", "PFR-")
+    reference = generate_reference_number("PFR")
 
     # ── Cover Page ──
     logo_path = find_logo()

@@ -22,7 +22,7 @@ import yaml  # type: ignore[import-untyped]
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import LedgerRule
+from pdf import LedgerRule
 from shared.framework_resolution import ResolvedFramework
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph

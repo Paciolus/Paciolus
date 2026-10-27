@@ -13,7 +13,7 @@ from typing import Any, Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,

@@ -35,7 +35,7 @@ from sqlalchemy.orm import Session
 from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
 from models import Client
-from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, create_memo_styles
 from shared.report_chrome import (
@@ -112,7 +112,7 @@ AUTHORITATIVE_REFERENCES = [
 
 def _generate_reference() -> str:
     """Generate a unique ANS reference number."""
-    return generate_reference_number().replace("PAC-", "ANS-")
+    return generate_reference_number("ANS")
 
 
 def _compute_engagement_risk(

@@ -13,7 +13,7 @@ from typing import Any, Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import LedgerRule
+from pdf import LedgerRule
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph

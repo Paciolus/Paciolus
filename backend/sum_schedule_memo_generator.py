@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 
 from engagement_model import Engagement
 from models import Client
-from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import create_memo_styles
 from shared.report_chrome import (
@@ -89,7 +89,7 @@ _BUCKET_LABEL = {
 
 
 def _generate_reference() -> str:
-    return generate_reference_number().replace("PAC-", "SUM-")
+    return generate_reference_number("SUM")
 
 
 def _format_money(value: Any) -> str:

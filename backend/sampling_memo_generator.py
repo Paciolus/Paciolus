@@ -22,7 +22,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
@@ -567,7 +567,7 @@ def _generate_sampling_memo(
     styles = create_memo_styles()
     story: list = []
     doc_width = letter[0] - 1.5 * inch
-    ref_number = generate_reference_number().replace("PAC-", "SSM-")
+    ref_number = generate_reference_number("SSM")
 
     # ─── BUG-01: Phase-specific title ─────────────────────────
     if is_evaluation:

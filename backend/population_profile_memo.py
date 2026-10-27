@@ -14,7 +14,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -93,7 +93,7 @@ def generate_population_profile_memo(
     doc_width = doc.width
     styles = create_memo_styles()
     story: list = []
-    reference = generate_reference_number().replace("PAC-", "PPR-")
+    reference = generate_reference_number("PPR")
 
     # ── Cover Page (diagonal color bands) ──
     logo_path = find_logo()

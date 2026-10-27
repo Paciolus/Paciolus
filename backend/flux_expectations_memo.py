@@ -20,7 +20,7 @@ from reportlab.lib.colors import HexColor
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -154,7 +154,7 @@ def generate_flux_expectations_memo(
     story: list = []
 
     # Generate reference number (WP-FE prefix)
-    reference = generate_reference_number().replace("PAC-", "WP-FE-")
+    reference = generate_reference_number("WP-FE")
 
     # ── Pre-compute completion metrics ──
     summary = flux_result.get("summary", {})

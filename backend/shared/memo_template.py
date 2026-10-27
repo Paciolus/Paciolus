@@ -21,7 +21,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer
 
-from pdf_generator import LedgerRule, generate_reference_number
+from pdf import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
 from shared.follow_up_procedures import get_finding_benchmark, get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
@@ -187,7 +187,7 @@ def generate_testing_memo(
 
     styles = create_memo_styles()
     buffer = io.BytesIO()
-    reference = generate_reference_number().replace("PAC-", f"{config.ref_prefix}-")
+    reference = generate_reference_number(config.ref_prefix)
 
     doc = SimpleDocTemplate(
         buffer,

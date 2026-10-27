@@ -21,7 +21,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     generate_reference_number,
@@ -128,7 +128,7 @@ def generate_currency_conversion_memo(
     story: list = []
 
     doc_width = letter[0] - 1.5 * inch  # page width minus margins
-    ref_number = generate_reference_number().replace("PAC-", "MCY-")
+    ref_number = generate_reference_number("MCY")
 
     # Extract data from result
     pres_currency = conversion_result.get("presentation_currency", "N/A")

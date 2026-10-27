@@ -41,7 +41,7 @@ _SHARED_REFS: dict[str, str] = {}
 # 1. TRIAL BALANCE DIAGNOSTIC REPORT
 # ─────────────────────────────────────────────────────────────────────
 def gen_tb_diagnostic() -> None:
-    from pdf_generator import generate_audit_report
+    from pdf import generate_audit_report
 
     audit_result = {
         "status": "success",
@@ -227,7 +227,7 @@ def gen_financial_statements() -> None:
         FinancialStatements,
         StatementLineItem,
     )
-    from pdf_generator import generate_financial_statements_pdf
+    from pdf import generate_financial_statements_pdf
 
     bs = [
         StatementLineItem("ASSETS", 0, indent_level=0),
@@ -1485,10 +1485,10 @@ def gen_revenue_testing() -> None:
 # ─────────────────────────────────────────────────────────────────────
 def gen_ar_aging() -> None:
     from ar_aging_memo_generator import generate_ar_aging_memo
-    from pdf_generator import generate_reference_number
+    from pdf import generate_reference_number
 
     # Generate and store AR aging reference for cross-report consistency
-    _SHARED_REFS["ar_aging"] = generate_reference_number().replace("PAC-", "ARA-")
+    _SHARED_REFS["ar_aging"] = generate_reference_number("ARA")
 
     tests = [
         _test("Sign Anomalies", "sign_anomalies", "structural", 3, 0.008, "medium"),
