@@ -18,19 +18,16 @@ Sections:
 8. Conclusion
 """
 
-import io
 from typing import Any, Optional
 from xml.sax.saxutils import escape as xml_escape
 
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
-    generate_reference_number,
 )
 from security_utils import log_secure_operation
 from shared.follow_up_procedures import get_follow_up_procedure
@@ -38,19 +35,15 @@ from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     RISK_SCALE_LEGEND,
     RISK_TIER_DISPLAY,
+    TESTING_MEMO_MARGINS,
+    MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
     build_workpaper_signoff,
-    create_memo_styles,
+    render_memo,
     source_line,
     wrap_table_strings,
-)
-from shared.report_chrome import (
-    ReportMetadata,
-    build_cover_page,
-    current_page_footer,
-    find_logo,
 )
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
@@ -731,306 +724,289 @@ def generate_bank_rec_memo(
     """
     log_secure_operation("bank_rec_memo_generate", f"Generating bank reconciliation memo: {filename}")
 
-    styles = create_memo_styles()
-    buffer = io.BytesIO()
-    reference = generate_reference_number("REC")
+    def _body(memo: MemoContext) -> None:
+        story, styles, doc_width = memo.story, memo.styles, memo.doc_width
+        summary = rec_result.get("summary", {})
+        bank_detection = rec_result.get("bank_column_detection", {})
+        ledger_detection = rec_result.get("ledger_column_detection", {})
+        test_results = rec_result.get("test_results", [])
+        composite = rec_result.get("composite_score", {})
 
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=1.0 * inch,
-        bottomMargin=0.8 * inch,
-    )
+        matched = summary.get("matched_count", 0)
+        bank_only = summary.get("bank_only_count", 0)
+        ledger_only = summary.get("ledger_only_count", 0)
+        total_txns = matched + bank_only + ledger_only
 
-    story: list[Any] = []
-    summary = rec_result.get("summary", {})
-    bank_detection = rec_result.get("bank_column_detection", {})
-    ledger_detection = rec_result.get("ledger_column_detection", {})
-    test_results = rec_result.get("test_results", [])
-    composite = rec_result.get("composite_score", {})
+        # ──────────────────────────────────────────────────────────────
+        # I. SCOPE
+        # ──────────────────────────────────────────────────────────────
+        story.append(Paragraph("I. Scope", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
 
-    matched = summary.get("matched_count", 0)
-    bank_only = summary.get("bank_only_count", 0)
-    ledger_only = summary.get("ledger_only_count", 0)
-    total_txns = matched + bank_only + ledger_only
+        scope_lines = []
+        source = source_line(source_document_title, filename)
+        if source:
+            scope_lines.append(source)
+        if period_tested:
+            scope_lines.append(create_leader_dots("Period Tested", period_tested))
 
-    # 0. COVER PAGE
-    logo_path = find_logo()
-    cover_metadata = ReportMetadata(
-        title="Bank Reconciliation Memo",
-        client_name=client_name or "",
-        engagement_period=period_tested or "",
-        fiscal_year_end=fiscal_year_end or "",
-        source_document=filename,
-        source_document_title=source_document_title or "",
-        source_context_note=source_context_note or "",
-        reference=reference,
-    )
-    build_cover_page(story, styles, cover_metadata, doc.width, logo_path)
-
-    # ──────────────────────────────────────────────────────────────
-    # I. SCOPE
-    # ──────────────────────────────────────────────────────────────
-    story.append(Paragraph("I. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    scope_lines = []
-    source = source_line(source_document_title, filename)
-    if source:
-        scope_lines.append(source)
-    if period_tested:
-        scope_lines.append(create_leader_dots("Period Tested", period_tested))
-
-    scope_lines.extend(
-        [
-            create_leader_dots("Total Transactions Analyzed", f"{total_txns:,}"),
-            create_leader_dots("Bank Statement Transactions", f"{matched + bank_only:,}"),
-            create_leader_dots("General Ledger Transactions", f"{matched + ledger_only:,}"),
-        ]
-    )
-
-    bank_conf = bank_detection.get("overall_confidence", 0)
-    ledger_conf = ledger_detection.get("overall_confidence", 0)
-    if bank_conf or ledger_conf:
         scope_lines.extend(
             [
-                create_leader_dots("Bank Column Detection Confidence", f"{bank_conf:.0%}"),
-                create_leader_dots("Ledger Column Detection Confidence", f"{ledger_conf:.0%}"),
+                create_leader_dots("Total Transactions Analyzed", f"{total_txns:,}"),
+                create_leader_dots("Bank Statement Transactions", f"{matched + bank_only:,}"),
+                create_leader_dots("General Ledger Transactions", f"{matched + ledger_only:,}"),
             ]
         )
 
-    for line in scope_lines:
-        story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 4))
-
-    # Scope statement (framework-aware)
-    build_scope_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="bank_reconciliation",
-        framework=resolved_framework,
-        domain_label="bank reconciliation analysis",
-    )
-
-    # Proof Summary (uses test_results for accurate counts)
-    build_proof_summary_section(story, styles, doc.width, rec_result)
-
-    # ──────────────────────────────────────────────────────────────
-    # II. METHODOLOGY
-    # ──────────────────────────────────────────────────────────────
-    if test_results:
-        _build_methodology_table(story, styles, doc.width, test_results)
-    else:
-        # Fallback: build from rec_tests
-        story.append(Paragraph("II. Methodology", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-        story.append(
-            Paragraph(
-                "Automated reconciliation tests were applied to the bank statement "
-                "and general ledger transaction data.",
-                styles["MemoBody"],
+        bank_conf = bank_detection.get("overall_confidence", 0)
+        ledger_conf = ledger_detection.get("overall_confidence", 0)
+        if bank_conf or ledger_conf:
+            scope_lines.extend(
+                [
+                    create_leader_dots("Bank Column Detection Confidence", f"{bank_conf:.0%}"),
+                    create_leader_dots("Ledger Column Detection Confidence", f"{ledger_conf:.0%}"),
+                ]
             )
-        )
-        story.append(Spacer(1, 8))
 
-    # Sprint 833: the split-match search is bounded (a Paciolus convention);
-    # disclose the bounds and how many open bank items were not searched
-    # exhaustively. Those items remain reconciling items in Section IV.
-    split_search = rec_result.get("split_search") or {}
-    split_note = split_search.get("note")
-    if split_note:
-        story.append(Paragraph(f"<b>Split matching:</b> {xml_escape(str(split_note))}", styles["MemoBodySmall"]))
-        story.append(Spacer(1, 6))
+        for line in scope_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+        story.append(Spacer(1, 4))
 
-    # Methodology statement
-    build_methodology_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="bank_reconciliation",
-        framework=resolved_framework,
-        domain_label="bank reconciliation analysis",
-    )
-
-    # ──────────────────────────────────────────────────────────────
-    # III. RECONCILIATION RESULTS
-    # ──────────────────────────────────────────────────────────────
-    _build_reconciliation_results(story, styles, doc.width, summary, rec_result)
-
-    # ──────────────────────────────────────────────────────────────
-    # IV. OUTSTANDING ITEMS
-    # ──────────────────────────────────────────────────────────────
-    _build_outstanding_aging_tables(story, styles, doc.width, rec_result, summary)
-
-    # ──────────────────────────────────────────────────────────────
-    # V. RESULTS SUMMARY
-    # ──────────────────────────────────────────────────────────────
-    if composite:
-        # Override section title to "V." (shared builder defaults to "III.")
-        story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-
-        risk_tier = str(composite.get("risk_tier", "low")).lower()
-        base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-        tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
-
-        story.append(
-            Paragraph(
-                create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
-                styles["MemoLeader"],
-            )
-        )
-        story.append(
-            Paragraph(
-                create_leader_dots("Diagnostic Tier", tier_label),
-                styles["MemoLeader"],
-            )
-        )
-        story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
-        story.append(Spacer(1, 2))
-        story.append(
-            Paragraph(
-                create_leader_dots("Total Items Flagged", f"{composite.get('total_flagged', 0):,}"),
-                styles["MemoLeader"],
-            )
+        # Scope statement (framework-aware)
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="bank_reconciliation",
+            framework=resolved_framework,
+            domain_label="bank reconciliation analysis",
         )
 
-        sev = composite.get("flags_by_severity", {})
-        story.append(
-            Paragraph(
-                create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
-                styles["MemoLeader"],
-            )
-        )
-        story.append(
-            Paragraph(
-                create_leader_dots("Medium Severity Flags", str(sev.get("medium", 0))),
-                styles["MemoLeader"],
-            )
-        )
-        story.append(
-            Paragraph(
-                create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
-                styles["MemoLeader"],
-            )
-        )
-        story.append(Spacer(1, 6))
+        # Proof Summary (uses test_results for accurate counts)
+        build_proof_summary_section(story, styles, doc_width, rec_result)
 
-        # Results by test table (from rec_tests)
-        rec_tests = rec_result.get("rec_tests", [])
-        if rec_tests:
-            cell_style_rt = styles["MemoTableCell"]
-            results_data = [["Test", "Flagged", "Severity"]]
-            for rt in rec_tests:
-                results_data.append(
-                    [
-                        Paragraph(str(rt.get("test_name", "")), cell_style_rt),
-                        Paragraph(str(rt.get("flagged_count", 0)), cell_style_rt),
-                        Paragraph(rt.get("severity", "low").upper(), cell_style_rt),
-                    ]
+        # ──────────────────────────────────────────────────────────────
+        # II. METHODOLOGY
+        # ──────────────────────────────────────────────────────────────
+        if test_results:
+            _build_methodology_table(story, styles, doc_width, test_results)
+        else:
+            # Fallback: build from rec_tests
+            story.append(Paragraph("II. Methodology", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+            story.append(
+                Paragraph(
+                    "Automated reconciliation tests were applied to the bank statement "
+                    "and general ledger transaction data.",
+                    styles["MemoBody"],
                 )
-
-            results_table = Table(
-                results_data,
-                colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch],
             )
-            results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
-            story.append(results_table)
+            story.append(Spacer(1, 8))
 
-        story.append(Spacer(1, 8))
+        # Sprint 833: the split-match search is bounded (a Paciolus convention);
+        # disclose the bounds and how many open bank items were not searched
+        # exhaustively. Those items remain reconciling items in Section IV.
+        split_search = rec_result.get("split_search") or {}
+        split_note = split_search.get("note")
+        if split_note:
+            story.append(Paragraph(f"<b>Split matching:</b> {xml_escape(str(split_note))}", styles["MemoBodySmall"]))
+            story.append(Spacer(1, 6))
 
-    # ──────────────────────────────────────────────────────────────
-    # VI. KEY FINDINGS
-    # ──────────────────────────────────────────────────────────────
-    _build_key_findings(story, styles, doc.width, rec_result, summary, composite)
+        # Methodology statement
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="bank_reconciliation",
+            framework=resolved_framework,
+            domain_label="bank reconciliation analysis",
+        )
 
-    # ──────────────────────────────────────────────────────────────
-    # VII. AUTHORITATIVE REFERENCES
-    # ──────────────────────────────────────────────────────────────
-    build_authoritative_reference_block(
-        story,
-        styles,
-        doc.width,
-        tool_domain="bank_reconciliation",
-        framework=resolved_framework,
-        domain_label="bank reconciliation analysis",
-        section_label="VII.",
+        # ──────────────────────────────────────────────────────────────
+        # III. RECONCILIATION RESULTS
+        # ──────────────────────────────────────────────────────────────
+        _build_reconciliation_results(story, styles, doc_width, summary, rec_result)
+
+        # ──────────────────────────────────────────────────────────────
+        # IV. OUTSTANDING ITEMS
+        # ──────────────────────────────────────────────────────────────
+        _build_outstanding_aging_tables(story, styles, doc_width, rec_result, summary)
+
+        # ──────────────────────────────────────────────────────────────
+        # V. RESULTS SUMMARY
+        # ──────────────────────────────────────────────────────────────
+        if composite:
+            # Override section title to "V." (shared builder defaults to "III.")
+            story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+
+            risk_tier = str(composite.get("risk_tier", "low")).lower()
+            base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+            tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
+
+            story.append(
+                Paragraph(
+                    create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Diagnostic Tier", tier_label),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
+            story.append(Spacer(1, 2))
+            story.append(
+                Paragraph(
+                    create_leader_dots("Total Items Flagged", f"{composite.get('total_flagged', 0):,}"),
+                    styles["MemoLeader"],
+                )
+            )
+
+            sev = composite.get("flags_by_severity", {})
+            story.append(
+                Paragraph(
+                    create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Medium Severity Flags", str(sev.get("medium", 0))),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(Spacer(1, 6))
+
+            # Results by test table (from rec_tests)
+            rec_tests = rec_result.get("rec_tests", [])
+            if rec_tests:
+                cell_style_rt = styles["MemoTableCell"]
+                results_data = [["Test", "Flagged", "Severity"]]
+                for rt in rec_tests:
+                    results_data.append(
+                        [
+                            Paragraph(str(rt.get("test_name", "")), cell_style_rt),
+                            Paragraph(str(rt.get("flagged_count", 0)), cell_style_rt),
+                            Paragraph(rt.get("severity", "low").upper(), cell_style_rt),
+                        ]
+                    )
+
+                results_table = Table(
+                    results_data,
+                    colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch],
+                )
+                results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
+                story.append(results_table)
+
+            story.append(Spacer(1, 8))
+
+        # ──────────────────────────────────────────────────────────────
+        # VI. KEY FINDINGS
+        # ──────────────────────────────────────────────────────────────
+        _build_key_findings(story, styles, doc_width, rec_result, summary, composite)
+
+        # ──────────────────────────────────────────────────────────────
+        # VII. AUTHORITATIVE REFERENCES
+        # ──────────────────────────────────────────────────────────────
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="bank_reconciliation",
+            framework=resolved_framework,
+            domain_label="bank reconciliation analysis",
+            section_label="VII.",
+        )
+
+        # ──────────────────────────────────────────────────────────────
+        # VIII. CONCLUSION
+        # ──────────────────────────────────────────────────────────────
+        story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
+
+        base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
+        score_val = composite.get("score", 0) if composite else 0
+        tier_label = f"{base_tier_label} ({score_val:.0f}/100)"
+
+        # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
+        _bank_rec_suffixes = {
+            "low": (
+                "The reconciling difference is immaterial and the match rate is satisfactory. "
+                "No items requiring further investigation were identified."
+            ),
+            "moderate": (
+                "The reconciling difference and outstanding items should be reviewed "
+                "to confirm they represent normal timing differences rather than errors or omissions."
+            ),
+            "elevated": (
+                "The reconciling difference and/or outstanding item volume may indicate "
+                "recording errors, omissions, or unusual transactions requiring detailed "
+                "investigation (ISA 500). The engagement team may also consider confirming "
+                "balances directly with the bank (ISA 505)."
+            ),
+            "high": (
+                "Significant reconciliation exceptions were identified. The reconciling "
+                "difference and outstanding items require immediate investigation (ISA 500), "
+                "including consideration of fraud risk (ISA 240) and of confirming balances "
+                "directly with the bank (ISA 505)."
+            ),
+        }
+
+        suffix = _bank_rec_suffixes.get(risk_tier, _bank_rec_suffixes["low"])
+        assessment = (
+            f"Based on the automated reconciliation procedures applied, "
+            f"the bank reconciliation returned {tier_label} flag density "
+            f"(Composite Diagnostic Score: {score_val:.1f}/100) across the automated tests. "
+            f"{suffix}"
+        )
+
+        story.append(Paragraph(assessment, styles["MemoBody"]))
+        story.append(Spacer(1, 12))
+
+        # WORKPAPER SIGN-OFF
+        build_workpaper_signoff(
+            story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+        )
+
+        # INTELLIGENCE STAMP
+        build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
+
+        # DISCLAIMER
+        build_disclaimer(
+            story,
+            styles,
+            domain="bank reconciliation analysis testing procedures",
+            isa_reference=(
+                "ISA 500 (Audit Evidence). It reconciles the client's own records and is not a bank "
+                "confirmation under ISA 505 (External Confirmations) or PCAOB AS 2310"
+            ),
+        )
+
+    pdf_bytes = render_memo(
+        "Bank Reconciliation Memo",
+        "REC",
+        _body,
+        cover={
+            "client_name": client_name or "",
+            "engagement_period": period_tested or "",
+            "fiscal_year_end": fiscal_year_end or "",
+            "source_document": filename,
+            "source_document_title": source_document_title or "",
+            "source_context_note": source_context_note or "",
+        },
+        margins=TESTING_MEMO_MARGINS,
     )
-
-    # ──────────────────────────────────────────────────────────────
-    # VIII. CONCLUSION
-    # ──────────────────────────────────────────────────────────────
-    story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
-
-    base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
-    score_val = composite.get("score", 0) if composite else 0
-    tier_label = f"{base_tier_label} ({score_val:.0f}/100)"
-
-    # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
-    _bank_rec_suffixes = {
-        "low": (
-            "The reconciling difference is immaterial and the match rate is satisfactory. "
-            "No items requiring further investigation were identified."
-        ),
-        "moderate": (
-            "The reconciling difference and outstanding items should be reviewed "
-            "to confirm they represent normal timing differences rather than errors or omissions."
-        ),
-        "elevated": (
-            "The reconciling difference and/or outstanding item volume may indicate "
-            "recording errors, omissions, or unusual transactions requiring detailed "
-            "investigation (ISA 500). The engagement team may also consider confirming "
-            "balances directly with the bank (ISA 505)."
-        ),
-        "high": (
-            "Significant reconciliation exceptions were identified. The reconciling "
-            "difference and outstanding items require immediate investigation (ISA 500), "
-            "including consideration of fraud risk (ISA 240) and of confirming balances "
-            "directly with the bank (ISA 505)."
-        ),
-    }
-
-    suffix = _bank_rec_suffixes.get(risk_tier, _bank_rec_suffixes["low"])
-    assessment = (
-        f"Based on the automated reconciliation procedures applied, "
-        f"the bank reconciliation returned {tier_label} flag density "
-        f"(Composite Diagnostic Score: {score_val:.1f}/100) across the automated tests. "
-        f"{suffix}"
-    )
-
-    story.append(Paragraph(assessment, styles["MemoBody"]))
-    story.append(Spacer(1, 12))
-
-    # WORKPAPER SIGN-OFF
-    build_workpaper_signoff(
-        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
-    )
-
-    # INTELLIGENCE STAMP
-    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
-
-    # DISCLAIMER
-    build_disclaimer(
-        story,
-        styles,
-        domain="bank reconciliation analysis testing procedures",
-        isa_reference=(
-            "ISA 500 (Audit Evidence). It reconciles the client's own records and is not a bank "
-            "confirmation under ISA 505 (External Confirmations) or PCAOB AS 2310"
-        ),
-    )
-
-    # Build PDF
-    page_footer = current_page_footer()
-    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
 
     log_secure_operation("bank_rec_memo_complete", f"Bank rec memo generated: {len(pdf_bytes)} bytes")
     return pdf_bytes

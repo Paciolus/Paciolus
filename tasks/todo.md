@@ -848,6 +848,7 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - [x] Item 5: `memo_base.source_line()` replaces the Source block in 10 memos + `build_scope_section`.
 - [x] Item 4: `ledger_table_style(font_size=, extra=)`; 20 inline copies replaced.
 - [x] Item 9: cached styles, Excel constants, `generate_reference_number(prefix)`, 29 importers on `pdf`.
+- [x] Item 3: `memo_base.render_memo()`; all 14 hand-built memos + `generate_testing_memo` on it.
 
 **Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
 

@@ -306,9 +306,11 @@ class TestReportGeneratorsReadContextVar:
         def _capture_cover(story, styles, metadata, doc_width, logo_path, **kwargs):
             cover_calls.append(kwargs)
 
+        # Sprint 813: page setup and the footer live in ``shared.memo_base.render_memo``,
+        # which imports them at call time — patch them where they are defined.
         with (
-            patch.object(asg, "make_branded_page_footer") as mock_footer,
-            patch.object(asg, "SimpleDocTemplate") as mock_doc_cls,
+            patch("shared.report_chrome.make_branded_page_footer") as mock_footer,
+            patch("reportlab.platypus.SimpleDocTemplate") as mock_doc_cls,
             patch.object(asg, "build_cover_page", side_effect=_capture_cover),
             patch.object(
                 asg.AnomalySummaryGenerator,

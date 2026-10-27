@@ -18,14 +18,12 @@ this generator reads ``current_pdf_branding()`` for logo + header/footer.
 """
 
 import json
-from io import BytesIO
 from typing import Any, Optional
 
 from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from analytical_expectations_model import (
@@ -38,12 +36,11 @@ from engagement_model import Engagement
 from models import Client
 from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import create_memo_styles
+from shared.memo_base import MemoContext, render_memo
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
     find_logo,
-    make_branded_page_footer,
 )
 from shared.safe_paragraph import Paragraph
 
@@ -164,37 +161,23 @@ class AnalyticalExpectationMemoGenerator:
             .all()
         )
 
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            leftMargin=0.75 * inch,
-            rightMargin=0.75 * inch,
-            topMargin=0.75 * inch,
-            bottomMargin=0.75 * inch,
-        )
-        doc_width = letter[0] - 1.5 * inch
+        # Sprint 813: the disclaimer banner precedes the cover, so the story
+        # builds its own cover; render_memo owns page setup and page chrome.
+        def _body(memo: MemoContext) -> None:
+            memo.story.extend(
+                self._build_story(
+                    memo.styles,
+                    memo.doc_width,
+                    client_name,
+                    engagement,
+                    expectations,
+                    resolved_framework=resolved_framework,
+                    custom_logo_bytes=memo.branding.effective_logo_bytes(),
+                    reference=memo.reference,
+                )
+            )
 
-        styles = create_memo_styles()
-        story = self._build_story(
-            styles,
-            doc_width,
-            client_name,
-            engagement,
-            expectations,
-            resolved_framework=resolved_framework,
-            custom_logo_bytes=branding.effective_logo_bytes(),
-        )
-
-        footer_cb = make_branded_page_footer(
-            header_text=branding.effective_header_text(),
-            footer_text=branding.effective_footer_text(),
-        )
-        doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
-
-        pdf_bytes = buffer.getvalue()
-        buffer.close()
-        return pdf_bytes
+        return render_memo("Analytical Expectations Workpaper", "AEM", _body, branding=branding)
 
     def _build_story(
         self,
@@ -205,6 +188,7 @@ class AnalyticalExpectationMemoGenerator:
         expectations: list[AnalyticalExpectation],
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
         custom_logo_bytes: Optional[bytes] = None,
+        reference: Optional[str] = None,
     ) -> list:
         story: list = []
 
@@ -228,7 +212,7 @@ class AnalyticalExpectationMemoGenerator:
         period_start = engagement.period_start.strftime("%b %d, %Y") if engagement.period_start else "N/A"
         period_end = engagement.period_end.strftime("%b %d, %Y") if engagement.period_end else "N/A"
         period_desc = f"{period_start} – {period_end}"
-        reference = _generate_reference()
+        reference = reference or _generate_reference()
         logo_path = find_logo()
 
         metadata = ReportMetadata(

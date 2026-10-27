@@ -16,18 +16,15 @@ Sections:
 9. Conclusion (4-tier risk scale)
 """
 
-import io
 from typing import Any, Optional
 
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
-    generate_reference_number,
 )
 from security_utils import log_secure_operation
 from shared.follow_up_procedures import get_follow_up_procedure
@@ -35,19 +32,15 @@ from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     RISK_SCALE_LEGEND,
     RISK_TIER_DISPLAY,
+    TESTING_MEMO_MARGINS,
+    MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
     build_saved_settings_disclosure,
     build_workpaper_signoff,
-    create_memo_styles,
+    render_memo,
     source_line,
-)
-from shared.report_chrome import (
-    ReportMetadata,
-    build_cover_page,
-    current_page_footer,
-    find_logo,
 )
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
@@ -753,223 +746,206 @@ def generate_three_way_match_memo(
     """
     log_secure_operation("twm_memo_generate", f"Generating three-way match memo: {filename}")
 
-    styles = create_memo_styles()
-    buffer = io.BytesIO()
-    reference = generate_reference_number("TWM")
+    def _body(memo: MemoContext) -> None:
+        story, styles, doc_width = memo.story, memo.styles, memo.doc_width
+        summary = twm_result.get("summary", {})
+        variances = twm_result.get("variances", [])
+        config = twm_result.get("config", {})
+        data_quality = twm_result.get("data_quality", {})
+        composite = twm_result.get("composite_score", {})
+        test_results = twm_result.get("test_results", [])
 
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=1.0 * inch,
-        bottomMargin=0.8 * inch,
-    )
+        # Map engine risk tier to standard 4-tier scale
+        engine_risk = summary.get("risk_assessment", "low")
+        risk_tier = composite.get("risk_tier", _ENGINE_TIER_MAPPING.get(engine_risk, "low"))
 
-    story: list = []
-    summary = twm_result.get("summary", {})
-    variances = twm_result.get("variances", [])
-    config = twm_result.get("config", {})
-    data_quality = twm_result.get("data_quality", {})
-    composite = twm_result.get("composite_score", {})
-    test_results = twm_result.get("test_results", [])
+        # ---- I. SCOPE ----
+        story.append(Paragraph("I. Scope", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
 
-    # Map engine risk tier to standard 4-tier scale
-    engine_risk = summary.get("risk_assessment", "low")
-    risk_tier = composite.get("risk_tier", _ENGINE_TIER_MAPPING.get(engine_risk, "low"))
+        source_scope_lines: list[str] = []
+        source = source_line(source_document_title, filename)
+        if source:
+            source_scope_lines.append(source)
 
-    # ---- COVER PAGE ----
-    logo_path = find_logo()
-    metadata = ReportMetadata(
-        title="Three-Way Match Validator Memo",
-        client_name=client_name or "",
-        engagement_period=period_tested or "",
-        fiscal_year_end=fiscal_year_end or "",
-        source_document=filename,
-        source_document_title=source_document_title or "",
-        source_context_note=source_context_note or "",
-        reference=reference,
-    )
-    build_cover_page(story, styles, metadata, doc.width, logo_path)
-
-    # ---- I. SCOPE ----
-    story.append(Paragraph("I. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    source_scope_lines: list[str] = []
-    source = source_line(source_document_title, filename)
-    if source:
-        source_scope_lines.append(source)
-
-    scope_lines = source_scope_lines + [
-        create_leader_dots("Purchase Orders", f"{summary.get('total_pos', 0):,}"),
-        create_leader_dots("Invoices", f"{summary.get('total_invoices', 0):,}"),
-        create_leader_dots("Receipts / GRNs", f"{summary.get('total_receipts', 0):,}"),
-    ]
-    if period_tested:
-        scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
-
-    amt_tol = config.get("amount_tolerance", 0.01)
-    price_tol = config.get("price_variance_threshold", 0.05)
-    date_window = config.get("date_window_days", 30)
-    fuzzy = config.get("enable_fuzzy_matching", True)
-
-    scope_lines.extend(
-        [
-            create_leader_dots("Amount Tolerance", f"${amt_tol:,.2f}"),
-            create_leader_dots("Price Variance Threshold", f"{price_tol:.0%}"),
-            create_leader_dots("Date Window", f"{date_window} days"),
-            create_leader_dots("Fuzzy Matching", "Enabled" if fuzzy else "Disabled"),
+        scope_lines = source_scope_lines + [
+            create_leader_dots("Purchase Orders", f"{summary.get('total_pos', 0):,}"),
+            create_leader_dots("Invoices", f"{summary.get('total_invoices', 0):,}"),
+            create_leader_dots("Receipts / GRNs", f"{summary.get('total_receipts', 0):,}"),
         ]
-    )
+        if period_tested:
+            scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
-    for line in scope_lines:
-        story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 4))
+        amt_tol = config.get("amount_tolerance", 0.01)
+        price_tol = config.get("price_variance_threshold", 0.05)
+        date_window = config.get("date_window_days", 30)
+        fuzzy = config.get("enable_fuzzy_matching", True)
 
-    # Scope statement (framework-aware)
-    build_scope_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="three_way_match",
-        framework=resolved_framework,
-        domain_label="three-way match validation",
-    )
+        scope_lines.extend(
+            [
+                create_leader_dots("Amount Tolerance", f"${amt_tol:,.2f}"),
+                create_leader_dots("Price Variance Threshold", f"{price_tol:.0%}"),
+                create_leader_dots("Date Window", f"{date_window} days"),
+                create_leader_dots("Fuzzy Matching", "Enabled" if fuzzy else "Disabled"),
+            ]
+        )
 
-    # Proof summary
-    col_detection = twm_result.get("column_detection", {})
-    po_conf = col_detection.get("po", {}).get("overall_confidence", 0) if col_detection else 0
-    inv_conf = col_detection.get("invoice", {}).get("overall_confidence", 0) if col_detection else 0
-    rcpt_conf = col_detection.get("receipt", {}).get("overall_confidence", 0) if col_detection else 0
-    avg_conf = (po_conf + inv_conf + rcpt_conf) / 3 if col_detection else 0
+        for line in scope_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+        story.append(Spacer(1, 4))
 
-    unmatched_count = (
-        len(twm_result.get("unmatched_pos", []))
-        + len(twm_result.get("unmatched_invoices", []))
-        + len(twm_result.get("unmatched_receipts", []))
-    )
+        # Scope statement (framework-aware)
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="three_way_match",
+            framework=resolved_framework,
+            domain_label="three-way match validation",
+        )
 
-    _proof_result = {
-        "composite_score": {
-            "tests_run": composite.get("tests_run", 6),
-            "total_flagged": composite.get(
-                "total_flagged", unmatched_count + summary.get("material_variances_count", 0)
-            ),
+        # Proof summary
+        col_detection = twm_result.get("column_detection", {})
+        po_conf = col_detection.get("po", {}).get("overall_confidence", 0) if col_detection else 0
+        inv_conf = col_detection.get("invoice", {}).get("overall_confidence", 0) if col_detection else 0
+        rcpt_conf = col_detection.get("receipt", {}).get("overall_confidence", 0) if col_detection else 0
+        avg_conf = (po_conf + inv_conf + rcpt_conf) / 3 if col_detection else 0
+
+        unmatched_count = (
+            len(twm_result.get("unmatched_pos", []))
+            + len(twm_result.get("unmatched_invoices", []))
+            + len(twm_result.get("unmatched_receipts", []))
+        )
+
+        _proof_result = {
+            "composite_score": {
+                "tests_run": composite.get("tests_run", 6),
+                "total_flagged": composite.get(
+                    "total_flagged", unmatched_count + summary.get("material_variances_count", 0)
+                ),
+            },
+            "data_quality": {
+                "completeness_score": data_quality.get("overall_quality_score", 0),
+            },
+            "column_detection": {
+                "overall_confidence": avg_conf,
+            },
+            "test_results": test_results
+            or [
+                {"test_name": "Full Matches", "entries_flagged": 0, "skipped": False},
+                {
+                    "test_name": "Partial Matches",
+                    "entries_flagged": len(twm_result.get("partial_matches", [])),
+                    "skipped": False,
+                },
+                {
+                    "test_name": "Material Variances",
+                    "entries_flagged": summary.get("material_variances_count", 0),
+                    "skipped": False,
+                },
+                {
+                    "test_name": "Unmatched POs",
+                    "entries_flagged": len(twm_result.get("unmatched_pos", [])),
+                    "skipped": False,
+                },
+                {
+                    "test_name": "Unmatched Invoices",
+                    "entries_flagged": len(twm_result.get("unmatched_invoices", [])),
+                    "skipped": False,
+                },
+                {
+                    "test_name": "Unmatched Receipts",
+                    "entries_flagged": len(twm_result.get("unmatched_receipts", [])),
+                    "skipped": False,
+                },
+            ],
+        }
+        build_proof_summary_section(story, styles, doc_width, _proof_result)
+
+        # ---- II. METHODOLOGY ----
+        if test_results:
+            _build_methodology_table(story, styles, doc_width, test_results)
+
+        # Sprint 836: tolerances that differed from the Paciolus defaults.
+        build_saved_settings_disclosure(
+            story, styles, doc_width, twm_result, defaults=engine_defaults_for_domain("three_way_match")
+        )
+
+        # Methodology statement (interpretive context)
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="three_way_match",
+            framework=resolved_framework,
+            domain_label="three-way match validation",
+        )
+
+        # ---- III. MATCH RESULTS ----
+        _build_match_results(story, styles, doc_width, summary, risk_tier, composite.get("score", 0))
+
+        # ---- IV. RESULTS SUMMARY ----
+        if composite:
+            _build_results_summary(story, styles, doc_width, composite, test_results)
+
+        # ---- V. MATERIAL VARIANCES ----
+        _build_material_variances(story, styles, doc_width, variances, summary)
+
+        # ---- VI. KEY FINDINGS ----
+        _build_key_findings(story, styles, doc_width, composite)
+
+        # ---- VII. UNMATCHED DOCUMENTS ----
+        _build_unmatched_documents(story, styles, doc_width, twm_result)
+
+        # ---- VIII. AUTHORITATIVE REFERENCES ----
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="three_way_match",
+            framework=resolved_framework,
+            domain_label="three-way match validation",
+            section_label="VIII.",
+        )
+
+        # ---- IX. CONCLUSION ----
+        story.append(Paragraph("IX. Conclusion", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        assessment = _build_risk_conclusion(risk_tier, composite.get("score", 0))
+        story.append(Paragraph(assessment, styles["MemoBody"]))
+        story.append(Spacer(1, 12))
+
+        # ---- WORKPAPER SIGN-OFF ----
+        build_workpaper_signoff(
+            story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+        )
+
+        # ---- INTELLIGENCE STAMP ----
+        build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
+
+        # ---- DISCLAIMER ----
+        build_disclaimer(
+            story,
+            styles,
+            domain="three-way match validation",
+            isa_reference="ISA 500 (Audit Evidence) and PCAOB AS 1105 (Audit Evidence)",
+        )
+
+    pdf_bytes = render_memo(
+        "Three-Way Match Validator Memo",
+        "TWM",
+        _body,
+        cover={
+            "client_name": client_name or "",
+            "engagement_period": period_tested or "",
+            "fiscal_year_end": fiscal_year_end or "",
+            "source_document": filename,
+            "source_document_title": source_document_title or "",
+            "source_context_note": source_context_note or "",
         },
-        "data_quality": {
-            "completeness_score": data_quality.get("overall_quality_score", 0),
-        },
-        "column_detection": {
-            "overall_confidence": avg_conf,
-        },
-        "test_results": test_results
-        or [
-            {"test_name": "Full Matches", "entries_flagged": 0, "skipped": False},
-            {
-                "test_name": "Partial Matches",
-                "entries_flagged": len(twm_result.get("partial_matches", [])),
-                "skipped": False,
-            },
-            {
-                "test_name": "Material Variances",
-                "entries_flagged": summary.get("material_variances_count", 0),
-                "skipped": False,
-            },
-            {
-                "test_name": "Unmatched POs",
-                "entries_flagged": len(twm_result.get("unmatched_pos", [])),
-                "skipped": False,
-            },
-            {
-                "test_name": "Unmatched Invoices",
-                "entries_flagged": len(twm_result.get("unmatched_invoices", [])),
-                "skipped": False,
-            },
-            {
-                "test_name": "Unmatched Receipts",
-                "entries_flagged": len(twm_result.get("unmatched_receipts", [])),
-                "skipped": False,
-            },
-        ],
-    }
-    build_proof_summary_section(story, styles, doc.width, _proof_result)
-
-    # ---- II. METHODOLOGY ----
-    if test_results:
-        _build_methodology_table(story, styles, doc.width, test_results)
-
-    # Sprint 836: tolerances that differed from the Paciolus defaults.
-    build_saved_settings_disclosure(
-        story, styles, doc.width, twm_result, defaults=engine_defaults_for_domain("three_way_match")
+        margins=TESTING_MEMO_MARGINS,
     )
-
-    # Methodology statement (interpretive context)
-    build_methodology_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="three_way_match",
-        framework=resolved_framework,
-        domain_label="three-way match validation",
-    )
-
-    # ---- III. MATCH RESULTS ----
-    _build_match_results(story, styles, doc.width, summary, risk_tier, composite.get("score", 0))
-
-    # ---- IV. RESULTS SUMMARY ----
-    if composite:
-        _build_results_summary(story, styles, doc.width, composite, test_results)
-
-    # ---- V. MATERIAL VARIANCES ----
-    _build_material_variances(story, styles, doc.width, variances, summary)
-
-    # ---- VI. KEY FINDINGS ----
-    _build_key_findings(story, styles, doc.width, composite)
-
-    # ---- VII. UNMATCHED DOCUMENTS ----
-    _build_unmatched_documents(story, styles, doc.width, twm_result)
-
-    # ---- VIII. AUTHORITATIVE REFERENCES ----
-    build_authoritative_reference_block(
-        story,
-        styles,
-        doc.width,
-        tool_domain="three_way_match",
-        framework=resolved_framework,
-        domain_label="three-way match validation",
-        section_label="VIII.",
-    )
-
-    # ---- IX. CONCLUSION ----
-    story.append(Paragraph("IX. Conclusion", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    assessment = _build_risk_conclusion(risk_tier, composite.get("score", 0))
-    story.append(Paragraph(assessment, styles["MemoBody"]))
-    story.append(Spacer(1, 12))
-
-    # ---- WORKPAPER SIGN-OFF ----
-    build_workpaper_signoff(
-        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
-    )
-
-    # ---- INTELLIGENCE STAMP ----
-    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
-
-    # ---- DISCLAIMER ----
-    build_disclaimer(
-        story,
-        styles,
-        domain="three-way match validation",
-        isa_reference="ISA 500 (Audit Evidence) and PCAOB AS 1105 (Audit Evidence)",
-    )
-
-    # Build PDF
-    page_footer = current_page_footer()
-    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
 
     log_secure_operation("twm_memo_complete", f"TWM memo generated: {len(pdf_bytes)} bytes")
     return pdf_bytes

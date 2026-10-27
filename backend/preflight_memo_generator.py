@@ -16,20 +16,20 @@ Sections: Cover → Scope (with score breakdown) → TB Balance Check →
 from typing import Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, create_leader_dots
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
     build_workpaper_signoff,
-    create_memo_styles,
+    render_memo,
     source_line,
     wrap_table_strings,
 )
 from shared.memo_template import _roman
-from shared.report_chrome import ReportMetadata, build_cover_page, current_page_footer, find_logo
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
@@ -81,340 +81,321 @@ def generate_preflight_memo(
     Returns:
         PDF bytes
     """
-    import io
 
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=(8.5 * inch, 11 * inch),
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-    )
+    def _body(memo: MemoContext) -> None:
+        story, styles, doc_width = memo.story, memo.styles, memo.doc_width
+        section_counter = 1
 
-    doc_width = doc.width
-    styles = create_memo_styles()
-    story: list = []
-    reference = generate_reference_number("PFR")
-
-    # ── Cover Page ──
-    logo_path = find_logo()
-    metadata = ReportMetadata(
-        title="Data Quality Pre-Flight Report",
-        client_name=client_name or "",
-        engagement_period=period_tested or "",
-        source_document=filename,
-        source_document_title=source_document_title or "",
-        source_context_note=source_context_note or "",
-        reference=reference,
-        fiscal_year_end=fiscal_year_end or "",
-    )
-    build_cover_page(story, styles, metadata, doc_width, logo_path)
-
-    section_counter = 1
-
-    # ── I. SCOPE ──
-    story.append(Paragraph(f"{_roman(section_counter)}. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    readiness = preflight_result.get("readiness_score", 0)
-    label = preflight_result.get("readiness_label", "Unknown")
-
-    # Source document transparency
-    source = source_line(source_document_title, filename, filename_label="Source File", always=True)
-
-    scope_lines = [
-        source,
-        create_leader_dots("Total Rows", f"{preflight_result.get('row_count', 0):,}"),
-        create_leader_dots("Total Columns", str(preflight_result.get("column_count", 0))),
-        create_leader_dots("Readiness Score", f"{readiness:.1f} / 100"),
-        create_leader_dots("Assessment", label),
-    ]
-    if period_tested:
-        scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
-
-    for line in scope_lines:
-        story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 8))
-
-    # ── Score Breakdown (IMP-01) ──
-    score_breakdown = preflight_result.get("score_breakdown", [])
-    if score_breakdown:
-        story.append(Paragraph("Readiness Score Breakdown", styles["MemoTableHeader"]))
-        story.append(Spacer(1, 4))
-
-        breakdown_data = [["Component", "Weight", "Score", "Contribution"]]
-        total_contribution = 0.0
-        for sc in score_breakdown:
-            weight_pct = f"{sc.get('weight', 0) * 100:.0f}%"
-            score_val = f"{sc.get('score', 0):.1f}"
-            contribution = sc.get("contribution", 0)
-            total_contribution += contribution
-            component_name = _COMPONENT_DISPLAY_NAMES.get(sc.get("component", ""), sc.get("component", ""))
-            breakdown_data.append([component_name, weight_pct, score_val, f"{contribution:.1f}"])
-
-        breakdown_data.append(["Total", "100%", "", f"{total_contribution:.1f} / 100"])
-
-        breakdown_data = wrap_table_strings(breakdown_data, styles)
-        breakdown_table = Table(
-            breakdown_data,
-            colWidths=[2.2 * inch, 0.8 * inch, 0.8 * inch, 1.2 * inch],
-        )
-        breakdown_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -2), "Times-Roman"),
-                    ("FONTNAME", (0, -1), (-1, -1), "Times-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("LINEABOVE", (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
-        story.append(breakdown_table)
-        story.append(Spacer(1, 8))
-
-    build_scope_statement(
-        story,
-        styles,
-        doc_width,
-        tool_domain="data_quality_preflight",
-        framework=resolved_framework,
-        domain_label="data quality assessment",
-    )
-
-    section_counter += 1
-
-    # ── II. TB BALANCE CHECK (BUG-04) ──
-    balance_check = preflight_result.get("balance_check")
-    if balance_check is not None:
-        story.append(Paragraph(f"{_roman(section_counter)}. Trial Balance Integrity Check", styles["MemoSection"]))
+        # ── I. SCOPE ──
+        story.append(Paragraph(f"{_roman(section_counter)}. Scope", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        total_debits = balance_check.get("total_debits", 0)
-        total_credits = balance_check.get("total_credits", 0)
-        difference = balance_check.get("difference", 0)
-        balanced = balance_check.get("balanced", True)
+        readiness = preflight_result.get("readiness_score", 0)
+        label = preflight_result.get("readiness_label", "Unknown")
 
-        balance_lines = [
-            create_leader_dots("Total Debits", f"${total_debits:,.2f}"),
-            create_leader_dots("Total Credits", f"${total_credits:,.2f}"),
-            create_leader_dots("Difference", f"${difference:,.2f}"),
+        # Source document transparency
+        source = source_line(source_document_title, filename, filename_label="Source File", always=True)
+
+        scope_lines = [
+            source,
+            create_leader_dots("Total Rows", f"{preflight_result.get('row_count', 0):,}"),
+            create_leader_dots("Total Columns", str(preflight_result.get("column_count", 0))),
+            create_leader_dots("Readiness Score", f"{readiness:.1f} / 100"),
+            create_leader_dots("Assessment", label),
         ]
-        for line in balance_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
+        if period_tested:
+            scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
-        story.append(Spacer(1, 4))
-        if balanced:
-            story.append(
-                Paragraph(
-                    "Status: Balanced — Total debits equal total credits within "
-                    f"rounding tolerance (${balance_check.get('tolerance', 0.01):.2f}).",
-                    styles["MemoBody"],
-                )
-            )
-        else:
-            story.append(
-                Paragraph(
-                    f"CRITICAL — Trial balance is out of balance by ${abs(difference):,.2f}. "
-                    "Downstream diagnostic results will be unreliable. Obtain a corrected TB "
-                    "before proceeding.",
-                    styles["MemoBody"],
-                )
-            )
+        for line in scope_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
         story.append(Spacer(1, 8))
+
+        # ── Score Breakdown (IMP-01) ──
+        score_breakdown = preflight_result.get("score_breakdown", [])
+        if score_breakdown:
+            story.append(Paragraph("Readiness Score Breakdown", styles["MemoTableHeader"]))
+            story.append(Spacer(1, 4))
+
+            breakdown_data = [["Component", "Weight", "Score", "Contribution"]]
+            total_contribution = 0.0
+            for sc in score_breakdown:
+                weight_pct = f"{sc.get('weight', 0) * 100:.0f}%"
+                score_val = f"{sc.get('score', 0):.1f}"
+                contribution = sc.get("contribution", 0)
+                total_contribution += contribution
+                component_name = _COMPONENT_DISPLAY_NAMES.get(sc.get("component", ""), sc.get("component", ""))
+                breakdown_data.append([component_name, weight_pct, score_val, f"{contribution:.1f}"])
+
+            breakdown_data.append(["Total", "100%", "", f"{total_contribution:.1f} / 100"])
+
+            breakdown_data = wrap_table_strings(breakdown_data, styles)
+            breakdown_table = Table(
+                breakdown_data,
+                colWidths=[2.2 * inch, 0.8 * inch, 0.8 * inch, 1.2 * inch],
+            )
+            breakdown_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -2), "Times-Roman"),
+                        ("FONTNAME", (0, -1), (-1, -1), "Times-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("LINEABOVE", (0, -1), (-1, -1), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ]
+                )
+            )
+            story.append(breakdown_table)
+            story.append(Spacer(1, 8))
+
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="data_quality_preflight",
+            framework=resolved_framework,
+            domain_label="data quality assessment",
+        )
+
         section_counter += 1
 
-    # ── III. COLUMN DETECTION ──
-    columns = preflight_result.get("columns", [])
-    if columns:
-        story.append(Paragraph(f"{_roman(section_counter)}. Column Detection", styles["MemoSection"]))
+        # ── II. TB BALANCE CHECK (BUG-04) ──
+        balance_check = preflight_result.get("balance_check")
+        if balance_check is not None:
+            story.append(Paragraph(f"{_roman(section_counter)}. Trial Balance Integrity Check", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+
+            total_debits = balance_check.get("total_debits", 0)
+            total_credits = balance_check.get("total_credits", 0)
+            difference = balance_check.get("difference", 0)
+            balanced = balance_check.get("balanced", True)
+
+            balance_lines = [
+                create_leader_dots("Total Debits", f"${total_debits:,.2f}"),
+                create_leader_dots("Total Credits", f"${total_credits:,.2f}"),
+                create_leader_dots("Difference", f"${difference:,.2f}"),
+            ]
+            for line in balance_lines:
+                story.append(Paragraph(line, styles["MemoLeader"]))
+
+            story.append(Spacer(1, 4))
+            if balanced:
+                story.append(
+                    Paragraph(
+                        "Status: Balanced — Total debits equal total credits within "
+                        f"rounding tolerance (${balance_check.get('tolerance', 0.01):.2f}).",
+                        styles["MemoBody"],
+                    )
+                )
+            else:
+                story.append(
+                    Paragraph(
+                        f"CRITICAL — Trial balance is out of balance by ${abs(difference):,.2f}. "
+                        "Downstream diagnostic results will be unreliable. Obtain a corrected TB "
+                        "before proceeding.",
+                        styles["MemoBody"],
+                    )
+                )
+            story.append(Spacer(1, 8))
+            section_counter += 1
+
+        # ── III. COLUMN DETECTION ──
+        columns = preflight_result.get("columns", [])
+        if columns:
+            story.append(Paragraph(f"{_roman(section_counter)}. Column Detection", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+
+            # Sprint 668 Issue 8: Downstream Use column added so the reader
+            # can see at a glance how each detected column is consumed (or
+            # explicitly NOT consumed) by downstream analysis.
+            col_data = [["Role", "Detected Column", "Confidence", "Status", "Downstream Use"]]
+            low_confidence_columns = []
+            for col in columns:
+                conf = col.get("confidence", 0)
+                downstream_use = col.get("downstream_use") or "Not used in current analysis"
+                col_data.append(
+                    [
+                        col.get("role", "").title(),
+                        col.get("detected_name") or "\u2014",
+                        f"{conf:.0%}",
+                        col.get("status", "").replace("_", " ").title(),
+                        Paragraph(downstream_use, styles["MemoBody"]),
+                    ]
+                )
+                # Track low-confidence columns for remediation note (IMP-02)
+                if col.get("status") == "low_confidence" or (0 < conf < 0.80):
+                    low_confidence_columns.append(col)
+
+            col_table = Table(
+                col_data,
+                colWidths=[1.0 * inch, 1.6 * inch, 0.8 * inch, 1.0 * inch, 2.6 * inch],
+            )
+            col_table.setStyle(TableStyle(ledger_table_style()))
+            story.append(col_table)
+            story.append(Spacer(1, 4))
+
+            # Low-confidence remediation notes (IMP-02)
+            for lc_col in low_confidence_columns:
+                role = lc_col.get("role", "").title()
+                detected = lc_col.get("detected_name", "")
+                conf = lc_col.get("confidence", 0)
+                story.append(
+                    Paragraph(
+                        f"<i>{role} detection confidence ({conf:.0%}) is below the 80% threshold. "
+                        f"The '{detected}' column was matched to {role} with moderate confidence. "
+                        f"Confirm the column mapping is correct before running tests that filter by {role.lower()}. "
+                        f"Use the column override feature to manually assign the correct column if needed.</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+
+            story.append(Spacer(1, 8))
+            section_counter += 1
+
+        # ── IV. DATA QUALITY ISSUES ──
+        issues = preflight_result.get("issues", [])
+        story.append(Paragraph(f"{_roman(section_counter)}. Data Quality Issues", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        # Sprint 668 Issue 8: Downstream Use column added so the reader
-        # can see at a glance how each detected column is consumed (or
-        # explicitly NOT consumed) by downstream analysis.
-        col_data = [["Role", "Detected Column", "Confidence", "Status", "Downstream Use"]]
-        low_confidence_columns = []
-        for col in columns:
-            conf = col.get("confidence", 0)
-            downstream_use = col.get("downstream_use") or "Not used in current analysis"
-            col_data.append(
-                [
-                    col.get("role", "").title(),
-                    col.get("detected_name") or "\u2014",
-                    f"{conf:.0%}",
-                    col.get("status", "").replace("_", " ").title(),
-                    Paragraph(downstream_use, styles["MemoBody"]),
-                ]
+        if not issues:
+            story.append(Paragraph("No data quality issues detected.", styles["MemoBody"]))
+        else:
+            # Sort by tests_affected descending (IMP-04)
+            sorted_issues = sorted(
+                issues,
+                key=lambda i: i.get("tests_affected", 0),
+                reverse=True,
             )
-            # Track low-confidence columns for remediation note (IMP-02)
-            if col.get("status") == "low_confidence" or (0 < conf < 0.80):
-                low_confidence_columns.append(col)
 
-        col_table = Table(
-            col_data,
-            colWidths=[1.0 * inch, 1.6 * inch, 0.8 * inch, 1.0 * inch, 2.6 * inch],
-        )
-        col_table.setStyle(TableStyle(ledger_table_style()))
-        story.append(col_table)
-        story.append(Spacer(1, 4))
+            issue_data = [
+                ["Category", "Severity", "Description", "Affected", "Tests", "Remediation", "Downstream Impact"]
+            ]
+            for issue in sorted_issues:
+                issue_data.append(
+                    [
+                        Paragraph(issue.get("category", "").replace("_", " ").title(), styles["MemoTableCell"]),
+                        Paragraph(issue.get("severity", "").upper(), styles["MemoTableCell"]),
+                        Paragraph(issue.get("message", ""), styles["MemoTableCell"]),
+                        str(issue.get("affected_count", 0)),
+                        str(issue.get("tests_affected", 0)),
+                        Paragraph(issue.get("remediation", ""), styles["MemoTableCell"]),
+                        Paragraph(issue.get("downstream_impact", ""), styles["MemoTableCell"]),
+                    ]
+                )
 
-        # Low-confidence remediation notes (IMP-02)
-        for lc_col in low_confidence_columns:
-            role = lc_col.get("role", "").title()
-            detected = lc_col.get("detected_name", "")
-            conf = lc_col.get("confidence", 0)
-            story.append(
-                Paragraph(
-                    f"<i>{role} detection confidence ({conf:.0%}) is below the 80% threshold. "
-                    f"The '{detected}' column was matched to {role} with moderate confidence. "
-                    f"Confirm the column mapping is correct before running tests that filter by {role.lower()}. "
-                    f"Use the column override feature to manually assign the correct column if needed.</i>",
-                    styles["MemoBodySmall"],
+            # BUG-01 fix: Severity column widened from 0.55 to 0.75 inch
+            # IMP-04: Added narrow "Tests" column (0.4 inch)
+            issue_table = Table(
+                issue_data,
+                colWidths=[0.7 * inch, 0.75 * inch, 1.3 * inch, 0.4 * inch, 0.4 * inch, 1.5 * inch, 1.95 * inch],
+                repeatRows=1,
+            )
+            issue_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                        ("ALIGN", (3, 0), (4, -1), "CENTER"),
+                    ]
                 )
             )
+            story.append(issue_table)
+            story.append(Spacer(1, 4))
 
-        story.append(Spacer(1, 8))
+            # Affected account lists (IMP-03)
+            for issue in sorted_issues:
+                items = issue.get("affected_items", [])
+                if not items:
+                    continue
+                category = issue.get("category", "").replace("_", " ").title()
+                total = issue.get("affected_items_total", len(items))
+                display_items = items[:10]
+                items_str = ", ".join(display_items)
+                if total > 10:
+                    items_str += f" ... and {total - 10} more"
+                story.append(
+                    Paragraph(
+                        f"<i>{category} — Affected: {items_str}</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+
+        story.append(Spacer(1, 12))
         section_counter += 1
 
-    # ── IV. DATA QUALITY ISSUES ──
-    issues = preflight_result.get("issues", [])
-    story.append(Paragraph(f"{_roman(section_counter)}. Data Quality Issues", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    if not issues:
-        story.append(Paragraph("No data quality issues detected.", styles["MemoBody"]))
-    else:
-        # Sort by tests_affected descending (IMP-04)
-        sorted_issues = sorted(
-            issues,
-            key=lambda i: i.get("tests_affected", 0),
-            reverse=True,
+        # ── Methodology & Authoritative References ──
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="data_quality_preflight",
+            framework=resolved_framework,
+            domain_label="data quality assessment",
         )
 
-        issue_data = [["Category", "Severity", "Description", "Affected", "Tests", "Remediation", "Downstream Impact"]]
-        for issue in sorted_issues:
-            issue_data.append(
-                [
-                    Paragraph(issue.get("category", "").replace("_", " ").title(), styles["MemoTableCell"]),
-                    Paragraph(issue.get("severity", "").upper(), styles["MemoTableCell"]),
-                    Paragraph(issue.get("message", ""), styles["MemoTableCell"]),
-                    str(issue.get("affected_count", 0)),
-                    str(issue.get("tests_affected", 0)),
-                    Paragraph(issue.get("remediation", ""), styles["MemoTableCell"]),
-                    Paragraph(issue.get("downstream_impact", ""), styles["MemoTableCell"]),
-                ]
-            )
-
-        # BUG-01 fix: Severity column widened from 0.55 to 0.75 inch
-        # IMP-04: Added narrow "Tests" column (0.4 inch)
-        issue_table = Table(
-            issue_data,
-            colWidths=[0.7 * inch, 0.75 * inch, 1.3 * inch, 0.4 * inch, 0.4 * inch, 1.5 * inch, 1.95 * inch],
-            repeatRows=1,
+        ref_label = _roman(section_counter)
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="data_quality_preflight",
+            framework=resolved_framework,
+            domain_label="data quality assessment",
+            section_label=f"{ref_label}.",
         )
-        issue_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ("ALIGN", (3, 0), (4, -1), "CENTER"),
-                ]
-            )
+        section_counter += 1
+
+        # ── CONCLUSION (BUG-03) ──
+        story.append(Paragraph(f"{_roman(section_counter)}. Conclusion", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        conclusion_text = _build_conclusion(preflight_result, filename)
+        story.append(Paragraph(conclusion_text, styles["MemoBody"]))
+        story.append(Spacer(1, 12))
+
+        # ── Workpaper Sign-Off ──
+        build_workpaper_signoff(
+            story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
         )
-        story.append(issue_table)
-        story.append(Spacer(1, 4))
 
-        # Affected account lists (IMP-03)
-        for issue in sorted_issues:
-            items = issue.get("affected_items", [])
-            if not items:
-                continue
-            category = issue.get("category", "").replace("_", " ").title()
-            total = issue.get("affected_items_total", len(items))
-            display_items = items[:10]
-            items_str = ", ".join(display_items)
-            if total > 10:
-                items_str += f" ... and {total - 10} more"
-            story.append(
-                Paragraph(
-                    f"<i>{category} — Affected: {items_str}</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
+        # ── Intelligence Stamp ──
+        build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
 
-    story.append(Spacer(1, 12))
-    section_counter += 1
+        # ── Disclaimer ──
+        build_disclaimer(
+            story,
+            styles,
+            domain="data quality assessment",
+            isa_reference="ISA 500 (Audit Evidence), ISA 330 (Auditor's Responses), and ISA 315 (Risk Assessment)",
+        )
 
-    # ── Methodology & Authoritative References ──
-    build_methodology_statement(
-        story,
-        styles,
-        doc_width,
-        tool_domain="data_quality_preflight",
-        framework=resolved_framework,
-        domain_label="data quality assessment",
+    return render_memo(
+        "Data Quality Pre-Flight Report",
+        "PFR",
+        _body,
+        cover={
+            "client_name": client_name or "",
+            "engagement_period": period_tested or "",
+            "source_document": filename,
+            "source_document_title": source_document_title or "",
+            "source_context_note": source_context_note or "",
+            "fiscal_year_end": fiscal_year_end or "",
+        },
     )
-
-    ref_label = _roman(section_counter)
-    build_authoritative_reference_block(
-        story,
-        styles,
-        doc_width,
-        tool_domain="data_quality_preflight",
-        framework=resolved_framework,
-        domain_label="data quality assessment",
-        section_label=f"{ref_label}.",
-    )
-    section_counter += 1
-
-    # ── CONCLUSION (BUG-03) ──
-    story.append(Paragraph(f"{_roman(section_counter)}. Conclusion", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    conclusion_text = _build_conclusion(preflight_result, filename)
-    story.append(Paragraph(conclusion_text, styles["MemoBody"]))
-    story.append(Spacer(1, 12))
-
-    # ── Workpaper Sign-Off ──
-    build_workpaper_signoff(
-        story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
-    )
-
-    # ── Intelligence Stamp ──
-    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
-
-    # ── Disclaimer ──
-    build_disclaimer(
-        story,
-        styles,
-        domain="data quality assessment",
-        isa_reference="ISA 500 (Audit Evidence), ISA 330 (Auditor's Responses), and ISA 315 (Risk Assessment)",
-    )
-
-    page_footer = current_page_footer()
-
-    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
 
 
 def _build_conclusion(preflight_result: dict, filename: str) -> str:

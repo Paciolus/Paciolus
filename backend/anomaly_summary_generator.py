@@ -22,14 +22,12 @@ GUARDRAIL 3: This template does NOT mimic ISA 265 structure.
 ZERO-STORAGE: Reads engagement metadata and follow-up item narratives only.
 """
 
-from io import BytesIO
 from typing import Optional
 
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import PageBreak, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import PageBreak, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from engagement_model import Engagement, ToolName, ToolRun
@@ -37,12 +35,11 @@ from follow_up_items_model import FollowUpItem
 from models import Client
 from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, create_memo_styles
+from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, MemoContext, render_memo
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
     find_logo,
-    make_branded_page_footer,
 )
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
@@ -235,6 +232,7 @@ class AnomalySummaryGenerator:
         follow_up_items: list,
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
         custom_logo_bytes: Optional[bytes] = None,
+        reference: Optional[str] = None,
     ) -> list:
         story: list = []
 
@@ -259,7 +257,7 @@ class AnomalySummaryGenerator:
         period_end = engagement.period_end.strftime("%b %d, %Y") if engagement.period_end else "N/A"
         period_desc = f"{period_start} \u2013 {period_end}"
 
-        reference = _generate_reference()
+        reference = reference or _generate_reference()
 
         logo_path = find_logo()
         metadata = ReportMetadata(
@@ -775,34 +773,21 @@ def render_anomaly_summary_pdf(
 
     branding = current_pdf_branding()
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-    )
-    doc_width = letter[0] - 1.5 * inch
+    # Sprint 813: the disclaimer banner precedes the cover, so the story
+    # builds its own cover; render_memo owns page setup and page chrome.
+    def _body(memo: MemoContext) -> None:
+        memo.story.extend(
+            AnomalySummaryGenerator._build_story(
+                memo.styles,
+                memo.doc_width,
+                client_name,
+                engagement,
+                tool_runs,
+                follow_up_items,
+                resolved_framework=resolved_framework,
+                custom_logo_bytes=memo.branding.effective_logo_bytes(),
+                reference=memo.reference,
+            )
+        )
 
-    styles = create_memo_styles()
-    story = AnomalySummaryGenerator._build_story(
-        styles,
-        doc_width,
-        client_name,
-        engagement,
-        tool_runs,
-        follow_up_items,
-        resolved_framework=resolved_framework,
-        custom_logo_bytes=branding.effective_logo_bytes(),
-    )
-
-    footer_cb = make_branded_page_footer(
-        header_text=branding.effective_header_text(),
-        footer_text=branding.effective_footer_text(),
-    )
-    doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
+    return render_memo("Anomaly Summary Report", "ANS", _body, branding=branding)

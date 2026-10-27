@@ -10,6 +10,8 @@ domain-specific content (title, test descriptions, conclusion text).
 """
 
 import functools
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, Optional
 from xml.sax.saxutils import escape as xml_escape
 
@@ -867,3 +869,133 @@ def build_limitations_section(
         "data is retained by Paciolus after the analysis session concludes."
     )
     story.append(Paragraph(zero_storage_text, styles.get("MemoBodySmall", styles.get("MemoBody"))))
+
+
+# =============================================================================
+# Memo skeleton (Sprint 813)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class MemoMargins:
+    """Page margins in points. Memos drift between two sets; each keeps its
+    own so moving it onto ``render_memo`` does not move its output."""
+
+    left: float = 0.75 * inch
+    right: float = 0.75 * inch
+    top: float = 0.75 * inch
+    bottom: float = 0.75 * inch
+
+
+#: 0.75in all round — the diagnostic and engagement memos.
+MEMO_MARGINS = MemoMargins()
+#: 1.0in top / 0.8in bottom — ``generate_testing_memo`` and the reconciliation memos.
+TESTING_MEMO_MARGINS = MemoMargins(top=1.0 * inch, bottom=0.8 * inch)
+
+
+@dataclass
+class MemoContext:
+    """What ``render_memo`` hands a memo's body builder."""
+
+    story: list
+    styles: dict
+    doc_width: float
+    reference: str
+    branding: Any
+
+
+def render_memo(
+    title: str,
+    ref_prefix: str,
+    body_builder: Callable[[MemoContext], None],
+    *,
+    cover: Optional[dict[str, Any]] = None,
+    running_header: Optional[str] = None,
+    margins: MemoMargins = MEMO_MARGINS,
+    branding: Any = None,
+    page_footer: Any = None,
+) -> bytes:
+    """Render a memo PDF: page setup, reference number, cover, page chrome.
+
+    The memo supplies only its body. ``render_memo`` owns what every memo
+    used to hand-build — and, in 11 of them, got wrong (Sprint 813 items 1-2):
+
+    * the reference number ``<ref_prefix>-YYYY-MMDD-NNN``;
+    * the cover page, when ``cover`` is given — the ``ReportMetadata`` fields
+      other than ``title``/``reference`` — with the firm's logo when branded;
+    * the page callback on **every** page: page number, Paciolus disclaimer
+      and the Enterprise header/footer from ``branding`` (default: the
+      route-scoped ``PDFBrandingContext``);
+    * with ``running_header``, the gold title/reference rule on pages 2+.
+
+    ``page_footer`` overrides the page callback; only the engagement
+    dashboard passes it, to keep the unbranded footer it has always had.
+    """
+    import io
+
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate
+
+    from pdf import generate_reference_number
+    from shared.report_chrome import (
+        ReportMetadata,
+        build_cover_page,
+        draw_page_header,
+        find_logo,
+        make_branded_page_footer,
+    )
+
+    if branding is None:
+        from shared.pdf_branding import current_pdf_branding
+
+        branding = current_pdf_branding()
+
+    def _effective(name: str) -> Any:
+        return getattr(branding, name, lambda: None)()
+
+    buffer = io.BytesIO()
+    reference = generate_reference_number(ref_prefix)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=margins.left,
+        rightMargin=margins.right,
+        topMargin=margins.top,
+        bottomMargin=margins.bottom,
+    )
+    memo = MemoContext(
+        story=[],
+        styles=create_memo_styles(),
+        doc_width=doc.width,
+        reference=reference,
+        branding=branding,
+    )
+
+    if cover is not None:
+        metadata = ReportMetadata(title=title, reference=reference, **cover)
+        build_cover_page(
+            memo.story,
+            memo.styles,
+            metadata,
+            doc.width,
+            find_logo(),
+            custom_logo_bytes=_effective("effective_logo_bytes"),
+        )
+
+    body_builder(memo)
+
+    first_page = page_footer or make_branded_page_footer(
+        header_text=_effective("effective_header_text"),
+        footer_text=_effective("effective_footer_text"),
+    )
+    later_pages = first_page
+    if running_header:
+
+        def later_pages(canvas: Any, doc: Any) -> None:
+            draw_page_header(canvas, doc, title=running_header, reference=reference)
+            first_page(canvas, doc)
+
+    doc.build(memo.story, onFirstPage=first_page, onLaterPages=later_pages)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

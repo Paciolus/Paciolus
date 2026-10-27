@@ -51,8 +51,7 @@ def branded_reports(tmp_path_factory) -> dict[str, list[str]]:
         samples.save_pdf = original_save
 
     return {
-        name: [page.extract_text() or "" for page in PdfReader(io.BytesIO(pdf)).pages]
-        for name, pdf in captured.items()
+        name: [page.extract_text() or "" for page in PdfReader(io.BytesIO(pdf)).pages] for name, pdf in captured.items()
     }
 
 
@@ -88,13 +87,25 @@ def test_every_content_page_carries_enterprise_branding(branded_reports, text, l
     assert not missing, f"content pages ignoring the firm's branded {label}: {missing}"
 
 
+def test_memo_modules_build_through_render_memo():
+    """Item 3: page setup, cover and page chrome live in one place,
+    ``shared.memo_base.render_memo``. A memo that builds its own
+    ``SimpleDocTemplate`` is how items 1 and 2 shipped."""
+    backend = Path(__file__).parent.parent
+    memo_modules = sorted(
+        {*backend.glob("*_memo_generator.py"), *backend.glob("*_memo.py")}
+        | {backend / "anomaly_summary_generator.py", backend / "shared" / "memo_template.py"}
+    )
+    assert len(memo_modules) >= 21, [p.name for p in memo_modules]
+    hand_built = [p.name for p in memo_modules if "SimpleDocTemplate(" in p.read_text(encoding="utf-8")]
+    assert not hand_built, f"memos building their own page setup instead of render_memo: {hand_built}"
+
+
 def test_memo_styles_never_set_leading_below_font_size():
     """A 24pt ``MemoTitle`` on ReportLab's default 12pt leading was overprinted
     by the subtitle beneath it in every memo that used it."""
     styles = create_memo_styles()
     cramped = {
-        name: (style.fontSize, style.leading)
-        for name, style in styles.items()
-        if style.leading < style.fontSize
+        name: (style.fontSize, style.leading) for name, style in styles.items() if style.leading < style.fontSize
     }
     assert not cramped, f"styles whose next line overprints them (fontSize, leading): {cramped}"
