@@ -1215,7 +1215,9 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    only if profiling shows cost.
    *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the stable
    actions, `useToastState()` the list for the container. A render-count test pins it.)*
-6. [ ] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
+6. [x] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
+   *(Done 2026-10-27: `BaseDataQuality` is the 3 shared fields, the six row-based tools extend
+   `RowDataQuality` (+`total_rows`), all six `*ColumnDetection` extend `BaseColumnDetection`. Types only.)*
 7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
    `fadeUp` copies → `lib/motion.ts:71`.
 

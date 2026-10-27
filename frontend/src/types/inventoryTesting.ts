@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -46,9 +47,9 @@ export interface InvCompositeScore extends BaseCompositeScore {
   flag_rate: number
 }
 
-export interface InvDataQuality extends BaseDataQuality {}
+export interface InvDataQuality extends RowDataQuality {}
 
-export interface InvColumnDetection {
+export interface InvColumnDetection extends BaseColumnDetection {
   item_id_column: string | null
   description_column: string | null
   quantity_column: string | null
@@ -57,9 +58,6 @@ export interface InvColumnDetection {
   location_column: string | null
   last_movement_date_column: string | null
   category_column: string | null
-  overall_confidence: number
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface InventoryTestingResult {

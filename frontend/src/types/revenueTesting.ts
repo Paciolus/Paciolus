@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -56,9 +57,9 @@ export interface RevenueCompositeScore extends BaseCompositeScore {
   flag_rate: number
 }
 
-export interface RevenueDataQuality extends BaseDataQuality {}
+export interface RevenueDataQuality extends RowDataQuality {}
 
-export interface RevenueColumnDetection {
+export interface RevenueColumnDetection extends BaseColumnDetection {
   date_column: string | null
   amount_column: string | null
   account_name_column: string | null
@@ -74,10 +75,7 @@ export interface RevenueColumnDetection {
   contract_modification_column: string | null
   allocation_basis_column: string | null
   obligation_satisfaction_date_column: string | null
-  overall_confidence: number
   requires_mapping: boolean
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface ContractEvidenceLevel {

@@ -43,11 +43,15 @@ const customJestConfig = {
   ],
 
   // Ignore patterns
+  // Sprint 820: e2e/ and helpers/ are matched without <rootDir>. On Windows,
+  // Jest's path-to-regex step reads a `\.` in the root path (e.g. a worktree
+  // under `.claude\worktrees\`) as an escaped dot, so the <rootDir> forms
+  // silently matched nothing there and the Playwright specs ran under Jest.
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
-    '<rootDir>/e2e/',
-    '<rootDir>/src/__tests__/helpers/',
+    '/e2e/',
+    '/src/__tests__/helpers/',
   ],
 
   // Module path ignore patterns (fixes haste module collision)

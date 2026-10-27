@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -49,9 +50,9 @@ export interface JECompositeScore extends BaseCompositeScore {
   flag_rate: number
 }
 
-export interface GLDataQuality extends BaseDataQuality {}
+export interface GLDataQuality extends RowDataQuality {}
 
-export interface GLColumnDetection {
+export interface GLColumnDetection extends BaseColumnDetection {
   date_column: string | null
   account_column: string | null
   debit_column: string | null
@@ -67,10 +68,7 @@ export interface GLColumnDetection {
   entry_id_column: string | null
   has_dual_dates: boolean
   has_separate_debit_credit: boolean
-  overall_confidence: number
   requires_mapping: boolean
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface MultiCurrencyWarning {

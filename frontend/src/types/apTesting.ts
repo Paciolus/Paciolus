@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -48,9 +49,9 @@ export interface APCompositeScore extends BaseCompositeScore {
   flag_rate: number
 }
 
-export interface APDataQuality extends BaseDataQuality {}
+export interface APDataQuality extends RowDataQuality {}
 
-export interface APColumnDetection {
+export interface APColumnDetection extends BaseColumnDetection {
   vendor_name_column: string | null
   amount_column: string | null
   payment_date_column: string | null
@@ -64,10 +65,7 @@ export interface APColumnDetection {
   po_number_column?: string | null
   has_dual_dates: boolean
   has_check_numbers: boolean
-  overall_confidence: number
   requires_mapping: boolean
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface APTestingResult extends SavedSettingsDisclosure {

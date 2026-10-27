@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -61,9 +62,9 @@ export interface PayrollCompositeScore extends BaseCompositeScore<PayrollTopFind
   flag_rate: number
 }
 
-export interface PayrollDataQuality extends BaseDataQuality {}
+export interface PayrollDataQuality extends RowDataQuality {}
 
-export interface PayrollColumnDetection {
+export interface PayrollColumnDetection extends BaseColumnDetection {
   employee_name_column: string | null
   gross_pay_column: string | null
   pay_date_column: string | null
@@ -84,10 +85,7 @@ export interface PayrollColumnDetection {
   has_bank_accounts: boolean
   has_addresses: boolean
   has_tax_ids: boolean
-  overall_confidence: number
   requires_mapping: boolean
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface PayrollTestingResult extends SavedSettingsDisclosure {

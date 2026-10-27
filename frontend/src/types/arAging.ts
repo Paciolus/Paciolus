@@ -18,6 +18,7 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
+  BaseDataQuality,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -49,10 +50,7 @@ export interface ARCompositeScore extends BaseCompositeScore {
   has_subledger: boolean
 }
 
-export interface ARDataQuality {
-  completeness_score: number
-  field_fill_rates: Record<string, number>
-  detected_issues: string[]
+export interface ARDataQuality extends BaseDataQuality {
   total_tb_accounts: number
   total_subledger_entries: number
   has_subledger: boolean
