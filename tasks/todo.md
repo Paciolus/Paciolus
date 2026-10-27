@@ -617,11 +617,10 @@ users share one bucket.
 ### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)
 **Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P2. **Source:** security review lows.
 
-> **CEO note (L2):** before merging, confirm in Render → paciolus-api → Environment that `ENV_MODE` is exactly
-> `production` (lowercase, no spaces). Any other value now refuses to boot on Render, and Render keeps serving the
-> old image when a deploy fails at startup. (Indirect evidence it is already correct: the production-only Sprint 768
-> `AUDIT_CHAIN_SECRET_KEY` hard-fail fired on Render.) If the service has a dashboard **Start Command** override,
-> drop `--access-logfile -` there too (L6).
+> **Checked by Claude via the Render API, 2026-10-27 (no CEO action needed for L2/L6):** the live startup log reads
+> `Sentry APM initialized (env=production, ...)`, which prints `ENV_MODE` verbatim, so the new allow-list and the
+> `RENDER` check pass in production. paciolus-api is a Docker service with an empty `dockerCommand`, so it runs the
+> Dockerfile `CMD` and the `--access-logfile -` removal there fully closes L6.
 
 - [x] **L2: `ENV_MODE` fails open.** `config.py` now accepts only `{"development", "test", "production"}`
       (case-sensitive) and hard-fails on anything else, and hard-fails when `RENDER` is set and `ENV_MODE !=
@@ -666,7 +665,7 @@ Each new regression test was confirmed failing against the unfixed source (count
 `ruff check` + `ruff format --check` are clean on touched files. mypy shows no new errors in touched modules
 (`config.py:253` is pre-existing).
 
-**Commit SHA:** TBD.
+**Commit SHA:** `7e317874` (stacked on PR #279).
 
 ---
 
