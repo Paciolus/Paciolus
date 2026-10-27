@@ -1209,8 +1209,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    adjustments, W-2 error rewrite, `project` alias) — 554 → 276 lines. Public APIs unchanged;
    existing tests pass unchanged.)*
 3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
-   each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout are
-   still client — they use ~30 motion elements each.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
+   each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout
+   done 2026-10-27: server components; the motion elements are `framer-motion/client` elements with
+   the same props, so nothing animates differently (About's `custom`-function variant became a
+   per-card static variant with the same delay). Page-only chunk About 12.6 → 0.4 KB, Approach
+   17.5 → 0.4 KB; route first-load JS About 957,024 → 942,098, Approach 962,082 → 942,098 bytes;
+   every marketing route ~2.5 KB lighter from the layout.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
    the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
    `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
 4. [x] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
