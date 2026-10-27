@@ -435,52 +435,39 @@ originally planned, was not feasible or reviewable. Shipped instead — a single
 ---
 
 ### Sprint 847: Session and account takeover hardening (M3, M4, L3, L4, L14)
-**Status:** NOT STARTED. **Priority:** P1. **Source:** security review M3, M4 (both verified), L3, L4, L14.
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1. **Source:** security review M3, M4 (both verified), L3, L4, L14.
 
-- [ ] **M3: refresh-token reuse detection lasts only about 1 hour.**
-  - The defect: `auth.py:908-918` `cleanup_expired_refresh_tokens` deletes rows where
-    `revoked_at != None OR expires_at < now`, every `CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES` (60,
-    `config.py:668`; scheduled in `cleanup_scheduler.py:316`, also run at startup from `main.py:137`). Reuse
-    detection (`auth.py:755`, `if db_token.is_revoked: _revoke_all_user_tokens`) needs the revoked row to still
-    exist. Once it is purged, a thief who rotated first is never detected, and their chain extends 7 days at a time.
-  - Fix: change the filter to `RefreshToken.expires_at < now` only. Revoked rows then live at most 7 days.
-  - Update the docstring.
-  - Test: issue → rotate → run cleanup → present the old raw token → expect 401 *and* every token for that user
-    revoked.
-- [ ] **M4: email change requires no password, so a stolen session becomes a permanent takeover.**
-  - The defect: `UserProfileUpdate` (`auth.py:461-470`) has only `name`/`email`. `PUT /users/me`
-    (`routes/users.py:27-38`) sets `pending_email`. `services/auth/registration.py:201-204` swaps it in on
-    verification and revokes nothing.
-  - Add `current_password: Optional[str]` to `UserProfileUpdate`. It is required when `email` is present and
-    differs from the current email; otherwise return 400. Verify it with `verify_password`, as
-    `change_user_password` does (`auth.py:653`), and log `email_change_failed` on mismatch.
-  - In the verification swap (`registration.py`, `if user.pending_email:` branch), also set
-    `user.password_changed_at = now`, which kills live access tokens via the `pwd_at` check, and revoke all
-    refresh tokens (`_revoke_all_user_tokens`).
-  - Frontend: add a password field to the email-change form in settings (find it with `grep -rn "pending_email\|
-    email" frontend/src/app/settings`). Send `current_password` and show the 400 inline.
-  - Tests:
-    - missing or wrong password → 400/401 and no `pending_email`;
-    - correct password → pending is set;
-    - after verification, old refresh tokens are rejected and an old access token gets 401.
-- [ ] **L4: older password-reset links stay valid.**
-  - `services/auth/recovery.py:94-105` (request) and `148-158` (complete).
-  - On a new request, a successful reset, and an email swap, set `used_at = now` on all of the user's
-    outstanding `PasswordResetToken` rows.
-  - Test: request twice → the first link is rejected; reset → a second outstanding link is rejected.
-- [ ] **L3: access JWT survives logout and "revoke all sessions" for up to 15 minutes.**
-  - Default (cheap, mirrors `pwd_at`): add `User.sessions_revoked_at` (Alembic migration) and set it in logout-all
-    (`auth_routes.py:518-531`) and plain logout (`:440-449`).
-  - In `require_current_user`, reject tokens whose `iat` is earlier than it, next to the `pwd_at` check at
-    `auth.py:321-334`.
-  - If the CEO prefers to accept the window instead, record that decision here and skip this item.
-- [ ] **L14: impersonation fails for any user who has changed their password.**
-  - The cause: `create_impersonation_token` (`auth.py:175-208`) omits `pwd_at`, so `auth.py:321-328` returns 401.
-  - Fix: pass the target user's `password_changed_at` and embed `pwd_at` as `create_access_token` does
-    (`auth.py:166`).
-  - Test: impersonate a user who has `password_changed_at` set → GET /users/me returns 200.
+- [x] **M3: refresh-token reuse detection lasted only about 1 hour.** `cleanup_expired_refresh_tokens` now
+  deletes only `expires_at < now`; revoked rows live until expiry (≤ 7 days) so reuse detection still fires.
+  Docstring updated. Test: issue → rotate → cleanup → replay old token → "All sessions terminated" and 0 active
+  tokens (`test_sprint201_cleanup.py`; three existing cleanup tests updated to the new semantics).
+- [x] **M4: email change required no password.** `UserProfileUpdate.current_password` (max 128); required when
+  the email actually changes (400 "Enter your current password…"), checked with `verify_password`, logs
+  `email_change_failed` on mismatch. The verification swap now, in the same transaction, sets
+  `sessions_revoked_at`, revokes all refresh tokens and retires all outstanding reset links.
+  - **Deviation from plan:** the swap sets the new `sessions_revoked_at` (L3) rather than `password_changed_at` —
+    same effect on live access tokens, without recording a password change that never happened.
+  - Frontend: settings/profile shows a "Current Password" field only once the email differs, Save is disabled
+    until it is filled, `current_password` is sent, and the API's 400 shows in the existing inline error.
+    `ProfileSettingsPage.test.tsx` (3 tests).
+- [x] **L4: older password-reset links stayed valid.** `_retire_outstanding_reset_tokens` runs on a new request
+  and on a completed reset; the email swap retires them too.
+- [x] **L3: access JWT survived "revoke all sessions".** `User.sessions_revoked_at` (migration `b5d2c8e71f30`,
+  inspector-guarded, nullable, no backfill); `revoke_all_user_sessions` sets it; `require_current_user` rejects
+  tokens whose `iat` (whole seconds, like `pwd_at`) is earlier.
+  - **Plain logout deliberately not wired (decision):** the timestamp is user-wide, so setting it on a one-device
+    logout would 401 every other device's access token. `apiClient` refreshes silently, but `uploadTransport.ts`
+    does not retry on 401, so a phone logout would fail an upload in progress on a laptop. Plain logout already
+    clears that device's access cookie and revokes its refresh token. Reopen only with a per-`jti` denylist.
+- [x] **L14: impersonation failed after a password change.** `create_impersonation_token(password_changed_at=…)`
+  embeds `pwd_at`; `internal_admin.impersonate_customer` passes the target's value.
 - **L11 (email enumeration via `PUT /users/me` "Email already in use"): no action.** Accepted risk, because
   registration reveals the same thing. Don't reopen it.
+
+Tests: `tests/test_session_hardening.py` (11) + updates to `test_email_change.py`, `test_sprint201_cleanup.py`.
+
+**Verification:** ruff clean; alembic single head `b5d2c8e71f30`; frontend build passes, 209 suites / 2,075 tests,
+`tsc` + eslint clean; full backend suite 9,992 passed.
 
 **Commit SHA:** TBD.
 

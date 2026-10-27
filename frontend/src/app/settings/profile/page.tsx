@@ -23,6 +23,7 @@ export default function ProfileSettingsPage() {
   // Profile form state
   const [profileName, setProfileName] = useState('')
   const [profileEmail, setProfileEmail] = useState('')
+  const [emailPassword, setEmailPassword] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileError, setProfileError] = useState('')
@@ -62,6 +63,7 @@ export default function ProfileSettingsPage() {
     }
     if (profileEmail !== user?.email) {
       updates.email = profileEmail
+      updates.current_password = emailPassword
     }
 
     if (Object.keys(updates).length === 0) {
@@ -73,6 +75,7 @@ export default function ProfileSettingsPage() {
     setProfileSaving(false)
 
     if (result.success) {
+      setEmailPassword('')
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 3000)
     } else {
@@ -116,6 +119,8 @@ export default function ProfileSettingsPage() {
   }
 
   // Input styling
+  const emailChanged = !!user && profileEmail !== user.email
+
   const inputClasses = 'w-full px-4 py-3 bg-surface-input border-2 border-theme rounded-lg text-content-primary font-sans transition-all duration-200 outline-hidden focus:border-sage-500 focus:ring-2 focus:ring-sage-500/20'
 
   if (authLoading) {
@@ -217,10 +222,31 @@ export default function ProfileSettingsPage() {
               />
             </div>
 
+            {/* Current password — required to change the email address (Sprint 847) */}
+            {emailChanged && (
+              <div className="mb-6">
+                <label htmlFor="profile-email-password" className="block text-content-secondary font-sans font-medium mb-2">
+                  Current Password
+                </label>
+                <input
+                  id="profile-email-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  className={inputClasses}
+                />
+                <p className="text-content-tertiary text-xs mt-1">
+                  Password resets go to your email address, so changing it needs your current password.
+                </p>
+              </div>
+            )}
+
             {/* Save Button */}
             <button
               onClick={handleProfileSave}
-              disabled={profileSaving}
+              disabled={profileSaving || (emailChanged && !emailPassword)}
               className="px-6 py-2.5 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {profileSaving ? 'Saving...' : 'Save Profile'}

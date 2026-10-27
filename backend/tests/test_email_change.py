@@ -9,8 +9,12 @@ from datetime import UTC, datetime
 
 import pytest
 
-from auth import UserProfileUpdate, hash_token, update_user_profile
+from auth import UserProfileUpdate, hash_password, hash_token, update_user_profile
 from models import EmailVerificationToken
+
+# Sprint 847: an email change needs the current password.
+_PASSWORD = "Correct-Horse-Battery-9"
+_HASH = hash_password(_PASSWORD)
 
 
 class TestEmailChangeReVerification:
@@ -18,8 +22,8 @@ class TestEmailChangeReVerification:
 
     def test_email_change_sets_pending_email(self, db_session, make_user):
         """Email change sets pending_email, keeps current email unchanged."""
-        user = make_user(email="original@example.com")
-        profile = UserProfileUpdate(email="new@example.com")
+        user = make_user(email="original@example.com", hashed_password=_HASH)
+        profile = UserProfileUpdate(email="new@example.com", current_password=_PASSWORD)
 
         updated, token = update_user_profile(db_session, user, profile)
 
@@ -29,25 +33,25 @@ class TestEmailChangeReVerification:
 
     def test_disposable_email_blocked_for_pending(self, db_session, make_user):
         """Disposable emails are blocked for email changes."""
-        user = make_user(email="legit@example.com")
-        profile = UserProfileUpdate(email="test@mailinator.com")
+        user = make_user(email="legit@example.com", hashed_password=_HASH)
+        profile = UserProfileUpdate(email="test@mailinator.com", current_password=_PASSWORD)
 
         with pytest.raises(ValueError, match="disposable"):
             update_user_profile(db_session, user, profile)
 
     def test_duplicate_email_check_for_pending(self, db_session, make_user):
         """Email already used by another account is rejected."""
-        make_user(email="taken@example.com")
-        user = make_user(email="requester@example.com")
-        profile = UserProfileUpdate(email="taken@example.com")
+        make_user(email="taken@example.com", hashed_password=_HASH)
+        user = make_user(email="requester@example.com", hashed_password=_HASH)
+        profile = UserProfileUpdate(email="taken@example.com", current_password=_PASSWORD)
 
         with pytest.raises(ValueError, match="already in use"):
             update_user_profile(db_session, user, profile)
 
     def test_verification_token_created_for_email_change(self, db_session, make_user):
         """A verification token is created in the DB for the email change."""
-        user = make_user(email="tokencreate@example.com")
-        profile = UserProfileUpdate(email="newtokencreate@example.com")
+        user = make_user(email="tokencreate@example.com", hashed_password=_HASH)
+        profile = UserProfileUpdate(email="newtokencreate@example.com", current_password=_PASSWORD)
 
         updated, token = update_user_profile(db_session, user, profile)
 
@@ -64,8 +68,8 @@ class TestEmailChangeReVerification:
 
     def test_verify_swaps_pending_to_email(self, db_session, make_user):
         """Verifying a token swaps pending_email into email."""
-        user = make_user(email="swap_old@example.com")
-        profile = UserProfileUpdate(email="swap_new@example.com")
+        user = make_user(email="swap_old@example.com", hashed_password=_HASH)
+        profile = UserProfileUpdate(email="swap_new@example.com", current_password=_PASSWORD)
 
         updated, token = update_user_profile(db_session, user, profile)
 
@@ -116,15 +120,15 @@ class TestEmailChangeReVerification:
 
     def test_new_email_change_replaces_previous_pending(self, db_session, make_user):
         """A second email change invalidates old tokens and updates pending_email."""
-        user = make_user(email="double@example.com")
+        user = make_user(email="double@example.com", hashed_password=_HASH)
 
         # First email change
-        profile1 = UserProfileUpdate(email="first_new@example.com")
+        profile1 = UserProfileUpdate(email="first_new@example.com", current_password=_PASSWORD)
         updated, token1 = update_user_profile(db_session, user, profile1)
         assert updated.pending_email == "first_new@example.com"
 
         # Second email change (should invalidate first token)
-        profile2 = UserProfileUpdate(email="second_new@example.com")
+        profile2 = UserProfileUpdate(email="second_new@example.com", current_password=_PASSWORD)
         updated, token2 = update_user_profile(db_session, user, profile2)
         assert updated.pending_email == "second_new@example.com"
         assert token2 != token1
@@ -141,7 +145,7 @@ class TestEmailChangeReVerification:
 
     def test_name_change_returns_no_token(self, db_session, make_user):
         """Name-only change returns no verification token."""
-        user = make_user(email="nameonly@example.com")
+        user = make_user(email="nameonly@example.com", hashed_password=_HASH)
         profile = UserProfileUpdate(name="New Name")
 
         updated, token = update_user_profile(db_session, user, profile)

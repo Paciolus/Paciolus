@@ -91,6 +91,10 @@ def initiate_password_reset(db: Session, email: str) -> PasswordResetInitiation:
         logger.info("Password reset requested for inactive account: %s", masked)
         return PasswordResetInitiation(user=None, token_result=None)
 
+    # Sprint 847 (security review L4): only the newest link works. Earlier
+    # unused links are retired so a leaked older email cannot be used.
+    _retire_outstanding_reset_tokens(db, user.id)
+
     token_result = generate_password_reset_token()
     reset_token = PasswordResetToken(
         user_id=user.id,
@@ -105,6 +109,14 @@ def initiate_password_reset(db: Session, email: str) -> PasswordResetInitiation:
         db.add(reset_token)
 
     return PasswordResetInitiation(user=user, token_result=token_result)
+
+
+def _retire_outstanding_reset_tokens(db: Session, user_id: int) -> None:
+    """Mark every unused reset token for ``user_id`` as used (no commit)."""
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user_id,
+        PasswordResetToken.used_at == None,  # noqa: E711
+    ).update({"used_at": datetime.now(UTC)}, synchronize_session=False)
 
 
 def complete_password_reset(db: Session, token: str, new_password: str) -> User:
@@ -149,6 +161,8 @@ def complete_password_reset(db: Session, token: str, new_password: str) -> User:
     user.password_changed_at = datetime.now(UTC)
 
     reset_token.used_at = datetime.now(UTC)
+    # Sprint 847 (L4): any other link still in an inbox stops working too.
+    _retire_outstanding_reset_tokens(db, user.id)
 
     # Revoke all existing refresh tokens (force re-login on all devices)
     _revoke_all_user_tokens(db, user.id)

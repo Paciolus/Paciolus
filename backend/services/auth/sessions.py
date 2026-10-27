@@ -109,6 +109,10 @@ def revoke_all_user_sessions(db: Session, user: User) -> int:
     `auth._revoke_all_user_tokens` helper so the count semantics stay
     identical to the legacy behavior.
     """
+    # Sprint 847 (L3): also end live access tokens — require_current_user
+    # rejects any token issued before this moment.
+    user.sessions_revoked_at = datetime.now(UTC)
+    db.commit()
     count = _revoke_all_user_tokens(db, user.id)
     log_secure_operation(
         "all_sessions_revoked",

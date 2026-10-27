@@ -125,6 +125,7 @@ class TokenData(BaseModel):
     password_changed_at: Optional[datetime] = None  # Sprint 199: pwd_at claim
     impersonation: bool = False  # Sprint 840: `imp` claim
     jti: Optional[str] = None
+    issued_at: Optional[datetime] = None  # Sprint 847: `iat` claim, checked against sessions_revoked_at
 
 
 def create_access_token(
@@ -178,6 +179,7 @@ def create_impersonation_token(
     admin_user_id: int,
     tier: str = "free",
     ttl_minutes: int = 15,
+    password_changed_at: Optional[datetime] = None,
 ) -> tuple[str, datetime]:
     """Create a time-boxed read-only impersonation JWT.
 
@@ -207,6 +209,13 @@ def create_impersonation_token(
         "imp_by": admin_user_id,  # Admin who initiated
     }
 
+    # Sprint 847 (security review L14): without pwd_at, require_current_user
+    # rejected the token for any target who had ever changed their password.
+    if password_changed_at is not None:
+        if password_changed_at.tzinfo is None:
+            password_changed_at = password_changed_at.replace(tzinfo=UTC)
+        payload["pwd_at"] = int(password_changed_at.timestamp())
+
     token = jwt.encode(payload, JWT_SECRET_KEY or "", algorithm=JWT_ALGORITHM)
 
     log_secure_operation(
@@ -235,12 +244,16 @@ def decode_access_token(token: str) -> Optional[TokenData]:
         pwd_at_epoch = payload.get("pwd_at")
         pwd_at = datetime.fromtimestamp(pwd_at_epoch, tz=UTC) if pwd_at_epoch is not None else None
 
+        iat_epoch = payload.get("iat")
+        issued_at = datetime.fromtimestamp(iat_epoch, tz=UTC) if iat_epoch is not None else None
+
         return TokenData(
             user_id=int(user_id),
             email=email,
             password_changed_at=pwd_at,
             impersonation=bool(payload.get("imp")),
             jti=payload.get("jti"),
+            issued_at=issued_at,
         )
 
     except PyJWTError as e:
@@ -336,6 +349,19 @@ def require_current_user(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token invalidated by password change",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+    # Sprint 847 (security review L3/M4): "revoke all sessions" and an email
+    # change also end live access tokens, not only refresh tokens.
+    if user.sessions_revoked_at is not None:
+        revoked_at = user.sessions_revoked_at
+        if revoked_at.tzinfo is None:
+            revoked_at = revoked_at.replace(tzinfo=UTC)
+        if token_data.issued_at is None or int(token_data.issued_at.timestamp()) < int(revoked_at.timestamp()):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been signed out",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -468,6 +494,9 @@ class UserProfileUpdate(BaseModel):
 
     name: Optional[str] = Field(None, max_length=200)
     email: Optional[EmailStr] = Field(None, max_length=254)
+    # Sprint 847 (security review M4): required to change the email address,
+    # so a stolen session cannot redirect password recovery to the attacker.
+    current_password: Optional[str] = Field(None, max_length=128)
 
     @field_validator("name")
     @classmethod
@@ -602,6 +631,14 @@ def update_user_profile(db: Session, user: User, profile_data: UserProfileUpdate
 
     if profile_data.email and normalize_email(profile_data.email) != user.email:
         new_email = normalize_email(profile_data.email)
+
+        # Sprint 847 (security review M4): the email is the account's recovery
+        # address, so changing it needs the current password, like a password change.
+        if not profile_data.current_password:
+            raise ValueError("Enter your current password to change your email address.")
+        if not verify_password(profile_data.current_password, user.hashed_password):
+            log_secure_operation("email_change_failed", f"Invalid current password for user {user.id}")
+            raise ValueError("Current password is incorrect.")
 
         # Check if new email is already taken (case-insensitive)
         existing = db.query(User).filter(User.email == new_email, User.id != user.id).first()
@@ -897,21 +934,21 @@ def _revoke_all_user_tokens(db: Session, user_id: int) -> int:
 
 def cleanup_expired_refresh_tokens(db: Session) -> int:
     """
-    Delete refresh tokens that are revoked or expired.
+    Delete refresh tokens that have expired.
 
     Sprint 201: Called on startup to prevent table bloat.
+
+    Sprint 847 (security review M3): revoked tokens are kept until they
+    expire. Reuse detection in ``rotate_refresh_token`` needs the revoked row
+    to still exist — deleting it (as this job did hourly) turned a replayed,
+    stolen token into a plain "invalid token" and the thief's rotated chain
+    was never revoked. Expiry bounds the extra rows to the refresh lifetime.
 
     Returns:
         Count of tokens deleted.
     """
     now = datetime.now(UTC)
-    stale_tokens = (
-        db.query(RefreshToken)
-        .filter(
-            (RefreshToken.revoked_at != None) | (RefreshToken.expires_at < now)  # noqa: E711
-        )
-        .all()
-    )
+    stale_tokens = db.query(RefreshToken).filter(RefreshToken.expires_at < now).all()
 
     count = len(stale_tokens)
     for token in stale_tokens:
