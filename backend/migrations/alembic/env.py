@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from config import DATABASE_URL
 from database import Base
+from db_url import normalize_database_url
 from model_registry import import_all_models
 
 # Import every ORM model module so Base.metadata knows about them.
@@ -27,7 +28,11 @@ config = context.config
 
 # Override the ini-file DB URL with the canonical one from config.py
 # so Alembic always points at the same database as the application.
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# config.py already normalizes DATABASE_URL (Sprint 786b: driverless
+# postgresql:// -> postgresql+psycopg2://, since SQLAlchemy 2.1 defaults to
+# psycopg 3). Normalizing again here is idempotent and covers callers that
+# monkeypatch ``config.DATABASE_URL`` before invoking Alembic.
+config.set_main_option("sqlalchemy.url", normalize_database_url(DATABASE_URL))
 
 # Set up Python logging from the .ini file
 if config.config_file_name is not None:

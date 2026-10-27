@@ -612,7 +612,7 @@ def _load_revenue_history_inputs(db: Session) -> dict:
             .group_by(BillingEvent.user_id)
             .all()
         )
-        if canceled_at is not None
+        if user_id is not None and canceled_at is not None
     }
     reactivations: dict[int, list[datetime]] = {}
     if first_cancel:
@@ -625,7 +625,8 @@ def _load_revenue_history_inputs(db: Session) -> dict:
             .all()
         )
         for user_id, created_at in rows:
-            reactivations.setdefault(user_id, []).append(created_at)
+            if user_id is not None:  # always true (filtered by first_cancel keys); narrows int | None
+                reactivations.setdefault(user_id, []).append(created_at)
     return {"subs": subs, "first_cancel": first_cancel, "reactivations": reactivations}
 
 
