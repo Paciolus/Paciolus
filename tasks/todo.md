@@ -1194,7 +1194,7 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 ---
 
 ### Sprint 820: Frontend consolidation and bundle weight
-**Status:** PARTIAL — item 3 (Terms + Privacy as server components) done 2026-10-23; the rest pending.
+**Status:** PARTIAL — items 2–7 done (3 and 5 earlier, 2/4/6/7 and the rest of 3 on 2026-10-27, branch `sprint-820-frontend-consolidation`, pending CI + merge); item 1 (`TestingToolPage` shell) not started — see below.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, frontend pass.
 
@@ -1202,47 +1202,62 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    fixed-assets, inventory, journal-entry — 70–80% identical, ~1,650 lines). Use the existing
    `components/shared/FileDropZone`; build `UpgradeGate` in so 814 item 1 cannot recur. ~1,100 lines out.
    Collapse the ~20 pass-through `*ScoreCard`/`*DataQualityBadge` wrappers.
+   **Not done — needs a design call first.** The item asks for both "reuse `FileDropZone`" and
+   (this pass) "no visual change", and those conflict: `FileDropZone` is the compact `p-6`
+   labelled zone from bank-rec/AR, while the six pages use a large `p-12 rounded-2xl` zone with an
+   icon disc and `h3` prompt. The six pages have also drifted apart — JE uses raw `sage-50`/`sage-700`
+   classes and plain `<button>`s where the others use theme tokens and `Button`; only AP/Payroll/JE
+   have the settings drawer and `SavedSettingsNotice`; spinner and border shades differ per page — so a
+   pixel-identical shell would be a slot for nearly every line. Collapsing the wrappers also breaks
+   each page test's `jest.mock('@/components/<tool>')` test-ids. Decide which variant is canonical
+   (and whether `FileDropZone` gets a large variant), then do the shell with page-test updates.
+   `ToolPageGating.test.ts` reads `<UpgradeGate toolName=…>` from each page's source; a shell must
+   update that test to recognise the shell's prop.
 2. [x] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
-   `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector` (~530 → ~90 lines).
-   *(Done 2026-10-27: `hooks/createJsonAnalysisHook.ts` (112 lines) owns status/result/error,
-   the engagement link and CSV export; the six hooks are config + extras (SoD rules, B2T standard
+   `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector`.
+   *(Done 2026-10-27: `hooks/createJsonAnalysisHook.ts` (112 lines) owns status/result/error, the
+   engagement link and CSV export; the six hooks are config + extras (SoD rules, B2T standard
    adjustments, W-2 error rewrite, `project` alias) — 554 → 276 lines. Public APIs unchanged;
    existing tests pass unchanged.)*
-3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
-   each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout
-   done 2026-10-27: server components; the motion elements are client motion elements (`components/ui/motionClient`) with
-   the same props, so nothing animates differently (About's `custom`-function variant became a
-   per-card static variant with the same delay). Page-only chunk About 12.6 → 0.4 KB, Approach
-   17.5 → 0.4 KB; route first-load JS About 957,024 → 942,098, Approach 962,082 → 942,098 bytes;
-   every marketing route ~2.5 KB lighter from the layout.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
-   the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
-   `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
+3. [x] `terms`, `privacy`, `about`, `approach` and `app/(marketing)/layout.tsx` as server components.
+   *(Terms + Privacy 2026-10-23 with `Reveal` wrappers. About, Approach and the layout 2026-10-27:
+   `'use client'` dropped, motion elements come from `components/ui/motionClient` with the same
+   props, so nothing animates differently; About's `custom`-function variant became a per-card static
+   variant with the same delay. Page-only client chunk About 12.6 → 0.4 KB, Approach 17.5 → 0.4 KB.)*
 4. [x] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
-   *(Done 2026-10-27: data + types in `content/trust.ts`; `ArchitectureDiagram`, `ControlMatrix`,
-   `PlaybookPreview`, `CountUp` are client components, `ComplianceTimeline` / `ModuleSection` and the
-   page are server components using client motion elements (`components/ui/motionClient`), so the mount animations are
-   unchanged. Page-only client chunk 37.6 → 22.6 KB (8.8 → 6.2 KB gz); route first-load JS
-   982,652 → 967,248 bytes. `test_citation_consistency.py` now scans the two new locations.)*
+   *(Done 2026-10-27: `ArchitectureDiagram`, `ControlMatrix`, `PlaybookPreview`, `CountUp` are
+   client components; the page, `ModuleSection` and `ComplianceTimeline` are server components.
+   Page-only client chunk 37.6 → 22.6 KB (8.8 → 6.2 KB gz). `test_citation_consistency.py` now
+   scans `content/trust.ts` and `components/trust/`.)*
 5. [x] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
-   every toast. Memoize `CanvasAccent`/`AuthSession`/`UserProfile`/`Verification`/`Mapping` values
-   only if profiling shows cost.
-   *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the stable
-   actions, `useToastState()` the list for the container. A render-count test pins it.)*
+   every toast. *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the
+   stable actions, `useToastState()` the list for the container. A render-count test pins it.)*
 6. [x] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
    *(Done 2026-10-27: `BaseDataQuality` is the 3 shared fields, the six row-based tools extend
    `RowDataQuality` (+`total_rows`), all six `*ColumnDetection` extend `BaseColumnDetection`. Types only.)*
-7. [x] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
-   `fadeUp` copies → `lib/motion.ts:71`.
-   *(Done 2026-10-27. Measured with `next experimental-analyze`: framer-motion + motion-dom is
-   145.8 KB raw on every marketing route and 139.3 KB on tool/auth routes — ~12% of client JS.
-   **LazyMotion not adopted:** it only pays once all 139 importers move from `motion` to `m` (one
-   `motion` import anywhere pulls the full feature set back in), so it is a sweep plus a lint rule,
-   not a sprint item — the saving is bounded by that ~140 KB. The five `fadeUp` copies are
-   `marketingFadeUp` / `marketingFadeUpAt` / `marketingFadeUpSoft` in `lib/motion.ts`, values
-   unchanged. Server pages use `components/ui/motionClient` (7 re-exported elements) instead of
-   `framer-motion/client`, whose 170-element module had put +2.4 KB on every route.)*
+7. [x] Measure framer-motion (139 importers, no `LazyMotion`); fold the 5 local `fadeUp` copies into `lib/motion.ts`.
+   *(Done 2026-10-27. `next experimental-analyze`: framer-motion + motion-dom is 145.8 KB raw on
+   every marketing route, 139.3 KB on tool/auth routes — ~12% of client JS. **LazyMotion not
+   adopted:** it only pays once all 139 importers move from `motion` to `m` (one `motion` import
+   pulls the full feature set back in) — a sweep plus a lint rule, bounded by that ~140 KB. The
+   `fadeUp` copies are `marketingFadeUp` / `marketingFadeUpAt` / `marketingFadeUpSoft`, values
+   unchanged. `components/ui/motionClient` (7 re-exports) replaces `framer-motion/client`, whose
+   170-element module had added +2.4 KB to every route.)*
+   Route first-load JS (bytes, `route-bundle-stats.json`) before → after the sprint:
+   `/about` 957,024 → 939,647 · `/approach` 962,082 → 939,647 · `/trust` 982,652 → 962,368 ·
+   `/pricing` 972,526 → 967,584 · `/` 945,612 → 940,986 · `/terms` 944,120 → 939,341 ·
+   tool/auth routes unchanged (±13 bytes). All client chunks 2,877 → 2,830 KB raw.
 
-**Commit SHA:** 391f1c14 (PR #211).
+Also: `jest.config.js` `testPathIgnorePatterns` for `e2e/` and `helpers/` no longer use `<rootDir>` —
+on Windows a `\.` in the root path (worktrees under `.claude\`) is read as an escaped dot, so the
+Playwright specs ran under Jest and the pre-commit gate failed in every worktree.
+
+**Verification:** `npm run build` passes — 65 routes all `ƒ (Dynamic)` (only `/icon.png` and
+`/sitemap.xml` static), `ƒ Proxy (Middleware)` listed; `npm test` 208 suites / 2,072 tests green;
+`npx tsc --noEmit` and `npx eslint src` clean; backend `test_citation_consistency` +
+`test_storage_claims` + `test_catalog_consistency` 57 passed.
+
+**Commit SHA:** 391f1c14 (PR #211); 2026-10-27: 947825c2, aa6dfd8b, c740c5c7, 3c168aaa, 24a76f71 + this todo commit.
 
 ---
 
