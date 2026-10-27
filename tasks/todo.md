@@ -1402,7 +1402,8 @@ binding to lowercase and break the current production database, which holds name
 
 ### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
 **Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI),
-**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PENDING** (the reviewed minors and majors).
+**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PENDING** (the reviewed minors and majors;
+`stripe` 16 done in PR — see "786b — stripe 15 → 16").
 **Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
 **Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
 
@@ -1624,6 +1625,49 @@ of the verification is a CEO action, and it matters more for the majors than it 
 
 **Commit SHA:** `e4f3c1cb` (786b step 2; PR #195), plus `494cf6d8` — the nightly's bash-probe fix —
 and `508ee136`, the PR #195 review finding that the stale claim was also running in production.
+
+#### 786b — stripe 15 → 16
+
+`stripe==15.1.0` → `==16.0.1` (16.0.1 = 16.0.0 + Stripe's replaced CA bundle). The SDK now pins
+API version **`2026-09-30.endive`** (15.1.0 pinned `2026-04-22.dahlia`). The code never sets
+`stripe.api_version`, and **still doesn't, deliberately**: the SDK's types and its pinned version
+move together, and pinning an older version under a newer SDK is what Stripe advises against.
+Instead `tests/test_stripe_sdk_contract.py` asserts the pinned version, so the next major fails
+there first and forces this review again.
+
+**Every billing test mocks `stripe` with a `MagicMock`, so none could see an SDK change.** Reviewing
+against the real installed SDK found three money-path defects — two of them already live on 15.x:
+
+1. **Webhooks 500'd on stripe ≥ 15 (pre-existing, live).** stripe 15 (#1762) made `StripeObject`
+   stop inheriting from `dict`; `.get()` now raises `AttributeError`. The webhook route calls
+   `event.get("id")` on the `construct_event` result outside its try-block, so every genuinely signed
+   event would 500; `Subscription.retrieve(...).get(...)` in checkout-completed and seat add/remove
+   had the same defect, as did the Sprint 780 price-parity preflight (its `price.get(...)` → every
+   price reported "could not retrieve"). Fix: `billing.stripe_client.to_plain_dict()` converts at
+   the SDK boundary (route, 3 retrieves, preflight). No Sentry issue in 90 days — consistent with no
+   real webhook traffic yet, not with the code working.
+2. **Billing period stored as NULL (pre-existing since API basil, live).** `current_period_start/end`
+   moved from Subscription to Subscription Item in `2025-03-31.basil`; the sync read only the
+   top-level fields. Now reads top-level when present (older webhook-endpoint versions), else the
+   base plan item. This also feeds the Sprint 790 upload-quota reset.
+3. **Checkout would 400 on endive (new in 16).** endive removes `payment_method_types` from Checkout
+   Session create; replaced with `allowed_payment_method_types: ["card"]` (keeps card-only in code,
+   not in Dashboard settings).
+
+Checked and unaffected: `Webhook.construct_event` signature, `stripe.error.SignatureVerificationError`
+alias (still present, asserted), `Customer/Refund/Subscription/SubscriptionItem.modify/delete` (path
+param already positional), `billing_portal.Session.create`, `SubscriptionItem.plan` (still on the
+object), `Reversal` rename / `StripeObject.request()` removal (unused).
+
+**CEO / Dashboard (in the PR body):** the webhook endpoint's API version is set in the Dashboard,
+not by the SDK; payload handling now accepts both shapes, so upgrading the endpoint is optional but
+recommended (Stripe's two-endpoint migration). Re-run `scripts/stripe_price_parity_preflight.py`
+before cutover — it could not have passed on 15.x.
+
+**Verification:** 16 new contract tests on the real SDK (offline, signed with a fake secret);
+the webhook-accepts test was regression-proved against the old route (fails with AttributeError).
+Billing subset 908 passed; full suite 9,944 passed, 0 failed; ruff clean on touched files; mypy 209 ≤
+baseline 1011, none in touched files; pip-audit clean.
 
 ---
 

@@ -2944,3 +2944,19 @@ mint real tokens instead.
 - **Check a filename is free before `Write`.** I created `tests/test_rate_limit_coverage.py` for
   the new default-limit tests without looking; one already existed (the mutating-endpoint audit)
   and was overwritten. `git status` showed `M` rather than `??`, which is how it was caught.
+
+## A fully-mocked SDK cannot notice the SDK changing (2026-10-27)
+
+Sprint 786b (stripe 15 → 16). Every billing test replaced the `stripe` module with a `MagicMock`
+and fed handlers plain dicts, so 900+ green tests said nothing about the real SDK. stripe 15 had
+already made `StripeObject` stop being a `dict` — `.get()` raises — which meant every genuinely
+signed webhook would 500 and the price-parity preflight could never pass. Found only by calling the
+installed SDK offline (`construct_from`, `construct_event` with a locally-computed signature).
+
+**The transferable parts:**
+
+- For each third-party boundary, keep at least one test that uses the real library offline.
+  Mocks prove our logic; only the real object proves the contract.
+- Convert SDK objects to plain data at the boundary, once (`to_plain_dict`), rather than
+  scattering assumptions about the object model through the handlers.
+- Read the changelog of the *previous* major too when the current pin was bumped without review.

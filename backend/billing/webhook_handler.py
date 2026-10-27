@@ -220,10 +220,10 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
         return
 
     # Fetch the full subscription from Stripe
-    from billing.stripe_client import get_stripe
+    from billing.stripe_client import get_stripe, to_plain_dict
 
     stripe = get_stripe()
-    stripe_sub = stripe.Subscription.retrieve(subscription_id)
+    stripe_sub = to_plain_dict(stripe.Subscription.retrieve(subscription_id))
 
     # Resolve tier from the base plan item (skip seat add-ons)
     items = stripe_sub.get("items", {}).get("data", [])

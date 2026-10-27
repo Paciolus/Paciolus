@@ -394,6 +394,11 @@ async def stripe_webhook(
     # This prevents duplicate side effects under concurrent delivery (Stripe retries).
     from sqlalchemy.exc import IntegrityError
 
+    from billing.stripe_client import to_plain_dict
+
+    # stripe-python >= 15: an Event is not a dict, and the handlers read it
+    # with .get(). Convert once here (Sprint 786b).
+    event = to_plain_dict(event)
     event_id = event.get("id")
     if event_id:
         from subscription_model import ProcessedWebhookEvent

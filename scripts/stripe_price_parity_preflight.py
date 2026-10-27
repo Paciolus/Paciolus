@@ -72,6 +72,7 @@ from billing.price_config import (  # noqa: E402
     PRICE_TABLE,
     PROFESSIONAL_SEAT_PRICE,
 )
+from billing.stripe_client import to_plain_dict  # noqa: E402
 
 _INTERVAL_TO_STRIPE = {"monthly": "month", "annual": "year"}
 
@@ -166,7 +167,8 @@ def _dollars(cents: int) -> str:
 def check_price(stripe_module, expected: ExpectedPrice, price_id: str, key_is_live: bool) -> list[str]:
     """Retrieve one Price and return a list of problem descriptions (empty = pass)."""
     try:
-        price = stripe_module.Price.retrieve(price_id)
+        # stripe-python >= 15 objects are not dicts; the checks below use .get().
+        price = to_plain_dict(stripe_module.Price.retrieve(price_id))
     except Exception as exc:  # noqa: BLE001 — any Stripe error is a preflight failure
         return [f"{expected.label}: could not retrieve {price_id} — {type(exc).__name__}: {exc}"]
 
@@ -220,7 +222,7 @@ def check_coupon(stripe_module, expected: ExpectedCoupon, coupon_id: str) -> lis
     """Retrieve one Coupon and return problem descriptions (empty = pass)."""
     label = expected.label
     try:
-        coupon = stripe_module.Coupon.retrieve(coupon_id)
+        coupon = to_plain_dict(stripe_module.Coupon.retrieve(coupon_id))
     except Exception as exc:  # noqa: BLE001
         return [f"coupon {label}: could not retrieve {coupon_id} — {type(exc).__name__}: {exc}"]
 
