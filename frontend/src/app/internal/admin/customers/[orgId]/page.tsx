@@ -134,7 +134,7 @@ export default function CustomerDetailPage() {
               <button onClick={() => setActiveModal('refund')} className="px-3 py-1.5 border border-theme rounded-lg text-sm font-sans hover:bg-surface-input transition-colors">Issue Refund</button>
               <button onClick={() => setActiveModal('cancel')} className="px-3 py-1.5 border border-clay-300 text-clay-600 rounded-lg text-sm font-sans hover:bg-clay-50 transition-colors">Cancel Subscription</button>
               <button onClick={() => setActiveModal('impersonate')} className="px-3 py-1.5 border border-theme rounded-lg text-sm font-sans hover:bg-surface-input transition-colors">View as Customer</button>
-              <button onClick={() => handleAction(() => revokeSessions(orgId))} className="px-3 py-1.5 border border-clay-300 text-clay-600 rounded-lg text-sm font-sans hover:bg-clay-50 transition-colors">Revoke Sessions</button>
+              <button onClick={() => handleAction(() => revokeSessions(orgId, d.user_id))} className="px-3 py-1.5 border border-clay-300 text-clay-600 rounded-lg text-sm font-sans hover:bg-clay-50 transition-colors">Revoke Sessions</button>
             </div>
           </Reveal>
 
@@ -273,7 +273,7 @@ export default function CustomerDetailPage() {
                         <label htmlFor="plan-reason" className="block text-sm font-sans text-content-tertiary mb-1">Reason</label>
                         <textarea id="plan-reason" value={formData.reason || ''} onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))} className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans" rows={2} />
                       </div>
-                      <button disabled={!formData.new_plan || !formData.reason || actionLoading} onClick={() => handleAction(() => planOverride(orgId, { new_plan: formData.new_plan ?? '', reason: formData.reason ?? '', effective_immediately: true }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
+                      <button disabled={!formData.new_plan || !formData.reason || actionLoading} onClick={() => handleAction(() => planOverride(orgId, { new_plan: formData.new_plan ?? '', reason: formData.reason ?? '', effective_immediately: true, target_user_id: d.user_id }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
                         {actionLoading ? 'Processing...' : 'Override Plan'}
                       </button>
                     </div>
@@ -291,7 +291,7 @@ export default function CustomerDetailPage() {
                         <label htmlFor="trial-reason" className="block text-sm font-sans text-content-tertiary mb-1">Reason</label>
                         <textarea id="trial-reason" value={formData.reason || ''} onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))} className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans" rows={2} />
                       </div>
-                      <button disabled={!formData.days || !formData.reason || actionLoading} onClick={() => handleAction(() => extendTrial(orgId, { days: Number(formData.days), reason: formData.reason ?? '' }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
+                      <button disabled={!formData.days || !formData.reason || actionLoading} onClick={() => handleAction(() => extendTrial(orgId, { days: Number(formData.days), reason: formData.reason ?? '', target_user_id: d.user_id }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
                         {actionLoading ? 'Processing...' : 'Extend Trial'}
                       </button>
                     </div>
@@ -309,7 +309,7 @@ export default function CustomerDetailPage() {
                         <label htmlFor="credit-reason" className="block text-sm font-sans text-content-tertiary mb-1">Reason</label>
                         <textarea id="credit-reason" value={formData.reason || ''} onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))} className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans" rows={2} />
                       </div>
-                      <button disabled={!formData.amount || !formData.reason || actionLoading} onClick={() => handleAction(() => issueCredit(orgId, { amount_cents: Math.round(Number(formData.amount) * 100), reason: formData.reason ?? '' }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
+                      <button disabled={!formData.amount || !formData.reason || actionLoading} onClick={() => handleAction(() => issueCredit(orgId, { amount_cents: Math.round(Number(formData.amount) * 100), reason: formData.reason ?? '', target_user_id: d.user_id }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
                         {actionLoading ? 'Processing...' : 'Issue Credit'}
                       </button>
                     </div>
@@ -331,7 +331,7 @@ export default function CustomerDetailPage() {
                         <label htmlFor="refund-reason" className="block text-sm font-sans text-content-tertiary mb-1">Reason</label>
                         <textarea id="refund-reason" value={formData.reason || ''} onChange={e => setFormData(f => ({ ...f, reason: e.target.value }))} className="w-full px-3 py-2 bg-surface-input border border-theme rounded-lg text-sm font-sans" rows={2} />
                       </div>
-                      <button disabled={!formData.payment_intent_id || !formData.amount || !formData.reason || actionLoading} onClick={() => handleAction(() => issueRefund(orgId, { payment_intent_id: formData.payment_intent_id ?? '', amount_cents: Math.round(Number(formData.amount) * 100), reason: formData.reason ?? '' }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
+                      <button disabled={!formData.payment_intent_id || !formData.amount || !formData.reason || actionLoading} onClick={() => handleAction(() => issueRefund(orgId, { payment_intent_id: formData.payment_intent_id ?? '', amount_cents: Math.round(Number(formData.amount) * 100), reason: formData.reason ?? '', target_user_id: d.user_id }))} className="w-full px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-sage-700 disabled:opacity-40 transition-colors">
                         {actionLoading ? 'Processing...' : 'Issue Refund'}
                       </button>
                     </div>
@@ -349,7 +349,7 @@ export default function CustomerDetailPage() {
                         <input type="checkbox" id="immediate" checked={formData.immediate === 'true'} onChange={e => setFormData(f => ({ ...f, immediate: String(e.target.checked) }))} className="rounded" />
                         <label htmlFor="immediate" className="text-sm font-sans text-content-primary">Cancel immediately (instead of at period end)</label>
                       </div>
-                      <button disabled={!formData.reason || actionLoading} onClick={() => handleAction(() => forceCancel(orgId, { reason: formData.reason ?? '', immediate: formData.immediate === 'true' }))} className="w-full px-4 py-2 bg-clay-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-clay-700 disabled:opacity-40 transition-colors">
+                      <button disabled={!formData.reason || actionLoading} onClick={() => handleAction(() => forceCancel(orgId, { reason: formData.reason ?? '', immediate: formData.immediate === 'true', target_user_id: d.user_id }))} className="w-full px-4 py-2 bg-clay-600 text-oatmeal-50 rounded-lg font-sans font-medium text-sm hover:bg-clay-700 disabled:opacity-40 transition-colors">
                         {actionLoading ? 'Processing...' : 'Cancel Subscription'}
                       </button>
                     </div>

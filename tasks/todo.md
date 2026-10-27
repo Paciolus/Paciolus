@@ -400,47 +400,33 @@
 > - When a sprint closes, set the doc's Status dropdown to Done, or tell the CEO to.
 
 ### Sprint 848: Authorization gaps (M8, M9, L1, L5)
-**Status:** NOT STARTED. **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
 
-- [ ] **M8: any org member can change firm branding**, which then appears on every memo PDF.
-  - The defect: `routes/branding.py:45-61` `_get_branding` checks only `check_custom_branding_access` and
-    membership.
-  - Split it into a read path (any member) and a write path that calls
-    `shared/organization_policy.require_admin(db, user, org)` (owner or admin; 403 otherwise).
-  - Use the write path in `PUT /branding/` (`:79`), `POST /branding/logo` (`:100`) and `DELETE /branding/logo`
-    (`:158`).
-  - Tests: a member gets 403 on all three writes and 200 on GET; an admin and the owner get 200.
-- [ ] **M9: a "read-only" impersonation session can open the customer's Stripe billing portal.**
-  - The defect: `routes/billing.py:273-292` `GET /billing/portal-session` uses `require_current_user`. GETs pass
-    the impersonation guard (`auth.py:298-310` blocks only mutating methods), and the portal URL lets the holder
-    cancel, change the plan or change the payment method.
-  - Fix: in `require_current_user`, set `request.state.impersonation = token_data.impersonation is True`. Add a
-    `reject_impersonation` dependency (403, `code: IMPERSONATION_READ_ONLY`) and apply it to the portal route and
-    any checkout-session route.
-  - Then grep `routes/` for other GET routes that return Stripe URLs, share tokens, download tokens or passcodes,
-    and apply it there too.
-  - Test: an impersonation token on the portal route → 403.
-- [ ] **L1: `POST /activity/tool-log` stores an unvalidated `engagement_id`.**
-  - The defect: `routes/activity.py:459-481` writes the query-string `engagement_id` straight into `ToolActivity`.
-    An unknown ID causes a foreign-key 500 and an existing one returns 201, which reveals which engagement IDs
-    exist across tenants.
-  - Fix: resolve it the way `shared/tool_run_recorder.py:87-102` does
-    (`EngagementManager(db).get_engagement(user_id, engagement_id)`), and store `None` when it does not resolve.
-  - Test: another user's engagement ID → 201 with `engagement_id` null; a nonexistent ID → 201, not 500.
-- [ ] **L5: admin billing actions can hit the wrong customer.**
-  - **Do NOT simply remove the fallback.** The `org_id → user_id` fallback is intentional: solo customers have no
-    org, and the admin UI passes their user ID as `org_id` (`billing/admin_customers.py:212-221`).
-  - The bug is that a stale or nonexistent org ID silently resolves to an unrelated user with that ID.
-  - Apply the Sprint 840 S3 pattern from `routes/internal_admin.py:325-341`:
-    - require `target_user_id` in the request body of every admin action that resolves this way — plan override
-      (`admin_customers.py:366-371`), the action at `:409-410`, the action at `:452-453`, and force cancel
-      (`:498-499`);
-    - return 409 "Customer ID does not resolve to the requested user" when the resolved owner's ID differs.
-  - Update the admin frontend calls to send `target_user_id`.
-  - Tests: mismatch → 409 and nothing changed; a solo customer (user ID passed as `org_id`) still works.
+- [x] **M8: any org member could change firm branding.** `_get_branding(..., write=True)` also requires the
+  owner or admin role (same rule and 403 as `organization_policy.require_admin`, checked on the membership row
+  the helper already loads, so no second query). Used by `PUT /branding/`, `POST /branding/logo` and
+  `DELETE /branding/logo`; `GET` stays open to every member.
+- [x] **M9: an impersonation session could open the Stripe billing portal.** `require_current_user` sets
+  `request.state.impersonation`; new `auth.reject_impersonation` dependency (403, `IMPERSONATION_READ_ONLY`)
+  guards `GET /billing/portal-session`. Checkout is a POST, already blocked by the mutating-method guard.
+  Grep of all 82 GET routes for Stripe URLs, share tokens, download tokens and passcodes: none other —
+  `ExportShareResponse` and `OrganizationInviteResponse` carry no tokens, and `GET /auth/csrf` only enables
+  writes, which impersonation cannot make.
+- [x] **L1: `POST /activity/tool-log` stored an unvalidated `engagement_id`.** Resolved through
+  `EngagementManager.get_engagement` as `tool_run_recorder` does; unresolved → stored as `None`, still 201.
+- [x] **L5: admin billing actions could hit the wrong customer.** Fallback kept (solo customers). New
+  `_require_target_user` in `routes/internal_admin.py` (404 unknown, 409 mismatch) runs before plan override,
+  extend trial, credit, refund, force cancel **and revoke sessions** (same fallback, so it gets the same
+  guard; it now takes a `RevokeSessionsRequest` body). Impersonation reuses the helper. Every request schema
+  requires `target_user_id`; the admin hook and customer page send `d.user_id`.
+
+Tests: `tests/test_authorization_gaps.py` (23; 16 fail on the pre-fix routes — including the FK 500 on an
+unknown engagement — and pass after); `test_internal_admin.py` requests now name their target;
+`useInternalAdmin.test.ts` +1.
+
+**Verification:** ruff clean; frontend `tsc` + eslint clean, `useInternalAdmin` 10/10; full backend suite 9,990 passed (before stacking on 847–852); after stacking, the auth, admin, branding, impersonation, 847 and 849 test files pass (117). The branding test uploads a real 4×4 PNG, because Sprint 852's logo-dimension check opens the image with Pillow. OpenAPI snapshot regenerated (`target_user_id`, `RevokeSessionsRequest`).
 
 **Commit SHA:** TBD.
-
 ---
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)

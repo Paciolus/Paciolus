@@ -342,7 +342,12 @@ class TestPlanOverride:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 f"/internal/admin/customers/{org_id}/plan-override",
-                json={"new_plan": "enterprise", "reason": "VIP customer upgrade", "effective_immediately": True},
+                json={
+                    "target_user_id": customer_with_org["owner"].id,
+                    "new_plan": "enterprise",
+                    "reason": "VIP customer upgrade",
+                    "effective_immediately": True,
+                },
             )
             assert response.status_code == 200
             data = response.json()
@@ -361,7 +366,12 @@ class TestPlanOverride:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 f"/internal/admin/customers/{org_id}/plan-override",
-                json={"new_plan": "invalid_tier", "reason": "test", "effective_immediately": True},
+                json={
+                    "target_user_id": customer_with_org["owner"].id,
+                    "new_plan": "invalid_tier",
+                    "reason": "test",
+                    "effective_immediately": True,
+                },
             )
             assert response.status_code == 422
 
@@ -377,7 +387,7 @@ class TestTrialExtension:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 f"/internal/admin/customers/{org_id}/extend-trial",
-                json={"days": 14, "reason": "Onboarding support"},
+                json={"target_user_id": customer_with_org["owner"].id, "days": 14, "reason": "Onboarding support"},
             )
             assert response.status_code == 200
             data = response.json()
@@ -398,7 +408,7 @@ class TestForceCancel:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 f"/internal/admin/customers/{org_id}/cancel",
-                json={"reason": "Fraud detected", "immediate": True},
+                json={"target_user_id": customer_with_org["owner"].id, "reason": "Fraud detected", "immediate": True},
             )
             assert response.status_code == 200
             data = response.json()
@@ -414,7 +424,11 @@ class TestForceCancel:
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 f"/internal/admin/customers/{org_id}/cancel",
-                json={"reason": "Customer request", "immediate": False},
+                json={
+                    "target_user_id": customer_with_org["owner"].id,
+                    "reason": "Customer request",
+                    "immediate": False,
+                },
             )
             assert response.status_code == 200
 
@@ -496,7 +510,10 @@ class TestSessionRevocation:
         """Revoke sessions creates audit log."""
         org_id = customer_with_org["org"].id
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post(f"/internal/admin/customers/{org_id}/revoke-sessions")
+            response = await client.post(
+                f"/internal/admin/customers/{org_id}/revoke-sessions",
+                json={"target_user_id": customer_with_org["owner"].id},
+            )
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
@@ -536,7 +553,11 @@ class TestAuditLog:
             # Perform an action
             await client.post(
                 f"/internal/admin/customers/{org_id}/cancel",
-                json={"reason": "Test cancellation", "immediate": False},
+                json={
+                    "target_user_id": customer_with_org["owner"].id,
+                    "reason": "Test cancellation",
+                    "immediate": False,
+                },
             )
 
             # Check audit log
@@ -554,11 +575,11 @@ class TestAuditLog:
             # Create entries of different types
             await client.post(
                 f"/internal/admin/customers/{org_id}/cancel",
-                json={"reason": "Cancel", "immediate": False},
+                json={"target_user_id": customer_with_org["owner"].id, "reason": "Cancel", "immediate": False},
             )
             await client.post(
                 f"/internal/admin/customers/{org_id}/extend-trial",
-                json={"days": 7, "reason": "Support"},
+                json={"target_user_id": customer_with_org["owner"].id, "days": 7, "reason": "Support"},
             )
 
             # Filter for force_cancel only
