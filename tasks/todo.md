@@ -1293,6 +1293,16 @@ data-quality report.
 6. **A guard for the class:** no engine may hold a bare statutory constant without a year key. The
    broader version is a test that any module naming a tax year in a comment has a year-selected
    table rather than a flat constant.
+   - [x] **Guard added 2026-10-27** — `tests/test_statutory_constants_year_keyed.py`. Discovers every
+     backend module handling `tax_year` (the three engines + their routes) and AST-scans each
+     `Decimal("<n>")` literal and module-level numeric constant: it must sit in (or be referenced by)
+     a dict keyed by tax years, or be on an exact `(module, name, value)` allow-list with a reason;
+     stale allow-list entries fail. **No figure changed.** The allow-list names the remaining flat
+     statutory constants as debt: 1099 `FORM_THRESHOLDS` (tests only), `MISC_BOX_THRESHOLDS`
+     (**unreferenced** — delete candidate), `LEGACY_GENERAL_THRESHOLD` (review-band floor) and
+     book-to-tax `M3_THRESHOLD_TOTAL_ASSETS` ($10M, never year-keyed). Fail-before: a planted
+     `PLANTED_SS_WAGE_BASE = Decimal("184500")` in the W-2 engine fails it. The narrower
+     `test_no_table_claims_to_be_2026_until_sprint_793b` is unchanged.
 
 **Acceptance bar:** a 2025 and a 2026 reconciliation of the same payroll produce different
 wage-base findings; a year outside the table is reported as unsupported rather than computed; and
