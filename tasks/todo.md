@@ -100,6 +100,7 @@
 ## Active Phase
 > **▶ Next session: start at "NEXT SESSION — START HERE" below (Sprints 840–845, from the 2026-10-24 claims review —
 > [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md)).** The worklist that follows is older context.
+> **▶ Also queued: security review 2026-10-27 → Sprints 846–853** (block directly after START HERE; 846–848 recommended before 843).
 > **WORKLIST — 2026-10-20 (authoritative order).** Consolidated in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543), which re-verified the 2026-10-19 launch-readiness assessment against current source and found ten items neither that doc nor the 2026-10-20 worklist covered.
 >
 > | Track | Scope | Sprints | Owner |
@@ -378,6 +379,342 @@
 > junction *before* `git worktree remove --force`, or the main checkout's node_modules is wiped; run the full backend
 > suite locally (~13 min) before pushing; every automated review thread must be fixed, replied to and resolved.
 > Sprints 836–840 archived to `tasks/archive/sprints-836-840-details.md`.
+
+> **▶ SECURITY REVIEW 2026-10-27 — Sprints 846–853.** The CEO ran a vibecoder-style security triage. It found
+> **0 critical, 0 high, 9 medium and 14 low** issues; secrets, dependencies and cross-tenant isolation are clean.
+> - **Full findings with file:line:** [`reports/security-review-vibecoder-2026-10-27.md`](../reports/security-review-vibecoder-2026-10-27.md).
+> - **CEO action-plan doc** (status tracker per finding): https://claude.ai/artifact/6A6odNhC1hZSS5BM1WbcdN.
+> - Finding IDs (M1–M9, L1–L14) are the same in the report, the doc and the sprints below.
+> - The L5 action was corrected in the doc on 2026-10-27; Sprint 848 is authoritative.
+>
+> **Order:** 846 → 847 → 848 are small, self-contained security defects; recommended before Sprint 843. 849 and 850
+> next. 851 is blocked on a CEO console check. 852 is backlog. 853 is blocked on CEO product decisions (defaults
+> given; use them if the CEO says "go with your recommendation").
+>
+> **Rules for every sprint here:**
+> - Line numbers are from `main` @ `48c17626`. Re-locate by symbol name before editing.
+> - Each fix lands with a regression test that fails before the fix.
+> - Run the full backend suite before pushing. One PR per sprint.
+> - When a sprint closes, set the doc's Status dropdown to Done, or tell the CEO to.
+
+### Sprint 846: Memo PDFs — escape user text before ReportLab parses it (M1)
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1. **Source:** security review M1 (verified by integrator).
+
+**Defect:** ReportLab `Paragraph(text, style)` parses `text` as markup; account names, descriptions and client
+names from uploaded files reached it unescaped, so `<a href=...>` became a live, Paciolus-branded link in an
+exported memo, `<font size=0>` hid text and `<img src=...>` failed the export.
+
+**Plan change (why):** the inventory found **1,036 `Paragraph(` calls in 36 modules, ~700 with non-literal text**
+(285 f-strings mixing template markup with values). Per-call-site escaping plus an AST guard on arguments, as
+originally planned, was not feasible or reviewable. Shipped instead — a single door:
+- [x] `shared/safe_paragraph.py`: a `Paragraph` subclass that sanitizes before ReportLab parses. It keeps the
+      template vocabulary found by inventory (`b i u strong em strike super sup sub`, `<br/>`, `<font>` with only
+      `size` 6–72 and `color` `#rrggbb`/`0xrrggbb`, allowed named + numeric entities) and escapes every other tag
+      and stray `< > &`. Unparseable text (e.g. an unbalanced user `<b>`) falls back to fully escaped text, so the
+      export completes. `split()`'s `text=None` re-instantiation passes through.
+- [x] All 36 modules import `Paragraph` from `shared.safe_paragraph` (mechanical AST-driven swap; import-only diff).
+- [x] Full escape (`escape_markup` / `xml_escape`) where values are known user data: `wrap_table_strings` cells
+      (inventory: no caller puts markup in table data), `build_memo_header` client name, and the custom headers in
+      the accrual, expense-category, flux, population-profile memos and `pdf/orchestrator.py` (entity name).
+- [x] `tests/test_safe_paragraph.py` (35 tests): sanitizer unit tests, a guard that fails if any module imports
+      ReportLab's `Paragraph` directly, and end-to-end runs of the accrual memo and the TB diagnostic report with
+      link/img/font payloads asserting **no `/URI` annotation** in the PDF. Guard + both end-to-end tests fail on the
+      pre-fix code and pass after.
+- [x] Regression audit: a temporary pytest plugin rendered every paragraph raw and sanitized across the 1,606
+      PDF/memo/export tests — **0 differences in visible text** for legitimate templates.
+- **Residual (accepted, documented in the module):** user data that is interpolated into templates can still use
+  the allowed formatting tags (bold/italic, or `<font color>` to colour text). Links, images, hidden (size<6)
+  text and every other tag are neutralised. Wrap a value in `escape_markup()` at the call site when touching it.
+- **Note for Sprint 813** (memo skeleton rebuild): keep `shared.safe_paragraph` as the only door; the guard test
+  enforces it.
+
+**Verification:** ruff clean; mypy 209 errors (baseline 1,011), none in touched files; full backend suite 9,979 passed (2 Stripe pin tests first failed on a stale local venv — stripe 15.1 vs pinned 16.0.1 — and pass after `pip install stripe==16.0.1`).
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 847: Session and account takeover hardening (M3, M4, L3, L4, L14)
+**Status:** NOT STARTED. **Priority:** P1. **Source:** security review M3, M4 (both verified), L3, L4, L14.
+
+- [ ] **M3: refresh-token reuse detection lasts only about 1 hour.**
+  - The defect: `auth.py:908-918` `cleanup_expired_refresh_tokens` deletes rows where
+    `revoked_at != None OR expires_at < now`, every `CLEANUP_REFRESH_TOKEN_INTERVAL_MINUTES` (60,
+    `config.py:668`; scheduled in `cleanup_scheduler.py:316`, also run at startup from `main.py:137`). Reuse
+    detection (`auth.py:755`, `if db_token.is_revoked: _revoke_all_user_tokens`) needs the revoked row to still
+    exist. Once it is purged, a thief who rotated first is never detected, and their chain extends 7 days at a time.
+  - Fix: change the filter to `RefreshToken.expires_at < now` only. Revoked rows then live at most 7 days.
+  - Update the docstring.
+  - Test: issue → rotate → run cleanup → present the old raw token → expect 401 *and* every token for that user
+    revoked.
+- [ ] **M4: email change requires no password, so a stolen session becomes a permanent takeover.**
+  - The defect: `UserProfileUpdate` (`auth.py:461-470`) has only `name`/`email`. `PUT /users/me`
+    (`routes/users.py:27-38`) sets `pending_email`. `services/auth/registration.py:201-204` swaps it in on
+    verification and revokes nothing.
+  - Add `current_password: Optional[str]` to `UserProfileUpdate`. It is required when `email` is present and
+    differs from the current email; otherwise return 400. Verify it with `verify_password`, as
+    `change_user_password` does (`auth.py:653`), and log `email_change_failed` on mismatch.
+  - In the verification swap (`registration.py`, `if user.pending_email:` branch), also set
+    `user.password_changed_at = now`, which kills live access tokens via the `pwd_at` check, and revoke all
+    refresh tokens (`_revoke_all_user_tokens`).
+  - Frontend: add a password field to the email-change form in settings (find it with `grep -rn "pending_email\|
+    email" frontend/src/app/settings`). Send `current_password` and show the 400 inline.
+  - Tests:
+    - missing or wrong password → 400/401 and no `pending_email`;
+    - correct password → pending is set;
+    - after verification, old refresh tokens are rejected and an old access token gets 401.
+- [ ] **L4: older password-reset links stay valid.**
+  - `services/auth/recovery.py:94-105` (request) and `148-158` (complete).
+  - On a new request, a successful reset, and an email swap, set `used_at = now` on all of the user's
+    outstanding `PasswordResetToken` rows.
+  - Test: request twice → the first link is rejected; reset → a second outstanding link is rejected.
+- [ ] **L3: access JWT survives logout and "revoke all sessions" for up to 15 minutes.**
+  - Default (cheap, mirrors `pwd_at`): add `User.sessions_revoked_at` (Alembic migration) and set it in logout-all
+    (`auth_routes.py:518-531`) and plain logout (`:440-449`).
+  - In `require_current_user`, reject tokens whose `iat` is earlier than it, next to the `pwd_at` check at
+    `auth.py:321-334`.
+  - If the CEO prefers to accept the window instead, record that decision here and skip this item.
+- [ ] **L14: impersonation fails for any user who has changed their password.**
+  - The cause: `create_impersonation_token` (`auth.py:175-208`) omits `pwd_at`, so `auth.py:321-328` returns 401.
+  - Fix: pass the target user's `password_changed_at` and embed `pwd_at` as `create_access_token` does
+    (`auth.py:166`).
+  - Test: impersonate a user who has `password_changed_at` set → GET /users/me returns 200.
+- **L11 (email enumeration via `PUT /users/me` "Email already in use"): no action.** Accepted risk, because
+  registration reveals the same thing. Don't reopen it.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 848: Authorization gaps (M8, M9, L1, L5)
+**Status:** NOT STARTED. **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
+
+- [ ] **M8: any org member can change firm branding**, which then appears on every memo PDF.
+  - The defect: `routes/branding.py:45-61` `_get_branding` checks only `check_custom_branding_access` and
+    membership.
+  - Split it into a read path (any member) and a write path that calls
+    `shared/organization_policy.require_admin(db, user, org)` (owner or admin; 403 otherwise).
+  - Use the write path in `PUT /branding/` (`:79`), `POST /branding/logo` (`:100`) and `DELETE /branding/logo`
+    (`:158`).
+  - Tests: a member gets 403 on all three writes and 200 on GET; an admin and the owner get 200.
+- [ ] **M9: a "read-only" impersonation session can open the customer's Stripe billing portal.**
+  - The defect: `routes/billing.py:273-292` `GET /billing/portal-session` uses `require_current_user`. GETs pass
+    the impersonation guard (`auth.py:298-310` blocks only mutating methods), and the portal URL lets the holder
+    cancel, change the plan or change the payment method.
+  - Fix: in `require_current_user`, set `request.state.impersonation = token_data.impersonation is True`. Add a
+    `reject_impersonation` dependency (403, `code: IMPERSONATION_READ_ONLY`) and apply it to the portal route and
+    any checkout-session route.
+  - Then grep `routes/` for other GET routes that return Stripe URLs, share tokens, download tokens or passcodes,
+    and apply it there too.
+  - Test: an impersonation token on the portal route → 403.
+- [ ] **L1: `POST /activity/tool-log` stores an unvalidated `engagement_id`.**
+  - The defect: `routes/activity.py:459-481` writes the query-string `engagement_id` straight into `ToolActivity`.
+    An unknown ID causes a foreign-key 500 and an existing one returns 201, which reveals which engagement IDs
+    exist across tenants.
+  - Fix: resolve it the way `shared/tool_run_recorder.py:87-102` does
+    (`EngagementManager(db).get_engagement(user_id, engagement_id)`), and store `None` when it does not resolve.
+  - Test: another user's engagement ID → 201 with `engagement_id` null; a nonexistent ID → 201, not 500.
+- [ ] **L5: admin billing actions can hit the wrong customer.**
+  - **Do NOT simply remove the fallback.** The `org_id → user_id` fallback is intentional: solo customers have no
+    org, and the admin UI passes their user ID as `org_id` (`billing/admin_customers.py:212-221`).
+  - The bug is that a stale or nonexistent org ID silently resolves to an unrelated user with that ID.
+  - Apply the Sprint 840 S3 pattern from `routes/internal_admin.py:325-341`:
+    - require `target_user_id` in the request body of every admin action that resolves this way — plan override
+      (`admin_customers.py:366-371`), the action at `:409-410`, the action at `:452-453`, and force cancel
+      (`:498-499`);
+    - return 409 "Customer ID does not resolve to the requested user" when the resolved owner's ID differs.
+  - Update the admin frontend calls to send `target_user_id`.
+  - Tests: mismatch → 409 and nothing changed; a solo customer (user ID passed as `org_id`) still works.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 849: Org members' entitlements follow the owner's live plan (M5)
+**Status:** NOT STARTED. **Priority:** P1 (revenue leak). **Source:** security review M5 (verified).
+
+**Defect:**
+- `shared/organization_policy.py:149-150` copies `sub.tier` onto `user.tier` when a member joins.
+- `shared/entitlement_checks.py:86-88` trusts `user.tier` when the user has no Subscription row, and members never
+  have one.
+- `billing/subscription_manager.py:212-221` (`sync_subscription_from_stripe`) updates only the owner.
+- `_downgrade_org_members_to_free` (`billing/webhook_handler.py:345-349, 446, 482`) runs only for non-entitled
+  statuses.
+
+So when an owner moves Enterprise → Solo, members keep Enterprise (bulk upload, branding) indefinitely.
+`admin_force_cancel(immediate=True)` (`billing/admin_customers.py:551-554`) has the same gap: it sets `CANCELED`
+locally and calls no Stripe API, so no webhook follows and members stay paid.
+
+- [ ] In `entitlement_checks`, when the user belongs to an org and is not its owner, use the **owner's**
+      Subscription instead of the "no row → trust tier" branch. Active or trialing → the owner's tier; anything
+      else → FREE. Keep `user.tier` only as a display cache.
+- [ ] Refresh members' cached `tier` in `sync_subscription_from_stripe` whenever the owner's tier changes, so
+      `/users/me` shows the right plan.
+- [ ] Make `admin_force_cancel(immediate=True)` call `_downgrade_org_members_to_free` (or the shared helper the
+      webhook uses).
+- [ ] Check the JWT `tier` claim. It is used for rate-limit tiers only (per the review), so stale claims are fine,
+      but confirm.
+- [ ] Tests:
+  - owner Enterprise → Solo via the sync path → the member's entitlements equal Solo's;
+  - owner past_due → member is FREE;
+  - admin immediate force-cancel → member is FREE;
+  - a solo user with no org is unchanged.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 850: PDF upload parsing in a resource-limited subprocess (M6)
+**Status:** NOT STARTED. **Priority:** P2 (DoS; needs a verified paid account). **Source:** security review M6.
+
+**Defect:**
+- `shared/pdf_parser.py:120-136`: the 5 s per-page "timeout" is compared *after* `page.extract_table()` returns,
+  so it never interrupts.
+- pdfminer's FlateDecode does `zlib.decompress(data)` with no output cap.
+- The ZIP ratio and size checks (`shared/upload_pipeline.py:126-186`) don't apply to PDF streams.
+- Parsing runs in `asyncio.to_thread` with no overall timeout.
+
+A roughly 5 MB PDF whose stream inflates to gigabytes can kill a Render worker; repeated uploads take the API down.
+
+- [ ] Move the PDF parse into a child process: `multiprocessing` with the **spawn** context, so it doesn't fork the
+      app.
+  - The child sets `resource.setrlimit(resource.RLIMIT_AS, (1 GiB, 1 GiB))`. Guard it with
+    `if sys.platform != "win32"`, because dev is Windows and production is Linux.
+  - The parent waits at most 30 s overall, then terminates and kills the child.
+  - Return the parsed rows across the pipe.
+- [ ] On a memory error, a kill or a timeout, return 422 `"This PDF is too complex to parse. Export the trial
+      balance as Excel or CSV instead."`, and increment a Prometheus counter (`pdf_parse_aborted_total{reason}`).
+- [ ] Delete the misleading post-hoc per-page timeout check, or keep it purely as a page-count budget, and say so
+      in a comment.
+- [ ] Tests:
+  - generate a small deflate-bomb PDF in the test (a deflated run of zeros in a content stream) → 422 within the
+    timeout and the test process is unharmed;
+  - a normal PDF fixture still parses.
+  - Mark the RLIMIT test `skipif(sys.platform == "win32")`.
+- [ ] Measure the latency overhead of spawn on a normal PDF and note it in the PR. If it is above about 1 s,
+      consider a small persistent worker pool.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 851: Client IP derivation behind Render's proxy (M2)
+**Status:** BLOCKED on CEO console check. **Priority:** P1 once unblocked. **Source:** security review M2.
+
+**CEO action first** (also in `ceo-actions.md`): in the Render dashboard → paciolus-api → Environment, report the
+values (or absence) of `TRUSTED_PROXY_IPS` and `FORWARDED_ALLOW_IPS`.
+
+**Defect:** `security_middleware.py:835-851` `get_client_ip` returns `X-Forwarded-For.split(",")[0]` (the
+**leftmost**) when the peer is a trusted proxy. Render's proxy *appends* the real client IP, so the leftmost entry
+is attacker-controlled.
+- **If `TRUSTED_PROXY_IPS` is set:** rotating spoofed XFF values bypasses the per-IP login failure block (20 per
+  15 min, `services/auth/identity.py:94`), every slowapi IP limit, and the register and forgot-password limits.
+- **If it is unset** (`config.py:279` default): every request's peer is Render's proxy, so all users share one
+  bucket. About 20 bad logins in 15 minutes then 429s login for **everyone**.
+
+- [ ] Rewrite `get_client_ip`:
+  - Only when the direct peer is trusted, walk `X-Forwarded-For` **right to left**, skipping entries that are
+    themselves trusted proxies, and return the first untrusted entry.
+  - Fall back to the peer when the header is absent or malformed.
+  - Validate each entry with `ipaddress.ip_address`.
+- [ ] Tests: spoofed leftmost entry ignored; a multi-hop chain resolves correctly; untrusted peer → XFF ignored
+      entirely; garbage values are skipped.
+- [ ] After deploy, the CEO (or Claude via the Render API, if a key exists) sets `TRUSTED_PROXY_IPS` to Render's
+      internal proxy range. Confirm in logs that the hashed client IPs vary per user.
+- [ ] **Never set `FORWARDED_ALLOW_IPS='*'`.** Uvicorn would rewrite `request.client.host` from the leftmost XFF,
+      and `X-Forwarded-For: 127.0.0.1` would pass the loopback-only gate on `/metrics` (`routes/metrics.py:44-45`).
+      Add a comment saying this next to that gate.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)
+**Status:** NOT STARTED. **Priority:** P2. **Source:** security review lows.
+
+- [ ] **L2: `ENV_MODE` fails open.**
+  - The defect: `config.py:66` `ENV_MODE = _load_optional("ENV_MODE", "development")`. A typo or an unset value
+    silently disables every `== "production"` guard: Secure cookies, HSTS/CSP, secret hard-fails, the SQLite and
+    DB-TLS guards, strict rate limiting, the Stripe test-key guard, the CSRF fallback rule, hiding `/docs`, the
+    `/metrics` loopback gate, and email auto-verify.
+  - Fix: accept only `{"development", "test", "production"}` and exit on anything else. Also exit when
+    `os.getenv("RENDER")` is set and `ENV_MODE != "production"`.
+  - Tests for both.
+- [ ] **L6: share tokens appear in raw access logs.**
+  - `backend/Dockerfile:124` runs gunicorn with `--access-logfile -`, so the uvicorn access log records
+    `/export-share/<token>` paths (`routes/export_sharing.py:467`).
+  - Remove that flag. The app's own access-log middleware already normalizes paths; confirm that it does before
+    removing.
+- [ ] **L7:** `routes/export_sharing.py:300-304` logs the raw IP on a passcode mismatch. Wrap it in
+      `security_middleware.hash_ip_address(ip)`.
+- [ ] **L8: shared exports are client-supplied bytes.**
+  - The defect: `routes/export_sharing.py:331-341` accepts base64 from the client, checked only by magic bytes.
+  - Minimum fix: when storing a CSV share, re-write it through `SafeCsvWriter` escaping on the server.
+  - Note in the code that PDF and XLSX shares remain client-supplied; the long-term fix is generating shared
+    exports on the server.
+- [ ] **L9: logo dimensions are not checked.**
+  - `routes/branding.py:114-127` checks size (500 KB) and magic bytes only.
+  - Open the image with Pillow (`Image.open(...)`, then `img.size`) and reject anything over 4000×4000 px or
+    25 MP. Keep the PNG/JPEG allow-list.
+  - Test with a crafted PNG whose header declares 20000×20000.
+- [ ] **L10: rate limits loosen during a Redis outage.**
+  - The in-memory fallback (Sprint 774, intentional) gives each worker its own counters.
+  - Make `.github/workflows/uptime-check.yml` fail when the `/health/ready` body says `"status": "degraded"`, not
+    only on a non-200 status.
+- [ ] **L13:** add `permissions:\n  contents: read` to `.github/workflows/dependency-compliance.yml`.
+
+**Commit SHA:** TBD.
+
+---
+
+### Sprint 853: Firm-owned client data and role gates (M7, L12)
+**Status:** BLOCKED on CEO decision. **Priority:** P2 (largest change; data-model migration). **Source:** security review M7, L12.
+
+**Defect M7:**
+- `Client` has only `user_id`, with no org column. Org access is "all user IDs currently in my org"
+  (`client_manager.py:102-118`, `engagement_manager.py:104-119`, `follow_up_items_manager.py:34-47`).
+- `remove_member` (`routes/organization.py:406-441`, `shared/organization_policy.py:162`) only drops the membership.
+- Consequences:
+  - A removed staffer keeps full read and export access, including the `/engagements/{id}/export/package` ZIP, to
+    every client and engagement they created.
+  - The firm loses access to those records at the same moment.
+  - A user who joins a firm exposes all their earlier clients to it.
+
+**Defect L12:** members have the same rights as owners and admins to hard-delete clients and archive engagements.
+- Client delete is `db.delete` at `client_manager.py:285`.
+- An admin can remove another admin (`organization.py:413`).
+- `OrgRole` is checked only in `organization.py` and `admin_dashboard.py`.
+
+**CEO decisions** (defaults; use them if the CEO says "go with recommendations"):
+1. Clients belong to **the firm**, not the individual (default: yes).
+2. On joining a firm, the user **chooses** whether to bring their existing clients (default: ask, opt-in).
+3. Destructive operations (client delete, engagement archive, misstatement/expectation archive) are **owner or
+   admin only** (default: yes).
+4. Only the **owner** can remove an admin (default: yes).
+
+- [ ] Alembic migration: add a nullable `Client.organization_id` (FK `organizations.id`, `ondelete=RESTRICT`).
+      Backfill it from the creating user's current `organization_id`. Run the migration-drift checks from Sprint 738.
+- [ ] Switch the access computation in the three managers to: `Client.user_id == me` (personal, no org) OR
+      `Client.organization_id == my current org`. Do it in **one** shared helper; the IDOR reviewer noted that
+      these checks are copy-pasted.
+- [ ] Unify `workpaper_index_generator.py:83-118` and `shared/expectation_evaluation.py:61-67`. They filter
+      `Client.user_id == user_id` only, so org teammates get a 400 on `/export/package` and `/workpaper-index`.
+      Move them onto the same helper deliberately.
+- [ ] Join flow: opt-in "bring my N clients into <Firm>" when an invite is accepted (backend flag plus frontend
+      prompt).
+- [ ] Interim, if the migration slips: in `remove_member`, reassign the departing member's clients to the org owner
+      (`Client.user_id = org.owner_user_id`) and log it.
+- [ ] Role gates: `require_admin` on client delete/update-destructive paths, engagement archive, misstatement and
+      expectation archive. Owner-only for removing an admin (`organization.py:413`).
+- [ ] Tests:
+  - removed member → 404 on their former clients, and the firm still sees them;
+  - joiner without opt-in → their personal clients are not visible to the firm;
+  - member → 403 on delete/archive, admin → 200;
+  - admin removing an admin → 403.
+
+**Commit SHA:** TBD.
+
+---
 
 ### Sprint 841: One honest storage statement everywhere
 **Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 2 (A1–A26 + Medium list).

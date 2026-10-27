@@ -21,17 +21,12 @@ from decimal import Decimal
 
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from loan_amortization_engine import AmortizationResult
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors, create_classical_styles
+from shared.safe_paragraph import Paragraph
 
 
 def _fmt_money(value: Decimal | str | None) -> str:

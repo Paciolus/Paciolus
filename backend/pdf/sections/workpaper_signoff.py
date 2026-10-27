@@ -10,10 +10,11 @@ from datetime import datetime
 from typing import Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 
 def render_workpaper_signoff(

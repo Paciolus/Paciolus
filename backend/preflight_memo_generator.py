@@ -16,7 +16,7 @@ Sections: Cover → Scope (with score breakdown) → TB Balance Check →
 from typing import Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
@@ -29,6 +29,7 @@ from shared.memo_base import (
 )
 from shared.memo_template import _roman
 from shared.report_chrome import ReportMetadata, build_cover_page, current_page_footer, find_logo
+from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,

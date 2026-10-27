@@ -11,15 +11,11 @@ Inventory Turnover note via build_extra_sections callback.
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.safe_paragraph import Paragraph
 
 INV_TEST_DESCRIPTIONS = {
     "missing_fields": "Flags inventory entries missing critical register fields (identifier, quantity, cost or value), a data completeness anomaly indicator per ISA 500.",

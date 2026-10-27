@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import SimpleDocTemplate, Spacer
 
 from pdf.chrome import draw_diagnostic_watermark, draw_fs_decorations
 from pdf.components import DoubleRule, LedgerRule, format_classical_date, generate_reference_number
@@ -40,6 +40,7 @@ from pdf.sections.ratios import render_quality_of_earnings, render_ratios
 from pdf.sections.workpaper_signoff import render_workpaper_signoff
 from pdf.styles import ClassicalColors, create_classical_styles
 from security_utils import log_secure_operation
+from shared.safe_paragraph import Paragraph, escape_markup
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Diagnostic Intelligence Summary
@@ -222,7 +223,7 @@ def generate_financial_statements_pdf(
     # Header
     story.append(Paragraph("FINANCIAL STATEMENTS", styles["ClassicalTitle"]))
     story.append(Paragraph("\u2500\u2500\u2500 \u25c6 \u2500\u2500\u2500", styles["SectionOrnament"]))
-    story.append(Paragraph(entity_name, styles["ClassicalSubtitle"]))
+    story.append(Paragraph(escape_markup(entity_name), styles["ClassicalSubtitle"]))
 
     if statements.period_end:
         story.append(Paragraph(f"Period Ending {statements.period_end}", styles["DocumentRef"]))

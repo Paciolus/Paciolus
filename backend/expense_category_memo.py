@@ -15,7 +15,7 @@ Guardrail: descriptive metrics only.
 from typing import Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table
 
 from pdf_generator import (
     ClassicalColors,
@@ -41,6 +41,7 @@ from shared.report_chrome import (
     current_page_footer,
     find_logo,
 )
+from shared.safe_paragraph import Paragraph, escape_markup
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -354,7 +355,7 @@ def generate_expense_category_memo(
     # ── Header ──
     story.append(Paragraph("Expense Category Analytical Procedures", styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+        story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
     story.append(
         Paragraph(
             f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",

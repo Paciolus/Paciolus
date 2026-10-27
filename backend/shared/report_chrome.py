@@ -30,15 +30,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Flowable,
-    Image,
-    PageBreak,
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Flowable, Image, PageBreak, Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -56,6 +48,7 @@ from shared.report_styles import (
     SPACE_COVER_AFTER_TITLE,
     SPACE_FOOTER_Y,
 )
+from shared.safe_paragraph import Paragraph
 
 
 def _safe_style(styles: dict, *names: str) -> Any:

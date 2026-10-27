@@ -10,10 +10,11 @@ assessment, exception details, limitations, and the classical footer.
 from datetime import UTC, datetime
 
 from reportlab.lib.units import inch
-from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 # ---------------------------------------------------------------------------
 # Table of Contents

@@ -21,13 +21,7 @@ from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -55,6 +49,7 @@ from shared.report_chrome import (
     find_logo,
 )
 from shared.report_styles import ledger_table_style
+from shared.safe_paragraph import Paragraph
 from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,

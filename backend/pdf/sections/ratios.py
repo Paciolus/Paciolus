@@ -9,11 +9,12 @@ cash-flow data is present.
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
 from ratio_engine import equity_basis_disclosure, unclosed_earnings_adjustment
+from shared.safe_paragraph import Paragraph
 
 
 def render_ratios(story: list, styles: dict, statements: Any) -> bool:

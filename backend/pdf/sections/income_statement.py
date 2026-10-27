@@ -9,10 +9,11 @@ by a cross-reference index.
 from typing import Any
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 # Cross-reference legend for income-statement lead-sheet refs
 _IS_LEGEND_MAP = {

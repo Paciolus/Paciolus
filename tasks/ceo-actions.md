@@ -49,7 +49,13 @@ The legal-and-security claims review (https://claude.ai/artifact/MFTYHezjA4zakoi
 6. Support promise — [“Email support; we aim to reply within 1–2 business days” for every tier].
 7. Verify ISA 315: does it prescribe the 4×4 inherent × control matrix the composite-risk tool attributes to “Appendix 1”? (Sprint 843 H12)
 
-**Verify in your consoles:** Neon region and PITR window; Render service region; an R2 lifecycle rule deleting `shares/` after ≤2 days; Sentry DSN set in production and its retention; whether Loki is enabled (Grafana Labs would be an unlisted processor); Render log retention; MFA on GitHub, Render, Vercel, Stripe, Sentry, Neon, Cloudflare and SendGrid; whether provider DPAs/SCCs were accepted; `JWT_EXPIRATION_MINUTES` and `TRUSTED_PROXY_IPS` on Render; TLS minimum on Vercel/Render; whether help@, privacy@ and security@ mailboxes exist.
+**Verify in your consoles:** Neon region and PITR window; Render service region; an R2 lifecycle rule deleting `shares/` after ≤2 days; Sentry DSN set in production and its retention; whether Loki is enabled (Grafana Labs would be an unlisted processor); Render log retention; MFA on GitHub, Render, Vercel, Stripe, Sentry, Neon, Cloudflare and SendGrid; whether provider DPAs/SCCs were accepted; `JWT_EXPIRATION_MINUTES`, `TRUSTED_PROXY_IPS` and `FORWARDED_ALLOW_IPS` on Render (unblocks Sprint 851); TLS minimum on Vercel/Render; whether help@, privacy@ and security@ mailboxes exist.
+
+**Security review 2026-10-27 — decisions** (detail: Sprint 853 in `tasks/todo.md`; tracker: https://claude.ai/artifact/6A6odNhC1hZSS5BM1WbcdN):
+1. Do clients belong to the firm or the individual? [recommend: the firm] (M7)
+2. When joining a firm, does a user choose whether to bring their existing clients? [recommend: yes, opt-in] (M7)
+3. Should deleting and archiving be owner/admin-only, and removing an admin owner-only? [recommend: yes] (L12)
+4. Logout window: add `sessions_revoked_at`, or accept up to 15 minutes of access-token life after logout? [recommend: add it] (L3, Sprint 847)
 
 **At website-final:** one counsel review of the Terms, Privacy Policy and DPA as contracts (liability, arbitration, governing law, refunds, auto-renewal disclosure for your state), plus any founder-CPA marketing copy against your state board's rules.
 

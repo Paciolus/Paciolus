@@ -9,10 +9,11 @@ any associated notes.
 from typing import Any
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 
 def render_cash_flow(story: list, styles: dict, statements: Any) -> None:

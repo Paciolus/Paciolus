@@ -11,12 +11,7 @@ from collections import Counter
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -34,6 +29,7 @@ from shared.memo_template import (
     _roman,
     generate_testing_memo,
 )
+from shared.safe_paragraph import Paragraph
 
 TEST_DESCRIPTIONS = {
     "unbalanced_entries": "Identifies journal entries where total debits do not equal total credits.",
