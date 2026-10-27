@@ -430,7 +430,7 @@ originally planned, was not feasible or reviewable. Shipped instead — a single
 
 **Verification:** ruff clean; mypy 209 errors (baseline 1,011), none in touched files; full backend suite 9,979 passed (2 Stripe pin tests first failed on a stale local venv — stripe 15.1 vs pinned 16.0.1 — and pass after `pip install stripe==16.0.1`).
 
-**Commit SHA:** TBD.
+**Commit SHA:** `d61bab47` (PR #275).
 
 ---
 
