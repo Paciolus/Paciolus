@@ -19,13 +19,14 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
 from shared.tool_run_recorder import maybe_record_tool_run
@@ -207,7 +208,7 @@ def analyze_sod_csv(
     payload: SodAnalysisRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """CSV export of the SoD analysis."""
     # Sprint 789: export mirrors the analyze-route gating, minus the quota
     # increment — the same split 689c–g use for their export.csv endpoints.
@@ -216,8 +217,4 @@ def analyze_sod_csv(
     users, roles, extra = _build_inputs(payload)
     result = analyze_segregation_of_duties(users, roles, extra_rules=extra or None)
     csv_text = sod_result_to_csv(result)
-    return StreamingResponse(
-        iter([csv_text]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=sod_analysis.csv"},
-    )
+    return attachment_response(csv_text, "sod_analysis.csv", MEDIA_CSV, quote_filename=False)

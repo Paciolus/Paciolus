@@ -11,7 +11,7 @@ import logging
 from fastapi import APIRouter, Depends, Query, Request
 
 logger = logging.getLogger(__name__)
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -73,7 +73,7 @@ def export_pdf_report(
     audit_result: AuditResultInput,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate and stream a PDF audit report.
 
     Sprint 679: Enterprise branding via ContextVar.
@@ -90,7 +90,7 @@ def export_pdf_report(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_excel_workpaper(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-) -> StreamingResponse:
+) -> Response:
     """Generate and stream an Excel workpaper.
 
     Sprint 748b: delegates to ``export.pipeline``. No branding —
@@ -106,7 +106,7 @@ def export_excel_workpaper(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_trial_balance(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-) -> StreamingResponse:
+) -> Response:
     """Export trial balance data as CSV."""
     return pipeline_export_csv_trial_balance(audit_result)
 
@@ -118,7 +118,7 @@ def export_csv_trial_balance(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_anomalies(
     request: Request, audit_result: AuditResultInput, current_user: User = Depends(require_verified_user)
-) -> StreamingResponse:
+) -> Response:
     """Export anomaly list as CSV."""
     return pipeline_export_csv_anomalies(audit_result)
 
@@ -130,7 +130,7 @@ def export_csv_anomalies(
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_leadsheets(
     request: Request, payload: LeadSheetInput, current_user: User = Depends(require_verified_user)
-) -> StreamingResponse:
+) -> Response:
     """Generate Excel Lead Sheets from analysis result.
 
     Sprint 748b: delegates to ``export.pipeline``. The flux/recon
@@ -151,7 +151,7 @@ def export_financial_statements(
     format: str = Query(default="pdf", pattern="^(pdf|excel)$"),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate and download financial statements as PDF or Excel.
 
     Sprint 679: PDF path applies Enterprise branding via ContextVar.
@@ -171,7 +171,7 @@ def export_csv_preflight_issues(
     request: Request,
     pf_input: PreFlightCSVInput,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export pre-flight quality issues as CSV."""
     return pipeline_export_csv_preflight_issues(pf_input)
 
@@ -185,7 +185,7 @@ def export_csv_population_profile(
     request: Request,
     pp_input: PopulationProfileCSVInput,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export population profile data as CSV."""
     return pipeline_export_csv_population_profile(pp_input)
 
@@ -199,7 +199,7 @@ def export_csv_expense_category(
     request: Request,
     ec_input: ExpenseCategoryCSVInput,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export expense category analytics data as CSV."""
     return pipeline_export_csv_expense_category(ec_input)
 
@@ -213,6 +213,6 @@ def export_csv_accrual_completeness(
     request: Request,
     ac_input: AccrualCompletenessCSVInput,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export accrual completeness data as CSV."""
     return pipeline_export_csv_accrual_completeness(ac_input)

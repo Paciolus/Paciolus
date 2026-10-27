@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -39,7 +39,7 @@ from preflight_memo_generator import generate_preflight_memo
 from revenue_testing_memo_generator import generate_revenue_testing_memo
 from sampling_memo_generator import generate_sampling_design_memo, generate_sampling_evaluation_memo
 from shared.error_messages import sanitize_error
-from shared.export_helpers import streaming_pdf_response
+from shared.export_helpers import pdf_response
 from shared.export_schemas import (
     AccrualCompletenessMemoInput,
     APTestingExportInput,
@@ -126,7 +126,7 @@ def _memo_export_handler(
     preprocessor: CustomPreprocessor = _standard_preprocessor,
     current_user: User | None = None,
     db: Session | None = None,
-) -> StreamingResponse:
+) -> Response:
     """Deserialize -> generate -> stream -> exception handling for any memo type.
 
     Sprint 679: ``current_user`` + ``db`` propagate the Enterprise PDF
@@ -171,7 +171,7 @@ def _memo_export_handler(
             entry.filename_template,
             "pdf",
         )
-        return streaming_pdf_response(pdf_bytes, download_filename)
+        return pdf_response(pdf_bytes, download_filename)
     except (ValueError, KeyError, TypeError, OSError) as e:
         logger.exception("%s export failed", entry.log_label)
         raise HTTPException(
@@ -392,7 +392,7 @@ def _register_standard_routes() -> None:
         def _make_handler(
             _entry: MemoRegistryEntry = entry,
             _schema: type[BaseModel] = schema_cls,
-        ) -> Callable[..., StreamingResponse]:
+        ) -> Callable[..., Response]:
             """Factory that captures registry entry per-closure."""
 
             # We need the concrete schema type in the signature for FastAPI's
@@ -403,7 +403,7 @@ def _register_standard_routes() -> None:
                 payload: _schema,  # type: ignore[valid-type]
                 current_user: User = Depends(require_verified_user),
                 db: Session = Depends(get_db),
-            ) -> StreamingResponse:
+            ) -> Response:
                 # Sprint 679: thread user + db for PDF branding.
                 return _memo_export_handler(_entry, payload, current_user=current_user, db=db)
 
@@ -446,7 +446,7 @@ def export_sampling_evaluation_memo(
     eval_input: SamplingEvaluationMemoInput,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate and download a Sampling Evaluation Memo PDF."""
     return _memo_export_handler(
         _SAMPLING_EVAL_ENTRY,
@@ -478,7 +478,7 @@ def export_flux_expectations_memo(
     payload: FluxExpectationsMemoInput,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate and download ISA 520 Flux Expectations Memo PDF."""
     return _memo_export_handler(
         _FLUX_ENTRY,

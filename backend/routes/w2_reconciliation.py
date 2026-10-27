@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from auth import User, require_verified_user
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -293,7 +294,7 @@ def export_reconciliation_csv(
     payload: W2ReconciliationRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689d: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "w2_reconciliation", db)
 
@@ -380,8 +381,6 @@ def export_reconciliation_csv(
             writer.writerow([notice["check"], notice["reason"], employee_ids, sanitize_csv_value(notice["message"])])
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=w2_reconciliation_{result.tax_year}.csv"},
+    return attachment_response(
+        buffer.getvalue(), f"w2_reconciliation_{result.tax_year}.csv", MEDIA_CSV, quote_filename=False
     )

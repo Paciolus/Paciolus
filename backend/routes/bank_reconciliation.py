@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,7 @@ from database import get_db
 from models import User
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
+from shared.export_helpers import csv_response
 from shared.filenames import safe_download_filename
 from shared.helpers import parse_json_mapping
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
@@ -154,7 +155,7 @@ def export_csv_bank_rec(
     request: Request,
     export_input: BankRecExportInput,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export bank reconciliation results as CSV."""
     try:
         # Rebuild ReconciliationSummary from dict input
@@ -224,14 +225,7 @@ def export_csv_bank_rec(
 
         download_filename = safe_download_filename(export_input.filename, "BankRec", "csv")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            },
-        )
+        return csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Bank rec CSV export failed")
         raise HTTPException(status_code=500, detail=sanitize_error(e, "export", "bank_rec_csv_export_error"))

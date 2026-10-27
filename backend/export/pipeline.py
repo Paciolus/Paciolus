@@ -17,7 +17,7 @@ import logging
 from collections.abc import Callable
 from typing import Optional
 
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 
 from export.serializers.csv import (
     serialize_accrual_completeness_csv,
@@ -67,7 +67,7 @@ def _run_export(
     error_code: str,
     start_event: Optional[tuple[str, str]] = None,
     complete_event: Optional[tuple[str, Callable[[int], str]]] = None,
-) -> StreamingResponse:
+) -> Response:
     """Serialize -> streaming response, with the shared logging and error mapping.
 
     ``start_event`` is logged before serializing; ``complete_event`` (name,
@@ -107,7 +107,7 @@ def export_diagnostic_pdf(
     audit_result: AuditResultInput,
     *,
     branding: Optional[PDFBrandingContext] = None,
-) -> StreamingResponse:
+) -> Response:
     """Full pipeline: audit result -> PDF bytes -> streaming response.
 
     Sprint 748b: optional ``branding`` parameter scopes
@@ -130,7 +130,7 @@ def export_diagnostic_pdf(
     )
 
 
-def export_diagnostic_excel(audit_result: AuditResultInput) -> StreamingResponse:
+def export_diagnostic_excel(audit_result: AuditResultInput) -> Response:
     """Full pipeline: audit result -> Excel bytes -> streaming response.
 
     Excel exports don't apply PDF branding (logo / header / footer live
@@ -149,7 +149,7 @@ def export_diagnostic_excel(audit_result: AuditResultInput) -> StreamingResponse
     )
 
 
-def export_csv_trial_balance(audit_result: AuditResultInput) -> StreamingResponse:
+def export_csv_trial_balance(audit_result: AuditResultInput) -> Response:
     """Full pipeline: audit result -> trial balance CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_trial_balance_csv(audit_result),
@@ -164,7 +164,7 @@ def export_csv_trial_balance(audit_result: AuditResultInput) -> StreamingRespons
     )
 
 
-def export_csv_anomalies(audit_result: AuditResultInput) -> StreamingResponse:
+def export_csv_anomalies(audit_result: AuditResultInput) -> Response:
     """Full pipeline: audit result -> anomalies CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_anomalies_csv(audit_result),
@@ -179,7 +179,7 @@ def export_csv_anomalies(audit_result: AuditResultInput) -> StreamingResponse:
     )
 
 
-def export_leadsheets(payload: LeadSheetInput) -> StreamingResponse:
+def export_leadsheets(payload: LeadSheetInput) -> Response:
     """Full pipeline: lead sheet input -> Excel bytes -> streaming response."""
     return _run_export(
         lambda: serialize_leadsheets_excel(payload),
@@ -199,7 +199,7 @@ def export_financial_statements(
     fmt: str = "pdf",
     *,
     branding: Optional[PDFBrandingContext] = None,
-) -> StreamingResponse:
+) -> Response:
     """Full pipeline: financial statements input -> PDF or Excel bytes -> streaming response.
 
     Args:
@@ -243,7 +243,7 @@ def export_financial_statements(
     )
 
 
-def export_csv_preflight_issues(pf_input: PreFlightCSVInput) -> StreamingResponse:
+def export_csv_preflight_issues(pf_input: PreFlightCSVInput) -> Response:
     """Full pipeline: pre-flight issues input -> CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_preflight_issues_csv(pf_input),
@@ -256,7 +256,7 @@ def export_csv_preflight_issues(pf_input: PreFlightCSVInput) -> StreamingRespons
     )
 
 
-def export_csv_population_profile(pp_input: PopulationProfileCSVInput) -> StreamingResponse:
+def export_csv_population_profile(pp_input: PopulationProfileCSVInput) -> Response:
     """Full pipeline: population profile input -> CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_population_profile_csv(pp_input),
@@ -269,7 +269,7 @@ def export_csv_population_profile(pp_input: PopulationProfileCSVInput) -> Stream
     )
 
 
-def export_csv_expense_category(ec_input: ExpenseCategoryCSVInput) -> StreamingResponse:
+def export_csv_expense_category(ec_input: ExpenseCategoryCSVInput) -> Response:
     """Full pipeline: expense category input -> CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_expense_category_csv(ec_input),
@@ -282,7 +282,7 @@ def export_csv_expense_category(ec_input: ExpenseCategoryCSVInput) -> StreamingR
     )
 
 
-def export_csv_accrual_completeness(ac_input: AccrualCompletenessCSVInput) -> StreamingResponse:
+def export_csv_accrual_completeness(ac_input: AccrualCompletenessCSVInput) -> Response:
     """Full pipeline: accrual completeness input -> CSV bytes -> streaming response."""
     return _run_export(
         lambda: serialize_accrual_completeness_csv(ac_input),

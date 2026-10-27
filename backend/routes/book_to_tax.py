@@ -14,7 +14,7 @@ import logging
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
@@ -32,6 +32,7 @@ from book_to_tax_engine import (
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -173,7 +174,7 @@ def export_book_to_tax_csv(
     payload: BookToTaxRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689f: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "book_to_tax", db)
 
@@ -231,8 +232,4 @@ def export_book_to_tax_csv(
     writer.writerow(["", "Effective Rate", str(p.effective_rate)])
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=book_to_tax_{result.tax_year}.csv"},
-    )
+    return attachment_response(buffer.getvalue(), f"book_to_tax_{result.tax_year}.csv", MEDIA_CSV, quote_filename=False)

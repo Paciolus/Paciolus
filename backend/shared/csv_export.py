@@ -9,7 +9,7 @@ Two helpers, one shape per export style:
 
 - ``diagnostic_csv_export``: free-form body pattern — caller supplies a
   ``body_writer(csv.writer)`` callable that fills the body. Wraps the
-  StringIO setup, UTF-8-BOM encoding, ``streaming_csv_response`` transport,
+  StringIO setup, UTF-8-BOM encoding, ``csv_response`` transport,
   and exception handling. Sprint 725 collapsed 6 copy-pasted CSV endpoints
   in ``routes/export_diagnostics.py`` onto this helper.
 
@@ -28,10 +28,10 @@ from io import StringIO
 from typing import Any
 
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 
 from shared.error_messages import sanitize_error
-from shared.export_helpers import streaming_csv_response, write_testing_csv_summary
+from shared.export_helpers import csv_response, write_testing_csv_summary
 from shared.filenames import safe_csv_writer, safe_download_filename
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ def csv_export_handler(
     error_log_prefix: str,
     error_code: str,
     summary_writer: SummaryWriter = None,
-) -> StreamingResponse:
+) -> Response:
     """Testing-tool flagged-entry CSV pipeline (header → rows → summary → encode → respond).
 
     Args:
@@ -99,7 +99,7 @@ def csv_export_handler(
 
         download_filename = safe_download_filename(filename_raw, filename_suffix, "csv")
 
-        return streaming_csv_response(csv_bytes, download_filename)
+        return csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("%s CSV export failed", error_log_prefix)
         raise HTTPException(status_code=500, detail=sanitize_error(e, "export", error_code))
@@ -121,7 +121,7 @@ def diagnostic_csv_export(
     filename_suffix: str,
     error_log_prefix: str,
     error_code: str,
-) -> StreamingResponse:
+) -> Response:
     """Free-form CSV body wrapper — handles StringIO, encoding, transport, and exceptions.
 
     Args:
@@ -149,7 +149,7 @@ def diagnostic_csv_export(
         csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(filename_raw, filename_suffix, "csv")
-        return streaming_csv_response(csv_bytes, download_filename)
+        return csv_response(csv_bytes, download_filename)
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("%s CSV export failed", error_log_prefix)
         raise HTTPException(status_code=500, detail=sanitize_error(e, "export", error_code))

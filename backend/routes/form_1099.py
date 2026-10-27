@@ -13,7 +13,7 @@ import logging
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,7 @@ from form_1099_engine import (
 )
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -171,7 +172,7 @@ def export_1099_csv(
     payload: Form1099Request,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689e: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "form_1099", db)
 
@@ -262,8 +263,6 @@ def export_1099_csv(
         writer.writerow([result.thresholds.confirm_against()])
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=form_1099_candidates_{result.tax_year}.csv"},
+    return attachment_response(
+        buffer.getvalue(), f"form_1099_candidates_{result.tax_year}.csv", MEDIA_CSV, quote_filename=False
     )

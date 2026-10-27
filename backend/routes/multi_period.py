@@ -9,7 +9,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -36,6 +36,7 @@ from shared.expectation_evaluation import (
     evaluate_expectations_against_measurements,
     extract_multi_period_measurements,
 )
+from shared.export_helpers import csv_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
 from shared.testing_route import enforce_tool_access
 from shared.tool_run_recorder import maybe_record_tool_run
@@ -230,7 +231,7 @@ def export_csv_movements(
     request: Request,
     payload: MovementExportRequest = ...,  # type: ignore[assignment]
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """Export movement comparison data as CSV."""
     log_secure_operation("csv_movements_export_start", f"User {current_user.id} exporting movements CSV")
 
@@ -272,14 +273,7 @@ def export_csv_movements(
 
         log_secure_operation("csv_movements_export_complete", f"CSV movements generated: {len(csv_bytes)} bytes")
 
-        return StreamingResponse(
-            iter([csv_bytes]),
-            media_type="text/csv; charset=utf-8",
-            headers={
-                "Content-Disposition": f'attachment; filename="{download_filename}"',
-                "Content-Length": str(len(csv_bytes)),
-            },
-        )
+        return csv_response(csv_bytes, download_filename)
 
     except (ValueError, KeyError, TypeError, UnicodeEncodeError) as e:
         logger.exception("Multi-period CSV movements export failed")

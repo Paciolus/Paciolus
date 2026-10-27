@@ -15,7 +15,7 @@ from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
@@ -30,6 +30,7 @@ from cash_flow_projector_engine import (
 from database import get_db
 from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -148,7 +149,7 @@ def export_projection_csv(
     payload: CashFlowProjectionRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689g: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "cash_flow_projector", db)
 
@@ -192,8 +193,4 @@ def export_projection_csv(
             )
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=cash_flow_projection.csv"},
-    )
+    return attachment_response(buffer.getvalue(), "cash_flow_projection.csv", MEDIA_CSV, quote_filename=False)

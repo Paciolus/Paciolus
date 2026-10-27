@@ -14,7 +14,7 @@ from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field, ValidationError
 
 from auth import User, require_verified_user
@@ -29,6 +29,7 @@ from loan_amortization_engine import (
 )
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, MEDIA_EXCEL, MEDIA_PDF, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -141,7 +142,7 @@ def export_schedule_csv(
     request: Request,
     payload: LoanAmortizationRequest,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """CSV export of the amortization schedule."""
     try:
         config = _build_config(payload)
@@ -181,11 +182,7 @@ def export_schedule_csv(
     writer.writerow(["Total Payments", "", "", "", "", "", "", f"{result.total_payments}"])
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.csv"},
-    )
+    return attachment_response(buffer.getvalue(), "loan_amortization_schedule.csv", MEDIA_CSV, quote_filename=False)
 
 
 def _compute_or_400(payload: LoanAmortizationRequest) -> AmortizationResult:
@@ -204,18 +201,14 @@ def export_schedule_xlsx(
     request: Request,
     payload: LoanAmortizationRequest,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """XLSX export with Schedule, Annual Summary, and Inputs sheets (Sprint 672)."""
     from loan_amortization_excel import build_amortization_workbook
 
     result = _compute_or_400(payload)
     xlsx_bytes = build_amortization_workbook(result)
 
-    return StreamingResponse(
-        iter([xlsx_bytes]),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.xlsx"},
-    )
+    return attachment_response(xlsx_bytes, "loan_amortization_schedule.xlsx", MEDIA_EXCEL, quote_filename=False)
 
 
 @router.post(
@@ -227,15 +220,11 @@ def export_schedule_pdf(
     request: Request,
     payload: LoanAmortizationRequest,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """PDF export of the amortization schedule (Sprint 672)."""
     from pdf.sections.loan_amortization import build_amortization_pdf
 
     result = _compute_or_400(payload)
     pdf_bytes = build_amortization_pdf(result)
 
-    return StreamingResponse(
-        iter([pdf_bytes]),
-        media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=loan_amortization_schedule.pdf"},
-    )
+    return attachment_response(pdf_bytes, "loan_amortization_schedule.pdf", MEDIA_PDF, quote_filename=False)
