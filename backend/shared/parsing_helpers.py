@@ -11,7 +11,7 @@ import decimal
 import functools
 import math
 import re
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date, datetime
@@ -214,10 +214,17 @@ def memoized_parse(kind: str, value: object, parse: Callable[[Any], _T]) -> _T:
         return result
 
 
-def parse_date(date_str: object) -> Optional[date]:
+def parse_date(date_str: object, formats: Optional[Sequence[str]] = None) -> Optional[date]:
     """Try to parse a date string into a :class:`date` object.
 
-    Supports ISO, US, EU, and datetime formats. Memoised inside ``parse_memo()``.
+    Supports ISO, US, EU, and datetime formats (``DEFAULT_DATE_FORMATS``, tried
+    in order). Memoised inside ``parse_memo()``.
+
+    ``formats`` (Sprint 819 item 4) restricts the string forms tried, in the
+    given order, for a caller whose accepted set is narrower than the default
+    and must stay that way — e.g. a user-typed reference date whose error
+    message names the forms it accepts. ``date``/``datetime`` values are
+    returned as dates either way.
     """
     if not date_str:
         return None
@@ -232,35 +239,41 @@ def parse_date(date_str: object) -> Optional[date]:
         return result if result == result else None  # NaT.date() is NaT, which != itself
     if isinstance(date_str, date):
         return date_str
-    return memoized_parse("date", date_str, _parse_date_uncached)
+    if formats is None:
+        return memoized_parse("date", date_str, _parse_date_uncached)
+    fmts = tuple(formats)
+    return memoized_parse("date:" + "|".join(fmts), date_str, lambda s: _parse_date_uncached(s, fmts))
 
 
-def _parse_date_uncached(date_str: str) -> Optional[date]:
-    for fmt in (
-        "%Y-%m-%d",
-        "%m/%d/%Y",
-        "%d/%m/%Y",
-        "%Y/%m/%d",
-        "%m-%d-%Y",
-        "%d-%m-%Y",
-        "%Y-%m-%d %H:%M:%S",
-        "%m/%d/%Y %H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S",
-        # Sprint 829: forms seen in exported ledgers that were silently skipped.
-        # All are unambiguous and only tried after the numeric forms above.
-        "%Y-%m-%d %H:%M:%S.%f",
-        "%Y-%m-%dT%H:%M:%S.%f",
-        "%Y-%m-%dT%H:%M:%SZ",
-        "%m/%d/%Y %I:%M %p",
-        "%m/%d/%Y %I:%M:%S %p",
-        "%m/%d/%y",  # 2-digit year, US order (the order the 4-digit forms prefer)
-        "%d.%m.%Y",  # dotted dates are day-first everywhere they are used
-        "%d-%b-%Y",
-        "%d %b %Y",
-        "%b %d, %Y",
-        "%B %d, %Y",
-        "%Y%m%d",
-    ):
+DEFAULT_DATE_FORMATS: tuple[str, ...] = (
+    "%Y-%m-%d",
+    "%m/%d/%Y",
+    "%d/%m/%Y",
+    "%Y/%m/%d",
+    "%m-%d-%Y",
+    "%d-%m-%Y",
+    "%Y-%m-%d %H:%M:%S",
+    "%m/%d/%Y %H:%M:%S",
+    "%Y-%m-%dT%H:%M:%S",
+    # Sprint 829: forms seen in exported ledgers that were silently skipped.
+    # All are unambiguous and only tried after the numeric forms above.
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%dT%H:%M:%S.%f",
+    "%Y-%m-%dT%H:%M:%SZ",
+    "%m/%d/%Y %I:%M %p",
+    "%m/%d/%Y %I:%M:%S %p",
+    "%m/%d/%y",  # 2-digit year, US order (the order the 4-digit forms prefer)
+    "%d.%m.%Y",  # dotted dates are day-first everywhere they are used
+    "%d-%b-%Y",
+    "%d %b %Y",
+    "%b %d, %Y",
+    "%B %d, %Y",
+    "%Y%m%d",
+)
+
+
+def _parse_date_uncached(date_str: str, formats: Sequence[str] = DEFAULT_DATE_FORMATS) -> Optional[date]:
+    for fmt in formats:
         try:
             return datetime.strptime(date_str.strip(), fmt).date()
         except (ValueError, AttributeError):

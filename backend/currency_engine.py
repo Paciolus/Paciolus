@@ -20,7 +20,7 @@ from typing import Optional
 import pandas as pd
 
 from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_columns
-from shared.parsing_helpers import safe_decimal
+from shared.parsing_helpers import parse_date, safe_decimal
 
 # ISO 4217 currency codes (common subset for validation)
 ISO_4217_CODES: set[str] = {
@@ -563,15 +563,16 @@ def parse_rate_table(rows: list[dict]) -> list[ExchangeRate]:
 
         # Parse date
         raw_date = str(normalized_row.get("effective_date", "")).strip()
-        try:
-            if "/" in raw_date:
-                parsed_date = datetime.strptime(raw_date, "%m/%d/%Y").date()
-            elif "-" in raw_date:
-                parsed_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
-            else:
-                errors.append(f"Row {i}: Invalid date format '{raw_date}' (use YYYY-MM-DD or MM/DD/YYYY)")
-                continue
-        except ValueError:
+        # Exactly one form per separator, as the error message says — narrower
+        # than the shared default on purpose (Sprint 819 item 4).
+        if "/" in raw_date:
+            parsed_date = parse_date(raw_date, formats=("%m/%d/%Y",))
+        elif "-" in raw_date:
+            parsed_date = parse_date(raw_date, formats=("%Y-%m-%d",))
+        else:
+            errors.append(f"Row {i}: Invalid date format '{raw_date}' (use YYYY-MM-DD or MM/DD/YYYY)")
+            continue
+        if parsed_date is None:
             errors.append(f"Row {i}: Invalid date '{raw_date}'")
             continue
 
