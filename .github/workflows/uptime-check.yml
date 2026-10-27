@@ -107,9 +107,16 @@ jobs:
           if [ "$STATUS" = "healthy" ]; then
             echo "result=PASS" >> "$GITHUB_OUTPUT"
             echo "- **Verdict:** PASS" >> report.md
-          else
+          elif [ "$STATUS" = "degraded" ]; then
             # "degraded" is a real signal, not a blip: a dependency is down
-            # while the service keeps serving. Alert on it.
+            # while the service keeps serving. Sprint 852 (security review
+            # L10): when it is the rate-limit store, every worker falls back
+            # to its own in-memory counters, so the effective limits loosen
+            # by the worker count until Redis returns. Alert on it.
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            echo "- **Verdict:** FAIL — status is \"degraded\" (HTTP 200, but a dependency is down; if it is rate_limit_storage, rate limits are per-worker until it recovers)" >> report.md
+            printf '\n```json\n%s\n```\n' "$JSON" >> report.md
+          else
             echo "result=FAIL" >> "$GITHUB_OUTPUT"
             echo "- **Verdict:** FAIL — status is not \"healthy\"" >> report.md
             printf '\n```json\n%s\n```\n' "$JSON" >> report.md

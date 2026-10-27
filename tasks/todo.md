@@ -615,38 +615,56 @@ users share one bucket.
 ---
 
 ### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)
-**Status:** NOT STARTED. **Priority:** P2. **Source:** security review lows.
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P2. **Source:** security review lows.
 
-- [ ] **L2: `ENV_MODE` fails open.**
-  - The defect: `config.py:66` `ENV_MODE = _load_optional("ENV_MODE", "development")`. A typo or an unset value
-    silently disables every `== "production"` guard: Secure cookies, HSTS/CSP, secret hard-fails, the SQLite and
-    DB-TLS guards, strict rate limiting, the Stripe test-key guard, the CSRF fallback rule, hiding `/docs`, the
-    `/metrics` loopback gate, and email auto-verify.
-  - Fix: accept only `{"development", "test", "production"}` and exit on anything else. Also exit when
-    `os.getenv("RENDER")` is set and `ENV_MODE != "production"`.
-  - Tests for both.
-- [ ] **L6: share tokens appear in raw access logs.**
-  - `backend/Dockerfile:124` runs gunicorn with `--access-logfile -`, so the uvicorn access log records
-    `/export-share/<token>` paths (`routes/export_sharing.py:467`).
-  - Remove that flag. The app's own access-log middleware already normalizes paths; confirm that it does before
-    removing.
-- [ ] **L7:** `routes/export_sharing.py:300-304` logs the raw IP on a passcode mismatch. Wrap it in
-      `security_middleware.hash_ip_address(ip)`.
-- [ ] **L8: shared exports are client-supplied bytes.**
-  - The defect: `routes/export_sharing.py:331-341` accepts base64 from the client, checked only by magic bytes.
-  - Minimum fix: when storing a CSV share, re-write it through `SafeCsvWriter` escaping on the server.
-  - Note in the code that PDF and XLSX shares remain client-supplied; the long-term fix is generating shared
-    exports on the server.
-- [ ] **L9: logo dimensions are not checked.**
-  - `routes/branding.py:114-127` checks size (500 KB) and magic bytes only.
-  - Open the image with Pillow (`Image.open(...)`, then `img.size`) and reject anything over 4000×4000 px or
-    25 MP. Keep the PNG/JPEG allow-list.
-  - Test with a crafted PNG whose header declares 20000×20000.
-- [ ] **L10: rate limits loosen during a Redis outage.**
-  - The in-memory fallback (Sprint 774, intentional) gives each worker its own counters.
-  - Make `.github/workflows/uptime-check.yml` fail when the `/health/ready` body says `"status": "degraded"`, not
-    only on a non-200 status.
-- [ ] **L13:** add `permissions:\n  contents: read` to `.github/workflows/dependency-compliance.yml`.
+> **CEO note (L2):** before merging, confirm in Render → paciolus-api → Environment that `ENV_MODE` is exactly
+> `production` (lowercase, no spaces). Any other value now refuses to boot on Render, and Render keeps serving the
+> old image when a deploy fails at startup. (Indirect evidence it is already correct: the production-only Sprint 768
+> `AUDIT_CHAIN_SECRET_KEY` hard-fail fired on Render.) If the service has a dashboard **Start Command** override,
+> drop `--access-logfile -` there too (L6).
+
+- [x] **L2: `ENV_MODE` fails open.** `config.py` now accepts only `{"development", "test", "production"}`
+      (case-sensitive) and hard-fails on anything else, and hard-fails when `RENDER` is set and `ENV_MODE !=
+      "production"`. Repo-wide audit of values set: `ci.yml` ×4 `development`, `dr-test-monthly.yml` `test`,
+      `.env.example` / `docker-compose.yml` default `development`, OpenAPI scripts `development`; no workflow or test
+      sets `RENDER`. Deviation: `test_security_hardening_2026_04_20.py` used `ENV_MODE=staging` for the
+      `create_dev_user` refusal tests → switched to `test`; `docs/ops/ENVIRONMENT_VARIABLES.md` listed `staging` as
+      valid → corrected. Tests: `tests/test_env_mode_allowlist.py` (8 of 12 fail on the old config).
+- [x] **L6: share tokens appear in raw access logs.** The premise was wrong: the app's access log
+      (`http_metrics_middleware.py`) logged the **raw** path, and its share-token pattern was hex-only, while tokens
+      are `token_urlsafe(32)`. Fixed first: new `_SECRET_PATH_REDACTIONS` (share token and
+      `/organization/invite/accept/{token}`) are applied to the access-log line, with numeric IDs kept for debugging,
+      and to metric labels. Then removed `--access-logfile -` from `backend/Dockerfile` and the documented Render
+      start command in `DEPLOYMENT_ARCHITECTURE.md`. Tests: `tests/test_access_log_redaction.py` (5 of 6 fail
+      before).
+- [x] **L7:** the passcode-mismatch log now records `ip_hash=hash_ip_address(ip)`. Test asserts the raw IP is absent
+      and the hash is present (fails before).
+- [x] **L8: shared exports are client-supplied bytes.** CSV shares are parsed and re-written through `SafeCsvWriter`
+      before storage (`_rewrite_csv_share`). Escaping is idempotent, a UTF-8 BOM is kept, and a non-UTF-8 or
+      malformed CSV gets a 400. A code comment says PDF and XLSX shares remain client-supplied, with server-side
+      generation as the long-term fix. Tests: `tests/test_export_sharing_hygiene.py`.
+- [x] **L9: logo dimensions are not checked.** Pillow was already a direct dependency (`pillow>=12.2.0`).
+      `routes/branding.py` reads the header only with lazy `Image.open`, rejects over 4000 px per side or over 25 MP
+      (Pillow's own `DecompressionBombError` is mapped to the same 400), requires format PNG/JPEG (plus MPO, which is
+      how Pillow reports a multi-picture camera JPEG), and keeps the magic-byte allow-list. Tests: a crafted
+      20000×20000 IHDR, 4001×10, 10×4001, a truncated PNG, and 4000×4000 plus a real JPEG accepted (4 fail before).
+      `test_post_audit_2026_04_20_batch2.py` uploaded magic bytes plus zero padding as a "PNG"; it now uses a real
+      4×4 PNG.
+- [x] **L10: rate limits loosen during a Redis outage.** The workflow already failed on any body status other than
+      `"healthy"` (Sprint 775), so this was already true. Added an explicit `degraded` branch whose verdict names the
+      per-worker rate-limit consequence. Kept the existing `python3` parse rather than switching to jq: same
+      robustness, and the test can run it. `tests/test_uptime_check_workflow.py` runs the real probe step under bash
+      with `curl` stubbed: healthy passes; degraded behind a 200, non-JSON, `{}` and 503 all fail; FAIL reaches
+      `exit 1`.
+- [x] **L13:** top-level `permissions: contents: read` in `dependency-compliance.yml`. No job needs more: there is
+      no issue or PR write, and the artifact upload/download is same-run and uses the runtime token.
+      `tests/test_workflow_permissions.py` guards it.
+
+**Verification:** full backend suite run serially in a fresh venv matching origin/main: **10,003 passed, 0 failed**
+(14m19s). The first full run caught two `test_post_audit_2026_04_20_batch2` logo tests using fake PNGs, fixed above.
+Each new regression test was confirmed failing against the unfixed source (counts per item above).
+`ruff check` + `ruff format --check` are clean on touched files. mypy shows no new errors in touched modules
+(`config.py:253` is pre-existing).
 
 **Commit SHA:** TBD.
 

@@ -89,7 +89,7 @@ These are non-sensitive configuration values. They can live in a repo-tracked
 
 | Variable | Default | Description |
 |---|---|---|
-| `ENV_MODE` | `development` | Environment mode: `development`, `staging`, or `production` |
+| `ENV_MODE` | `development` | Environment mode: exactly `development`, `test`, or `production` (case-sensitive). Any other value refuses to start, and a Render host (`RENDER` set) refuses anything but `production` (Sprint 852) |
 | `API_HOST` | *(required)* | Host address for API server (`0.0.0.0` for all interfaces) |
 | `API_PORT` | *(required)* | Port for API server (typically `8000`, or `${PORT}` on Render) |
 | `CORS_ORIGINS` | *(required)* | Comma-separated list of allowed frontend origins |

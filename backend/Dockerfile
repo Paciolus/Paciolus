@@ -121,6 +121,5 @@ sys.exit(subprocess.call(['alembic', 'upgrade', 'head']))\" && \
      --keep-alive ${GUNICORN_KEEP_ALIVE:-5} \
      --max-requests ${GUNICORN_MAX_REQUESTS:-1000} \
      --max-requests-jitter 50 \
-     --access-logfile - \
      --error-logfile - \
      --capture-output"]

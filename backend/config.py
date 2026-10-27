@@ -6,6 +6,7 @@ Secret resolution priority: env vars (.env if present) > Docker secrets > cloud 
 Cloud platforms (Render, etc.) inject env vars directly — .env file is optional.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -63,8 +64,22 @@ else:
 # REQUIRED CONFIGURATION
 # =============================================================================
 
-# Environment mode (development/production)
+# Environment mode (development/test/production)
 ENV_MODE = _load_optional("ENV_MODE", "development")
+
+# Sprint 852 (security review L2): ENV_MODE must fail closed. Every production
+# guard below is `ENV_MODE == "production"`, so a typo ("prod", "Production")
+# used to silently disable Secure cookies, HSTS/CSP, the secret hard-fails and
+# the DB guards. Only exact allow-listed values are accepted, and a Render host
+# (Render sets RENDER=true on every service) must run in production mode.
+VALID_ENV_MODES = frozenset({"development", "test", "production"})
+if ENV_MODE not in VALID_ENV_MODES:
+    _hard_fail(f"ENV_MODE={ENV_MODE!r} is not one of {sorted(VALID_ENV_MODES)} (values are case-sensitive).")
+if os.getenv("RENDER") and ENV_MODE != "production":
+    _hard_fail(
+        f"Running on Render (RENDER is set) with ENV_MODE={ENV_MODE!r}. "
+        "Render services must set ENV_MODE=production so the production guards apply."
+    )
 
 # API URL that the backend is served from (used for CORS)
 API_HOST = _load_required("API_HOST")

@@ -8,6 +8,12 @@ on:
     # Run weekly on Monday at 07:00 UTC to catch new advisories between PRs
     - cron: '0 7 * * 1'
 
+# Sprint 852 (security review L13): least privilege. The jobs only check out
+# code and pass artifacts between jobs of the same run (which uses the runtime
+# token, not GITHUB_TOKEN), so read access to contents is all they need.
+permissions:
+  contents: read
+
 jobs:
   python-audit:
     name: Python CVE & License Audit

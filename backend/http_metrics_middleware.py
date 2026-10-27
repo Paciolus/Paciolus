@@ -33,9 +33,18 @@ logger = logging.getLogger("paciolus.access")
 # Patterns that match dynamic path segments. Order matters — more specific
 # patterns first, then the catch-all numeric/hex ID pattern.
 
+# Sprint 852 (security review L6): bearer secrets that travel in the URL path.
+# The share and invite tokens are ``secrets.token_urlsafe(32)`` (43 chars of
+# [A-Za-z0-9_-]); the old hex-only share pattern never matched one. These are
+# applied to the access-log line as well as to the metric labels, so a share
+# link is never written to the logs.
+_SECRET_PATH_REDACTIONS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"/export-sharing/[A-Za-z0-9_\-]{16,}"), "/export-sharing/{token}"),
+    (re.compile(r"/organization/invite/accept/[A-Za-z0-9_\-]{16,}"), "/organization/invite/accept/{token}"),
+]
+
 _PATH_NORMALIZERS: list[tuple[re.Pattern[str], str]] = [
-    # Export-sharing tokens (hex strings, 16+ chars)
-    (re.compile(r"/export-sharing/[a-f0-9]{16,}"), "/export-sharing/{token}"),
+    *_SECRET_PATH_REDACTIONS,
     # Bulk upload job IDs (UUID-style or numeric)
     (re.compile(r"/upload/bulk/[a-f0-9\-]{8,}"), "/upload/bulk/{job_id}"),
     # Benchmark industry names (e.g. /benchmarks/manufacturing)
@@ -47,6 +56,13 @@ _PATH_NORMALIZERS: list[tuple[re.Pattern[str], str]] = [
 # Paths to exclude from metrics entirely (high-frequency internal endpoints
 # that would bloat cardinality without providing useful signal)
 _EXCLUDED_PATHS = frozenset({"/health", "/metrics"})
+
+
+def _redact_path(path: str) -> str:
+    """Replace secret-bearing path segments (share/invite tokens) with placeholders."""
+    for pattern, replacement in _SECRET_PATH_REDACTIONS:
+        path = pattern.sub(replacement, path)
+    return path
 
 
 def _normalize_path(path: str) -> str:
@@ -99,14 +115,15 @@ class HttpMetricsMiddleware(BaseHTTPMiddleware):
             status_code=status_code,
         ).observe(duration)
 
-        # F-017: Structured access log (no PII, no financial data)
+        # F-017: Structured access log (no PII, no financial data). The path is
+        # redacted, not fully normalized: numeric IDs stay for debugging, tokens go.
         request_id = request_id_var.get("-")
         duration_ms = round(duration * 1000, 1)
 
         logger.info(
             "%s %s %s %.1fms [%s]",
             method,
-            path,
+            _redact_path(path),
             status_code,
             duration_ms,
             request_id,

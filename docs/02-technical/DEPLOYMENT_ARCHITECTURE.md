@@ -319,7 +319,7 @@ Project Settings → Git → Uncheck "Production Branch: main"
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:**
      ```bash
-     gunicorn main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --access-logfile - --error-logfile -
+     gunicorn main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120 --error-logfile -
      ```
 
 **Step 2: Create Database**
