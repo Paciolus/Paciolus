@@ -389,31 +389,6 @@ def check_client_limit(
     return user
 
 
-def check_tool_access(tool_name: str) -> object:
-    """Factory that returns a dependency checking tool access for the given tool."""
-
-    def _dependency(
-        user: Annotated[User, Depends(require_current_user)],
-        db: Session = Depends(get_db),
-    ) -> User:
-        entitlements = get_effective_entitlements(user, db)
-
-        # Empty set = all tools allowed
-        if not entitlements.tools_allowed:
-            return user
-
-        if tool_name not in entitlements.tools_allowed:
-            _raise_or_log(
-                user,
-                "tool_access",
-                f"Tool '{tool_name}' is not available on your current plan. Upgrade to access this tool.",
-            )
-
-        return user
-
-    return _dependency
-
-
 def check_format_access(format_name: str) -> object:
     """Factory that returns a dependency checking format access for the given format."""
 

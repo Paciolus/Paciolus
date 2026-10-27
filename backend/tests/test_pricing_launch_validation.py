@@ -1395,21 +1395,6 @@ class TestEntitlementEnforcement:
         result = get_entitlements(UserTier.FREE)
         assert result == TIER_ENTITLEMENTS[UserTier.FREE]
 
-    # --- check_tool_access returns callable ---
-
-    def test_check_tool_access_returns_a_usable_dependency(self):
-        """
-        Sprint 810 (T-3): `check_tool_access` is a factory returning a FastAPI
-        dependency, so `callable(dep)` is a *legitimate* thing to care about —
-        but on its own it does not distinguish a working dependency from
-        `lambda: None`. Pin the dependency's own signature, since that is what
-        FastAPI resolves against.
-        """
-        from shared.entitlement_checks import check_tool_access
-
-        dep = check_tool_access("journal_entry_testing")
-        assert_signature(dep, ["user", "db"], allow_extra=True)
-
     # --- check_format_access returns callable ---
 
     def test_check_format_access_returns_a_usable_dependency(self):

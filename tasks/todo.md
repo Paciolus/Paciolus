@@ -978,8 +978,8 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 ---
 
 ### Sprint 817: Dead-code sweep
-**Status:** PARTIAL — items 1, 2, 6 done and most of 5; items 3–4 await CEO decisions; the
-`package.json` half of item 6 waits for PR #197 (it rewrites the same lockfile).
+**Status:** PARTIAL — items 1, 2, 5, 6 done (5 with two findings left for a product call, see
+"Delivered 2026-10-27"); items 3–4 await CEO decisions.
 **Priority:** P2 — ~7,000 lines with no runtime effect except bundle size and reader cost.
 **Source:** Code health review 2026-10-23. Every item grep-verified repo-wide; re-grep before deleting.
 
@@ -1003,7 +1003,7 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 4. [ ] **Product decision 1 (bulk upload):** `components/batch/*`, `contexts/BatchUploadContext.tsx`,
    `hooks/useBatchUpload.ts`, `routes/bulk_upload.py`, `shared/bulk_job_store.py` — wire or delete,
    and fix the pricing/UpgradeModal claim to match. **Do not delete the route before Sprint 790 lands.**
-5. [ ] **Unused helpers/constants:** entitlement `check_client_limit`, `check_tool_access`,
+5. [x] **Unused helpers/constants:** entitlement `check_client_limit`, `check_tool_access`,
    `check_workspace_access`, `check_activity_log_access` (routes re-implement them inline — keep
    one implementation each); `auth.get_current_user` (unreferenced and skips the password-change
    check — unsafe to adopt); `ratio_engine.calculate_dupont_decomposition`;
@@ -1012,7 +1012,7 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
    `CURRENT_RATIO_THRESHOLD`, `LOW_CONFIDENCE_THRESHOLD`; `export/transport.py:41` no-op and
    unused `"excel"` branch at `:46`; the 10 unused `DEFAULT_*` aliases in
    `w2_reconciliation_engine.py:160-172` and their stale comment (**fix in the current branch before merge**).
-6. [ ] **Assets/deps:** delete `frontend/public/backgrounds/background4.jpg` (22 MB, unreferenced);
+6. [x] **Assets/deps:** delete `frontend/public/backgrounds/background4.jpg` (22 MB, unreferenced);
    compress `background5.jpg` (7.1 MB raw CSS background on `pricing/page.tsx:774`);
    remove `ts-jest`, `@eslint/eslintrc`; move `@testing-library/dom` to devDependencies; declare
    `eslint` explicitly; fix or drop `npm run generate:types` (`openapi-typescript` not installed).
@@ -1041,6 +1041,54 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
   (1920px, q72 progressive — it renders at 6% opacity).
 
 **Commit SHA:** 1f058c4b (PR #207).
+
+**Delivered 2026-10-27 (items 5 and 6 remainder):**
+- **`check_client_limit`:** `POST /clients` re-implemented it inline; the route now calls the shared
+  function. New `TestCreateClientLimit` (4 HTTP tests in `test_clients_api.py`: under limit, exact
+  403 body at limit, soft mode, unlimited tier) was run green against the *old* inline route first,
+  then against the new one. Only difference: soft mode now also logs the standard "SOFT entitlement
+  block" warning (the inline copy was silent). Hard-mode 403 body byte-identical.
+- **`check_tool_access`:** deleted. The live implementation is `shared.testing_route.enforce_tool_access`
+  (21 call sites); the factory had no route callers and a different message. Its unit tests were
+  ported to `enforce_tool_access` (exact 403 body, soft mode, no-db fallback); the runbook line in
+  `format-rollout.md` that pointed at it now names `enforce_format_access`.
+- **`check_workspace_access` / `check_activity_log_access`: kept, and flagged — CEO/product call.**
+  There is no inline duplicate: *nothing* on the backend enforces the `workspace` or `activity_logs`
+  entitlements. Free tier is `workspace=False`, yet every `/engagements` route depends only on
+  `require_current_user`. (Team activity is reachable only through `/admin/*`, gated by
+  `admin_dashboard`, which has the same tier values — so `activity_logs` is effectively covered;
+  `workspace` is not.) Wiring the check would change what Free users get, so it is not done here.
+  Decide: wire `check_workspace_access` onto the engagement routes, or delete both and drop the
+  flags from `TierEntitlements`.
+- **`export/transport.py`:** removed the no-op `extension = fmt if fmt != "xlsx" else "xlsx"` and the
+  `"excel"` alias (every caller passes a literal `pdf`/`xlsx`/`csv`; `"excel"` would also have
+  produced a `.excel` filename). New `test_export_transport.py` (7).
+- **`PREPAID_KEYWORDS`: deleted as dead.** Added in Sprint 513, never referenced. The engine filters to
+  liability-classified accounts before any keyword runs, and prepaid balances are assets, so there is
+  no detection it could have fed. `TestPrepaidAccountsNotInScope` pins the output, and the
+  engine's `to_dict()` on that fixture was byte-identical before and after the deletion.
+- **`PAYROLL_SUSPICIOUS_KEYWORDS`: kept — looks like an unwired check, needs a product call.** Added
+  in Sprint 86 with weights in the `classification_rules` tuple shape, under "Keywords for ghost
+  employee pattern detection", and never read. PR-T9's "No department assignment" indicator only
+  fires on an *empty* department, so placeholder values the list names (`"N/A"`, `"Unassigned"`,
+  `"No Department"`, `"Unknown"`) pass as assigned departments, and the status words (`terminated`,
+  `inactive`) have no field to match since `PayrollEntry` carries no status column. Wiring it changes
+  PR-T9 output. Decide: wire (placeholder-department matching at minimum), or delete.
+- **npm:** removed `ts-jest` (Jest uses `next/jest`/SWC) and `@eslint/eslintrc` (flat config, no
+  `FlatCompat`); `@testing-library/dom` moved to devDependencies (no `src` import — it is the peer of
+  `@testing-library/react`/`jest-dom`); `eslint` declared (`^9.39.5`). **`generate:types` dropped**
+  with `scripts/generate-types.sh`: `src/types/api-generated.ts` does not exist and nothing consumes
+  it, and the script would `npm install -D openapi-typescript` on the fly, mutating the lockfile.
+  **Lockfile audited:** 882 → 871 entries; 0 added; 11 removed (ts-jest and its private tree:
+  `bs-logger`, `handlebars`, `lodash.memoize`, `make-error`, `neo-async`, `source-map@0.6.1`,
+  `uglify-js`, `wordwrap`, nested `semver`/`type-fest`); 2 changed (`eslint`, `@eslint/js`
+  9.39.4 → 9.39.5); 49 flag-only. Of those, 34 are the eslint chain losing `peer: true` — it is now a
+  real devDependency tree rather than peer-derived, which is the fragility the 786b jest-dom note
+  hit with `--legacy-peer-deps` — and 15 are the `@testing-library/dom` subtree becoming `dev`.
+  Nothing unexpected.
+
+**Verification (2026-10-27):** see the Sprint 786 "typescript 7" entry's verification line — run on
+this branch with both changes.
 
 ---
 

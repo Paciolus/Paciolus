@@ -38,12 +38,11 @@ def build_streaming_response(
     Returns:
         A FastAPI StreamingResponse with correct media type and Content-Disposition.
     """
-    extension = fmt if fmt != "xlsx" else "xlsx"
-    download_filename = safe_download_filename(source_filename, filename_suffix, extension)
+    download_filename = safe_download_filename(source_filename, filename_suffix, fmt)
 
     if fmt == "pdf":
         return streaming_pdf_response(file_bytes, download_filename)
-    elif fmt in ("xlsx", "excel"):
+    elif fmt == "xlsx":
         return streaming_excel_response(file_bytes, download_filename)
     elif fmt == "csv":
         return streaming_csv_response(file_bytes, download_filename)

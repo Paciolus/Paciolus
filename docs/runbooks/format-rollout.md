@@ -27,7 +27,7 @@ To enable a new format:
 New formats can be gated by user tier using the entitlements system:
 
 - `shared/entitlements.py` defines `TierEntitlements` with format access lists per tier
-- `shared/entitlement_checks.py` provides `check_tool_access()` for route-level enforcement
+- `shared/entitlement_checks.py` provides `enforce_format_access()`, which the upload routes call once the filename is known
 - During initial rollout, a format can be restricted to higher tiers (e.g., Professional and above) before opening to all users
 
 **Rollout progression example:**
