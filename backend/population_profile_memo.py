@@ -38,6 +38,7 @@ from shared.report_chrome import (
     current_page_footer,
     find_logo,
 )
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph, escape_markup
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -349,21 +350,13 @@ def generate_population_profile_memo(
         net_col = 5 if has_acct_nums else 4
         top_table.setStyle(
             TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("ALIGN", (0, 0), (0, -1), "CENTER"),
-                    ("ALIGN", (net_col - 1, 0), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (net_col - 1, 1), (net_col - 1, -1), "Courier"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
+                ledger_table_style(
+                    extra=[
+                        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                        ("ALIGN", (net_col - 1, 0), (-1, -1), "RIGHT"),
+                        ("FONTNAME", (net_col - 1, 1), (net_col - 1, -1), "Courier"),
+                    ]
+                )
             )
         )
         story.append(top_table)

@@ -846,6 +846,7 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - [x] Rendering-equivalence harness `tests/test_memo_render_equivalence.py` recorded on the
   unmodified code before any refactor.
 - [x] Item 5: `memo_base.source_line()` replaces the Source block in 10 memos + `build_scope_section`.
+- [x] Item 4: `ledger_table_style(font_size=, extra=)`; 20 inline copies replaced.
 
 **Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
 

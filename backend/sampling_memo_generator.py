@@ -47,6 +47,7 @@ from shared.report_chrome import (
     current_page_footer,
     find_logo,
 )
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -1256,23 +1257,7 @@ def _generate_sampling_memo(
                 colWidths=[0.3 * inch, 1.1 * inch, 2.2 * inch, 1.1 * inch, 1.1 * inch],
                 repeatRows=1,
             )
-            preview_table.setStyle(
-                TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (3, 0), (3, -1), "RIGHT"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
-                )
-            )
+            preview_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (3, 0), (3, -1), "RIGHT")])))
             story.append(preview_table)
             story.append(Spacer(1, 6))
 

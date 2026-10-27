@@ -44,6 +44,7 @@ from shared.report_chrome import (
     find_logo,
     make_branded_page_footer,
 )
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_methodology_statement,
@@ -372,23 +373,7 @@ class AnomalySummaryGenerator:
 
             if len(scope_data) > 1:
                 scope_table = Table(scope_data, colWidths=[3.0 * inch, 0.8 * inch, 2.5 * inch])
-                scope_table.setStyle(
-                    TableStyle(
-                        [
-                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                            ("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                            ("LEFTPADDING", (0, 0), (0, -1), 0),
-                        ]
-                    )
-                )
+                scope_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (1, 0), (1, -1), "CENTER")])))
                 story.append(Spacer(1, 4))
                 story.append(scope_table)
 
@@ -410,20 +395,12 @@ class AnomalySummaryGenerator:
             not_exec_table = Table(not_exec_data, colWidths=[3.0 * inch, 1.0 * inch, 2.3 * inch])
             not_exec_table.setStyle(
                 TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("TEXTCOLOR", (1, 1), (1, -1), ClassicalColors.OBSIDIAN_500),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
+                    ledger_table_style(
+                        extra=[
+                            ("TEXTCOLOR", (1, 1), (1, -1), ClassicalColors.OBSIDIAN_500),
+                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                        ]
+                    )
                 )
             )
             story.append(not_exec_table)
@@ -503,23 +480,7 @@ class AnomalySummaryGenerator:
                     anomaly_data,
                     colWidths=[1.0 * inch, 0.4 * inch, 1.0 * inch, 4.0 * inch],
                 )
-                anomaly_table.setStyle(
-                    TableStyle(
-                        [
-                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                            ("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                            ("LEFTPADDING", (0, 0), (0, -1), 0),
-                        ]
-                    )
-                )
+                anomaly_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (1, 0), (1, -1), "CENTER")])))
                 story.append(anomaly_table)
                 story.append(Spacer(1, 10))
 
@@ -570,22 +531,7 @@ class AnomalySummaryGenerator:
             )
 
         ref_table = Table(ref_data, colWidths=[0.8 * inch, 1.4 * inch, 4.2 * inch])
-        ref_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
+        ref_table.setStyle(TableStyle(ledger_table_style()))
         story.append(ref_table)
         story.append(Spacer(1, 8))
 
@@ -682,22 +628,7 @@ class AnomalySummaryGenerator:
                         response_data,
                         colWidths=[1.8 * inch, 4.6 * inch],
                     )
-                    response_table.setStyle(
-                        TableStyle(
-                            [
-                                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                                ("LEFTPADDING", (0, 0), (0, -1), 0),
-                            ]
-                        )
-                    )
+                    response_table.setStyle(TableStyle(ledger_table_style()))
                     story.append(response_table)
                     story.append(Spacer(1, 12))
         else:

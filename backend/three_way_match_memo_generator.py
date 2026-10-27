@@ -480,23 +480,7 @@ def _build_material_variances(
         var_data,
         colWidths=[1.1 * inch, 0.85 * inch, 0.85 * inch, 0.55 * inch, 0.8 * inch, 0.8 * inch, 0.75 * inch, 0.6 * inch],
     )
-    var_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (4, 0), (-1, -1), "RIGHT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
+    var_table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (4, 0), (-1, -1), "RIGHT")])))
     story.append(var_table)
 
     if len(material_variances) > 15:
