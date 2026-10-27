@@ -506,7 +506,7 @@ touched source files; new tests 17/17; full backend suite **9,984 passed, 0 fail
 run failed 30 tests (compare-periods / three-way / rate-limit). Those tests use `MagicMock` users whose
 auto-attribute `organization_id` is truthy. Org membership is now detected by `isinstance(..., int)`.
 
-**Commit SHA:** TBD.
+**Commit SHA:** `ec1c00b2` (stacked on PR #276).
 
 ---
 
