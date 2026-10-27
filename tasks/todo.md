@@ -1213,7 +1213,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    still client — they use ~30 motion elements each.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
    the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
    `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
-4. [ ] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
+4. [x] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
+   *(Done 2026-10-27: data + types in `content/trust.ts`; `ArchitectureDiagram`, `ControlMatrix`,
+   `PlaybookPreview`, `CountUp` are client components, `ComplianceTimeline` / `ModuleSection` and the
+   page are server components using `framer-motion/client` elements, so the mount animations are
+   unchanged. Page-only client chunk 37.6 → 22.6 KB (8.8 → 6.2 KB gz); route first-load JS
+   982,652 → 967,248 bytes. `test_citation_consistency.py` now scans the two new locations.)*
 5. [x] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
    every toast. Memoize `CanvasAccent`/`AuthSession`/`UserProfile`/`Verification`/`Mapping` values
    only if profiling shows cost.
