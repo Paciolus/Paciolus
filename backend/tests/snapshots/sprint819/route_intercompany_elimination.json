@@ -1,0 +1,392 @@
+{
+ "ok": {
+  "status": 200,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": "gzip",
+  "json": {
+   "intercompany_lines": [
+    {
+     "entity_id": "A",
+     "account": "Due From B",
+     "direction": "receivable",
+     "counterparty_entity": "B",
+     "net_balance": "1000.00",
+     "debit": "1000.00",
+     "credit": "0.00"
+    },
+    {
+     "entity_id": "B",
+     "account": "Due To A",
+     "direction": "payable",
+     "counterparty_entity": "A",
+     "net_balance": "-1000.00",
+     "debit": "0.00",
+     "credit": "1000.00"
+    }
+   ],
+   "pairs": [
+    {
+     "entity_a": "A",
+     "entity_b": "B",
+     "account_a": "Due From B",
+     "account_b": "Due To A",
+     "direction_a": "receivable",
+     "direction_b": "payable",
+     "amount_a": "1000.00",
+     "amount_b": "1000.00",
+     "net_residual": "0.00",
+     "reconciles": true
+    }
+   ],
+   "mismatches": [],
+   "elimination_journal_entries": [
+    {
+     "description": "Eliminate intercompany receivable / payable between A and B",
+     "debit_entity": "B",
+     "debit_account": "Due To A",
+     "credit_entity": "A",
+     "credit_account": "Due From B",
+     "amount": "1000.00"
+    }
+   ],
+   "worksheet": {
+    "columns": [
+     {
+      "entity_id": "A",
+      "entity_name": "Parent",
+      "debit_total": "1000.00",
+      "credit_total": "0.00",
+      "intercompany_gross": "1000.00"
+     },
+     {
+      "entity_id": "B",
+      "entity_name": "Sub",
+      "debit_total": "0.00",
+      "credit_total": "1000.00",
+      "intercompany_gross": "1000.00"
+     }
+    ],
+    "total_entity_debits": "1000.00",
+    "total_entity_credits": "1000.00",
+    "elimination_debits": "1000.00",
+    "elimination_credits": "1000.00",
+    "consolidated_debits": "0.00",
+    "consolidated_credits": "0.00"
+   },
+   "summary": {
+    "entity_count": 2,
+    "intercompany_line_count": 2,
+    "matched_pair_count": 1,
+    "reconciling_pair_count": 1,
+    "mismatch_count": 0,
+    "elimination_je_count": 1,
+    "consolidation_complete": true
+   }
+  },
+  "tool_runs": [
+   {
+    "tool": "intercompany_elimination",
+    "status": "completed",
+    "score": null
+   }
+  ]
+ },
+ "ok:export": {
+  "status": 200,
+  "content_type": "text/csv; charset=utf-8",
+  "content_disposition": "attachment; filename=intercompany_consolidation.csv",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "text": "Consolidation Worksheet\r\nEntity ID,Entity Name,Debit Total,Credit Total,Intercompany Gross\r\nA,Parent,1000.00,0.00,1000.00\r\nB,Sub,0.00,1000.00,1000.00\r\nTotals,,1000.00,1000.00,\r\nEliminations,,1000.00,1000.00,\r\nConsolidated,,0.00,0.00,\r\n\r\nElimination Journal Entries\r\nDescription,Debit Entity,Debit Account,Credit Entity,Credit Account,Amount\r\nEliminate intercompany receivable / payable between A and B,B,Due To A,A,Due From B,1000.00\r\n\r\nMismatches\r\nKind,Entity,Counterparty,Account,Direction,Amount,Message\r\n"
+ },
+ "bad_decimal": {
+  "status": 400,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "BAD_REQUEST",
+   "message": "Invalid numeric value for debit: 'abc'",
+   "detail": "Invalid numeric value for debit: 'abc'"
+  },
+  "tool_runs": []
+ },
+ "bad_decimal:export": {
+  "status": 400,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "BAD_REQUEST",
+   "message": "Invalid numeric value for debit: 'abc'",
+   "detail": "Invalid numeric value for debit: 'abc'"
+  }
+ },
+ "huge": {
+  "status": 400,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "BAD_REQUEST",
+   "message": "An unexpected error occurred. Please try again.",
+   "detail": "An unexpected error occurred. Please try again."
+  },
+  "tool_runs": [
+   {
+    "tool": "intercompany_elimination",
+    "status": "failed",
+    "score": null
+   }
+  ]
+ },
+ "huge:export": {
+  "status": 400,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "BAD_REQUEST",
+   "message": "An amount is too large to process.",
+   "detail": "An amount is too large to process."
+  }
+ },
+ "negative": {
+  "status": 200,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": "gzip",
+  "json": {
+   "intercompany_lines": [
+    {
+     "entity_id": "A",
+     "account": "Due From B",
+     "direction": "receivable",
+     "counterparty_entity": "B",
+     "net_balance": "-1000.00",
+     "debit": "-1000.00",
+     "credit": "-0.00"
+    },
+    {
+     "entity_id": "B",
+     "account": "Due To A",
+     "direction": "payable",
+     "counterparty_entity": "A",
+     "net_balance": "1000.00",
+     "debit": "-0.00",
+     "credit": "-1000.00"
+    }
+   ],
+   "pairs": [
+    {
+     "entity_a": "A",
+     "entity_b": "B",
+     "account_a": "Due From B",
+     "account_b": "Due To A",
+     "direction_a": "receivable",
+     "direction_b": "payable",
+     "amount_a": "1000.00",
+     "amount_b": "1000.00",
+     "net_residual": "0.00",
+     "reconciles": false
+    }
+   ],
+   "mismatches": [
+    {
+     "kind": "amount_mismatch",
+     "entity": "A",
+     "counterparty": "B",
+     "account": "Due From B",
+     "direction": "receivable",
+     "amount": "0.00",
+     "message": "Intercompany residual of $0.00 between A.Due From B and B.Due To A exceeds the $-1.00 tolerance."
+    }
+   ],
+   "elimination_journal_entries": [],
+   "worksheet": {
+    "columns": [
+     {
+      "entity_id": "A",
+      "entity_name": "Parent",
+      "debit_total": "-1000.00",
+      "credit_total": "0.00",
+      "intercompany_gross": "1000.00"
+     },
+     {
+      "entity_id": "B",
+      "entity_name": "Sub",
+      "debit_total": "0.00",
+      "credit_total": "-1000.00",
+      "intercompany_gross": "1000.00"
+     }
+    ],
+    "total_entity_debits": "-1000.00",
+    "total_entity_credits": "-1000.00",
+    "elimination_debits": "0.00",
+    "elimination_credits": "0.00",
+    "consolidated_debits": "-1000.00",
+    "consolidated_credits": "-1000.00"
+   },
+   "summary": {
+    "entity_count": 2,
+    "intercompany_line_count": 2,
+    "matched_pair_count": 1,
+    "reconciling_pair_count": 0,
+    "mismatch_count": 1,
+    "elimination_je_count": 0,
+    "consolidation_complete": false
+   }
+  },
+  "tool_runs": [
+   {
+    "tool": "intercompany_elimination",
+    "status": "completed",
+    "score": null
+   }
+  ]
+ },
+ "negative:export": {
+  "status": 200,
+  "content_type": "text/csv; charset=utf-8",
+  "content_disposition": "attachment; filename=intercompany_consolidation.csv",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "text": "Consolidation Worksheet\r\nEntity ID,Entity Name,Debit Total,Credit Total,Intercompany Gross\r\nA,Parent,-1000.00,0.00,1000.00\r\nB,Sub,0.00,-1000.00,1000.00\r\nTotals,,-1000.00,-1000.00,\r\nEliminations,,0.00,0.00,\r\nConsolidated,,-1000.00,-1000.00,\r\n\r\nElimination Journal Entries\r\nDescription,Debit Entity,Debit Account,Credit Entity,Credit Account,Amount\r\n\r\nMismatches\r\nKind,Entity,Counterparty,Account,Direction,Amount,Message\r\namount_mismatch,A,B,Due From B,receivable,0.00,Intercompany residual of $0.00 between A.Due From B and B.Due To A exceeds the $-1.00 tolerance.\r\n"
+ },
+ "empty_lists": {
+  "status": 422,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "VALIDATION_ERROR",
+   "message": "The request could not be processed. Please check your input.",
+   "detail": null,
+   "error_code": "VALIDATION_ERROR"
+  },
+  "tool_runs": []
+ },
+ "empty_lists:export": {
+  "status": 422,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "VALIDATION_ERROR",
+   "message": "The request could not be processed. Please check your input.",
+   "detail": null,
+   "error_code": "VALIDATION_ERROR"
+  }
+ },
+ "bad_rule": {
+  "status": 200,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": "gzip",
+  "json": {
+   "intercompany_lines": [
+    {
+     "entity_id": "A",
+     "account": "Due From B",
+     "direction": "receivable",
+     "counterparty_entity": "B",
+     "net_balance": "1000.00",
+     "debit": "1000.00",
+     "credit": "0.00"
+    },
+    {
+     "entity_id": "B",
+     "account": "Due To A",
+     "direction": "payable",
+     "counterparty_entity": "A",
+     "net_balance": "-1000.00",
+     "debit": "0.00",
+     "credit": "1000.00"
+    }
+   ],
+   "pairs": [
+    {
+     "entity_a": "A",
+     "entity_b": "B",
+     "account_a": "Due From B",
+     "account_b": "Due To A",
+     "direction_a": "receivable",
+     "direction_b": "payable",
+     "amount_a": "1000.00",
+     "amount_b": "1000.00",
+     "net_residual": "0.00",
+     "reconciles": true
+    }
+   ],
+   "mismatches": [],
+   "elimination_journal_entries": [
+    {
+     "description": "Eliminate intercompany receivable / payable between A and B",
+     "debit_entity": "B",
+     "debit_account": "Due To A",
+     "credit_entity": "A",
+     "credit_account": "Due From B",
+     "amount": "1000.00"
+    }
+   ],
+   "worksheet": {
+    "columns": [
+     {
+      "entity_id": "A",
+      "entity_name": "Parent",
+      "debit_total": "1000.00",
+      "credit_total": "0.00",
+      "intercompany_gross": "1000.00"
+     },
+     {
+      "entity_id": "B",
+      "entity_name": "Sub",
+      "debit_total": "0.00",
+      "credit_total": "1000.00",
+      "intercompany_gross": "1000.00"
+     }
+    ],
+    "total_entity_debits": "1000.00",
+    "total_entity_credits": "1000.00",
+    "elimination_debits": "1000.00",
+    "elimination_credits": "1000.00",
+    "consolidated_debits": "0.00",
+    "consolidated_credits": "0.00"
+   },
+   "summary": {
+    "entity_count": 2,
+    "intercompany_line_count": 2,
+    "matched_pair_count": 1,
+    "reconciling_pair_count": 1,
+    "mismatch_count": 0,
+    "elimination_je_count": 1,
+    "consolidation_complete": true
+   }
+  },
+  "tool_runs": [
+   {
+    "tool": "intercompany_elimination",
+    "status": "completed",
+    "score": null
+   }
+  ]
+ },
+ "bad_rule:export": {
+  "status": 200,
+  "content_type": "text/csv; charset=utf-8",
+  "content_disposition": "attachment; filename=intercompany_consolidation.csv",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "text": "Consolidation Worksheet\r\nEntity ID,Entity Name,Debit Total,Credit Total,Intercompany Gross\r\nA,Parent,1000.00,0.00,1000.00\r\nB,Sub,0.00,1000.00,1000.00\r\nTotals,,1000.00,1000.00,\r\nEliminations,,1000.00,1000.00,\r\nConsolidated,,0.00,0.00,\r\n\r\nElimination Journal Entries\r\nDescription,Debit Entity,Debit Account,Credit Entity,Credit Account,Amount\r\nEliminate intercompany receivable / payable between A and B,B,Due To A,A,Due From B,1000.00\r\n\r\nMismatches\r\nKind,Entity,Counterparty,Account,Direction,Amount,Message\r\n"
+ }
+}

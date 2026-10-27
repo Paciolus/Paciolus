@@ -1,0 +1,112 @@
+{
+ "anomaly-summary": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "content_disposition": "attachment; filename=\"anomaly_summary.pdf\"",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "sha256": "0834568d9b4fed4b82739e2c6611ca8e1994931f4e372ff288b0b33cae05e809",
+  "length": 42847,
+  "magic": "25504446"
+ },
+ "anomaly-summary:missing": {
+  "status": 404,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "NOT_FOUND",
+   "message": "Engagement not found",
+   "detail": "Engagement not found"
+  }
+ },
+ "package": {
+  "status": 200,
+  "content_type": "application/zip",
+  "content_disposition": "attachment; filename=\"Snapshot_Client_20251231_diagnostic_package.zip\"",
+  "cache_control": "no-store",
+  "content_encoding": null,
+  "zip_members": {
+   "anomaly_summary.pdf": "0834568d9b4fed4b82739e2c6611ca8e1994931f4e372ff288b0b33cae05e809",
+   "manifest.json": "aafdeec89ca889dd585214750e684d2ded98caa8720d924aa3f4d25ad2e44896",
+   "workpaper_index.json": "b5816e873e47e0a0270cbe98c839a0e7e192a612997243b63a5fe05cf295233f"
+  }
+ },
+ "package:missing": {
+  "status": 404,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "NOT_FOUND",
+   "message": "Engagement not found",
+   "detail": "Engagement not found"
+  }
+ },
+ "convergence-csv": {
+  "status": 200,
+  "content_type": "text/csv; charset=utf-8",
+  "content_disposition": "attachment; filename=\"convergence_index_<id>.csv\"",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "text": "Account,Convergence Count,Tools Flagging It\n"
+ },
+ "convergence-csv:missing": {
+  "status": 404,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "NOT_FOUND",
+   "message": "Engagement not found",
+   "detail": "Engagement not found"
+  }
+ },
+ "analytical-expectations": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "content_disposition": "attachment; filename=\"analytical_expectations.pdf\"",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "sha256": "3b06851e0b792dd1e76483ada02a30b25160e29831287c9748a567d2c6c52fc7",
+  "length": 38265,
+  "magic": "25504446"
+ },
+ "analytical-expectations:missing": {
+  "status": 404,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "NOT_FOUND",
+   "message": "Engagement not found",
+   "detail": "Engagement not found"
+  }
+ },
+ "sum-schedule": {
+  "status": 200,
+  "content_type": "application/pdf",
+  "content_disposition": "attachment; filename=\"sum_schedule.pdf\"",
+  "cache_control": "no-store",
+  "content_encoding": "gzip",
+  "sha256": "707427c9655b212f368d3d12485a1d1d683080937bb54d4bd88c6ae74c5dfdeb",
+  "length": 38750,
+  "magic": "25504446"
+ },
+ "sum-schedule:missing": {
+  "status": 404,
+  "content_type": "application/json",
+  "content_disposition": null,
+  "cache_control": null,
+  "content_encoding": null,
+  "json": {
+   "code": "NOT_FOUND",
+   "message": "Engagement not found",
+   "detail": "Engagement not found"
+  }
+ }
+}
