@@ -842,6 +842,10 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - **Branded header struck through by the gold rule** on the accrual memo, which draws its own
   page header at the same 0.5in line. Branded header moved to 0.35in for all memos.
 
+**Structural items (2026-10-27, branch `sprint-813-memo-skeleton`, in progress):**
+- [x] Rendering-equivalence harness `tests/test_memo_render_equivalence.py` recorded on the
+  unmodified code before any refactor.
+
 **Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
 
 ---

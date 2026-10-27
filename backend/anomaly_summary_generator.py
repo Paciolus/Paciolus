@@ -303,7 +303,9 @@ class AnomalySummaryGenerator:
 
         # Tools with runs but no anomalies
         tools_with_findings = {s for s in items_by_tool}
-        clean_result_tools = [t for t in executed_tools if t.value not in tools_with_findings]
+        # Sprint 813: catalog order, not set order — iterating the set printed this
+        # list in a different order from one process to the next.
+        clean_result_tools = [t for t in catalog_tools if t in executed_tools and t.value not in tools_with_findings]
 
         risk_tier_key, risk_score = _compute_engagement_risk(
             severity_counts["high"],
