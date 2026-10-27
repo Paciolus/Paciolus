@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from admin_audit_model import AdminAuditLog  # noqa: F401 — Sprint 590: admin audit trail
 from analytical_expectations_model import AnalyticalExpectation  # noqa: F401 — Sprint 728a (ISA 520)
 from database import Base
+from db_url import normalize_database_url
 from dunning_model import DunningEpisode  # noqa: F401 — Sprint 591: dunning state machine
 from engagement_model import Engagement, EngagementStatus, MaterialityBasis, ToolName, ToolRun, ToolRunStatus
 from export_share_model import ExportShare  # noqa: F401 — needed for FK resolution in create_all
@@ -49,7 +50,10 @@ from upload_dedup_model import UploadDedup  # noqa: F401 — AUDIT-06 FIX 4
 # Dialect detection — used by fixtures and test skip conditions
 # ---------------------------------------------------------------------------
 
-_TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+# Sprint 786b: CI's PostgreSQL job sets a driverless postgresql:// URL, which
+# SQLAlchemy 2.1 would resolve to psycopg 3 (not installed). Same normalizer
+# as config.DATABASE_URL.
+_TEST_DATABASE_URL = normalize_database_url(os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:"))
 _is_test_sqlite = _TEST_DATABASE_URL.startswith("sqlite")
 
 # ---------------------------------------------------------------------------

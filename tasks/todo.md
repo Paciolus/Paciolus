@@ -1467,6 +1467,56 @@ Route inventory 257 before and after (253 path operations). `ruff check .` clean
 209 errors on both versions, identical output; `pip-audit` gate CLEAN; app boots and
 `/health/ready` returns 200 `healthy` via `httpx.ASGITransport`.
 
+#### 786b — SQLAlchemy 2.1 + Alembic 1.20
+
+**Status:** PR open, not merged. `sqlalchemy` 2.0.49 → 2.1.6, `alembic` 1.18.4 → 1.20.1, one
+commit each. Supersedes Dependabot #265.
+
+**The hazard, reproduced rather than inferred:** under 2.1, `create_engine("postgresql://...")`
+raises `ModuleNotFoundError: No module named 'psycopg'` — 2.1 moved the driverless default from
+psycopg2 to psycopg 3, which is not installed. Production's Neon `DATABASE_URL` is driverless, so a
+naive bump breaks the production DB while every SQLite test stays green. CI's PostgreSQL job sets a
+driverless `TEST_DATABASE_URL` too, which is how #265 went red.
+
+**Fix: `backend/db_url.py::normalize_database_url`** — `postgresql://` and `postgres://` become
+`postgresql+psycopg2://` by scheme-prefix substitution only, so credentials, host and query params
+(`sslmode`, `channel_binding`) pass through byte-for-byte. Applied once in `config.py`, so the app
+engine, Alembic `env.py`, the Dockerfile's stamp-or-upgrade probe and the admin scripts all read
+the same value; `env.py` re-applies it (idempotent) for callers that monkeypatch
+`config.DATABASE_URL`; `tests/conftest.py` applies it to `TEST_DATABASE_URL`;
+`dr-test-monthly.yml`'s smoke check applies it. psycopg 3 deliberately not adopted here.
+`scripts/verify_backup_integrity.py` and the DR workflow's `psycopg2.connect` / `psql` calls take
+libpq URLs and are correctly left alone. **Tests:** `tests/test_db_url_normalization.py` (19) —
+plain, `postgres://`, explicit drivers unchanged, Neon-style query string + escaped password
+preserved, and `engine.dialect.driver == "psycopg2"` for each, including `database.engine` built
+in a subprocess from a driverless URL.
+
+**2.1 typing fallout:** `Query`/`Row` tuples are now typed, which surfaced 5 latent mypy errors
+(209 → 214 locally): `Decimal` passed to `float` fields in `routes/activity.py` (now explicit
+`float()`, identical to Pydantic's lax coercion) and a nullable `BillingEvent.user_id` used as a
+dict key in `billing/internal_metrics.py` (now filtered). Net mypy after: 206 (below the 209 starting point).
+
+**Migration-guide review, against the code:** no `MappedAsDataclass`, `composite()`,
+`exclude_properties`, `__declare_first__`, `@validates`, `decimal_return_scale`/`asdecimal`, or
+`ext.asyncio` usage; `greenlet` (no longer installed by default) is not needed. Unchanged by 2.1
+and covered by the suite: `Numeric(19,2)` Decimal round-trips, `use_alter` FKs, `create_all`,
+SQLite `PRAGMA foreign_keys=ON` listeners, soft-delete guards. Autoflush-on-every-execution and
+`Select.filter_by` ambiguity checks produced no failures.
+
+**Alembic 1.18.4 → 1.20.1:** no `env.py` API change needed. Added `path_separator = os` to
+`alembic.ini` — the 1.16+ key, whose absence emitted a `DeprecationWarning` on every Alembic run
+(seen in `test_alembic_models_parity`). `alembic upgrade head` on a fresh SQLite DB is clean with
+`-W error::DeprecationWarning`. Compared old stack (2.0.49 + 1.18.4) against new on fresh
+databases: `alembic check` reports the **identical** pre-existing autogenerate drift (142 ops,
+nullable/index differences already allow-listed by the parity test — not touched here), and the
+migrated DDL differs only in the order of `FOREIGN KEY` clauses inside batch-recreated tables.
+
+**Verification:** full backend suite on SQLite **9,947 passed / 0 failed** on 2.1.6 + 1.20.1, no
+SQLAlchemy deprecation warnings; `pip-audit` gate CLEAN (69 packages); ruff clean. The PostgreSQL 15 path is verified by CI's `Backend Tests (PostgreSQL 15)` job only — no local
+Postgres. **After merge: confirm on the Render deploy that `/health/ready` returns 200 with the
+database dependency healthy** — the production URL path is the one thing no test here exercises
+against the real host.
+
 #### 786b step 3 — @types/node 26 shipped; jest-dom 7 is BLOCKED by an npm bug
 
 > **Update 2026-10-27: unblocked and shipped** (see Hotfixes). Option 1 below — on Node 22.23.4 /

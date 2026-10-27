@@ -11,6 +11,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from db_url import normalize_database_url
 from secrets_manager import get_secret as _resolve_secret
 from secrets_manager import get_secrets_manager
 
@@ -387,8 +388,14 @@ if RATE_LIMIT_STORAGE_FAILURE_POLICY not in ("degrade", "fail_closed"):
 # Frontend URL for email verification links and CORS
 FRONTEND_URL = _load_optional("FRONTEND_URL", "http://localhost:3000")
 
-# Database URL - SQLite by default for local development
-DATABASE_URL = _load_optional("DATABASE_URL", f"sqlite:///{Path(__file__).parent / 'paciolus.db'}")
+# Database URL - SQLite by default for local development.
+# Sprint 786b: a driverless postgresql:// (or postgres://) URL is pinned to
+# postgresql+psycopg2:// — SQLAlchemy 2.1 otherwise defaults it to psycopg 3,
+# which is not installed. See db_url.py. Every engine (app, Alembic, the
+# Dockerfile probe, admin scripts) reads this normalized value.
+DATABASE_URL = normalize_database_url(
+    _load_optional("DATABASE_URL", f"sqlite:///{Path(__file__).parent / 'paciolus.db'}")
+)
 
 # Production guardrail: SQLite is not suitable for production deployments
 if ENV_MODE == "production" and DATABASE_URL.startswith("sqlite"):
