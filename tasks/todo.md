@@ -469,7 +469,7 @@ Tests: `tests/test_session_hardening.py` (11) + updates to `test_email_change.py
 **Verification:** ruff clean; alembic single head `b5d2c8e71f30`; frontend build passes, 209 suites / 2,075 tests,
 `tsc` + eslint clean; full backend suite 9,992 passed.
 
-**Commit SHA:** TBD.
+**Commit SHA:** `6ca55f1b` (stacked on PR #275).
 
 ---
 
