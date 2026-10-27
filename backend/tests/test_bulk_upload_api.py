@@ -18,6 +18,8 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_verified_user
@@ -92,11 +94,11 @@ class TestBulkUploadRouteRegistration:
     """Verify bulk upload routes are registered."""
 
     def test_bulk_upload_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/upload/bulk" in paths
 
     def test_bulk_status_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/upload/bulk/{job_id}/status" in paths
 
 

@@ -680,9 +680,9 @@ class TestBackgroundTaskOrderingContract:
     bank_reconciliation, multi_period, sampling, three_way_match) plus the two
     shared helpers, not thirteen.
 
-    Verified on FastAPI 0.136.1: the task runs first. This test keeps it
-    verified. **Sprint 786b plans FastAPI 0.136 → 0.150**, and if a release in
-    that range flips the ordering, those routes silently stop recording while
+    Verified on FastAPI 0.136.1 and again on 0.162.0 (Sprint 786b): the task
+    runs first. This test keeps it verified. If a future release flips the
+    ordering, those routes silently stop recording while
     every other test here still passes — they all override `get_db` with a
     non-generator, so none of them exercises teardown at all.
 

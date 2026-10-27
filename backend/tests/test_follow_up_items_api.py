@@ -20,6 +20,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user
@@ -85,19 +87,19 @@ class TestFollowUpRouteRegistration:
     """Verify follow-up item routes are registered."""
 
     def test_create_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/follow-up-items" in paths
 
     def test_summary_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/follow-up-items/summary" in paths
 
     def test_update_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/follow-up-items/{item_id}" in paths
 
     def test_comments_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/follow-up-items/{item_id}/comments" in paths
 
 

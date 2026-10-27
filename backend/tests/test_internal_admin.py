@@ -20,6 +20,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from admin_audit_model import AdminActionType, AdminAuditLog
@@ -197,7 +199,7 @@ class TestRouteRegistration:
     ]
 
     def test_all_routes_exist(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         for route in self.EXPECTED_ROUTES:
             assert route in paths, f"Missing route: {route}"
 

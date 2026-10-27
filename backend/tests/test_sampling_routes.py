@@ -8,6 +8,8 @@ Validates route registration, response models, and memo generator.
 import sys
 from pathlib import Path
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from shared.export_schemas import (
@@ -27,20 +29,24 @@ from shared.testing_response_schemas import (
 # Route Registration
 # =============================================================================
 
+
 class TestRouteRegistration:
     def test_sampling_routes_registered(self):
         from main import app
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/sampling/design" in route_paths
         assert "/audit/sampling/evaluate" in route_paths
 
     def test_sampling_router_tags(self):
         from routes.sampling import router
+
         assert "sampling" in router.tags
 
     def test_export_routes_registered(self):
         from main import app
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/sampling-selection" in route_paths
         assert "/export/sampling-design-memo" in route_paths
         assert "/export/sampling-evaluation-memo" in route_paths
@@ -49,6 +55,7 @@ class TestRouteRegistration:
 # =============================================================================
 # Response Models
 # =============================================================================
+
 
 class TestResponseModels:
     def test_selected_item_response(self):
@@ -195,9 +202,12 @@ class TestResponseModels:
             conclusion_detail="UEL $63,000.00 exceeds tolerable misstatement $50,000.00",
             errors=[
                 SamplingErrorResponse(
-                    row_index=10, item_id="INV-042",
-                    recorded_amount=5000.0, audited_amount=4200.0,
-                    misstatement=800.0, tainting=0.16,
+                    row_index=10,
+                    item_id="INV-042",
+                    recorded_amount=5000.0,
+                    audited_amount=4200.0,
+                    misstatement=800.0,
+                    tainting=0.16,
                 ),
             ],
             taintings_ranked=[0.16],
@@ -210,6 +220,7 @@ class TestResponseModels:
 # =============================================================================
 # Export Schemas
 # =============================================================================
+
 
 class TestExportSchemas:
     def test_design_memo_input_defaults(self):
@@ -277,9 +288,11 @@ class TestExportSchemas:
 # Memo Generator
 # =============================================================================
 
+
 class TestMemoGenerator:
     def test_design_memo_generates_pdf(self):
         from sampling_memo_generator import generate_sampling_design_memo
+
         result = generate_sampling_design_memo(
             design_result={
                 "method": "mus",
@@ -306,6 +319,7 @@ class TestMemoGenerator:
 
     def test_design_memo_with_strata(self):
         from sampling_memo_generator import generate_sampling_design_memo
+
         result = generate_sampling_design_memo(
             design_result={
                 "method": "mus",
@@ -323,8 +337,20 @@ class TestMemoGenerator:
                 "remainder_count": 995,
                 "remainder_sample_size": 300,
                 "strata_summary": [
-                    {"stratum": "High Value", "threshold": ">= $100,000", "count": 5, "total_value": 750000, "sample_size": 5},
-                    {"stratum": "Remainder", "threshold": "< $100,000", "count": 995, "total_value": 4250000, "sample_size": 300},
+                    {
+                        "stratum": "High Value",
+                        "threshold": ">= $100,000",
+                        "count": 5,
+                        "total_value": 750000,
+                        "sample_size": 5,
+                    },
+                    {
+                        "stratum": "Remainder",
+                        "threshold": "< $100,000",
+                        "count": 995,
+                        "total_value": 4250000,
+                        "sample_size": 300,
+                    },
                 ],
             },
             filename="test_strata",
@@ -335,6 +361,7 @@ class TestMemoGenerator:
 
     def test_evaluation_memo_generates_pdf(self):
         from sampling_memo_generator import generate_sampling_evaluation_memo
+
         result = generate_sampling_evaluation_memo(
             evaluation_result={
                 "method": "mus",
@@ -353,7 +380,14 @@ class TestMemoGenerator:
                 "conclusion": "pass",
                 "conclusion_detail": "UEL within tolerance",
                 "errors": [
-                    {"row_index": 10, "item_id": "INV-042", "recorded_amount": 5000, "audited_amount": 4200, "misstatement": 800, "tainting": 0.16},
+                    {
+                        "row_index": 10,
+                        "item_id": "INV-042",
+                        "recorded_amount": 5000,
+                        "audited_amount": 4200,
+                        "misstatement": 800,
+                        "tainting": 0.16,
+                    },
                 ],
                 "taintings_ranked": [0.16],
             },
@@ -364,6 +398,7 @@ class TestMemoGenerator:
 
     def test_evaluation_memo_fail_conclusion(self):
         from sampling_memo_generator import generate_sampling_evaluation_memo
+
         result = generate_sampling_evaluation_memo(
             evaluation_result={
                 "method": "mus",
@@ -390,6 +425,7 @@ class TestMemoGenerator:
 
     def test_evaluation_memo_with_design_context(self):
         from sampling_memo_generator import generate_sampling_evaluation_memo
+
         result = generate_sampling_evaluation_memo(
             evaluation_result={
                 "method": "mus",
@@ -425,7 +461,9 @@ class TestMemoGenerator:
 # ToolName Enum
 # =============================================================================
 
+
 class TestToolNameEnum:
     def test_statistical_sampling_in_toolname(self):
         from engagement_model import ToolName
+
         assert ToolName.STATISTICAL_SAMPLING.value == "statistical_sampling"

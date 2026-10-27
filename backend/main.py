@@ -19,7 +19,6 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 
 from config import (
     API_HOST,
@@ -45,7 +44,7 @@ from security_middleware import (
     SecurityHeadersMiddleware,
 )
 from security_utils import log_secure_operation
-from shared.rate_limits import get_storage_backend, limiter
+from shared.rate_limits import DefaultLimitMiddleware, get_storage_backend, limiter
 from shared.schemas import ErrorResponse
 from version import __version__
 
@@ -279,8 +278,10 @@ app.add_middleware(HttpMetricsMiddleware)
 # page described a global one. Added before RateLimitIdentityMiddleware so it
 # runs inside it — the user-aware key is resolved first. (Not the ASGI variant:
 # slowapi 0.1.9's SlowAPIASGIMiddleware re-sends http.response.start on every
-# body chunk, which breaks any multi-chunk response.)
-app.add_middleware(SlowAPIMiddleware)
+# body chunk, which breaks any multi-chunk response.) Sprint 786b: a subclass,
+# because stock SlowAPIMiddleware cannot see routes inside included routers on
+# FastAPI >= 0.137 and would silently exempt every one of them.
+app.add_middleware(DefaultLimitMiddleware)
 
 # Rate limit identity — resolves user tier from JWT before slowapi checks (Sprint 306)
 app.add_middleware(RateLimitIdentityMiddleware)

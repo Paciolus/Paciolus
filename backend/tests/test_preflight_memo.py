@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from preflight_memo_generator import (
@@ -454,13 +456,13 @@ class TestPreflightMemoExportRoute:
     def test_preflight_memo_route_exists(self):
         from main import app
 
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        routes = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/preflight-memo" in routes
 
     def test_preflight_memo_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/preflight-memo":
                 assert "POST" in route.methods
                 break

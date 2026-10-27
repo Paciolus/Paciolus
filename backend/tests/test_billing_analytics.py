@@ -15,6 +15,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from subscription_model import (
@@ -505,7 +507,7 @@ class TestAnalyticsRouteRegistration:
     def test_weekly_review_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/analytics/weekly-review" in paths
 
 

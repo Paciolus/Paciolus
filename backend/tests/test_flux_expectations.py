@@ -14,10 +14,12 @@ import pytest
 
 from flux_expectations_memo import generate_flux_expectations_memo
 from shared.export_schemas import ExpectationEntry, FluxExpectationsMemoInput
+from tests.helpers.route_inventory import all_routes
 
 # ═══════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════
+
 
 @pytest.fixture
 def sample_flux_dict():
@@ -68,6 +70,7 @@ def sample_flux_dict():
 # Schema Validation
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestExpectationSchemas:
     """Verify Pydantic schemas for expectations."""
 
@@ -109,6 +112,7 @@ class TestExpectationSchemas:
 # PDF Memo Generation
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestFluxExpectationsMemo:
     """Verify ISA 520 Flux Expectations Memo generation."""
 
@@ -120,7 +124,7 @@ class TestFluxExpectationsMemo:
         )
         assert isinstance(result, bytes)
         assert len(result) > 0
-        assert result[:5] == b'%PDF-'
+        assert result[:5] == b"%PDF-"
 
     def test_generates_with_expectations(self, sample_flux_dict):
         """Should generate PDF with expectation text included."""
@@ -152,16 +156,22 @@ class TestFluxExpectationsMemo:
             workpaper_date="2026-02-18",
         )
         assert isinstance(result, bytes)
-        assert result[:5] == b'%PDF-'
+        assert result[:5] == b"%PDF-"
 
     def test_empty_flux_items(self):
         """Should handle empty flux items gracefully."""
         result = generate_flux_expectations_memo(
-            flux_result={"items": [], "summary": {
-                "total_items": 0, "high_risk_count": 0,
-                "medium_risk_count": 0, "new_accounts": 0,
-                "removed_accounts": 0, "threshold": 0,
-            }},
+            flux_result={
+                "items": [],
+                "summary": {
+                    "total_items": 0,
+                    "high_risk_count": 0,
+                    "medium_risk_count": 0,
+                    "new_accounts": 0,
+                    "removed_accounts": 0,
+                    "threshold": 0,
+                },
+            },
             expectations={},
         )
         assert isinstance(result, bytes)
@@ -171,6 +181,7 @@ class TestFluxExpectationsMemo:
 # ═══════════════════════════════════════════════════════════════
 # Guardrail: No Auto-Populate
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestNoAutoPopulate:
     """CRITICAL: Expectations must never be auto-generated."""
@@ -192,11 +203,13 @@ class TestNoAutoPopulate:
 # Route Registration
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestRouteRegistration:
     """Verify export endpoint is registered."""
 
     def test_flux_expectations_memo_route_exists(self):
         """The /export/flux-expectations-memo route should be registered."""
         from main import app
-        routes = [r.path for r in app.routes if hasattr(r, 'path')]
+
+        routes = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/flux-expectations-memo" in routes

@@ -16,6 +16,7 @@ import httpx
 import pytest
 
 from tests.helpers.contract_assertions import assert_signature
+from tests.helpers.route_inventory import all_routes
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -29,7 +30,7 @@ class TestBillingRouteRegistration:
     def test_billing_router_in_app(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/subscription" in paths
         assert "/billing/usage" in paths
         assert "/billing/webhook" in paths
@@ -37,25 +38,25 @@ class TestBillingRouteRegistration:
     def test_create_checkout_session_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/create-checkout-session" in paths
 
     def test_cancel_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/cancel" in paths
 
     def test_reactivate_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/reactivate" in paths
 
     def test_portal_session_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/portal-session" in paths
 
 

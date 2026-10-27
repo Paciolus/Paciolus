@@ -15,6 +15,8 @@ from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
@@ -31,13 +33,13 @@ class TestSeatRouteRegistration:
     def test_add_seats_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/add-seats" in paths
 
     def test_remove_seats_route_exists(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/remove-seats" in paths
 
 

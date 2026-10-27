@@ -18,6 +18,7 @@ from population_profile_engine import (
     compute_population_profile,
     run_population_profile,
 )
+from tests.helpers.route_inventory import all_routes
 
 
 class TestComputeGini:
@@ -553,17 +554,17 @@ class TestRouteRegistration:
     def test_population_profile_route(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/population-profile" in paths
 
     def test_population_profile_memo_route(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/population-profile-memo" in paths
 
     def test_population_profile_csv_route(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/population-profile" in paths

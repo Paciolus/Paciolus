@@ -28,6 +28,7 @@ from ap_testing_engine import (
     test_vendor_name_variations as run_vendor_variations_test,
 )
 from tests.helpers.ap_fixtures import make_payments, sample_ap_columns, sample_ap_rows
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # TIER 3 TESTS — Sprint 74
@@ -408,13 +409,13 @@ class TestAPTestingAPI:
     def test_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes]
+        paths = [r.path for r in all_routes(app)]
         assert "/audit/ap-payments" in paths
 
     def test_route_method_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/audit/ap-payments":
                 assert "POST" in route.methods
                 break

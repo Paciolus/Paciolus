@@ -19,6 +19,7 @@ Test IDs:
 from shared.parsing_helpers import parse_date as _parse_date
 from shared.parsing_helpers import safe_float as _safe_float
 from shared.parsing_helpers import safe_str as _safe_str
+from tests.helpers.route_inventory import all_routes
 from three_way_match_engine import (
     Invoice,
     InvoiceColumnDetectionResult,
@@ -1231,13 +1232,13 @@ class TestAPIRouteRegistration:
     def test_route_registered(self):
         from main import app
 
-        routes = [r.path for r in app.routes]
+        routes = [r.path for r in all_routes(app)]
         assert "/audit/three-way-match" in routes
 
     def test_post_method(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/audit/three-way-match":
                 assert "POST" in route.methods
 

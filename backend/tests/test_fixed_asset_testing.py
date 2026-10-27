@@ -60,6 +60,7 @@ from shared.parsing_helpers import parse_date as _parse_date
 from shared.parsing_helpers import safe_float as _safe_float
 from shared.parsing_helpers import safe_str as _safe_str
 from shared.testing_enums import RiskTier, Severity, TestTier
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURE HELPERS
@@ -1265,7 +1266,7 @@ class TestFixedAssetTestingRoute:
     def test_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/fixed-assets" in paths
 
     def test_engagement_model_has_fixed_assets(self):

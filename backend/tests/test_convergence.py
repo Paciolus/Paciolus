@@ -22,6 +22,7 @@ from shared.account_extractors import (
     extract_revenue_accounts,
     extract_tb_accounts,
 )
+from tests.helpers.route_inventory import all_routes
 
 # ---------------------------------------------------------------------------
 # TestAccountExtractors
@@ -455,13 +456,13 @@ class TestConvergenceRouteRegistration:
     def test_convergence_get_endpoint_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/convergence" in paths
 
     def test_convergence_csv_export_endpoint_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/export/convergence-csv" in paths
 
 

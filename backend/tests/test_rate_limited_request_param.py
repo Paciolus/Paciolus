@@ -17,24 +17,26 @@ cannot recur silently.
 import sys
 from pathlib import Path
 
+from tests.helpers.route_inventory import api_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi.routing import APIRoute
+from fastapi.routing import RouteContext
 
 from main import app
 from shared.rate_limits import limiter
 
 
-def _api_routes() -> list[APIRoute]:
-    return [r for r in app.routes if isinstance(r, APIRoute)]
+def _api_routes() -> list[RouteContext]:
+    return api_routes(app)
 
 
-def _limited_routes() -> list[APIRoute]:
+def _limited_routes() -> list[RouteContext]:
     marked = limiter._Limiter__marked_for_limiting  # slowapi's registry of decorated endpoints
     return [r for r in _api_routes() if f"{r.endpoint.__module__}.{r.endpoint.__name__}" in marked]
 
 
-def _label(route: APIRoute) -> str:
+def _label(route: RouteContext) -> str:
     return f"{sorted(route.methods)} {route.path} ({route.endpoint.__module__}.{route.endpoint.__name__})"
 
 

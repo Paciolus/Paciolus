@@ -32,6 +32,7 @@ from multi_period_memo_generator import (
     compute_apc_diagnostic_score,
     generate_multi_period_memo,
 )
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURES
@@ -905,7 +906,7 @@ class TestMultiPeriodMemoExportRoute:
         from main import app
 
         routes = []
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path"):
                 routes.append(route.path)
         assert "/export/multi-period-memo" in routes
@@ -913,7 +914,7 @@ class TestMultiPeriodMemoExportRoute:
     def test_multi_period_memo_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/multi-period-memo":
                 assert "POST" in route.methods
                 break

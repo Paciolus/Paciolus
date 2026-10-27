@@ -12,6 +12,8 @@ import sys
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(os.path.join(os.path.dirname(__file__), "..")))
 
 ROUTES_DIR = os.path.join(os.path.dirname(__file__), "..", "routes")
@@ -144,7 +146,7 @@ class TestRouteRegistration:
         """All routes from touched modules should still be registered."""
         from main import app
 
-        registered = {r.path for r in app.routes if hasattr(r, "path")}
+        registered = {r.path for r in all_routes(app) if hasattr(r, "path")}
 
         expected_paths = [
             "/activity/log",

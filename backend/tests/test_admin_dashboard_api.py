@@ -15,6 +15,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user
@@ -147,19 +149,19 @@ class TestAdminDashboardRouteRegistration:
     """Verify admin dashboard routes are registered."""
 
     def test_overview_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/admin/overview" in paths
 
     def test_team_activity_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/admin/team-activity" in paths
 
     def test_usage_by_member_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/admin/usage-by-member" in paths
 
     def test_export_activity_csv_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/admin/export-activity-csv" in paths
 
 

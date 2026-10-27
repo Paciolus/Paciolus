@@ -14,6 +14,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_verified_user
@@ -147,7 +149,7 @@ class TestBillingAnalyticsRouteRegistration:
     """Verify billing analytics routes are registered."""
 
     def test_weekly_review_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/billing/analytics/weekly-review" in paths
 
 

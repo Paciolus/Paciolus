@@ -14,6 +14,8 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from main import app
@@ -27,7 +29,7 @@ class TestMetricsRouteRegistration:
     """Verify metrics route is registered."""
 
     def test_metrics_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/metrics" in paths
 
 

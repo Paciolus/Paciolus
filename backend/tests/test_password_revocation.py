@@ -24,6 +24,7 @@ from auth import (
     hash_password,
 )
 from models import User
+from tests.helpers.route_inventory import all_routes
 
 # Helper to create a user with a known plaintext password
 KNOWN_PASSWORD = "OldPassword1!"
@@ -525,5 +526,5 @@ class TestRouteRegistration:
         """PUT /users/me/password should be registered."""
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/users/me/password" in paths

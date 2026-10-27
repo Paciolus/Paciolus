@@ -20,6 +20,8 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user
@@ -115,11 +117,11 @@ class TestBrandingRouteRegistration:
     """Verify branding routes are registered."""
 
     def test_get_branding_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/branding/" in paths
 
     def test_logo_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/branding/logo" in paths
 
 

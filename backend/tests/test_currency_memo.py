@@ -7,6 +7,7 @@ non-monetary note, CTA note, suggested rate sources, unconverted count fix.
 """
 
 from currency_memo_generator import generate_currency_conversion_memo
+from tests.helpers.route_inventory import all_routes
 
 
 class TestCurrencyMemoGeneration:
@@ -518,7 +519,7 @@ class TestCurrencyMemoExportRegistration:
     def test_endpoint_registered(self):
         from main import app
 
-        route_paths = [r.path for r in app.routes if hasattr(r, "path")]
+        route_paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/currency-conversion-memo" in route_paths
 
     def test_export_schema_importable(self):

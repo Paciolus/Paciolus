@@ -29,6 +29,7 @@ from unittest.mock import patch
 import pytest
 
 from models import UserTier
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # Sprint 677a: Concentration overflow SUSPICION REJECTED
@@ -386,7 +387,7 @@ class TestEveryExportRouteIsGated:
             module = importlib.import_module(module_name)
             router = getattr(module, "router", None)
             assert router is not None, f"{module_name} has no router"
-            for route in router.routes:
+            for route in all_routes(router):
                 if not hasattr(route, "methods"):
                     continue
                 total += 1

@@ -12,6 +12,8 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 
 def _auth_headers(token="test-token"):
     """Build auth headers with a bearer token and CSRF token."""
@@ -91,7 +93,7 @@ class TestAuditPipelineAuth:
         """The /audit/trial-balance endpoint exists in the app router."""
         from main import app
 
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        routes = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/trial-balance" in routes
 
 

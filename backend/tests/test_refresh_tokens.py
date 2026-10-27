@@ -26,6 +26,7 @@ from auth import (
     rotate_refresh_token,
 )
 from models import RefreshToken
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # TestRefreshTokenModel
@@ -490,21 +491,21 @@ class TestRouteRegistration:
         """POST /auth/refresh is registered."""
         from main import app
 
-        paths = [route.path for route in app.routes]
+        paths = [route.path for route in all_routes(app)]
         assert "/auth/refresh" in paths
 
     def test_logout_route_registered(self):
         """POST /auth/logout is registered."""
         from main import app
 
-        paths = [route.path for route in app.routes]
+        paths = [route.path for route in all_routes(app)]
         assert "/auth/logout" in paths
 
     def test_refresh_route_method(self):
         """POST /auth/refresh accepts POST."""
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if getattr(route, "path", None) == "/auth/refresh":
                 assert "POST" in route.methods
                 break
@@ -515,7 +516,7 @@ class TestRouteRegistration:
         """POST /auth/logout accepts POST."""
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if getattr(route, "path", None) == "/auth/logout":
                 assert "POST" in route.methods
                 break

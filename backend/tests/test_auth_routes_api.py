@@ -15,6 +15,8 @@ import sys
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, "..")
 
 from auth import UserCreate, create_user, hash_password, require_current_user
@@ -361,23 +363,23 @@ class TestAuthRouteRegistration:
     """Verify auth routes are registered in the app."""
 
     def test_register_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/register" in paths
 
     def test_login_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/login" in paths
 
     def test_logout_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/logout" in paths
 
     def test_csrf_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/csrf" in paths
 
     def test_verification_status_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/auth/verification-status" in paths
 
 

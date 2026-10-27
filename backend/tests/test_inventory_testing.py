@@ -57,6 +57,7 @@ from shared.parsing_helpers import parse_date as _parse_date
 from shared.parsing_helpers import safe_float as _safe_float
 from shared.parsing_helpers import safe_str as _safe_str
 from shared.testing_enums import RiskTier, Severity, TestTier
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURE HELPERS
@@ -1303,7 +1304,7 @@ class TestAPIIntegration:
     def test_route_registered(self):
         from main import app
 
-        paths = [route.path for route in app.routes if hasattr(route, "path")]
+        paths = [route.path for route in all_routes(app) if hasattr(route, "path")]
         assert "/audit/inventory-testing" in paths
 
     def test_engagement_model_has_inventory(self):

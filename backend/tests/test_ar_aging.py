@@ -90,6 +90,7 @@ from ar_aging_engine import (
 from shared.parsing_helpers import safe_float as _safe_float
 from shared.parsing_helpers import safe_int as _safe_int
 from shared.testing_enums import RiskTier, Severity, TestTier
+from tests.helpers.route_inventory import all_routes
 
 # =============================================================================
 # FIXTURES / HELPERS
@@ -1233,13 +1234,13 @@ class TestRouteRegistration:
     def test_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/audit/ar-aging" in paths
 
     def test_route_accepts_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/audit/ar-aging":
                 assert "POST" in route.methods
                 break

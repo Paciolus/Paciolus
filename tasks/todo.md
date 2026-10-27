@@ -1426,6 +1426,47 @@ binding to lowercase and break the current production database, which holds name
 
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
 
+#### 786b — fastapi 0.136 → 0.16x
+
+`fastapi==0.136.1` → `==0.162.0` (step 4). Starlette stays 1.10.0; the only new transitive dep is
+`opentelemetry-api` (FastAPI's native OTel, opt-in since 0.143 — nothing here enables it). Supersedes
+Dependabot #261.
+
+**What broke — one upstream change, two consequences.** 0.137 stopped copying an included router's
+routes into the parent: `app.routes` now holds one `_IncludedRouter` node per `include_router` (54
+nodes instead of 257 routes), and those nodes have no `path`/`methods`/`endpoint`.
+
+1. **Production: the Sprint 840 default rate limit silently switched off.** slowapi's
+   `SlowAPIMiddleware` finds the handler by iterating `app.routes` flat; on 0.162 it resolved *no*
+   handler for any of the 183 static routes, treated each request as exempt, and
+   `/benchmarks/industries` answered 61/61 requests with 200. Decorated routes were unaffected (their
+   `@limiter.limit` checks itself). Fixed with `shared.rate_limits.DefaultLimitMiddleware`, a
+   `SlowAPIMiddleware` subclass whose lookup uses `fastapi.routing.iter_route_contexts` (0.137.2,
+   upstream's public replacement for iterating `router.routes`). One deliberate departure from slowapi:
+   the *first* full match wins, as in Starlette dispatch — slowapi took the last, so
+   `/clients/industries` was being limited as `/clients/{client_id}`.
+2. **Tests: 133 failures in the 62 files that enumerate `app.routes`.** Fixed with one helper,
+   `tests/helpers/route_inventory.py` (`all_routes()` / `api_routes()` over `iter_route_contexts`),
+   and a mechanical `app.routes` → `all_routes(app)` rewrite. Several of those tests (e.g.
+   `test_finding_comments`, `test_three_way_match` route checks) had no `else: fail`, so they would
+   have passed vacuously on 0.162. New `tests/test_route_inventory.py` pins the helper to the OpenAPI
+   document (inventory == documented operations, ≥240 routes, prefixed paths present), and
+   `test_rate_limit_default.py` now checks every undecorated static route resolves to its own endpoint.
+
+**Checked and not affected:** the full OpenAPI document is byte-identical between 0.136.1 and 0.162.0
+(drift check clean, no snapshot regeneration); 0.155's removal of `**extra` on params (app imports);
+0.147/0.162 bool-form defaults (the one `Optional[bool] = Form(default=None)` in `three_way_match`
+behaves as on 0.136 again); 0.148–0.151 default/empty/null handling (no `Body()` params, no
+parameter models); 0.136.3 underscore headers (no `Header()` params); 0.145/0.146 `FastAPI()` args
+(not used); Sentry 2.73 already reads the 0.137+ effective route path; background tasks still run
+before `yield`-dependency teardown (`test_promoted_tool_engagement_wiring`).
+
+**Verification:** baseline on 0.136.1 **9,928 passed / 0 failed**; on 0.162.0 **9,932 passed / 0 failed** (+4 new tests). Before the test
+fix, the 62 route-enumerating files gave 133 failures on 0.162.0.
+Route inventory 257 before and after (253 path operations). `ruff check .` clean; mypy (non-test)
+209 errors on both versions, identical output; `pip-audit` gate CLEAN; app boots and
+`/health/ready` returns 200 `healthy` via `httpx.ASGITransport`.
+
 #### 786b step 3 — @types/node 26 shipped; jest-dom 7 is BLOCKED by an npm bug
 
 > **Update 2026-10-27: unblocked and shipped** (see Hotfixes). Option 1 below — on Node 22.23.4 /

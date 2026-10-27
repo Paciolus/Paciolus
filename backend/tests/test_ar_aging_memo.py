@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ar_aging_memo_generator import (
@@ -405,19 +407,19 @@ class TestARAgingExportRoutes:
     def test_pdf_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/ar-aging-memo" in paths
 
     def test_csv_route_registered(self):
         from main import app
 
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/export/csv/ar-aging" in paths
 
     def test_pdf_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/ar-aging-memo":
                 assert "POST" in route.methods
                 break
@@ -427,7 +429,7 @@ class TestARAgingExportRoutes:
     def test_csv_route_is_post(self):
         from main import app
 
-        for route in app.routes:
+        for route in all_routes(app):
             if hasattr(route, "path") and route.path == "/export/csv/ar-aging":
                 assert "POST" in route.methods
                 break

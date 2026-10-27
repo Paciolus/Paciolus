@@ -13,6 +13,8 @@ import sys
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, "..")
 
 from auth import hash_password, require_current_user
@@ -149,10 +151,10 @@ class TestUserRouteRegistration:
 
     def test_users_me_route_exists(self):
         """PUT /users/me route is registered."""
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/users/me" in paths
 
     def test_users_me_password_route_exists(self):
         """PUT /users/me/password route is registered."""
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/users/me/password" in paths

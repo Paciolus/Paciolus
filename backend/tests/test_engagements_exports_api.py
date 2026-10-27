@@ -15,6 +15,8 @@ from pathlib import Path
 import httpx
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from auth import require_current_user, require_verified_user
@@ -88,15 +90,15 @@ class TestEngagementExportRouteRegistration:
     """Verify engagement export routes are registered."""
 
     def test_anomaly_summary_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/export/anomaly-summary" in paths
 
     def test_package_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/export/package" in paths
 
     def test_convergence_csv_route_exists(self):
-        paths = [r.path for r in app.routes if hasattr(r, "path")]
+        paths = [r.path for r in all_routes(app) if hasattr(r, "path")]
         assert "/engagements/{engagement_id}/export/convergence-csv" in paths
 
 

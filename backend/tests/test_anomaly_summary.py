@@ -25,6 +25,8 @@ from zipfile import ZipFile
 
 import pytest
 
+from tests.helpers.route_inventory import all_routes
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from anomaly_summary_generator import (
@@ -718,12 +720,12 @@ class TestExportRoutes:
         """POST /engagements/{id}/export/anomaly-summary is registered."""
         from main import app
 
-        routes = [route.path for route in app.routes]
+        routes = [route.path for route in all_routes(app)]
         assert "/engagements/{engagement_id}/export/anomaly-summary" in routes
 
     def test_export_package_route_registered(self):
         """POST /engagements/{id}/export/package is registered."""
         from main import app
 
-        routes = [route.path for route in app.routes]
+        routes = [route.path for route in all_routes(app)]
         assert "/engagements/{engagement_id}/export/package" in routes
