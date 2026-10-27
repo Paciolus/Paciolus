@@ -29,6 +29,7 @@ import hashlib
 import io
 import json
 import zipfile
+from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
 
@@ -82,6 +83,12 @@ def _capture(response: httpx.Response) -> dict[str, Any]:
         # each member's content instead.
         with zipfile.ZipFile(io.BytesIO(body)) as zf:
             out["zip_members"] = {name: hashlib.sha256(zf.read(name)).hexdigest() for name in sorted(zf.namelist())}
+    elif body[:5] == b"%PDF-":
+        # PDF bytes are not stable run to run (object layout), so pin the text
+        # of every page.
+        from pypdf import PdfReader
+
+        out["pdf_pages"] = [page.extract_text() for page in PdfReader(io.BytesIO(body)).pages]
     else:
         out["sha256"] = hashlib.sha256(body).hexdigest()
         out["length"] = len(body)
@@ -449,3 +456,48 @@ async def test_diagnostic_export_pipeline_unchanged(db_session, make_user):
     finally:
         app.dependency_overrides.clear()
     check_snapshot("route_export_pipeline", out)
+
+
+# =============================================================================
+# Testing-tool CSV exports + memo PDFs (item 7: the shared response helpers)
+# =============================================================================
+
+_TESTING_EXPORTS: dict[str, tuple[str, str, str]] = {
+    # engine case: (csv route, memo route, filename)
+    "je": ("/export/csv/je-testing", "/export/je-testing-memo", "GL Detail FY25"),
+    "ap": ("/export/csv/ap-testing", "/export/ap-testing-memo", "ap_payments"),
+    "payroll": ("/export/csv/payroll-testing", "/export/payroll-testing-memo", "payroll"),
+    "revenue": ("/export/csv/revenue-testing", "/export/revenue-testing-memo", "revenue"),
+    "fixed_assets": ("/export/csv/fixed-assets", "/export/fixed-asset-memo", "fa_register"),
+    "inventory": ("/export/csv/inventory", "/export/inventory-memo", "inventory"),
+}
+
+
+@pytest.mark.asyncio
+async def test_testing_tool_exports_unchanged(db_session, make_user):
+    from tests.test_sprint819_output_snapshots import CASES
+
+    user = make_user(email="snap819_testing_exports@example.com")
+    _override(user, db_session)
+    out: dict[str, Any] = {}
+    try:
+        # shared/memo_template.py seeds its follow-up wording rotation with the
+        # builtin str hash(), which is randomised per process (PYTHONHASHSEED), so
+        # memo wording differs between server restarts — pre-existing, outside
+        # Sprint 819. Pin it here so the snapshot is reproducible.
+        with (
+            freeze_time(FROZEN_NOW),
+            patch("shared.memo_template.hash", create=True, side_effect=lambda s: sum(map(ord, s))),
+        ):
+            for case, (csv_url, memo_url, filename) in _TESTING_EXPORTS.items():
+                # The wire shape the frontend posts back: FastAPI's encoder sends
+                # Decimal as a JSON number.
+                result = json.loads(
+                    json.dumps(CASES[case](), default=lambda o: float(o) if isinstance(o, Decimal) else str(o))
+                )
+                body = {**result, "filename": filename}
+                out[f"{case}:csv"] = _capture(await _call("POST", csv_url, json=body))
+                out[f"{case}:memo"] = _capture(await _call("POST", memo_url, json=body))
+    finally:
+        app.dependency_overrides.clear()
+    check_snapshot("route_testing_exports", out)
