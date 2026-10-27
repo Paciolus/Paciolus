@@ -294,6 +294,32 @@ def build_memo_header(
     story.append(Spacer(1, 12))
 
 
+def source_line(
+    source_document_title: Optional[str],
+    filename: Optional[str],
+    *,
+    filename_label: str = "Source",
+    always: bool = False,
+) -> Optional[str]:
+    """Leader-dot "Source" line for a memo's scope block (Sprint 813).
+
+    * title and filename → ``Source ... <title> (<filename>)``
+    * title only         → ``Source ... <title>``
+    * filename only      → ``<filename_label> ... <filename>``
+
+    With neither, returns ``None`` — unless ``always`` is set, in which case
+    the filename line is emitted regardless (the diagnostic memos label it
+    "Source File" and always print it).
+    """
+    if source_document_title and filename:
+        return create_leader_dots("Source", f"{source_document_title} ({filename})")
+    if source_document_title:
+        return create_leader_dots("Source", source_document_title)
+    if filename or always:
+        return create_leader_dots(filename_label, filename or "")
+    return None
+
+
 def build_scope_section(
     story: list,
     styles: dict,
@@ -326,12 +352,9 @@ def build_scope_section(
         scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
     # Source document transparency (Sprint 6)
-    if source_document_title and source_document:
-        scope_lines.insert(0, create_leader_dots("Source", f"{source_document_title} ({source_document})"))
-    elif source_document_title:
-        scope_lines.insert(0, create_leader_dots("Source", source_document_title))
-    elif source_document:
-        scope_lines.insert(0, create_leader_dots("Source", source_document))
+    source = source_line(source_document_title, source_document)
+    if source:
+        scope_lines.insert(0, source)
 
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))

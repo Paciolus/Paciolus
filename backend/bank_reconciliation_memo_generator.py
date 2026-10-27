@@ -43,6 +43,7 @@ from shared.memo_base import (
     build_proof_summary_section,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
     wrap_table_strings,
 )
 from shared.report_chrome import (
@@ -776,12 +777,9 @@ def generate_bank_rec_memo(
     story.append(LedgerRule(doc.width))
 
     scope_lines = []
-    if source_document_title and filename:
-        scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
-    elif source_document_title:
-        scope_lines.append(create_leader_dots("Source", source_document_title))
-    elif filename:
-        scope_lines.append(create_leader_dots("Source", filename))
+    source = source_line(source_document_title, filename)
+    if source:
+        scope_lines.append(source)
     if period_tested:
         scope_lines.append(create_leader_dots("Period Tested", period_tested))
 

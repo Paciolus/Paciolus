@@ -24,7 +24,6 @@ from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from pdf_generator import (
     ClassicalColors,
     LedgerRule,
-    create_leader_dots,
     generate_reference_number,
 )
 from security_utils import log_secure_operation
@@ -35,6 +34,7 @@ from shared.memo_base import (
     build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
 )
 from shared.memo_template import _roman
 from shared.report_chrome import (
@@ -178,16 +178,9 @@ def generate_currency_conversion_memo(
     story.append(Spacer(1, 12))
 
     # Source document transparency
-    if source_document_title and filename:
-        story.append(
-            Paragraph(create_leader_dots("Source", f"{source_document_title} ({filename})"), styles["MemoLeader"])
-        )
-        story.append(Spacer(1, 4))
-    elif source_document_title:
-        story.append(Paragraph(create_leader_dots("Source", source_document_title), styles["MemoLeader"]))
-        story.append(Spacer(1, 4))
-    elif filename:
-        story.append(Paragraph(create_leader_dots("Source", filename), styles["MemoLeader"]))
+    source = source_line(source_document_title, filename)
+    if source:
+        story.append(Paragraph(source, styles["MemoLeader"]))
         story.append(Spacer(1, 4))
 
     section_num = 1

@@ -32,6 +32,7 @@ from shared.memo_base import (
     build_intelligence_stamp,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
     standard_table_style,
     wrap_table_strings,
 )
@@ -150,15 +151,10 @@ def generate_accrual_completeness_memo(
     story.append(LedgerRule(doc_width))
 
     # Source document transparency
-    if source_document_title and filename:
-        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
-    elif source_document_title:
-        source_line = create_leader_dots("Source", source_document_title)
-    else:
-        source_line = create_leader_dots("Source File", filename)
+    source = source_line(source_document_title, filename, filename_label="Source File", always=True)
 
     scope_lines = [
-        source_line,
+        source,
         create_leader_dots("Accrual Accounts Identified", str(accrual_count)),
         create_leader_dots("Total Accrued Balance", f"${total_accrued:,.2f}"),
     ]

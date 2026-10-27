@@ -29,7 +29,7 @@ from pdf_generator import (
     generate_reference_number,
 )
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import build_disclaimer, build_intelligence_stamp, create_memo_styles
+from shared.memo_base import build_disclaimer, build_intelligence_stamp, create_memo_styles, source_line
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -237,12 +237,7 @@ def generate_flux_expectations_memo(
     story.append(LedgerRule(doc_width))
 
     # Source document transparency
-    if source_document_title and filename:
-        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
-    elif source_document_title:
-        source_line = create_leader_dots("Source", source_document_title)
-    else:
-        source_line = create_leader_dots("Source File", filename)
+    source = source_line(source_document_title, filename, filename_label="Source File", always=True)
 
     # Documented/pending badges
     exp_badge = f"{documented_count:,}"
@@ -250,7 +245,7 @@ def generate_flux_expectations_memo(
         exp_badge += f"  \u26a0 ({pending_count} pending)"
 
     scope_lines = [
-        source_line,
+        source,
         create_leader_dots("Total Accounts Compared", f"{summary.get('total_items', len(items)):,}"),
         create_leader_dots("High Risk Items", f"{summary.get('high_risk_count', 0):,}"),
         create_leader_dots("Medium Risk Items", f"{summary.get('medium_risk_count', 0):,}"),

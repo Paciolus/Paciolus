@@ -25,6 +25,7 @@ from shared.memo_base import (
     build_intelligence_stamp,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
     wrap_table_strings,
 )
 from shared.memo_template import _roman
@@ -120,15 +121,10 @@ def generate_preflight_memo(
     label = preflight_result.get("readiness_label", "Unknown")
 
     # Source document transparency
-    if source_document_title and filename:
-        source_line = create_leader_dots("Source", f"{source_document_title} ({filename})")
-    elif source_document_title:
-        source_line = create_leader_dots("Source", source_document_title)
-    else:
-        source_line = create_leader_dots("Source File", filename)
+    source = source_line(source_document_title, filename, filename_label="Source File", always=True)
 
     scope_lines = [
-        source_line,
+        source,
         create_leader_dots("Total Rows", f"{preflight_result.get('row_count', 0):,}"),
         create_leader_dots("Total Columns", str(preflight_result.get("column_count", 0))),
         create_leader_dots("Readiness Score", f"{readiness:.1f} / 100"),

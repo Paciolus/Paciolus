@@ -38,6 +38,7 @@ from shared.memo_base import (
     build_memo_header,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
 )
 from shared.memo_template import _roman
 from shared.report_chrome import (
@@ -602,14 +603,9 @@ def _generate_sampling_memo(
     story.append(LedgerRule(doc_width))
 
     # Source document transparency (Sprint 6)
-    if source_document_title and filename:
-        story.append(
-            Paragraph(create_leader_dots("Source", f"{source_document_title} ({filename})"), styles["MemoLeader"])
-        )
-    elif source_document_title:
-        story.append(Paragraph(create_leader_dots("Source", source_document_title), styles["MemoLeader"]))
-    elif filename:
-        story.append(Paragraph(create_leader_dots("Source", filename), styles["MemoLeader"]))
+    source = source_line(source_document_title, filename)
+    if source:
+        story.append(Paragraph(source, styles["MemoLeader"]))
 
     scope_text = (
         "This memo documents the statistical sampling procedures performed in accordance with "

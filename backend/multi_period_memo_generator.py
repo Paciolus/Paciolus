@@ -40,6 +40,7 @@ from shared.memo_base import (
     build_intelligence_stamp,
     build_workpaper_signoff,
     create_memo_styles,
+    source_line,
 )
 from shared.report_chrome import (
     ReportMetadata,
@@ -1139,12 +1140,9 @@ def generate_multi_period_memo(
 
     # Source document transparency
     source_scope_lines = []
-    if source_document_title and filename:
-        source_scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
-    elif source_document_title:
-        source_scope_lines.append(create_leader_dots("Source", source_document_title))
-    elif filename:
-        source_scope_lines.append(create_leader_dots("Source", filename))
+    source = source_line(source_document_title, filename)
+    if source:
+        source_scope_lines.append(source)
 
     scope_lines = source_scope_lines + [
         create_leader_dots("Periods Compared", period_desc),
