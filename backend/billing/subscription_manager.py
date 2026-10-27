@@ -9,10 +9,11 @@ Self-Serve Checkout: multi-item seat extraction from seat add-on line item.
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from billing.stripe_client import get_stripe
+from billing.stripe_client import get_stripe, to_plain_dict
 from models import User, UserTier
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
@@ -106,6 +107,46 @@ def _extract_billing_interval(items: list[dict]) -> BillingInterval:
     return BillingInterval.MONTHLY
 
 
+def _extract_period_bounds(stripe_subscription: dict, items: list[dict]) -> tuple[datetime | None, datetime | None]:
+    """Return the billing period (start, end) as aware UTC datetimes.
+
+    Sprint 786b: Stripe API ``2025-03-31.basil`` moved ``current_period_start``
+    / ``current_period_end`` off the Subscription and onto each Subscription
+    Item. Every SDK this code has shipped on since then (stripe 15 pins
+    ``2026-04-22.dahlia``, stripe 16 pins ``2026-09-30.endive``) sends a basil-or-
+    later ``Stripe-Version``, so ``stripe.Subscription.retrieve()`` responses
+    carry the period only on the items. Webhook payloads follow the *endpoint's*
+    API version (set in the Stripe Dashboard), so they may still carry the
+    legacy top-level fields.
+
+    Read the top-level field when present (pre-basil payloads), else the base
+    plan item's: its renewal is what defines the plan period.
+    """
+
+    def _ts(value: Any) -> datetime | None:
+        return datetime.fromtimestamp(int(value), tz=UTC) if value else None
+
+    start = stripe_subscription.get("current_period_start")
+    end = stripe_subscription.get("current_period_end")
+    if not start or not end:
+        base_item = _find_base_item(items)
+        if base_item is not None:
+            start = start or base_item.get("current_period_start")
+            end = end or base_item.get("current_period_end")
+    return _ts(start), _ts(end)
+
+
+def _find_base_item(items: list[dict]) -> dict | None:
+    """Return the base plan item (first non-seat-add-on), else the first item."""
+    from billing.price_config import get_all_seat_price_ids
+
+    seat_ids = get_all_seat_price_ids()
+    for item in items:
+        if item.get("price", {}).get("id", "") not in seat_ids:
+            return item
+    return items[0] if items else None
+
+
 def _period_advanced(old_start: datetime | None, new_start: datetime | None) -> bool:
     """True when ``new_start`` begins a later billing period than ``old_start``.
 
@@ -157,12 +198,7 @@ def sync_subscription_from_stripe(
     additional_seats = _extract_additional_seats(stripe_subscription)
 
     # Convert timestamps
-    period_start = None
-    period_end = None
-    if stripe_subscription.get("current_period_start"):
-        period_start = datetime.fromtimestamp(stripe_subscription["current_period_start"], tz=UTC)
-    if stripe_subscription.get("current_period_end"):
-        period_end = datetime.fromtimestamp(stripe_subscription["current_period_end"], tz=UTC)
+    period_start, period_end = _extract_period_bounds(stripe_subscription, items)
 
     if sub is None:
         sub = Subscription(
@@ -330,7 +366,7 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     stripe = get_stripe()
 
     # Get current subscription items from Stripe
-    stripe_sub = stripe.Subscription.retrieve(snap_stripe_sub_id)
+    stripe_sub = to_plain_dict(stripe.Subscription.retrieve(snap_stripe_sub_id))
     items = stripe_sub.get("items", {}).get("data", [])
     if not items:
         return None
@@ -425,7 +461,7 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
     stripe = get_stripe()
 
     # Get current subscription items from Stripe
-    stripe_sub = stripe.Subscription.retrieve(snap_stripe_sub_id)
+    stripe_sub = to_plain_dict(stripe.Subscription.retrieve(snap_stripe_sub_id))
     items = stripe_sub.get("items", {}).get("data", [])
     if not items:
         return None

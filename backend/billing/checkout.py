@@ -99,7 +99,12 @@ def create_checkout_session(
 
     session_params: dict = {
         "customer": customer_id,
-        "payment_method_types": ["card"],
+        # Sprint 786b: API 2026-09-30.endive (pinned by stripe 16) rejects
+        # `payment_method_types` on Checkout Session create with a 400. The
+        # replacement `allowed_payment_method_types` keeps the card-only intent
+        # in code rather than handing it to the Dashboard's dynamic payment
+        # method settings.
+        "allowed_payment_method_types": ["card"],
         "line_items": line_items,
         "mode": "subscription",
         "success_url": success_url,
