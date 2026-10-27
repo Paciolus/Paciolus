@@ -576,7 +576,7 @@ still hold 1 GiB each; the per-user rate limit is the only bound today.
 0 failed** (serial, 18m59s, origin/main venv: FastAPI 0.162 / SQLAlchemy 2.1.6). `ruff check` + `ruff format --check`
 clean on the 4 touched Python files; mypy clean on `shared/pdf_parser.py` + `shared/pdf_extraction.py`.
 
-**Commit SHA:** TBD.
+**Commit SHA:** `3f001479` (stacked on PR #277).
 
 ---
 
