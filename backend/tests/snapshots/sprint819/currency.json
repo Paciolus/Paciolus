@@ -327,6 +327,573 @@
    }
   ]
  },
+ "conversion_typed": {
+  "conversion_performed": true,
+  "presentation_currency": "USD",
+  "total_accounts": 10,
+  "converted_count": 6,
+  "unconverted_count": 3,
+  "unconverted_items": [
+   {
+    "account_number": "1003",
+    "account_name": "Line 3",
+    "original_amount": "-250.00",
+    "original_currency": "JPY",
+    "issue": "stale_rate",
+    "severity": "low"
+   },
+   {
+    "account_number": "1005",
+    "account_name": "Line 5",
+    "original_amount": "99.5",
+    "original_currency": "(none)",
+    "issue": "missing_currency_code",
+    "severity": "medium"
+   },
+   {
+    "account_number": "1006",
+    "account_name": "Line 6",
+    "original_amount": "12",
+    "original_currency": "XYZ",
+    "issue": "missing_rate",
+    "severity": "medium"
+   },
+   {
+    "account_number": "1008",
+    "account_name": "Line 8",
+    "original_amount": "3.3",
+    "original_currency": "CHF",
+    "issue": "missing_rate",
+    "severity": "medium"
+   }
+  ],
+  "currencies_found": [
+   "CAD",
+   "CHF",
+   "EUR",
+   "GBP",
+   "JPY",
+   "USD",
+   "XYZ"
+  ],
+  "rates_applied": {
+   "CAD/USD": "0.74",
+   "EUR/USD": "1.10",
+   "GBP/USD": "1.27",
+   "JPY/USD": "0.0067"
+  },
+  "balance_check_passed": true,
+  "balance_imbalance": 0.0,
+  "conversion_summary": "6 of 10 accounts converted (60%). Presentation currency: USD. 3 accounts could not be converted.",
+  "currency_exposure": [
+   {
+    "currency": "CAD",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.74",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "CHF",
+    "account_count": 1,
+    "foreign_total": "3.30",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "EUR",
+    "account_count": 2,
+    "foreign_total": "1500.25",
+    "rate": "1.10",
+    "usd_equivalent": "1650.28",
+    "pct_of_total": "51.2"
+   },
+   {
+    "currency": "GBP",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "1.27",
+    "usd_equivalent": "1567.89",
+    "pct_of_total": "48.6"
+   },
+   {
+    "currency": "JPY",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.0067",
+    "usd_equivalent": "-1.68",
+    "pct_of_total": "0.1"
+   },
+   {
+    "currency": "USD",
+    "account_count": 1,
+    "foreign_total": "7.00",
+    "rate": "1.0000",
+    "usd_equivalent": "7.00",
+    "pct_of_total": "0.2"
+   },
+   {
+    "currency": "XYZ",
+    "account_count": 1,
+    "foreign_total": "12.00",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   }
+  ]
+ },
+ "conversion_typed:rows": [
+  {
+   "Account Code": 1000,
+   "Description": "Line 0",
+   "Amount": 1500.25,
+   "Curr": "EUR",
+   "converted_amount_usd": "1650.2750"
+  },
+  {
+   "Account Code": 1001,
+   "Description": "Line 1",
+   "Amount": NaN,
+   "Curr": "EUR",
+   "converted_amount_usd": "0.0000"
+  },
+  {
+   "Account Code": 1002,
+   "Description": "Line 2",
+   "Amount": "$1,234.56",
+   "Curr": "GBP",
+   "converted_amount_usd": "1567.8912"
+  },
+  {
+   "Account Code": 1003,
+   "Description": "Line 3",
+   "Amount": "(250.00)",
+   "Curr": "JPY",
+   "converted_amount_usd": "-1.6750"
+  },
+  {
+   "Account Code": 1004,
+   "Description": "Line 4",
+   "Amount": 0,
+   "Curr": NaN,
+   "converted_amount_usd": "0"
+  },
+  {
+   "Account Code": 1005,
+   "Description": "Line 5",
+   "Amount": 99.5,
+   "Curr": NaN,
+   "converted_amount_usd": "99.5"
+  },
+  {
+   "Account Code": 1006,
+   "Description": "Line 6",
+   "Amount": 12,
+   "Curr": "XYZ",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1007,
+   "Description": "Line 7",
+   "Amount": 7,
+   "Curr": "usd",
+   "converted_amount_usd": "7.0000"
+  },
+  {
+   "Account Code": 1008,
+   "Description": "Line 8",
+   "Amount": 3.3,
+   "Curr": "CHF",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1009,
+   "Description": "Line 9",
+   "Amount": null,
+   "Curr": "CAD",
+   "converted_amount_usd": "0.0000"
+  }
+ ],
+ "conversion_typed_detect": {
+  "conversion_performed": true,
+  "presentation_currency": "USD",
+  "total_accounts": 10,
+  "converted_count": 6,
+  "unconverted_count": 3,
+  "unconverted_items": [
+   {
+    "account_number": "1003",
+    "account_name": "Line 3",
+    "original_amount": "-250.00",
+    "original_currency": "JPY",
+    "issue": "stale_rate",
+    "severity": "low"
+   },
+   {
+    "account_number": "1005",
+    "account_name": "Line 5",
+    "original_amount": "99.5",
+    "original_currency": "(none)",
+    "issue": "missing_currency_code",
+    "severity": "medium"
+   },
+   {
+    "account_number": "1006",
+    "account_name": "Line 6",
+    "original_amount": "12",
+    "original_currency": "XYZ",
+    "issue": "missing_rate",
+    "severity": "medium"
+   },
+   {
+    "account_number": "1008",
+    "account_name": "Line 8",
+    "original_amount": "3.3",
+    "original_currency": "CHF",
+    "issue": "missing_rate",
+    "severity": "medium"
+   }
+  ],
+  "currencies_found": [
+   "CAD",
+   "CHF",
+   "EUR",
+   "GBP",
+   "JPY",
+   "USD",
+   "XYZ"
+  ],
+  "rates_applied": {
+   "CAD/USD": "0.74",
+   "EUR/USD": "1.10",
+   "GBP/USD": "1.27",
+   "JPY/USD": "0.0067"
+  },
+  "balance_check_passed": true,
+  "balance_imbalance": 0.0,
+  "conversion_summary": "6 of 10 accounts converted (60%). Presentation currency: USD. 3 accounts could not be converted.",
+  "currency_exposure": [
+   {
+    "currency": "CAD",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.74",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "CHF",
+    "account_count": 1,
+    "foreign_total": "3.30",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "EUR",
+    "account_count": 2,
+    "foreign_total": "1500.25",
+    "rate": "1.10",
+    "usd_equivalent": "1650.28",
+    "pct_of_total": "51.2"
+   },
+   {
+    "currency": "GBP",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "1.27",
+    "usd_equivalent": "1567.89",
+    "pct_of_total": "48.6"
+   },
+   {
+    "currency": "JPY",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.0067",
+    "usd_equivalent": "-1.68",
+    "pct_of_total": "0.1"
+   },
+   {
+    "currency": "USD",
+    "account_count": 1,
+    "foreign_total": "7.00",
+    "rate": "1.0000",
+    "usd_equivalent": "7.00",
+    "pct_of_total": "0.2"
+   },
+   {
+    "currency": "XYZ",
+    "account_count": 1,
+    "foreign_total": "12.00",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   }
+  ]
+ },
+ "conversion_typed_detect:rows": [
+  {
+   "Account Code": 1000,
+   "Description": "Line 0",
+   "Amount": 1500.25,
+   "Curr": "EUR",
+   "converted_amount_usd": "1650.2750"
+  },
+  {
+   "Account Code": 1001,
+   "Description": "Line 1",
+   "Amount": NaN,
+   "Curr": "EUR",
+   "converted_amount_usd": "0.0000"
+  },
+  {
+   "Account Code": 1002,
+   "Description": "Line 2",
+   "Amount": "$1,234.56",
+   "Curr": "GBP",
+   "converted_amount_usd": "1567.8912"
+  },
+  {
+   "Account Code": 1003,
+   "Description": "Line 3",
+   "Amount": "(250.00)",
+   "Curr": "JPY",
+   "converted_amount_usd": "-1.6750"
+  },
+  {
+   "Account Code": 1004,
+   "Description": "Line 4",
+   "Amount": 0,
+   "Curr": NaN,
+   "converted_amount_usd": "0"
+  },
+  {
+   "Account Code": 1005,
+   "Description": "Line 5",
+   "Amount": 99.5,
+   "Curr": NaN,
+   "converted_amount_usd": "99.5"
+  },
+  {
+   "Account Code": 1006,
+   "Description": "Line 6",
+   "Amount": 12,
+   "Curr": "XYZ",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1007,
+   "Description": "Line 7",
+   "Amount": 7,
+   "Curr": "usd",
+   "converted_amount_usd": "7.0000"
+  },
+  {
+   "Account Code": 1008,
+   "Description": "Line 8",
+   "Amount": 3.3,
+   "Curr": "CHF",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1009,
+   "Description": "Line 9",
+   "Amount": null,
+   "Curr": "CAD",
+   "converted_amount_usd": "0.0000"
+  }
+ ],
+ "conversion_typed_no_account_cols": {
+  "conversion_performed": true,
+  "presentation_currency": "USD",
+  "total_accounts": 10,
+  "converted_count": 6,
+  "unconverted_count": 3,
+  "unconverted_items": [
+   {
+    "account_number": "3",
+    "account_name": "",
+    "original_amount": "-250.00",
+    "original_currency": "JPY",
+    "issue": "stale_rate",
+    "severity": "low"
+   },
+   {
+    "account_number": "5",
+    "account_name": "",
+    "original_amount": "99.5",
+    "original_currency": "(none)",
+    "issue": "missing_currency_code",
+    "severity": "medium"
+   },
+   {
+    "account_number": "6",
+    "account_name": "",
+    "original_amount": "12",
+    "original_currency": "XYZ",
+    "issue": "missing_rate",
+    "severity": "medium"
+   },
+   {
+    "account_number": "8",
+    "account_name": "",
+    "original_amount": "3.3",
+    "original_currency": "CHF",
+    "issue": "missing_rate",
+    "severity": "medium"
+   }
+  ],
+  "currencies_found": [
+   "CAD",
+   "CHF",
+   "EUR",
+   "GBP",
+   "JPY",
+   "USD",
+   "XYZ"
+  ],
+  "rates_applied": {
+   "CAD/USD": "0.74",
+   "EUR/USD": "1.10",
+   "GBP/USD": "1.27",
+   "JPY/USD": "0.0067"
+  },
+  "balance_check_passed": true,
+  "balance_imbalance": 0.0,
+  "conversion_summary": "6 of 10 accounts converted (60%). Presentation currency: USD. 3 accounts could not be converted.",
+  "currency_exposure": [
+   {
+    "currency": "CAD",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.74",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "CHF",
+    "account_count": 1,
+    "foreign_total": "3.30",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   },
+   {
+    "currency": "EUR",
+    "account_count": 2,
+    "foreign_total": "1500.25",
+    "rate": "1.10",
+    "usd_equivalent": "1650.28",
+    "pct_of_total": "51.2"
+   },
+   {
+    "currency": "GBP",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "1.27",
+    "usd_equivalent": "1567.89",
+    "pct_of_total": "48.6"
+   },
+   {
+    "currency": "JPY",
+    "account_count": 1,
+    "foreign_total": "0.00",
+    "rate": "0.0067",
+    "usd_equivalent": "-1.68",
+    "pct_of_total": "0.1"
+   },
+   {
+    "currency": "USD",
+    "account_count": 1,
+    "foreign_total": "7.00",
+    "rate": "1.0000",
+    "usd_equivalent": "7.00",
+    "pct_of_total": "0.2"
+   },
+   {
+    "currency": "XYZ",
+    "account_count": 1,
+    "foreign_total": "12.00",
+    "rate": "N/A",
+    "usd_equivalent": "0.00",
+    "pct_of_total": "0.0"
+   }
+  ]
+ },
+ "conversion_typed_no_account_cols:rows": [
+  {
+   "Account Code": 1000,
+   "Description": "Line 0",
+   "Amount": 1500.25,
+   "Curr": "EUR",
+   "converted_amount_usd": "1650.2750"
+  },
+  {
+   "Account Code": 1001,
+   "Description": "Line 1",
+   "Amount": NaN,
+   "Curr": "EUR",
+   "converted_amount_usd": "0.0000"
+  },
+  {
+   "Account Code": 1002,
+   "Description": "Line 2",
+   "Amount": "$1,234.56",
+   "Curr": "GBP",
+   "converted_amount_usd": "1567.8912"
+  },
+  {
+   "Account Code": 1003,
+   "Description": "Line 3",
+   "Amount": "(250.00)",
+   "Curr": "JPY",
+   "converted_amount_usd": "-1.6750"
+  },
+  {
+   "Account Code": 1004,
+   "Description": "Line 4",
+   "Amount": 0,
+   "Curr": NaN,
+   "converted_amount_usd": "0"
+  },
+  {
+   "Account Code": 1005,
+   "Description": "Line 5",
+   "Amount": 99.5,
+   "Curr": NaN,
+   "converted_amount_usd": "99.5"
+  },
+  {
+   "Account Code": 1006,
+   "Description": "Line 6",
+   "Amount": 12,
+   "Curr": "XYZ",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1007,
+   "Description": "Line 7",
+   "Amount": 7,
+   "Curr": "usd",
+   "converted_amount_usd": "7.0000"
+  },
+  {
+   "Account Code": 1008,
+   "Description": "Line 8",
+   "Amount": 3.3,
+   "Curr": "CHF",
+   "converted_amount_usd": null
+  },
+  {
+   "Account Code": 1009,
+   "Description": "Line 9",
+   "Amount": null,
+   "Curr": "CAD",
+   "converted_amount_usd": "0.0000"
+  }
+ ],
  "date_errors": {
   "eu_slash": "Rate table validation failed: Row 1: Invalid date '31/12/2025'",
   "dotted": "Rate table validation failed: Row 1: Invalid date format '31.12.2025' (use YYYY-MM-DD or MM/DD/YYYY)",

@@ -504,6 +504,33 @@ def _currency_case() -> dict:
             tb, table, "Balance", None, "Account Number", "Account Name"
         ).to_dict(),
     }
+    # Typed (Excel-like) cells: int account numbers, float / NaN / text amounts,
+    # missing currencies, no name column (falls back to "description").
+    typed = [
+        {"Account Code": 1000 + i, "Description": f"Line {i}", "Amount": amt, "Curr": cur}
+        for i, (amt, cur) in enumerate(
+            [
+                (1500.25, "EUR"),
+                (float("nan"), "EUR"),
+                ("$1,234.56", "GBP"),
+                ("(250.00)", "JPY"),
+                (0, None),
+                (99.5, None),
+                (12, "XYZ"),
+                (7, "usd"),
+                (3.3, "CHF"),
+                (None, "CAD"),
+            ]
+        )
+    ]
+    for label, kwargs in {
+        "conversion_typed": {"currency_column": "Curr", "target_date": date(2025, 12, 31)},
+        "conversion_typed_detect": {},
+        "conversion_typed_no_account_cols": {"account_number_column": "nope", "account_name_column": "nope"},
+    }.items():
+        typed_result = convert_trial_balance(typed, table, "Amount", **kwargs)
+        out[label] = typed_result.to_dict()
+        out[label + ":rows"] = typed_result.converted_rows
     bad: dict[str, str] = {}
     for label, raw in {
         "eu_slash": "31/12/2025",
