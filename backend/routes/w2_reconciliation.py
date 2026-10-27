@@ -15,19 +15,16 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from database import get_db
-from shared.entitlement_checks import check_upload_limit
-from shared.error_messages import sanitize_error
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
-from shared.testing_route import enforce_tool_access
-from shared.tool_run_recorder import maybe_record_tool_run
+from shared.testing_route import enforce_tool_access, run_json_tool
 from w2_reconciliation_engine import (
     STATUTORY_LIMITS_BY_YEAR,
     EmployeePayroll,
@@ -251,38 +248,20 @@ def run_reconciliation(
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    # Sprint 689d: gate promoted tool at tier + upload-limit level.
-    enforce_tool_access(current_user, "w2_reconciliation", db)
-    check_upload_limit(current_user, db)
-
-    try:
-        result = reconcile_w2(_build_config(payload))
-    except W2ReconciliationInputError as e:
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
-        raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError, ArithmeticError) as e:
-        logger.exception("W-2 reconciliation failed")
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "w2_reconciliation", False)
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "audit", "w2_reconciliation_error"),
-        )
-
-    # Sprint 787b: record the run on the engagement workpaper trail. Both
-    # composite_score and flagged_accounts are None by design, not omission:
-    # this engine produces no composite score, and shared/account_extractors.py
-    # has no extractor for it because its output is not GL-account-level.
-    # PR #183 review: recorded synchronously, not via background_tasks.
-    # Starlette sends the response body (responses.py:167) *before* awaiting the
-    # background task (:170), so the client already has the result while the
-    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
-    # as the POST resolves, which would GET the workpaper list before the row
-    # existed, replace the context state with the stale list, and never refresh
-    # again — the new entry invisible until a manual reload. The write is one
-    # INSERT plus a commit after an analysis that already ran in-process, so the
-    # latency it buys back is not worth the race.
-    maybe_record_tool_run(
-        db, payload.engagement_id, current_user.id, "w2_reconciliation", True, None, None, consumes_upload=True
+    # Sprint 689d: gate promoted tool at tier + upload-limit level;
+    # Sprint 787b: run recorded on the engagement workpaper trail (success
+    # synchronously, before the response). Sprint 819: the sequence lives in
+    # shared/testing_route.py::run_json_tool.
+    result = run_json_tool(
+        db=db,
+        current_user=current_user,
+        tool_name="w2_reconciliation",
+        engagement_id=payload.engagement_id,
+        compute=lambda: reconcile_w2(_build_config(payload)),
+        input_errors=(W2ReconciliationInputError,),
+        error_key="w2_reconciliation_error",
+        route_logger=logger,
+        failure_log="W-2 reconciliation failed",
     )
     return result.to_dict()
 

@@ -845,9 +845,13 @@ class TestCheckAndIncrementAreSymmetric:
                     unmetered.append(f"{rel}::{fn.name}")
 
         # The scan must actually be finding the gate, or this test proves nothing.
-        assert len(gated) >= 14, gated
+        # Sprint 819 item 6: the six promoted JSON tools gate through one shared
+        # helper, so they count once (as run_json_tool) — was 14 when each route
+        # called check_upload_limit itself.
+        assert len(gated) >= 9, gated
         assert "routes/audit_pipeline.py::audit_trial_balance" in gated  # the Depends() form
         assert "shared/testing_route.py::run_single_file_testing" in gated  # the six testing tools
+        assert "shared/testing_route.py::run_json_tool" in gated  # the six promoted JSON tools
         assert not unmetered, (
             "These functions call check_upload_limit but never advance the counter on success, "
             "so the quota is inert for paid tiers there. Pass consumes_upload=True on the success "

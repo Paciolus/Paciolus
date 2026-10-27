@@ -25,14 +25,13 @@ from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from database import get_db
-from shared.entitlement_checks import check_upload_limit
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
-from shared.testing_route import enforce_tool_access
-from shared.tool_run_recorder import maybe_record_tool_run
+from shared.testing_route import enforce_tool_access, run_json_tool
 from sod_engine import (
     DEFAULT_SOD_RULES,
     RolePermission,
+    SodResult,
     SodRule,
     SodSeverity,
     UserRoleAssignment,
@@ -167,36 +166,25 @@ def analyze_sod(
     db: Session = Depends(get_db),
 ) -> SodAnalysisResponse:
     """Run the SoD checker against the supplied matrices."""
+
     # Sprint 789: standard tier + upload-quota gating, matching 689c–g.
-    enforce_tool_access(current_user, "sod_checker", db)
-    check_upload_limit(current_user, db)
-
-    # Sprint 787b: unlike 689c–g this route had no try/except, because the
-    # engine does not raise on bad input — _build_extra_rule does, as a 400 for
-    # an unrecognised severity. That is still a failed run from the engagement's
-    # point of view, so it is recorded rather than left silent.
-    try:
+    # Sprint 787b: unlike 689c–g this route maps no exception to a 400 itself,
+    # because the engine does not raise on bad input — _build_extra_rule does,
+    # as a 400 for an unrecognised severity. That is still a failed run from the
+    # engagement's point of view, so it is recorded and re-raised unchanged.
+    # Sprint 819: the sequence lives in shared/testing_route.py::run_json_tool.
+    def _analyze() -> SodResult:
         users, roles, extra = _build_inputs(payload)
-        result = analyze_segregation_of_duties(users, roles, extra_rules=extra or None)
-    except (HTTPException, ValueError, KeyError, TypeError):
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "sod_checker", False)
-        raise
+        return analyze_segregation_of_duties(users, roles, extra_rules=extra or None)
 
-    # composite_score and flagged_accounts are None by design, not omission: a
-    # role-permission matrix yields a per-user risk ranking, not a single
-    # composite, and its findings are users and permissions rather than GL
-    # accounts — so shared/account_extractors.py has no extractor for it.
-    # PR #183 review: recorded synchronously, not via background_tasks.
-    # Starlette sends the response body (responses.py:167) *before* awaiting the
-    # background task (:170), so the client already has the result while the
-    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
-    # as the POST resolves, which would GET the workpaper list before the row
-    # existed, replace the context state with the stale list, and never refresh
-    # again — the new entry invisible until a manual reload. The write is one
-    # INSERT plus a commit after an analysis that already ran in-process, so the
-    # latency it buys back is not worth the race.
-    maybe_record_tool_run(
-        db, payload.engagement_id, current_user.id, "sod_checker", True, None, None, consumes_upload=True
+    result = run_json_tool(
+        db=db,
+        current_user=current_user,
+        tool_name="sod_checker",
+        engagement_id=payload.engagement_id,
+        compute=_analyze,
+        unexpected_errors=(),
+        reraise_errors=(HTTPException, ValueError, KeyError, TypeError),
     )
     return SodAnalysisResponse(**result.to_dict())
 
