@@ -4,15 +4,15 @@
  * W-2 / W-3 Reconciliation hook — Sprint 689d.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { describeW2Error } from '@/components/w2Reconciliation/taxYearSupport'
 import type {
   W2ReconciliationRequest,
   W2ReconciliationResponse,
 } from '@/types/w2Reconciliation'
-import { apiDownload, apiGet, apiPost, downloadBlob } from '@/utils/apiClient'
+import { apiGet } from '@/utils/apiClient'
+import { createJsonAnalysisHook, type JsonAnalysisStatus } from './createJsonAnalysisHook'
 
 export interface W2SupportedYears {
   tax_years: number[]
@@ -36,7 +36,7 @@ export function useW2SupportedYears(): { supported: W2SupportedYears | null; loa
   return { supported, loaded }
 }
 
-export type W2Status = 'idle' | 'loading' | 'success' | 'error'
+export type W2Status = JsonAnalysisStatus
 
 export interface UseW2ReconciliationReturn {
   status: W2Status
@@ -47,60 +47,16 @@ export interface UseW2ReconciliationReturn {
   reset: () => void
 }
 
+const useW2Analysis = createJsonAnalysisHook<W2ReconciliationRequest, W2ReconciliationResponse>({
+  endpoint: '/audit/w2-reconciliation',
+  exportEndpoint: '/audit/w2-reconciliation/export.csv',
+  toolName: 'W-2/W-3 Reconciliation',
+  analyzeErrorMessage: 'Failed to run W-2 reconciliation',
+  exportFilename: 'w2_reconciliation.csv',
+  describeError: (error, payload) => describeW2Error(error, payload.tax_year),
+})
+
 export function useW2Reconciliation(): UseW2ReconciliationReturn {
-  const { token } = useAuthSession()
-  // Sprint 791: the engagement link is injected by the hook, not declared on
-  // the request type — the page supplies the analysis inputs and the hook owns
-  // the workspace link. Same split as useAuditUpload (which appends
-  // engagement_id to FormData) and useStatisticalSampling.
-  const engagement = useOptionalEngagementContext()
-  const engagementId = engagement?.engagementId
-  const [status, setStatus] = useState<W2Status>('idle')
-  const [result, setResult] = useState<W2ReconciliationResponse | null>(null)
-  const [error, setError] = useState('')
-
-  const analyze = useCallback(async (payload: W2ReconciliationRequest): Promise<boolean> => {
-    setStatus('loading')
-    setError('')
-    const response = await apiPost<W2ReconciliationResponse>(
-      '/audit/w2-reconciliation',
-      token,
-      { ...payload, engagement_id: engagementId ?? undefined },
-    )
-    if (response.ok && response.data) {
-      setResult(response.data)
-      setStatus('success')
-      // Sprint 791: mirror useAuditUpload's follow-through so the
-      // workspace reflects the new workpaper entry instead of going stale.
-      if (engagement && engagementId) {
-        engagement.refreshToolRuns()
-        engagement.triggerLinkToast('W-2/W-3 Reconciliation')
-      }
-      return true
-    }
-    setStatus('error')
-    setError(describeW2Error(response.error, payload.tax_year) || 'Failed to run W-2 reconciliation')
-    return false
-  }, [token, engagement, engagementId])
-
-  const exportCsv = useCallback(async (payload: W2ReconciliationRequest): Promise<boolean> => {
-    const response = await apiDownload('/audit/w2-reconciliation/export.csv', token, {
-      method: 'POST',
-      body: payload,
-    })
-    if (response.ok && response.blob) {
-      downloadBlob(response.blob, response.filename || 'w2_reconciliation.csv')
-      return true
-    }
-    setError(describeW2Error(response.error, payload.tax_year) || 'Failed to export CSV')
-    return false
-  }, [token])
-
-  const reset = useCallback(() => {
-    setStatus('idle')
-    setResult(null)
-    setError('')
-  }, [])
-
+  const { status, result, error, analyze, exportCsv, reset } = useW2Analysis()
   return { status, result, error, analyze, exportCsv, reset }
 }

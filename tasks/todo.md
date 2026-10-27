@@ -1202,8 +1202,12 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    fixed-assets, inventory, journal-entry — 70–80% identical, ~1,650 lines). Use the existing
    `components/shared/FileDropZone`; build `UpgradeGate` in so 814 item 1 cannot recur. ~1,100 lines out.
    Collapse the ~20 pass-through `*ScoreCard`/`*DataQualityBadge` wrappers.
-2. [ ] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
+2. [x] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
    `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector` (~530 → ~90 lines).
+   *(Done 2026-10-27: `hooks/createJsonAnalysisHook.ts` (112 lines) owns status/result/error,
+   the engagement link and CSV export; the six hooks are config + extras (SoD rules, B2T standard
+   adjustments, W-2 error rewrite, `project` alias) — 554 → 276 lines. Public APIs unchanged;
+   existing tests pass unchanged.)*
 3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
    each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout are
    still client — they use ~30 motion elements each.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
