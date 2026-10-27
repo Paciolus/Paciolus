@@ -147,7 +147,14 @@ def apply_org_subscription_to_user(db: Session, user: User, org: Organization) -
             org.subscription_id = sub.id
 
     if sub:
-        user.tier = sub.tier  # type: ignore[assignment]
+        # Sprint 849 (security review M5): this is now only the member's display
+        # cache; entitlements resolve the org's live subscription on every check
+        # (``shared.entitlement_checks.get_effective_entitlements``). Assign the
+        # enum, not the raw string: ``user.tier.value`` raised on the in-memory
+        # str until the row was reloaded.
+        from models import UserTier
+
+        user.tier = UserTier(sub.tier)
 
 
 def revert_user_tier_after_removal(db: Session, user: User) -> None:

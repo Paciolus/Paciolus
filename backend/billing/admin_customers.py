@@ -552,6 +552,12 @@ def admin_force_cancel(
         from models import UserTier
 
         owner.tier = UserTier.FREE
+        # Sprint 849 (security review M5): an immediate cancel is local only (no
+        # Stripe call, so no customer.subscription.deleted webhook follows to
+        # downgrade the org). Downgrade the members here, as that webhook does.
+        from billing.webhook_handler import _downgrade_org_members_to_free
+
+        _downgrade_org_members_to_free(db, owner.id)
     else:
         sub.cancel_at_period_end = True
 

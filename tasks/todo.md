@@ -443,34 +443,68 @@
 ---
 
 ### Sprint 849: Org members' entitlements follow the owner's live plan (M5)
-**Status:** NOT STARTED. **Priority:** P1 (revenue leak). **Source:** security review M5 (verified).
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1 (revenue leak). **Source:** security review M5 (verified).
 
 **Defect:**
-- `shared/organization_policy.py:149-150` copies `sub.tier` onto `user.tier` when a member joins.
-- `shared/entitlement_checks.py:86-88` trusts `user.tier` when the user has no Subscription row, and members never
-  have one.
-- `billing/subscription_manager.py:212-221` (`sync_subscription_from_stripe`) updates only the owner.
-- `_downgrade_org_members_to_free` (`billing/webhook_handler.py:345-349, 446, 482`) runs only for non-entitled
-  statuses.
+- `shared/organization_policy.py` (`apply_org_subscription_to_user`) copies `sub.tier` onto `user.tier` when a
+  member joins.
+- `shared/entitlement_checks.py` (`get_effective_entitlements`) trusts `user.tier` when the user has no
+  Subscription row, and members never have one.
+- `billing/subscription_manager.py` (`sync_subscription_from_stripe`) updates only the owner.
+- `_downgrade_org_members_to_free` (`billing/webhook_handler.py`) runs only for non-entitled statuses.
 
 So when an owner moves Enterprise → Solo, members keep Enterprise (bulk upload, branding) indefinitely.
-`admin_force_cancel(immediate=True)` (`billing/admin_customers.py:551-554`) has the same gap: it sets `CANCELED`
+`admin_force_cancel(immediate=True)` (`billing/admin_customers.py`) has the same gap: it sets `CANCELED`
 locally and calls no Stripe API, so no webhook follows and members stay paid.
 
-- [ ] In `entitlement_checks`, when the user belongs to an org and is not its owner, use the **owner's**
+- [x] In `entitlement_checks`, when the user belongs to an org and is not its owner, use the **owner's**
       Subscription instead of the "no row → trust tier" branch. Active or trialing → the owner's tier; anything
       else → FREE. Keep `user.tier` only as a display cache.
-- [ ] Refresh members' cached `tier` in `sync_subscription_from_stripe` whenever the owner's tier changes, so
+      — New `_org_member_entitlements` resolves the org through the existing seat-check resolver
+      (`_resolve_org_subscription`, split into `_resolve_subscription_for_org` so the org is loaded once):
+      `org.subscription_id` first, then the owner's ACTIVE/TRIALING row; no row or a non-entitled status → FREE.
+      It runs only when the member has **no** Subscription row of their own (as the item says); a member's own row
+      keeps the existing rules, and the owner still resolves from their own row. The `user.tier == FREE`
+      short-circuit now applies only to users in no org, so a member whose cache says FREE still follows the owner.
+      Extra: `apply_org_subscription_to_user` assigned the raw string to `user.tier` (`type: ignore`), so
+      `user.tier.value` raised until the row reloaded; it now assigns `UserTier(sub.tier)`.
+- [x] Refresh members' cached `tier` in `sync_subscription_from_stripe` whenever the owner's tier changes, so
       `/users/me` shows the right plan.
-- [ ] Make `admin_force_cancel(immediate=True)` call `_downgrade_org_members_to_free` (or the shared helper the
+      — New `_refresh_org_member_tiers(db, owner_id, tier)` runs after the owner's tier is set on every sync (an
+      idempotent no-op when nothing changed, or when the user owns no org). It sets each non-owner member to the
+      owner's effective tier (FREE for a non-entitled status). It skips members with their own Subscription row,
+      because their entitlements read their `tier`.
+- [x] Make `admin_force_cancel(immediate=True)` call `_downgrade_org_members_to_free` (or the shared helper the
       webhook uses).
-- [ ] Check the JWT `tier` claim. It is used for rate-limit tiers only (per the review), so stale claims are fine,
+      — Calls `billing.webhook_handler._downgrade_org_members_to_free` (lazy import). Cancel-at-period-end is
+      unchanged: Stripe's `customer.subscription.deleted` webhook downgrades the org at period end.
+- [x] Check the JWT `tier` claim. It is used for rate-limit tiers only (per the review), so stale claims are fine,
       but confirm.
-- [ ] Tests:
-  - owner Enterprise → Solo via the sync path → the member's entitlements equal Solo's;
-  - owner past_due → member is FREE;
-  - admin immediate force-cancel → member is FREE;
-  - a solo user with no org is unchanged.
+      — **Confirmed.** The claim is written by `auth.create_access_token` / `create_impersonation_token` from
+      `user.tier`. Its only reader is `RateLimitIdentityMiddleware` (`security_middleware.py`,
+      `payload.get("tier")`). That reader sets the `shared.rate_limits._current_tier` ContextVar, which
+      `TieredLimit` uses, and `request.state.rate_limit_user_tier`, which nothing reads. Entitlement checks and
+      `require_current_user` load the `User` row and never read the claim. The frontend does not decode it. A stale
+      claim only keeps the old rate-limit tier until the access token expires.
+- [x] Tests (`tests/test_sprint_849_org_member_entitlements.py`, 17 tests):
+  - owner Enterprise → Solo via the sync path → the member's entitlements equal Solo's (and the cache says Solo);
+  - owner past_due → member is FREE (via sync, and with no refresh at all: live read with a stale cache);
+  - admin immediate force-cancel → member is FREE (cancel-at-period-end leaves the member paid);
+  - a solo user with no org is unchanged (6 parametrised tier/status cases);
+  - plus: stale-cache tier change, reactivation restores the member, an org with no subscription → FREE, the owner
+    keeps their own rules, and the refresh skips a member with their own row.
+  - 10 of the 17 fail on the unfixed code. They were checked by reverting the three source files (the other 7 are
+    the solo-user and owner baselines). Two of the 10 failed on the old `str` assignment rather than on the
+    entitlement logic.
+
+**Not in scope (noted):** other owner-only cache writes (`admin_plan_override`, `invoice.payment_succeeded` /
+dispute-won restores, the dunning-engine cancel) still leave members' *display* cache stale. Their *entitlements*
+are correct now, because they read the owner's row live.
+
+**Verification:** ruff check + ruff format --check clean on the 5 touched files; mypy reports no errors in the 4
+touched source files; new tests 17/17; full backend suite **9,984 passed, 0 failed** (serial, 18m42s). A first full
+run failed 30 tests (compare-periods / three-way / rate-limit). Those tests use `MagicMock` users whose
+auto-attribute `organization_id` is truthy. Org membership is now detected by `isinstance(..., int)`.
 
 **Commit SHA:** TBD.
 

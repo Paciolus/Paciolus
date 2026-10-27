@@ -164,6 +164,50 @@ def _period_advanced(old_start: datetime | None, new_start: datetime | None) -> 
     return _naive_utc(new_start) > _naive_utc(old_start)
 
 
+def _refresh_org_member_tiers(db: Session, owner_user_id: int, tier: UserTier) -> int:
+    """Set the cached ``tier`` of every non-owner member of the org ``owner_user_id`` owns.
+
+    Sprint 849 (security review M5): only the owner's ``User.tier`` used to
+    follow a plan change, so after Enterprise -> Solo each member's cached tier
+    still said Enterprise. Entitlements no longer read that cache for members
+    (``shared.entitlement_checks.get_effective_entitlements`` resolves the
+    owner's live subscription); this keeps what ``/users/me`` shows in step.
+    Members with a Subscription row of their own are skipped: their entitlements
+    follow that row, which reads their ``tier``. No-op when the user owns no
+    organization. Returns the number of members changed.
+    """
+    from organization_model import Organization, OrganizationMember
+
+    org = db.query(Organization).filter(Organization.owner_user_id == owner_user_id).first()
+    if org is None:
+        return 0
+
+    members = (
+        db.query(User)
+        .join(OrganizationMember, OrganizationMember.user_id == User.id)
+        .filter(
+            OrganizationMember.organization_id == org.id,
+            User.id != owner_user_id,
+            ~db.query(Subscription.id).filter(Subscription.user_id == User.id).exists(),
+        )
+        .all()
+    )
+    changed = 0
+    for member in members:
+        if member.tier != tier:
+            member.tier = tier
+            changed += 1
+    if changed:
+        logger.info(
+            "Refreshed cached tier=%s on %d org member(s) of org %d (owner user %d)",
+            tier.value,
+            changed,
+            org.id,
+            owner_user_id,
+        )
+    return changed
+
+
 def sync_subscription_from_stripe(
     db: Session,
     user_id: int,
@@ -255,6 +299,7 @@ def sync_subscription_from_stripe(
                 logger.warning("Unknown tier value '%s' for user %d, keeping current", tier, user_id)
         else:
             user.tier = UserTier.FREE
+        _refresh_org_member_tiers(db, user_id, user.tier)
 
     db.flush()
     logger.info(
