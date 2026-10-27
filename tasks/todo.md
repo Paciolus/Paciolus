@@ -511,34 +511,70 @@ auto-attribute `organization_id` is truthy. Org membership is now detected by `i
 ---
 
 ### Sprint 850: PDF upload parsing in a resource-limited subprocess (M6)
-**Status:** NOT STARTED. **Priority:** P2 (DoS; needs a verified paid account). **Source:** security review M6.
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P2 (DoS; needs a verified paid account). **Source:** security review M6.
 
 **Defect:**
-- `shared/pdf_parser.py:120-136`: the 5 s per-page "timeout" is compared *after* `page.extract_table()` returns,
-  so it never interrupts.
+- `shared/pdf_parser.py` `_extract_tables_from_pages`: the 5 s per-page "timeout" is compared *after*
+  `page.extract_table()` returns, so it never interrupts.
 - pdfminer's FlateDecode does `zlib.decompress(data)` with no output cap.
-- The ZIP ratio and size checks (`shared/upload_pipeline.py:126-186`) don't apply to PDF streams.
+- The ZIP ratio and size checks (`shared/upload_pipeline.py`) don't apply to PDF streams.
 - Parsing runs in `asyncio.to_thread` with no overall timeout.
 
 A roughly 5 MB PDF whose stream inflates to gigabytes can kill a Render worker; repeated uploads take the API down.
+Reproduced on the old code: a 34 KB PDF (32 MiB of deflated zeros) held the API process for 43 s, logged
+`took 43.1s (limit 5.0s), dropping` *after the fact*, then returned the generic "No tables" 422.
 
-- [ ] Move the PDF parse into a child process: `multiprocessing` with the **spawn** context, so it doesn't fork the
-      app.
-  - The child sets `resource.setrlimit(resource.RLIMIT_AS, (1 GiB, 1 GiB))`. Guard it with
-    `if sys.platform != "win32"`, because dev is Windows and production is Linux.
-  - The parent waits at most 30 s overall, then terminates and kills the child.
-  - Return the parsed rows across the pipe.
-- [ ] On a memory error, a kill or a timeout, return 422 `"This PDF is too complex to parse. Export the trial
-      balance as Excel or CSV instead."`, and increment a Prometheus counter (`pdf_parse_aborted_total{reason}`).
-- [ ] Delete the misleading post-hoc per-page timeout check, or keep it purely as a page-count budget, and say so
-      in a comment.
-- [ ] Tests:
-  - generate a small deflate-bomb PDF in the test (a deflated run of zeros in a content stream) → 422 within the
-    timeout and the test process is unharmed;
-  - a normal PDF fixture still parses.
-  - Mark the RLIMIT test `skipif(sys.platform == "win32")`.
-- [ ] Measure the latency overhead of spawn on a normal PDF and note it in the PR. If it is above about 1 s,
-      consider a small persistent worker pool.
+- [x] Move the PDF parse into a child process: `multiprocessing` with the **spawn** context, so it doesn't fork the
+      app. — Extraction core split out to new `shared/pdf_extraction.py` (stdlib + pdfplumber only; no FastAPI,
+      pandas or app imports, so the child stays cheap); `shared/pdf_parser.py` is the parent side and re-exports the
+      old names, so `routes/audit_preview.py`, `upload_pipeline` and the route-test patches are unchanged.
+      `extract_pdf_tables()` checks `%PDF` magic in the parent (no spawn for non-PDFs), then runs
+      `pdf_extraction.sandbox_main` in a `spawn`-context `Process`.
+  - The child sets `resource.setrlimit(resource.RLIMIT_AS, (1 GiB, 1 GiB))`, guarded by
+    `if sys.platform != "win32"`.
+  - The parent waits at most 30 s overall (`PDF_PARSE_TIMEOUT_SECONDS`, covering child start-up too), then
+    `terminate()` → `kill()` with a 2 s grace each.
+  - The parsed rows come back across a one-way `Pipe` as a tagged tuple (`ok` / `rejected` / `aborted` / `error`);
+    a corrupt or >500-page PDF still reaches the client as the same 400 (via a FastAPI-free `PdfRejectedError`).
+  - Found while testing: pdfplumber re-wraps any interpreter error as `PdfminerException(e)`, and the per-page
+    `except Exception` would have swallowed the RLIMIT `MemoryError` as "page dropped". `_is_memory_error()`
+    unwraps it and the parse aborts instead.
+- [x] On a memory error, a kill or a timeout, return 422 `"This PDF is too complex to parse. Export the trial
+      balance as Excel or CSV instead."` (`PDF_TOO_COMPLEX_DETAIL`, raised as `HTTPException(422)` — the same
+      path `parse_pdf`'s other 422s use, so `upload_pipeline` also counts it in `parse_errors_total`), and
+      increment `pdf_parse_aborted_total{reason}` (`memory` / `killed` / `timeout`). Deviation: the exported
+      metric name is `paciolus_pdf_parse_aborted_total` in `PARSER_REGISTRY`, matching every other counter in
+      `shared/parser_metrics.py`. `killed` = the child exited without a result (OOM-kill, signal, crash).
+- [x] Delete the misleading post-hoc per-page timeout check — deleted with `PER_PAGE_TIMEOUT_SECONDS`; the
+      docstring of `_extract_tables_from_pages` says why and what bounds time/work now (parent deadline +
+      `MAX_PDF_PAGES`). The old `TestPdfTimeout` (which asserted `dropped_rows >= 0`) went with it.
+- [x] Tests (`tests/test_pdf_parser.py::TestPdfSandbox`, 7 new + 1 new 400-translation test):
+  - deflate bomb generated in the test from one full-flushed 1 MiB block repeated (a 2 GiB bomb is ~2 MB and no
+    big buffer exists in the test process); a 32 MiB bomb with the deadline patched to 3 s → exact 422 message in
+    ~3.0 s, `timeout` counter +1, no live children. 32 MiB is harmless on Windows, where only the deadline applies.
+  - Linux only (`skipif(sys.platform == "win32")`): a 2 GiB bomb trips the 1 GiB RLIMIT_AS → 422, `memory` +1,
+    well inside the deadline. **Not run locally (Windows dev box); first run is CI.**
+  - child dying without a result (target swapped for `os._exit`, which dies on the extra args) → 422, `killed` +1;
+    a wrapped `MemoryError` inside a page aborts the parse; non-PDF bytes are rejected before spawning; a normal
+    PDF parses with the in-process core patched to raise (so it really ran in the child).
+  - The existing normal-fixture tests (`extract_pdf_tables` / `parse_pdf`) all go through the sandbox and pass;
+    the mocked >500-page test now drives `extract_tables_in_process`, since a mock can't cross the process.
+  - Fail-before-fix: the new tests import names that don't exist pre-fix; the bomb case was also run against the
+    unfixed parser (43 s, wrong 422 — fails both the 13 s bound and the message assert).
+- [x] Measure the latency overhead of spawn on a normal PDF. **~0.40 s** on the Windows dev box (median of 10:
+      1-page fixture 17 ms in-process vs 416 ms sandboxed; 3-page 71 ms vs 466 ms); Linux spawn is typically
+      faster. Under the ~1 s bar, so **no persistent pool**: one fresh child per parse also means no state or heap
+      fragmentation carries between uploads. Caveat found while measuring: `spawn` re-imports the parent's
+      `__main__` in the child — when `__main__` imported the app, overhead was 2.2 s. Production's `__main__` is
+      the gunicorn launcher (light); running the API as `python main.py` would pay that cost per PDF.
+
+**Not done / follow-up:** no cap on concurrent PDF children per worker — several simultaneous bomb uploads could
+still hold 1 GiB each; the per-user rate limit is the only bound today.
+
+**Verification:** `test_pdf_parser.py` + `test_pdf_upload_integration.py` + `test_audit_preview_routes.py`
+**73 passed, 1 skipped** (the Linux-only RLIMIT test) in 28.5 s; **full backend suite 9,973 passed, 1 skipped,
+0 failed** (serial, 18m59s, origin/main venv: FastAPI 0.162 / SQLAlchemy 2.1.6). `ruff check` + `ruff format --check`
+clean on the 4 touched Python files; mypy clean on `shared/pdf_parser.py` + `shared/pdf_extraction.py`.
 
 **Commit SHA:** TBD.
 
