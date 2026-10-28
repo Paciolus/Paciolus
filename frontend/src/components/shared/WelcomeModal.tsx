@@ -4,11 +4,14 @@
  * WelcomeModal — Sprint 583: First-Run Onboarding Experience
  *
  * 3-step onboarding guide for new users landing on the dashboard.
- * Shows once per user (completion stored in localStorage).
+ * Shows once per device/browser (completion stored in localStorage, not on
+ * the account — a user on a second machine sees it again).
+ * Sprint 856: Escape closes, Tab is trapped, focus moves into the dialog on
+ * open and returns on close (shared useFocusTrap, same as the other modals).
  * Follows Oat & Obsidian design tokens.
  *
  * Steps:
- * 1. Upload a trial balance (core action)
+ * 1. Choose the tool that matches your data (most tools take no TB)
  * 2. Explore your diagnostic tools (18 tools)
  * 3. Export audit-ready memos (deliverable)
  */
@@ -16,6 +19,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { fadeScale } from '@/lib/motion'
 
 const ONBOARDING_KEY = 'paciolus_onboarding_complete'
@@ -30,15 +34,15 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    title: 'Upload a Trial Balance',
-    description: 'Start by uploading any trial balance file — CSV, Excel, or 8 other formats. Your file is processed in memory and not kept after analysis.',
+    title: 'Choose a Tool',
+    description: 'Pick the tool that matches the file you have — a trial balance, a journal entry export, an AP, payroll or AR listing, a fixed asset register, and more. Files are processed in memory and not kept after analysis.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
       </svg>
     ),
-    cta: 'Upload Now',
-    href: '/tools/trial-balance',
+    cta: 'Choose a Tool',
+    href: '/tools',
   },
   {
     title: 'Run Diagnostic Tools',
@@ -115,6 +119,8 @@ export function WelcomeModal({ forceShow = false }: WelcomeModalProps) {
     }
   }, [currentStep, handleStepAction])
 
+  const focusTrapRef = useFocusTrap(isOpen, handleComplete)
+
   const step = STEPS[currentStep] ?? STEPS[0]!
 
   return (
@@ -138,6 +144,7 @@ export function WelcomeModal({ forceShow = false }: WelcomeModalProps) {
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="welcome-title"
