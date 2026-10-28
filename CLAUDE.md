@@ -120,6 +120,7 @@ Both are mechanically enforced — not discipline-dependent. Hotfix commits (`fi
 | 477–487 | Report Engine & UX Polish | Copy consistency, Digital Excellence Council audits, pricing page redesign, report engine content audit, TB Diagnostic enrichment |
 | 478, 488–502 | Security Hardening & Quality | Deprecated alias migration, report fixes, security audit quadrilogy (35 fixes), 61 injection tests, CI hardening, formula consistency, Digital Excellence Council remediation (42 findings), payroll report enrichment, toolbar refactor, revenue report enrichment (3 bug fixes, 4 improvements), fixed asset report enrichment (4 bug fixes, 4 improvements, FA-10 lease indicator) — **Tests: 5,808 + 1,345** |
 | 499–515 | Report Enrichment | Toolbar three-zone refactor, 16 report enrichments (Payroll through Anomaly Summary: bug fixes, new sections, risk scoring, suggested procedures, authoritative reference corrections), test suite fixes — **Tests: 6,188 + 1,345** |
+| 516–853 | Hardening, Restoration & Launch Prep | Production restored after the 5.5-month silent outage (2026-10-19), Render Key Value replaces Upstash, catalog SSOT (18 tools), methodology + claims reviews (Sprints 825–845), security review 2026-10-27 (Sprints 846–853), dependency currency (FastAPI 0.162, SQLAlchemy 2.1) — **Tests: 10,297 backend collected + 2,078 frontend (2026-10-28)**. Current plan: the START HERE block in `tasks/todo.md` |
 
 ### Compliance Documentation
 Located in `docs/04-compliance/`:
