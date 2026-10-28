@@ -131,6 +131,33 @@ TRIAL_ELIGIBLE_TIERS: frozenset[str] = frozenset({"solo", "professional", "enter
 
 
 # ---------------------------------------------------------------------------
+# Self-serve purchase gate (Sprint 858)
+# ---------------------------------------------------------------------------
+
+# Launch sells Solo only. Professional and Enterprise are multi-seat firm plans,
+# and until Sprint 853 makes clients firm-owned (not user-owned) they cannot be
+# sold self-serve. Sprint 853 flips this to True. While False, every
+# self-serve path that would put a user on — or buy more of — these tiers is
+# refused: checkout-session creation (new or upgrade) and seat add-ons.
+# Mirrored by `SELF_SERVE_TEAM_TIERS_ENABLED` in frontend/src/domain/pricing.ts
+# (pinned by tests/test_pricing_copy_consistency.py).
+SELF_SERVE_TEAM_TIERS_ENABLED = False
+
+# Tiers that are sold by arrangement only while the flag is off.
+SALES_ONLY_TIERS: frozenset[str] = frozenset({"professional", "enterprise"})
+
+SALES_ONLY_MESSAGE = (
+    "The Professional and Enterprise plans are not available for self-serve purchase yet. "
+    "Contact us at sales@paciolus.com to set one up."
+)
+
+
+def is_self_serve_purchasable(tier: str) -> bool:
+    """Whether ``tier`` may be bought (or have seats added) without talking to sales."""
+    return SELF_SERVE_TEAM_TIERS_ENABLED or tier not in SALES_ONLY_TIERS
+
+
+# ---------------------------------------------------------------------------
 # Promotional coupons
 # ---------------------------------------------------------------------------
 

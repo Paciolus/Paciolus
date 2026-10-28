@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import PricingCard from '@/components/pricing/PricingCard'
 import PricingComparison from '@/components/pricing/PricingComparison'
 import PricingEstimator from '@/components/pricing/PricingEstimator'
-import { type BillingInterval, faqItems, getPromoCopy, tiers } from '@/domain/pricing'
+import { type BillingInterval, faqItems, getPromoCopy, SELF_SERVE_TEAM_TIERS_ENABLED, tiers, TRIAL_DAYS } from '@/domain/pricing'
 import { trackEvent } from '@/utils/telemetry'
 import { marketingFadeUpSoft } from '@/lib/motion'
 
@@ -118,7 +118,8 @@ export default function PricingPage() {
               Eighteen tools. Uploads not kept. One platform. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
-              Every paid plan starts with a 7-day free trial. A card is required; you are not charged until the trial ends.
+              {/* Sprint 858: only self-serve plans carry a trial. */}
+              {SELF_SERVE_TEAM_TIERS_ENABLED ? 'Every paid plan' : 'Solo'} starts with a {TRIAL_DAYS}-day free trial. A card is required; you are not charged until the trial ends.
             </p>
           </motion.div>
         </div>
