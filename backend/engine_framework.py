@@ -5,8 +5,16 @@ Defines AuditEngineBase with the common pipeline sequence:
   detect columns → apply overrides → parse → quality checks →
   enrich → test battery → composite score → build result
 
-Each tool-specific engine (JE, AP, Payroll) extends this base class
-and implements only the abstract methods for its domain.
+Each tool-specific engine (JE, AP, Payroll, Inventory, Fixed Assets,
+Revenue) extends this base class and implements only the abstract methods
+for its domain.
+
+Sprint 819 item 5: manual column overrides are data, not code. An engine lists
+its overridable detection attributes in ``OVERRIDABLE_COLUMNS`` and gets the
+default ``apply_column_overrides``; ``after_column_overrides`` is the hook for
+flags derived from the mapping (JE's debit/credit mode, AP's dual dates).
+Payroll keeps its own override — its mapping keys are suffix-less
+(``"gross_pay"``, not ``"gross_pay_column"``), which is API contract.
 """
 
 from abc import ABC, abstractmethod
@@ -20,6 +28,10 @@ class AuditEngineBase(ABC):
     Subclasses implement the tool-specific steps as abstract methods.
     """
 
+    # Detection attributes a manual column mapping may set, keyed by the same
+    # name (e.g. "amount_column"). Applied in this order.
+    OVERRIDABLE_COLUMNS: tuple[str, ...] = ()
+
     def __init__(self, config: Any = None):
         self.config = config
         self.detection: Any = None  # Set during pipeline execution
@@ -32,14 +44,23 @@ class AuditEngineBase(ABC):
         """
         ...
 
-    @abstractmethod
     def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
         """Apply manual column mapping overrides to the detection result.
 
-        Must set detection.overall_confidence = 1.0 after applying overrides.
-        Returns the (possibly new) detection object.
+        Default: copy each ``OVERRIDABLE_COLUMNS`` key present in the mapping
+        onto the detection, run ``after_column_overrides``, and set
+        ``overall_confidence = 1.0``. Override entirely when the mapping has a
+        different shape (Payroll). Returns the (possibly new) detection object.
         """
-        ...
+        for attr in self.OVERRIDABLE_COLUMNS:
+            if attr in column_mapping:
+                setattr(detection, attr, column_mapping[attr])
+        self.after_column_overrides(detection, column_mapping)
+        detection.overall_confidence = 1.0
+        return detection
+
+    def after_column_overrides(self, detection: Any, column_mapping: dict) -> None:
+        """Hook: update flags that depend on which columns were mapped."""
 
     @abstractmethod
     def parse_data(self, rows: list[dict], detection: Any) -> list:

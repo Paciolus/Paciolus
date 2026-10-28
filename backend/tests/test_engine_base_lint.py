@@ -88,6 +88,7 @@ class TestKnownMigrated:
 
     Sprint 519: JE / AP / Payroll.
     Sprint 727a: Inventory (first sub-sprint migration).
+    Sprint 819 item 5: Fixed Assets, Revenue.
 
     A regression here means either the AST detection broke or the subclass
     declaration was inadvertently removed from one of the migrated engines.
@@ -101,6 +102,8 @@ class TestKnownMigrated:
             "ap_testing_engine.py",
             "payroll_testing_engine.py",
             "inventory_testing_engine.py",  # Sprint 727a
+            "fixed_asset_testing_engine.py",  # Sprint 819 item 5
+            "revenue_testing_engine.py",  # Sprint 819 item 5
         ):
             assert migrated not in finding_names, (
                 f"{migrated} appeared in off-pattern findings but should be on-pattern"
@@ -142,15 +145,15 @@ class TestSprint727Triage:
         # lint regressed or someone added it to the blocklist without
         # rationale.
         #
-        # Sprint 727a migrated inventory_testing_engine — it's now on-pattern
-        # and is asserted in TestKnownMigrated above. The four remaining
-        # targets are listed here.
+        # Sprint 727a migrated inventory_testing_engine, Sprint 819 item 5
+        # fixed_asset_testing_engine and revenue_testing_engine — all now
+        # on-pattern and asserted in TestKnownMigrated above. AR aging stays a
+        # target: it takes two files (TB + optional sub-ledger), which the
+        # single-input run_pipeline does not model.
         findings = find_off_pattern_engines()
         finding_names = {p.name for p in findings}
         for migration_target in (
             "ar_aging_engine.py",
-            "fixed_asset_testing_engine.py",
-            "revenue_testing_engine.py",
             "sod_engine.py",
         ):
             assert migration_target in finding_names, (

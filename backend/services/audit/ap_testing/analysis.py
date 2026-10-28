@@ -2040,34 +2040,25 @@ class APTestingEngine(AuditEngineBase):
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_ap_columns(column_names)
 
-    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
-        if "vendor_name_column" in column_mapping:
-            detection.vendor_name_column = column_mapping["vendor_name_column"]
-        if "amount_column" in column_mapping:
-            detection.amount_column = column_mapping["amount_column"]
-        if "payment_date_column" in column_mapping:
-            detection.payment_date_column = column_mapping["payment_date_column"]
-        if "invoice_number_column" in column_mapping:
-            detection.invoice_number_column = column_mapping["invoice_number_column"]
-        if "invoice_date_column" in column_mapping:
-            detection.invoice_date_column = column_mapping["invoice_date_column"]
-            if detection.payment_date_column:
-                detection.has_dual_dates = True
-        if "vendor_id_column" in column_mapping:
-            detection.vendor_id_column = column_mapping["vendor_id_column"]
+    OVERRIDABLE_COLUMNS = (
+        "vendor_name_column",
+        "amount_column",
+        "payment_date_column",
+        "invoice_number_column",
+        "invoice_date_column",
+        "vendor_id_column",
+        "check_number_column",
+        "description_column",
+        "gl_account_column",
+        "payment_method_column",
+        "po_number_column",
+    )
+
+    def after_column_overrides(self, detection: Any, column_mapping: dict) -> None:
+        if "invoice_date_column" in column_mapping and detection.payment_date_column:
+            detection.has_dual_dates = True
         if "check_number_column" in column_mapping:
-            detection.check_number_column = column_mapping["check_number_column"]
             detection.has_check_numbers = True
-        if "description_column" in column_mapping:
-            detection.description_column = column_mapping["description_column"]
-        if "gl_account_column" in column_mapping:
-            detection.gl_account_column = column_mapping["gl_account_column"]
-        if "payment_method_column" in column_mapping:
-            detection.payment_method_column = column_mapping["payment_method_column"]
-        if "po_number_column" in column_mapping:
-            detection.po_number_column = column_mapping["po_number_column"]
-        detection.overall_confidence = 1.0
-        return detection
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
         return parse_ap_payments(rows, detection)

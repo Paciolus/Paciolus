@@ -3127,42 +3127,32 @@ class JETestingEngine(AuditEngineBase):
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_gl_columns(column_names)
 
-    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
-        if "date_column" in column_mapping:
-            detection.date_column = column_mapping["date_column"]
-        if "account_column" in column_mapping:
-            detection.account_column = column_mapping["account_column"]
-        if "debit_column" in column_mapping:
-            detection.debit_column = column_mapping["debit_column"]
-            detection.has_separate_debit_credit = True
-        if "credit_column" in column_mapping:
-            detection.credit_column = column_mapping["credit_column"]
-            detection.has_separate_debit_credit = True
+    OVERRIDABLE_COLUMNS = (
+        "date_column",
+        "account_column",
+        "debit_column",
+        "credit_column",
+        "amount_column",
+        "description_column",
+        "reference_column",
+        "posted_by_column",
+        "entry_id_column",
+        "currency_column",
+        "source_column",
+        "entry_date_column",
+        "posting_date_column",
+    )
+
+    def after_column_overrides(self, detection: Any, column_mapping: dict) -> None:
+        # A mapped single amount column wins over mapped debit/credit columns.
         if "amount_column" in column_mapping:
-            detection.amount_column = column_mapping["amount_column"]
             detection.has_separate_debit_credit = False
-        if "description_column" in column_mapping:
-            detection.description_column = column_mapping["description_column"]
-        if "reference_column" in column_mapping:
-            detection.reference_column = column_mapping["reference_column"]
-        if "posted_by_column" in column_mapping:
-            detection.posted_by_column = column_mapping["posted_by_column"]
-        if "entry_id_column" in column_mapping:
-            detection.entry_id_column = column_mapping["entry_id_column"]
-        if "currency_column" in column_mapping:
-            detection.currency_column = column_mapping["currency_column"]
-        if "source_column" in column_mapping:
-            detection.source_column = column_mapping["source_column"]
-        if "entry_date_column" in column_mapping:
-            detection.entry_date_column = column_mapping["entry_date_column"]
-        if "posting_date_column" in column_mapping:
-            detection.posting_date_column = column_mapping["posting_date_column"]
+        elif "debit_column" in column_mapping or "credit_column" in column_mapping:
+            detection.has_separate_debit_credit = True
         # Sprint 816: auto-detection sets this when it finds both dates; a hand
         # mapping of both left it False in the reported column detection.
         if detection.entry_date_column and detection.posting_date_column:
             detection.has_dual_dates = True
-        detection.overall_confidence = 1.0
-        return detection
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
         return parse_gl_entries(rows, detection)

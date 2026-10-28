@@ -24,8 +24,9 @@ import statistics
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
@@ -1587,6 +1588,63 @@ def calculate_fa_composite_score(
 # =============================================================================
 
 
+class FixedAssetTestingEngine(AuditEngineBase):
+    """Fixed-asset testing engine on AuditEngineBase (Sprint 819 item 5).
+
+    Same steps, in the same order, as the procedural ``run_fixed_asset_testing``
+    it replaced: each method delegates to the module-level helper that function
+    called. No rows are cleared (the base ``cleanup`` is a no-op), as before.
+    """
+
+    OVERRIDABLE_COLUMNS = (
+        "asset_id_column",
+        "description_column",
+        "cost_column",
+        "accumulated_depreciation_column",
+        "acquisition_date_column",
+        "useful_life_column",
+        "depreciation_method_column",
+        "residual_value_column",
+        "location_column",
+        "category_column",
+        "net_book_value_column",
+    )
+
+    def __init__(self, config: Optional[FixedAssetTestingConfig] = None):
+        super().__init__(config or FixedAssetTestingConfig())
+
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_fa_columns(column_names)
+
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_fa_entries(rows, detection)
+
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_fa_data_quality(entries, detection)
+
+    def run_tests(self, entries: list) -> Any:
+        return run_fa_test_battery(entries, self.config)
+
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_fa_composite_score(test_results, entry_count)
+
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        return FATestingResult(
+            composite_score=composite,
+            test_results=test_output,
+            data_quality=data_quality,
+            column_detection=detection,
+        )
+
+
 @with_parse_memo
 def run_fixed_asset_testing(
     rows: list[dict],
@@ -1605,49 +1663,9 @@ def run_fixed_asset_testing(
     Returns:
         FATestingResult with composite score, test results, data quality.
     """
-    if config is None:
-        config = FixedAssetTestingConfig()
-
-    # 1. Detect columns
-    detection = detect_fa_columns(column_names)
-
-    # Apply manual overrides
-    if column_mapping:
-        for attr in (
-            "asset_id_column",
-            "description_column",
-            "cost_column",
-            "accumulated_depreciation_column",
-            "acquisition_date_column",
-            "useful_life_column",
-            "depreciation_method_column",
-            "residual_value_column",
-            "location_column",
-            "category_column",
-            "net_book_value_column",
-        ):
-            if attr in column_mapping:
-                setattr(detection, attr, column_mapping[attr])
-        detection.overall_confidence = 1.0
-
-    # 2. Parse entries
-    entries = parse_fa_entries(rows, detection)
-
-    # 3. Assess data quality
-    data_quality = assess_fa_data_quality(entries, detection)
-
-    # 4. Run test battery
-    test_results = run_fa_test_battery(entries, config)
-
-    # 5. Calculate composite score
-    composite = calculate_fa_composite_score(test_results, len(entries))
-
-    return FATestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        column_detection=detection,
-    )
+    engine = FixedAssetTestingEngine(config)
+    result: FATestingResult = engine.run_pipeline(rows, column_names, column_mapping)
+    return result
 
 
 # =============================================================================
