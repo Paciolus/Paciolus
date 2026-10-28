@@ -169,6 +169,29 @@ def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     return None
 
 
+def _flag_sales_only_tier(event: str, user_id: int, tier: str) -> None:
+    """Sprint 858: log when Stripe reports a sales-only tier.
+
+    Self-serve checkout and seat add-ons refuse Professional/Enterprise while
+    ``SELF_SERVE_TEAM_TIERS_ENABLED`` is off, but Stripe itself can still put a
+    customer there — a plan switch in the Billing Portal, or a subscription made
+    by hand in the dashboard. The webhook records what Stripe has already billed
+    (refusing it would desync access from payment), so it only flags it: an
+    arranged sale is expected, anything else means the Portal allows plan
+    switching to these tiers and must be reconfigured.
+    """
+    from billing.price_config import is_self_serve_purchasable
+
+    if not is_self_serve_purchasable(tier):
+        logger.warning(
+            "%s: user %d is on sales-only tier %s (self-serve is off) — confirm this was an "
+            "arranged sale, not a Billing Portal plan switch",
+            event,
+            user_id,
+            tier,
+        )
+
+
 def _resolve_tier_from_price(price_id: str) -> str | None:
     """Map a Stripe Price ID to a Paciolus tier.
 
@@ -340,6 +363,7 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
 
     sync_subscription_from_stripe(db, user_id, event_data, customer_id or "", tier)
     logger.info("customer.subscription.updated: synced user %d to tier %s", user_id, tier)
+    _flag_sales_only_tier("customer.subscription.updated", user_id, tier)
 
     # If subscription transitions to any non-entitled state, downgrade (AUDIT-08-F2)
     if new_status in ("canceled", "unpaid", "past_due", "incomplete", "incomplete_expired", "paused"):
@@ -696,6 +720,7 @@ def handle_subscription_created(db: Session, event_data: dict) -> None:
 
     sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
     logger.info("customer.subscription.created: synced user %d to tier %s", user_id, tier)
+    _flag_sales_only_tier("customer.subscription.created", user_id, tier)
 
     # Record analytics only if this handler is the first to create the local row
     if is_new:

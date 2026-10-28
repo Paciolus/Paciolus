@@ -17,6 +17,7 @@ import { UpgradeModal } from '@/components/billing/UpgradeModal'
 import { UsageMeter } from '@/components/shared/UsageMeter'
 import { Reveal } from '@/components/ui/Reveal'
 import { useBilling } from '@/hooks/useBilling'
+import { isSelfServePlan, SALES_CONTACT_HREF, SALES_CONTACT_LABEL } from '@/domain/pricing'
 
 export default function BillingSettingsPage() {
   const router = useRouter()
@@ -222,6 +223,15 @@ export default function BillingSettingsPage() {
               </p>
               {!subscription.cancel_at_period_end && (
                 <div className="flex gap-3">
+                  {/* Sprint 858: seat add-ons are sales-only (backend refuses them) until Sprint 853. */}
+                  {!isSelfServePlan(tier) ? (
+                    <Link
+                      href={SALES_CONTACT_HREF}
+                      className="px-4 py-2 bg-sage-600 text-oatmeal-50 rounded-lg font-sans text-sm font-medium hover:bg-sage-700 transition-colors"
+                    >
+                      {SALES_CONTACT_LABEL} to add seats
+                    </Link>
+                  ) : (
                   <button
                     onClick={async () => {
                       setSeatLoading(true)
@@ -234,6 +244,7 @@ export default function BillingSettingsPage() {
                   >
                     {seatLoading ? 'Updating...' : 'Add Seat'}
                   </button>
+                  )}
                   {subscription.additional_seats > 0 && (
                     <button
                       onClick={async () => {

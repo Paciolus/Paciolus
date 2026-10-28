@@ -59,16 +59,21 @@ describe('FeatureGate', () => {
     expect(screen.getByText(/requires a Professional plan/)).toBeInTheDocument()
   })
 
-  it('shows View Plans link when access denied', () => {
-    mockUser = { tier: 'free' }
-    render(
-      <FeatureGate feature="admin_dashboard">
-        <div>Dashboard</div>
-      </FeatureGate>
-    )
-    expect(screen.getByText('View Plans')).toBeInTheDocument()
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/pricing')
-  })
+  // Sprint 858: every gated feature needs Professional or Enterprise, which are
+  // sales-only while SELF_SERVE_TEAM_TIERS_ENABLED is off.
+  it.each(['admin_dashboard', 'export_sharing', 'custom_branding'] as const)(
+    'shows a Contact us link (not View Plans) for %s while team tiers are sales-only',
+    (feature) => {
+      mockUser = { tier: 'free' }
+      render(
+        <FeatureGate feature={feature}>
+          <div>Dashboard</div>
+        </FeatureGate>
+      )
+      expect(screen.queryByText('View Plans')).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Contact us' })).toHaveAttribute('href', '/contact?inquiry=Organization')
+    },
+  )
 
   it('renders nothing when hidden mode is enabled and access denied', () => {
     mockUser = { tier: 'free' }

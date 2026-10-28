@@ -6,6 +6,28 @@
  */
 export const TRIAL_DAYS = 7
 
+/**
+ * Sprint 858: self-serve purchase of Professional and Enterprise. Launch sells
+ * Solo only; those tiers show "Contact us" until Sprint 853 (firm-owned client
+ * data) ships and flips this. Mirrors `SELF_SERVE_TEAM_TIERS_ENABLED` in
+ * backend/billing/price_config.py (pinned by tests/test_pricing_copy_consistency.py),
+ * which refuses the checkout session and seat add-ons while it is off.
+ */
+export const SELF_SERVE_TEAM_TIERS_ENABLED = false
+
+const SALES_ONLY_TIER_IDS = new Set(['professional', 'enterprise'])
+
+/** Where a sales-only plan's CTA goes: the contact form, "Organization" preselected. */
+export const SALES_CONTACT_HREF = '/contact?inquiry=Organization'
+
+/** CTA label for a sales-only plan. */
+export const SALES_CONTACT_LABEL = 'Contact us'
+
+/** Whether plan `id` can be bought (or have seats added) without talking to sales. */
+export function isSelfServePlan(id: string): boolean {
+  return SELF_SERVE_TEAM_TIERS_ENABLED || !SALES_ONLY_TIER_IDS.has(id)
+}
+
 /** The date the first charge lands when a trial starts on `start` (Sprint 842). */
 export function trialChargeDate(start: Date): Date {
   const d = new Date(start.getTime())
@@ -207,10 +229,11 @@ export const tiers: Tier[] = [
       { text: 'Export sharing' },
       { text: 'Admin dashboard & activity logs' },
       { text: 'Email support (reply within 1–2 business days)' },
-      { text: '7-day free trial' },
+      // Sprint 858: no self-serve trial while the plan is sales-only.
+      ...(isSelfServePlan('professional') ? [{ text: '7-day free trial' }] : []),
     ],
-    cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=professional&interval=${interval}`,
+    cta: isSelfServePlan('professional') ? 'Start Free Trial' : SALES_CONTACT_LABEL,
+    ctaHref: (interval) => isSelfServePlan('professional') ? `/register?plan=professional&interval=${interval}` : SALES_CONTACT_HREF,
     ctaFilled: true,
     hasSeats: true,
   },
@@ -227,8 +250,8 @@ export const tiers: Tier[] = [
       { text: 'Custom PDF branding' },
       { text: 'Email support (reply within 1–2 business days)' },
     ],
-    cta: 'Start Free Trial',
-    ctaHref: (interval) => `/register?plan=enterprise&interval=${interval}`,
+    cta: isSelfServePlan('enterprise') ? 'Start Free Trial' : SALES_CONTACT_LABEL,
+    ctaHref: (interval) => isSelfServePlan('enterprise') ? `/register?plan=enterprise&interval=${interval}` : SALES_CONTACT_HREF,
     ctaFilled: false,
     hasSeats: true,
   },
@@ -260,7 +283,14 @@ export const comparisonRows: ComparisonRow[] = [
   { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
   { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
   { feature: 'Support', free: 'Email', solo: 'Email', professional: 'Email', enterprise: 'Email' },
-  { feature: 'Free Trial', free: false, solo: '7 days', professional: '7 days', enterprise: '7 days' },
+  {
+    feature: 'Free Trial',
+    free: false,
+    solo: '7 days',
+    // Sprint 858: sales-only plans have no self-serve trial.
+    professional: isSelfServePlan('professional') ? '7 days' : SALES_CONTACT_LABEL,
+    enterprise: isSelfServePlan('enterprise') ? '7 days' : SALES_CONTACT_LABEL,
+  },
 ]
 
 /* ────────────────────────────────────────────────
@@ -279,8 +309,15 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'How does the 7-day free trial work?',
-    answer: `Every paid plan starts with a ${TRIAL_DAYS}-day free trial with full feature access. A card is required when you start the trial, but you are not charged during it. On day ${TRIAL_DAYS + 1} we charge the plan price you chose, and then charge it again every month or year until you cancel. Cancel before the trial ends and you will not be charged. Checkout shows the exact amount and date before you enter your card.`,
+    answer: `${SELF_SERVE_TEAM_TIERS_ENABLED ? 'Every paid plan' : 'The Solo plan'} starts with a ${TRIAL_DAYS}-day free trial with full feature access. A card is required when you start the trial, but you are not charged during it. On day ${TRIAL_DAYS + 1} we charge the plan price you chose, and then charge it again every month or year until you cancel. Cancel before the trial ends and you will not be charged. Checkout shows the exact amount and date before you enter your card.`,
   },
+  // Sprint 858: while Professional and Enterprise are sales-only, say how to get them.
+  ...(SELF_SERVE_TEAM_TIERS_ENABLED
+    ? []
+    : [{
+        question: 'How do I sign up for Professional or Enterprise?',
+        answer: "Professional and Enterprise are not available to buy online yet. Contact us and we will set up your firm's plan with you. Solo can be bought online today.",
+      }]),
   {
     question: 'What happens when my trial expires?',
     answer: 'When the trial ends, your subscription continues on the plan you chose and the card on file is charged. If that charge fails, we email you and the card is retried over the following days; if it still has not gone through after a 7-day grace period, the subscription is canceled and your account moves to the Free plan. Your client list, analysis summaries and engagement entries are kept.',

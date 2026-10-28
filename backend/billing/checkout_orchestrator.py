@@ -62,6 +62,12 @@ class CheckoutUnavailableError(Exception):
     pass
 
 
+class CheckoutTierNotSelfServeError(Exception):
+    """Raised when the tier is sold by arrangement only (→ 403). Sprint 858."""
+
+    pass
+
+
 @dataclass
 class CheckoutParams:
     """Validated checkout parameters ready for Stripe session creation."""
@@ -94,18 +100,25 @@ def orchestrate_checkout(
     """
     from billing.checkout import create_checkout_session, create_or_get_stripe_customer
     from billing.price_config import (
+        SALES_ONLY_MESSAGE,
         TRIAL_ELIGIBLE_TIERS,
         TRIAL_PERIOD_DAYS,
         get_max_self_serve_seats,
         get_stripe_coupon_id,
         get_stripe_price_id,
         get_stripe_seat_price_id,
+        is_self_serve_purchasable,
         validate_promo_for_interval,
     )
     from billing.stripe_client import is_stripe_enabled
     from billing.subscription_manager import get_subscription
     from models import UserTier
     from shared.entitlements import get_entitlements
+
+    # 0. Sprint 858: Professional/Enterprise are sales-only until Sprint 853.
+    #    Checked before any Stripe call, so no customer is created for a refused tier.
+    if not is_self_serve_purchasable(tier):
+        raise CheckoutTierNotSelfServeError(SALES_ONLY_MESSAGE)
 
     # 1. Check billing enabled
     if not is_stripe_enabled():

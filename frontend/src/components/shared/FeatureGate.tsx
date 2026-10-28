@@ -23,6 +23,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { isSelfServePlan, SALES_CONTACT_HREF, SALES_CONTACT_LABEL } from '@/domain/pricing'
 import { trackEvent } from '@/utils/telemetry'
 
 type FeatureName =
@@ -91,6 +92,9 @@ export function FeatureGate({ feature, children, message, hidden }: FeatureGateP
   }
 
   const requiredTier = FEATURE_MIN_TIER[feature]
+  // Sprint 858: every gated feature needs Professional or Enterprise, which are
+  // sales-only until Sprint 853 — point at the contact form, not the plans page.
+  const salesOnly = !isSelfServePlan(requiredTier)
 
   return (
     <div className="bg-surface-card border border-theme rounded-lg p-8 text-center">
@@ -102,11 +106,11 @@ export function FeatureGate({ feature, children, message, hidden }: FeatureGateP
           {message ?? `This feature requires a ${TIER_DISPLAY_NAMES[requiredTier]} plan or higher.`}
         </p>
         <Link
-          href="/pricing"
+          href={salesOnly ? SALES_CONTACT_HREF : '/pricing'}
           onClick={() => trackEvent('click_upgrade_from_feature_gate', { feature, tier })}
           className="inline-block px-6 py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
         >
-          View Plans
+          {salesOnly ? SALES_CONTACT_LABEL : 'View Plans'}
         </Link>
         <p className="text-content-tertiary text-sm mt-4">
           Current plan: <span className="font-medium">{TIER_DISPLAY_NAMES[tier] ?? tier}</span>

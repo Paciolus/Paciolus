@@ -489,14 +489,35 @@ Two deterministic checks only, run in CI. No prose matching of "pending merge" �
 **Commit SHA:** TBD.
 
 ### Sprint 858: Solo-only checkout gating
-**Status:** PENDING. **Priority:** P1 (Phase 3 — must ship before Sprint 447 goes live). **Source:** Q1 (8–0), Executor amendment.
+**Status:** COMPLETE 2026-10-28. **Priority:** P1 (Phase 3 — must ship before Sprint 447 goes live). **Source:** Q1 (8–0), Executor amendment.
 
 The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in the code enforces that yet.
 
-- [ ] Pricing page, `UpgradeGate` CTAs and the upgrade flow show **"Contact us"** for Professional and Enterprise.
-- [ ] Backend **rejects** checkout-session creation for Professional/Enterprise price IDs behind a single flag that
-      Sprint 853 flips (test: request a Pro session → 4xx).
-- [ ] Copy check: no marketing surface promises self-serve Professional/Enterprise purchase while the flag is off.
+- [x] Pricing page, `UpgradeGate` CTAs and the upgrade flow show **"Contact us"** for Professional and Enterprise.
+      (Pricing cards, `UpgradeModal`, `/checkout?plan=professional|enterprise`, `FeatureGate` — the gate that
+      actually names those tiers — and the Settings → Billing "Add Seat" button all go to
+      `/contact?inquiry=Organization`. `UpgradeGate` only gates Free-tier tools and links to `/pricing`, where Solo
+      is still self-serve, so it is unchanged.)
+- [x] Backend **rejects** checkout-session creation for Professional/Enterprise price IDs behind a single flag that
+      Sprint 853 flips (test: request a Pro session → 4xx). Flag: `SELF_SERVE_TEAM_TIERS_ENABLED = False` in
+      `backend/billing/price_config.py`, mirrored in `frontend/src/domain/pricing.ts` and pinned by
+      `tests/test_pricing_copy_consistency.py`. Checkout (new or Solo→Pro upgrade) → **403** before any Stripe call;
+      `POST /billing/add-seats` on a Pro/Enterprise subscription → 403; the subscription created/updated webhooks
+      still sync what Stripe billed but log a warning (a Billing Portal plan switch is the remaining path — see
+      CEO note). Sprint 853: flip both constants together; tests opt in with the `self_serve_team_tiers` fixture.
+- [x] Copy check: no marketing surface promises self-serve Professional/Enterprise purchase while the flag is off.
+      ("Every paid plan starts with a 7-day free trial" on the pricing page and FAQ now name Solo; Pro/Enterprise
+      trial lines and comparison cells drop the trial; a "How do I sign up for Professional or Enterprise?" FAQ; a
+      USER_GUIDE §21.3 note. Generic "Start Free Trial" → `/register` CTAs are Solo-true and stay.)
+- **CEO note:** the Stripe Billing Portal must not offer plan switching to Professional/Enterprise (Stripe
+  dashboard → Billing Portal → Subscriptions); that path is outside the code and only logged.
+
+**Verification:** backend billing/pricing subset 1,011 passed; full backend suite 10,308 passed / 3 failed, all environmental (hypothesis
+200 ms deadline flake in `test_anomaly_properties.py`, 13/13 on rerun; two `test_model_registry.py` checks that glob
+the worktree venv placed at `backend/.venv-wt`); ruff clean; mypy
+clean on touched files; frontend `tsc --noEmit` clean, `npm run lint` clean, Jest 2,086/2,086 (209 suites);
+`npm run build` not run in the worktree (Turbopack cannot build through the node_modules junction) — run from the
+main checkout.
 
 **Commit SHA:** TBD.
 

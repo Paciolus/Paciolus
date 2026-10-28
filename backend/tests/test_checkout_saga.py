@@ -265,6 +265,7 @@ class TestSagaDBCommitFailure:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("self_serve_team_tiers")
 class TestSagaValidationFailureRollback:
     """Validation failures (promo, seats) after customer creation
     should clean up the new Stripe customer."""
