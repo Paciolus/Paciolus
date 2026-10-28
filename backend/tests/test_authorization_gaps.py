@@ -168,7 +168,10 @@ class TestPortalRefusesImpersonation:
     @pytest.mark.asyncio
     async def test_portal_route_still_works_for_the_customer(self, customer):
         token, _ = create_access_token(customer.id, customer.email)
-        with patch("billing.subscription_manager.create_portal_session", return_value="https://billing.example/p"):
+        with (
+            patch("billing.stripe_client.is_stripe_enabled", return_value=True),  # CI has no Stripe key
+            patch("billing.subscription_manager.create_portal_session", return_value="https://billing.example/p"),
+        ):
             async with _client() as client:
                 r = await client.get("/billing/portal-session", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200, r.text
