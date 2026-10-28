@@ -17,6 +17,7 @@ from billing.price_config import (
     MAX_SELF_SERVE_SEATS_ENTERPRISE,
     MAX_SELF_SERVE_SEATS_PROFESSIONAL,
     PROFESSIONAL_SEAT_PRICE,
+    SELF_SERVE_TEAM_TIERS_ENABLED,
     TRIAL_PERIOD_DAYS,
 )
 from models import UserTier
@@ -37,6 +38,13 @@ def _ts_number(source: str, name: str) -> int:
 
 def test_trial_length_matches_backend():
     assert _ts_number(PRICING_TS, "TRIAL_DAYS") == TRIAL_PERIOD_DAYS
+
+
+def test_self_serve_team_tier_flag_matches_backend():
+    """Sprint 858: the pricing page's "Contact us" switch mirrors the checkout gate."""
+    match = re.search(r"export const SELF_SERVE_TEAM_TIERS_ENABLED = (true|false)", PRICING_TS)
+    assert match, "SELF_SERVE_TEAM_TIERS_ENABLED not found"
+    assert (match.group(1) == "true") is SELF_SERVE_TEAM_TIERS_ENABLED
 
 
 def test_ledger_test_counts_match_the_registry():

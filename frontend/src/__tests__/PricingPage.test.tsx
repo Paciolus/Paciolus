@@ -84,11 +84,15 @@ describe('PricingPage', () => {
     expect(screen.getByText('$1,000')).toBeInTheDocument()
   })
 
-  it('Enterprise card CTA links to /register?plan=enterprise', () => {
+  // Sprint 858: Professional/Enterprise are sales-only while
+  // SELF_SERVE_TEAM_TIERS_ENABLED is off — their cards say "Contact us".
+  it('Enterprise card CTA is Contact us, not a self-serve sign-up', () => {
     render(<PricingPage />)
-    const trialLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    const hrefs = trialLinks.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/register?plan=enterprise&interval=monthly')
+    const trialHrefs = screen.getAllByRole('link', { name: 'Start Free Trial' }).map(l => l.getAttribute('href'))
+    expect(trialHrefs).not.toContain('/register?plan=enterprise&interval=monthly')
+    const contactLinks = screen.getAllByRole('link', { name: 'Contact us' })
+    expect(contactLinks.length).toBeGreaterThanOrEqual(2)
+    contactLinks.forEach(l => expect(l).toHaveAttribute('href', '/contact?inquiry=Organization'))
   })
 
   // ── Paid tier CTAs ────────────────────────────────
@@ -100,11 +104,17 @@ describe('PricingPage', () => {
     expect(hrefs).toContain('/register?plan=solo&interval=monthly')
   })
 
-  it('Professional CTA links to /register?plan=professional&interval=monthly', () => {
+  it('Professional CTA is Contact us; only Solo offers a self-serve trial', () => {
     render(<PricingPage />)
-    const proLinks = screen.getAllByRole('link', { name: 'Start Free Trial' })
-    const hrefs = proLinks.map(l => l.getAttribute('href'))
-    expect(hrefs).toContain('/register?plan=professional&interval=monthly')
+    const trialHrefs = screen.getAllByRole('link', { name: 'Start Free Trial' }).map(l => l.getAttribute('href'))
+    expect(trialHrefs).not.toContain('/register?plan=professional&interval=monthly')
+    expect(trialHrefs.filter(h => h?.startsWith('/register?plan='))).toEqual(['/register?plan=solo&interval=monthly'])
+  })
+
+  it('does not promise a free trial on every paid plan', () => {
+    const { container } = render(<PricingPage />)
+    expect(container.textContent).not.toMatch(/Every paid plan starts with/)
+    expect(container.textContent).toMatch(/Solo starts with a 7-day free trial/)
   })
 
   // ── "forever free" absent ─────────────────────────

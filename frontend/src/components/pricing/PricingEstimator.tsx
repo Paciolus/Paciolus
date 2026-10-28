@@ -19,6 +19,7 @@ import {
   SEAT_CONFIGS,
   calculateSeatCost,
   getSeatCalculatorDescription,
+  SALES_CONTACT_HREF,
 } from '@/domain/pricing'
 
 /* ────────────────────────────────────────────────
@@ -145,7 +146,7 @@ function SeatCalculator({ interval }: { interval: BillingInterval }) {
                   For teams larger than {config.maxSeats} seats, we offer custom pricing.
                 </p>
                 <Link
-                  href="/contact?inquiry=seats"
+                  href={SALES_CONTACT_HREF}
                   className="inline-flex items-center gap-2 font-sans text-sm text-sage-400 hover:text-sage-300 underline underline-offset-2"
                 >
                   Contact sales

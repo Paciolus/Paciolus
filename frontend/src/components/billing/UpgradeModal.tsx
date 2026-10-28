@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type BillingInterval, baseSeats, formatPrice, getTier, maxAdditionalSeats, seatPriceDollars } from '@/domain/pricing'
+import { type BillingInterval, baseSeats, formatPrice, getTier, isSelfServePlan, maxAdditionalSeats, SALES_CONTACT_HREF, SALES_CONTACT_LABEL, seatPriceDollars } from '@/domain/pricing'
 import { fadeScale } from '@/lib/motion'
 
 interface UpgradeModalProps {
@@ -115,6 +115,9 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             const tierIndex = tierOrder.indexOf(tier.id)
             const isCurrent = tier.id === currentTier
             const isDowngrade = tierIndex <= currentIndex
+            // Sprint 858: Professional/Enterprise are sales-only until Sprint 853.
+            const isSelfServe = isSelfServePlan(tier.id)
+            const features = isSelfServe ? tier.features : tier.features.filter((f) => !f.includes('free trial'))
 
             return (
               <div
@@ -139,7 +142,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       {priceLabel(tier.id, interval)}
                     </p>
                     <ul className="mt-3 space-y-1">
-                      {tier.features.map((f) => (
+                      {features.map((f) => (
                         <li key={f} className="text-sm text-content-secondary font-sans flex items-center gap-2">
                           <svg className="w-4 h-4 text-theme-success-text shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -154,6 +157,14 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                       <span className="text-sm text-content-tertiary font-sans">Active</span>
                     ) : isDowngrade ? (
                       <span className="text-sm text-content-tertiary font-sans">—</span>
+                    ) : !isSelfServe ? (
+                      <Link
+                        href={SALES_CONTACT_HREF}
+                        className="inline-block px-4 py-2 border border-sage-600 text-sage-600 rounded-lg text-sm font-sans font-medium hover:bg-sage-50 transition-colors"
+                        onClick={onClose}
+                      >
+                        {SALES_CONTACT_LABEL}
+                      </Link>
                     ) : (
                       <Link
                         href={`/checkout?plan=${tier.id}&interval=${interval}${maxAdditionalSeats(tier.id) > 0 && additionalSeats > 0 ? `&seats=${additionalSeats}` : ''}`}
@@ -166,7 +177,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
                   </div>
                 </div>
                 {/* Seat selector for multi-seat tiers */}
-                {maxAdditionalSeats(tier.id) > 0 && !isCurrent && !isDowngrade && (
+                {maxAdditionalSeats(tier.id) > 0 && isSelfServe && !isCurrent && !isDowngrade && (
                   <div className="mt-3 pt-3 border-t border-theme">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-content-secondary font-sans">
