@@ -18,7 +18,7 @@ export default function MarketingError({
   reset: () => void
 }) {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
+    <main id="main-content" className="min-h-[80vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         {/* Error icon */}
         <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-clay-500/15 flex items-center justify-center">
@@ -77,6 +77,6 @@ export default function MarketingError({
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

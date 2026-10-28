@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { AccountTypeDropdown, MappingIndicator } from '@/components/mapping'
 import type { AbnormalBalanceExtended, AccountType, ClassificationSuggestion } from '@/types/mapping'
 import { ACCOUNT_TYPE_LABELS } from '@/types/mapping'
+import { formatCurrency } from '@/utils/formatting'
 
 interface AnomalyCardProps {
   anomaly: AbnormalBalanceExtended
@@ -141,7 +142,9 @@ export const AnomalyCard = memo(function AnomalyCard({
 
             {/* Account Info */}
             <div className="min-w-0 flex-1">
-              <p className={`font-sans font-medium text-sm truncate ${isHighSeverity ? 'text-content-primary' : 'text-content-primary'}`}>
+              {/* Sprint 856: wrap, don't truncate — at 375px the ellipsis cut
+                  most account names to a dozen characters. */}
+              <p className="font-sans font-medium text-sm text-content-primary break-words">
                 {anomaly.account}
               </p>
 
@@ -166,7 +169,7 @@ export const AnomalyCard = memo(function AnomalyCard({
           {/* Amount */}
           <div className="text-right flex-shrink-0">
             <span className={`font-mono text-sm ${isHighSeverity ? 'text-clay-400' : isInformational ? 'text-content-tertiary' : 'text-content-secondary'}`}>
-              ${anomaly.amount.toLocaleString()}
+              {formatCurrency(Number(anomaly.amount))}
             </span>
             {isHighSeverity && (
               <span className="block text-xs text-theme-error-text font-sans mt-0.5">
@@ -188,8 +191,8 @@ export const AnomalyCard = memo(function AnomalyCard({
 
         {/* Balance Detail (expandable info) */}
         <div className="mt-2 ml-8 flex items-center gap-4 text-xs font-mono text-content-tertiary">
-          <span>Dr: ${anomaly.debit.toLocaleString()}</span>
-          <span>Cr: ${anomaly.credit.toLocaleString()}</span>
+          <span>Dr: {formatCurrency(Number(anomaly.debit))}</span>
+          <span>Cr: {formatCurrency(Number(anomaly.credit))}</span>
           {anomaly.expected_balance && anomaly.actual_balance && (
             <span className="text-clay-400/70">
               Expected: {anomaly.expected_balance} / Actual: {anomaly.actual_balance}
