@@ -678,6 +678,174 @@ def _currency_case() -> dict:
     return out
 
 
+def _renamed(rows: list[dict], names: dict[str, str]) -> list[dict]:
+    return [{names.get(k, k): v for k, v in r.items()} for r in rows]
+
+
+def _override_case() -> dict:
+    """Manual column mappings (item 5): headers no detector recognises, mapped by hand."""
+    from ap_testing_engine import run_ap_testing
+    from fixed_asset_testing_engine import run_fixed_asset_testing
+    from inventory_testing_engine import run_inventory_testing
+    from je_testing_engine import run_je_testing
+    from revenue_testing_engine import run_revenue_testing
+
+    rng = random.Random(8199)
+    out: dict[str, Any] = {}
+
+    je_rows = []
+    for i in range(40):
+        amt = _amount(rng)
+        d = _day(rng)
+        for acct, dr, cr in (("Cash", amt, "0"), ("Revenue", "0", amt)):
+            je_rows.append(
+                {
+                    "K": f"E{i}",
+                    "D1": d.isoformat(),
+                    "D2": (d + timedelta(days=rng.choice([0, 9]))).isoformat(),
+                    "A": acct,
+                    "X": dr,
+                    "Y": cr,
+                    "T": rng.choice(["adj", "", "reclass"]),
+                    "U": rng.choice(_USERS),
+                    "AMT": amt if acct == "Cash" else f"-{amt}",
+                }
+            )
+    je_cols = list(je_rows[0])
+    je_maps = {
+        "debit_credit": {
+            "entry_id_column": "K",
+            "date_column": "D1",
+            "account_column": "A",
+            "debit_column": "X",
+            "credit_column": "Y",
+            "description_column": "T",
+            "posted_by_column": "U",
+        },
+        "amount_wins": {
+            "entry_id_column": "K",
+            "date_column": "D1",
+            "account_column": "A",
+            "debit_column": "X",
+            "credit_column": "Y",
+            "amount_column": "AMT",
+        },
+        "dual_dates": {
+            "entry_id_column": "K",
+            "entry_date_column": "D1",
+            "posting_date_column": "D2",
+            "date_column": "D2",
+            "account_column": "A",
+            "amount_column": "AMT",
+        },
+    }
+    for label, mapping in je_maps.items():
+        out[f"je:{label}"] = run_je_testing([dict(r) for r in je_rows], je_cols, column_mapping=mapping).to_dict()
+
+    ap_rows = [
+        {
+            "V": rng.choice(_VENDORS),
+            "M": _amount(rng),
+            "P": _day(rng).isoformat(),
+            "I": f"N{rng.randrange(50)}",
+            "ID": _day(rng).isoformat(),
+            "C": str(100 + i * rng.choice([1, 1, 2])),
+            "G": "6000",
+            "PO": rng.choice(["", "PO1"]),
+        }
+        for i in range(50)
+    ]
+    ap_cols = list(ap_rows[0])
+    ap_maps = {
+        "full": {
+            "vendor_name_column": "V",
+            "amount_column": "M",
+            "payment_date_column": "P",
+            "invoice_number_column": "I",
+            "invoice_date_column": "ID",
+            "check_number_column": "C",
+            "gl_account_column": "G",
+            "po_number_column": "PO",
+        },
+        "invoice_date_without_payment": {"vendor_name_column": "V", "amount_column": "M", "invoice_date_column": "ID"},
+    }
+    for label, mapping in ap_maps.items():
+        out[f"ap:{label}"] = run_ap_testing([dict(r) for r in ap_rows], ap_cols, column_mapping=mapping).to_dict()
+
+    fa_rows = [
+        {
+            "F1": f"A{i}",
+            "F2": "Truck",
+            "F3": 1000 + i * 150.0,
+            "F4": (1000 + i * 150.0) * rng.choice([0.2, 1.0, 1.3]),
+            "F5": _day(rng, date(2010, 1, 1), 5000).isoformat(),
+            "F6": rng.choice([5, 7, 0]),
+            "F7": "Straight-line",
+            "F8": 0,
+            "F9": "HQ",
+            "F10": "Vehicles",
+        }
+        for i in range(30)
+    ]
+    fa_map = {
+        "asset_id_column": "F1",
+        "description_column": "F2",
+        "cost_column": "F3",
+        "accumulated_depreciation_column": "F4",
+        "acquisition_date_column": "F5",
+        "useful_life_column": "F6",
+        "depreciation_method_column": "F7",
+        "residual_value_column": "F8",
+        "location_column": "F9",
+        "category_column": "F10",
+    }
+    out["fa"] = run_fixed_asset_testing(fa_rows, list(fa_rows[0]), column_mapping=fa_map).to_dict()
+
+    rv_rows = [
+        {
+            "R1": _day(rng).isoformat(),
+            "R2": _amount(rng),
+            "R3": rng.choice(["Product Revenue", "Returns"]),
+            "R4": "4000",
+            "R5": rng.choice(["", "manual"]),
+            "R6": rng.choice(["", "C-1", "C-2"]),
+            "R7": rng.choice(["", "PO1"]),
+            "R8": rng.choice(["", "over_time"]),
+        }
+        for _ in range(40)
+    ]
+    rv_map = {
+        "date_column": "R1",
+        "amount_column": "R2",
+        "account_name_column": "R3",
+        "account_number_column": "R4",
+        "entry_type_column": "R5",
+        "contract_id_column": "R6",
+        "performance_obligation_id_column": "R7",
+        "recognition_method_column": "R8",
+    }
+    out["revenue"] = run_revenue_testing(rv_rows, list(rv_rows[0]), column_mapping=rv_map).to_dict()
+
+    inv_rows = [
+        {
+            "Q1": f"S{i}",
+            "Q2": rng.choice([0, 5, 500]),
+            "Q3": round(rng.uniform(1, 90), 2),
+            "Q4": "",
+            "Q5": _day(rng, date(2024, 1, 1), 700).isoformat(),
+        }
+        for i in range(30)
+    ]
+    inv_map = {
+        "item_id_column": "Q1",
+        "quantity_column": "Q2",
+        "unit_cost_column": "Q3",
+        "last_movement_date_column": "Q5",
+    }
+    out["inventory"] = run_inventory_testing(inv_rows, list(inv_rows[0]), column_mapping=inv_map).to_dict()
+    return out
+
+
 CASES: dict[str, Callable[[], Any]] = {
     "je": _je_case,
     "ap": _ap_case,
@@ -689,6 +857,7 @@ CASES: dict[str, Callable[[], Any]] = {
     "inventory": _inventory_case,
     "three_way_match": _three_way_case,
     "currency": _currency_case,
+    "column_overrides": _override_case,
 }
 
 
