@@ -1179,38 +1179,52 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 ---
 
 ### Sprint 819: Backend deduplication
-**Status:** PARTIAL — items 6 (`_to_decimal` half) and 9 done 2026-10-23; the rest pending.
+**Status:** PARTIAL — items 3–10 done 2026-10-27 (branch `sprint-819-backend-dedup`, pending CI + merge); items 1 and 2 (result base classes, `.empty()`/`.from_flags()`) not started — see below.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, engines + routes + exports passes.
+
+**Output-preservation harness (built first, on unmodified code):** `tests/test_sprint819_output_snapshots.py`
+(engine `to_dict()` for JE, AP, Payroll + PR-T9 ghost/HR-master, Revenue, AR, FA, Inventory, three-way
+match, currency, and hand-mapped column overrides; seeded data, frozen clock, key order pinned) and
+`tests/test_sprint819_route_snapshots.py` (six promoted JSON tools incl. error paths + ToolRun rows,
+their CSV exports, form-input / engagement / admin exports, the diagnostic export pipeline incl. log
+events and error paths, testing-tool CSVs + memo PDFs by page text). Goldens in `tests/snapshots/sprint819/`;
+regenerate only with `SPRINT819_UPDATE_SNAPSHOTS=1` when a change is intended. Every refactor below kept them green.
 
 1. [ ] Generic result base classes in `shared/` for the per-tool `FlaggedEntry` / `TestResult` /
    `DataQuality` / `CompositeScore` (~650 lines across 7 tools; e.g. `je_testing/analysis.py:546-665`).
    **JSON output must not change**: Payroll stores severity/tier as strings and rounds
    `completeness_score` to 2 dp; AR adds `skipped`/`skip_reason`; Payroll `top_findings` is list-of-dicts.
-   Snapshot-test every tool's response before and after.
+   *(Not started 2026-10-27: out of safe room in this pass. The snapshot harness above now covers every
+   tool's `to_dict()`, so this is unblocked; do it one tool at a time against those goldens.)*
 2. [ ] `.empty(...)` / `.from_flags(...)` constructors replacing 76 zero-result blocks (~800 lines)
    and ~110 hand-computed `flag_rate`s. AR's `_skipped_result` (`ar_aging/analysis.py:1801`) is the model.
-3. [ ] Round-amount test copied 4× (JE `:1087`, AP `:904`, Revenue `:922`, Payroll `:1163`) — adopt
-   one Decimal-safe helper. *(Ordering decided 2026-10-24 and applied in Sprint 831: count all, keep the
-   largest, in all four. The shared helper itself is still open.)*
-4. [ ] Optional `formats=` on `parse_date`; AR (`:862,873`), FA (`:1429`), currency (`:567`) pass
-   their **current** lists — do not widen what they accept.
-5. [ ] Default `apply_column_overrides` driven by a class-level column list (JE `:2857`, AP `:1996`
-   hand-written); keep Payroll's suffix-less keys (API contract). Finish `AuditEngineBase`
-   adoption for FA, Revenue, AR (feeds the Refactor Intake item).
-6. [x] *(`_to_decimal` half done 2026-10-23: nine byte-identical copies → `shared/request_decimal.py`;
-   the guard that scanned each copy for the finiteness fix now forbids new copies and checks the
-   shared helper. `run_json_tool` not done.)* `_to_decimal` copied verbatim into 9 route files → one `shared/` helper; a `run_json_tool(...)`
-   wrapper for the 6 promoted-tool routes' enforce → quota → record sequence.
-7. [ ] ~20 export endpoints hand-roll `StreamingResponse`/`Content-Disposition` (list in the review:
-   `engagements_exports.py`, `loan_amortization.py`, `bank_reconciliation.py:193`,
-   `multi_period.py:281`, `depreciation.py:243`, `lease_accounting.py:216`, …) → use
-   `shared/export_helpers`. Decide `Cache-Control: no-store` for all financial exports (only
-   `export_sharing.py:222` sets it). In-memory PDFs: plain `Response`, not 8 KB chunking.
-   *(No-store decided and done 2026-10-24: `SecurityHeadersMiddleware` adds `Cache-Control:
-   no-store` to every `Content-Disposition: attachment` response unless the route set its own
-   policy — one place, all ~20 endpoints. The helper consolidation itself is still open.)*
-8. [ ] `export/pipeline.py:47-262` — 11 near-identical functions → one `_run_export(...)` (~120 lines).
+   *(Not started; depends on item 1's base classes. Mind `flag_rate` variants — `x / max(n, 1)` vs
+   `x / n if n else 0.0` agree only for n ≥ 1.)*
+3. [x] Round-amount test copied 4× → `shared/round_amounts.py::match_round_amount` (Decimal tier match) +
+   `keep_most_severe` (count all, keep most severe then largest; stable). Payroll now matches via the 4-tier
+   table but keeps its own wording, string severity and amount-only details.
+4. [x] `parse_date(..., formats=...)`; default list is now `DEFAULT_DATE_FORMATS` (unchanged). AR `as_of_date`
+   and the rate-table `effective_date` pass their existing narrow sets (memo keyed per set); FA already used
+   the shared default since Sprint 827. Guard tests prove nothing new is accepted.
+5. [x] `AuditEngineBase` default `apply_column_overrides` from class-level `OVERRIDABLE_COLUMNS` + an
+   `after_column_overrides` hook (JE debit/credit-vs-amount + dual dates, AP dual dates + check numbers).
+   Inventory uses it too; Payroll keeps its suffix-less override. FA and Revenue now run as
+   `FixedAssetTestingEngine` / `RevenueTestingEngine`. **AR not migrated:** two input files (TB + optional
+   sub-ledger) do not fit the single-input `run_pipeline`; it stays a lint migration target.
+6. [x] *(`_to_decimal` half done 2026-10-23.)* `shared/testing_route.py::run_json_tool` owns enforce →
+   quota → compute → record for the six promoted tools; SoD keeps re-raise-unchanged via `reraise_errors`.
+   The two AST guards that enumerate recording/metering sites count it as the delegate.
+7. [x] Every file download builds its response in `shared/export_helpers` (`attachment_response` +
+   `pdf_/excel_/csv_response`); ~20 hand-rolled blocks and the PDF/ZIP 8 KB chunk generators removed.
+   Bodies, Content-Type and Content-Disposition byte-identical (the bare `filename=` form is kept via
+   `quote_filename=False`). *(No-store done 2026-10-24.)* **Deliberately still a single-chunk
+   `StreamingResponse`, not a plain `Response`:** GZipMiddleware (`minimum_size=500`) gzips every streamed
+   body today; a plain `Response` would stop compressing downloads under 500 B — a wire change. Callers are
+   typed against `Response`, so that switch is one line if wanted. Only framing change: the formerly
+   chunked CSV downloads now also send `Content-Length`.
+8. [x] `export/pipeline.py`: eleven functions → `_run_export(...)`; log events, mapped exceptions and
+   filenames unchanged.
 9. [x] **Env reads through `config.py` only.** *(Done 2026-10-23 for the secret-bearing reads —
    see below.)* Latent bug: `email_service.py:48-50` reads
    `SENDGRID_API_KEY` via `os.getenv` while `config.py:647` validates via `_resolve_secret` —
@@ -1224,11 +1238,21 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    while the probe reported "not_configured" and healthy. Re-checked the rest of the list:
    `export_share_storage` already reads through `_load_optional`, and the remaining direct reads
    (`REDACT_LOG_TRACEBACKS`, `MEMO_RSS_WARN_MB`) are non-secret tuning flags — left as they are.
-10. [ ] Split long functions: `three_way_match_engine.py:1210` (268 lines, 64 branches),
-   `currency_engine.py:821` (254 lines; lookup copied 3×, per-cell `df.at` loop under a
-   "Vectorized" comment), `payroll_testing/analysis.py:1659` (145 lines).
+10. [x] Long functions split: `run_three_way_match` → exact-PO / fuzzy (+ invoice and receipt scorers) /
+   unmatched / summary over a shared `_MatchState`; `convert_trial_balance` → `_detect_account_columns`,
+   `_resolve_currency_rates`, one `_flag()` builder, columns read once (`to_numpy`) instead of per-cell `df.at`;
+   Payroll PR-T9 → grouping + in-file + HR-master indicator functions.
 
-**Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9).
+**Found, not fixed (outside scope, pre-existing):** `/export/pdf` 500s when `risk_summary` is null
+(`pdf/sections/diagnostic.py` calls `.get` on the `None` the schema dumps); memo follow-up wording is
+seeded with the per-process `str` `hash()` (`shared/memo_template.py`), so the same report's wording
+changes between server restarts.
+
+**Verification:** full backend suite 10,022 passed / 0 failed (3f3b74df, 56m44s serial; a first run caught the three-way-match `@with_parse_memo` slip, fixed in 3f3b74df); 20 Sprint 819 snapshot tests green; OpenAPI drift check clean (221 paths, 430 schemas); mypy 204 errors (baseline 1011), none in touched code; `ruff check` + `ruff format --check` clean on touched files.
+
+**Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9); 2026-10-27 branch
+`sprint-819-backend-dedup`: 4fe89870 (snapshots), 5601d850 (3), 17bdcf41 (4), e3ba87fe (8), 54ff41c2 + a9c5f5f2 (7),
+9f9def4d (6), 1bba4172 + 81976abe + 3f3b74df + 4423c770 (10), 7e3aeded (5).
 
 ---
 
