@@ -42,6 +42,7 @@
 - [ ] `git add <files> && git commit -m "Sprint X: Description"`
 - [ ] Record commit SHA in sprint Review section (e.g., `Commit: abc1234`)
 - [ ] Verify Active Phase has fewer than 5 completed sprints (the commit-msg hook blocks at 5+; run `sh scripts/archive_sprints.sh` if threshold exceeded)
+- [ ] **After the PR merges:** set the sprint's `**Status:**` → COMPLETE, record the merge SHA on `main` in its `**Commit SHA:**` line, and refresh `SESSION_STATE.md`'s `**Main SHA:**` line (`git rev-parse --short origin/main`). CI (`scripts/check_state_docs.py`, Sprint 857) only checks that this SHA is an ancestor of HEAD and that sprint ids are unique; the rest is this manual step.
 
 ---
 

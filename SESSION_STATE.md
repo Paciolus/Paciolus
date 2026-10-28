@@ -2,6 +2,12 @@
 
 _Updated at the end of every Claude Code session. Overwrite the previous state — this is not a history log._
 
+_Format rule (Sprint 857, enforced in CI by `scripts/check_state_docs.py`): keep exactly one line of the form
+``**Main SHA:** `<short sha>` `` naming the current `origin/main` commit (`git rev-parse --short origin/main`). It
+must be an ancestor of HEAD. Refresh it after every merge._
+
+**Main SHA:** `1435b0e4`
+
 ## START HERE — what the next session should pick up
 
 **1. Work the 2026-10-28 action plan** — the "START HERE — ACTION PLAN 2026-10-28" block at the top of
