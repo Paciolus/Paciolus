@@ -1674,6 +1674,66 @@ PAYROLL_SUSPICIOUS_KEYWORDS = [
 ]
 
 
+def _group_by_employee_key(entries: list[PayrollEntry]) -> dict[str, list[PayrollEntry]]:
+    """Group entries by employee id, falling back to name (lower-cased, stripped)."""
+    emp_groups: dict[str, list[PayrollEntry]] = {}
+    for entry in entries:
+        key = entry.employee_id.strip().lower() if entry.employee_id.strip() else entry.employee_name.strip().lower()
+        if key:
+            emp_groups.setdefault(key, []).append(entry)
+    return emp_groups
+
+
+def _in_file_ghost_indicators(
+    group: list[PayrollEntry],
+    *,
+    has_dept: bool,
+    single_entry_is_unusual: bool,
+    first_month: tuple[int, int],
+    last_month: tuple[int, int],
+) -> list[str]:
+    """PR-T9 indicators 1-3, from the register alone."""
+    indicators: list[str] = []
+
+    # Indicator 1: No department (if column exists)
+    if has_dept and all(not e.department.strip() for e in group):
+        indicators.append("No department assignment")
+
+    # Indicator 2: Single pay entry
+    if len(group) == 1 and single_entry_is_unusual:
+        indicators.append("Single pay entry in period")
+
+    # Indicator 3: Payments only in first/last month
+    dated_entries = [e for e in group if e.pay_date]
+    if dated_entries and len(dated_entries) > 1 and first_month != last_month:
+        entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries if e.pay_date)
+        if entry_months <= {first_month, last_month}:
+            indicators.append("Pay entries only in first/last month of period")
+    return indicators
+
+
+def _hr_master_ghost_indicators(
+    hr_rec: Optional[HRMasterRecord],
+    group: list[PayrollEntry],
+    *,
+    has_address: bool,
+    executive_addresses: set[str],
+) -> list[str]:
+    """PR-T9 indicators 4-6, against the HR master (Sprint 642)."""
+    if hr_rec is None:
+        return ["Absent from HR master (no matching employee record)"]
+    indicators: list[str] = []
+    if hr_rec.termination_date is not None:
+        post_term = [e for e in group if e.pay_date and e.pay_date > hr_rec.termination_date]
+        if post_term:
+            indicators.append(f"Pay entries after HR termination date ({hr_rec.termination_date.isoformat()})")
+    if has_address and executive_addresses:
+        emp_addrs = {e.address.strip().lower() for e in group if e.address.strip()}
+        if emp_addrs & executive_addresses and not hr_rec.is_executive:
+            indicators.append("Address matches an executive in HR master")
+    return indicators
+
+
 def _test_ghost_employee_indicators(
     entries: list[PayrollEntry],
     config: PayrollTestingConfig,
@@ -1706,20 +1766,14 @@ def _test_ghost_employee_indicators(
 
     has_dept = detection.department_column is not None
     has_address = detection.address_column is not None
-    hr_enabled = hr_master is not None  # explicit empty dict still enables the cross-file check
 
     executive_addresses: set[str] = set()
-    if hr_enabled:
+    if hr_master is not None:  # explicit empty dict still enables the cross-file check
         for rec in hr_master.values():
             if rec.is_executive and rec.address.strip():
                 executive_addresses.add(rec.address.strip().lower())
 
-    # Group by employee identifier
-    emp_groups: dict[str, list[PayrollEntry]] = {}
-    for entry in entries:
-        key = entry.employee_id.strip().lower() if entry.employee_id.strip() else entry.employee_name.strip().lower()
-        if key:
-            emp_groups.setdefault(key, []).append(entry)
+    emp_groups = _group_by_employee_key(entries)
 
     # Determine period boundaries from all entries
     all_dates = [e.pay_date for e in entries if e.pay_date]
@@ -1747,41 +1801,17 @@ def _test_ghost_employee_indicators(
     single_entry_is_unusual = len(set(all_dates)) > 1 and single_entry_share < 0.5
 
     for emp_key, group in emp_groups.items():
-        indicators: list[str] = []
-
-        # Indicator 1: No department (if column exists)
-        if has_dept:
-            all_no_dept = all(not e.department.strip() for e in group)
-            if all_no_dept:
-                indicators.append("No department assignment")
-
-        # Indicator 2: Single pay entry
-        if len(group) == 1 and single_entry_is_unusual:
-            indicators.append("Single pay entry in period")
-
-        # Indicator 3: Payments only in first/last month
-        dated_entries = [e for e in group if e.pay_date]
-        if dated_entries and len(dated_entries) > 1 and first_month != last_month:
-            entry_months = set((e.pay_date.year, e.pay_date.month) for e in dated_entries if e.pay_date)
-            if entry_months <= {first_month, last_month}:
-                indicators.append("Pay entries only in first/last month of period")
-
-        # Indicators 4–6: HR master cross-file (Sprint 642)
-        if hr_enabled:
-            hr_rec = hr_master.get(emp_key)
-            if hr_rec is None:
-                indicators.append("Absent from HR master (no matching employee record)")
-            else:
-                if hr_rec.termination_date is not None:
-                    post_term = [e for e in dated_entries if e.pay_date and e.pay_date > hr_rec.termination_date]
-                    if post_term:
-                        indicators.append(
-                            f"Pay entries after HR termination date ({hr_rec.termination_date.isoformat()})"
-                        )
-                if has_address and executive_addresses:
-                    emp_addrs = {e.address.strip().lower() for e in group if e.address.strip()}
-                    if emp_addrs & executive_addresses and not hr_rec.is_executive:
-                        indicators.append("Address matches an executive in HR master")
+        indicators = _in_file_ghost_indicators(
+            group,
+            has_dept=has_dept,
+            single_entry_is_unusual=single_entry_is_unusual,
+            first_month=first_month,
+            last_month=last_month,
+        )
+        if hr_master is not None:
+            indicators += _hr_master_ghost_indicators(
+                hr_master.get(emp_key), group, has_address=has_address, executive_addresses=executive_addresses
+            )
 
         if len(indicators) < config.ghost_min_indicators:
             continue
