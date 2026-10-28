@@ -22,7 +22,7 @@ import math
 import re
 import statistics
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any, Optional
 
@@ -31,7 +31,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.monetary import decimals_to_floats
-from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
+from shared.parsing_helpers import infer_day_first, parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
@@ -172,7 +172,19 @@ FA_USEFUL_LIFE_PATTERNS = [
     (r"^life$", 0.65, True),
     (r"useful.?life", 0.80, False),
     (r"life.?years", 0.65, False),
+    # Sprint 846 (A8): month-denominated lives; parse_fa_entries converts them.
+    (r"life\b.*\b(months?|mos|mths?)\b", 0.85, False),
 ]
+
+# Sprint 846 (A8): a useful-life header that names months. 60 in a
+# "Useful Life (Months)" column was read as 60 years.
+_LIFE_IN_MONTHS = re.compile(r"\b(months?|mos|mths?)\b", re.IGNORECASE)
+
+
+def life_column_is_months(column: Optional[str]) -> bool:
+    """Whether a useful-life column is denominated in months (by its header)."""
+    return bool(column and _LIFE_IN_MONTHS.search(column))
+
 
 FA_DEPRECIATION_METHOD_PATTERNS = [
     (r"^depreciation\s*method$", 1.0, True),
@@ -349,13 +361,16 @@ class FixedAssetEntry:
     cost: Decimal = Decimal("0")
     accumulated_depreciation: Decimal = Decimal("0")
     acquisition_date: Optional[str] = None
-    useful_life: Optional[float] = None  # Non-monetary: years
+    useful_life: Optional[float] = None  # Non-monetary: years (month columns converted on parse)
     depreciation_method: Optional[str] = None
     residual_value: Decimal = Decimal("0")
     location: Optional[str] = None
     category: Optional[str] = None
     net_book_value: Optional[Decimal] = None
     row_number: int = 0
+    # Sprint 846 (A4): the register's date column is DD/MM (inferred per column
+    # in parse_fa_entries). Not serialised — it changes how the date is read.
+    acquisition_date_day_first: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.cost, (int, float)):
@@ -537,6 +552,12 @@ def parse_fa_entries(
 ) -> list[FixedAssetEntry]:
     """Parse raw rows into FixedAssetEntry objects using detected columns."""
     entries: list[FixedAssetEntry] = []
+    # Sprint 846 (A4): DD/MM registers read month-first gave every day <= 12
+    # date the wrong month. Decide the order once for the whole column.
+    day_first = bool(detection.acquisition_date_column) and infer_day_first(
+        row.get(detection.acquisition_date_column) for row in rows
+    )
+    life_divisor = 12.0 if life_column_is_months(detection.useful_life_column) else 1.0
     for idx, row in enumerate(rows):
         entry = FixedAssetEntry(row_number=idx + 1)
         if detection.asset_id_column:
@@ -549,8 +570,10 @@ def parse_fa_entries(
             entry.accumulated_depreciation = safe_decimal(row.get(detection.accumulated_depreciation_column))
         if detection.acquisition_date_column:
             entry.acquisition_date = safe_str(row.get(detection.acquisition_date_column))
+            entry.acquisition_date_day_first = day_first
         if detection.useful_life_column:
-            entry.useful_life = _safe_float_optional(row.get(detection.useful_life_column))
+            life = _safe_float_optional(row.get(detection.useful_life_column))
+            entry.useful_life = life / life_divisor if life is not None else None
         if detection.depreciation_method_column:
             entry.depreciation_method = safe_str(row.get(detection.depreciation_method_column))
         if detection.residual_value_column:
@@ -1046,6 +1069,30 @@ def test_cost_zscore_outliers(
     )
 
 
+def _acquisition_date(e: FixedAssetEntry) -> Optional[date]:
+    return parse_date(e.acquisition_date, day_first=e.acquisition_date_day_first)
+
+
+def _half_year_midpoint(acquired: date, period_end: date) -> date:
+    """Midpoint of the fiscal year containing ``acquired``.
+
+    Fiscal years are taken to end on ``period_end``'s month and day, so a June
+    year-end register puts the half-year midpoint at 31 December.
+    """
+
+    def anniversary(year: int) -> date:
+        try:
+            return period_end.replace(year=year)
+        except ValueError:  # 29 February in a non-leap year
+            return period_end.replace(year=year, day=28)
+
+    fy_end = anniversary(acquired.year)
+    if fy_end < acquired:
+        fy_end = anniversary(acquired.year + 1)
+    fy_start = anniversary(fy_end.year - 1) + timedelta(days=1)
+    return fy_start + (fy_end - fy_start) / 2
+
+
 def test_age_concentration(
     entries: list[FixedAssetEntry],
     config: FixedAssetTestingConfig,
@@ -1055,7 +1102,7 @@ def test_age_concentration(
     Flags if >50% of total asset cost is concentrated in a single
     acquisition year, indicating potential bulk capitalization risk.
     """
-    dated = [(e, parse_date(e.acquisition_date)) for e in entries]
+    dated = [(e, _acquisition_date(e)) for e in entries]
     dated_entries = [(e, d) for e, d in dated if d is not None]
 
     if not dated_entries:
@@ -1387,32 +1434,37 @@ def test_depreciation_recalculation(
     """FA-T11: Depreciation Recalculation (IAS 16 / ASC 360).
 
     Sprint 682 — when cost, residual_value, useful_life, and
-    depreciation_method are all present, recalculate expected annual
-    depreciation and flag entries whose reported accumulated
-    depreciation deviates materially from the expected amount.
+    depreciation_method are all present, recalculate expected accumulated
+    depreciation and flag entries whose reported figure deviates
+    materially from it.
 
     Supported methods:
-      * Straight-Line (SL): annual = (cost − residual) / useful_life
-      * Double-Declining Balance (DDB): annual ≈ 2/useful_life × NBV
-        — approximated here as a one-year average charge on the
-        straight-line baseline; without an acquisition_date-based
-        year count we can't compute compound DDB. Tolerance is wider
-        for DDB to absorb that approximation.
+      * Straight-Line (SL): (cost − residual) / useful_life × t
+      * Declining balance (DDB, or 150% DB when the method names "150"):
+        cost × (1 − (1 − r)^t) with r = factor / useful_life (Sprint 827)
+    Both are capped at the depreciable base.
 
-    The test compares the *annual* expected charge against accumulated
-    depreciation / years_elapsed where years_elapsed is derived from
-    acquisition_date. Rows lacking any required input are silently
-    skipped (not flagged) — this test is additive on top of FA-T02
-    missing-required-fields, which is the structural check.
+    ``t`` is measured under two first-year conventions and the closer one
+    is used (Sprint 846, A5): actual days from acquisition, and the
+    half-year convention (depreciation from the midpoint of the fiscal year
+    of acquisition, fiscal years ending on the reference date's month and
+    day). The tolerance absorbs rounding only — mid-quarter and mid-month
+    registers are not modelled and can still be flagged.
+
+    Rows lacking any required input are silently skipped (not flagged) —
+    this test is additive on top of FA-T02 missing-required-fields, which
+    is the structural check.
     """
     from datetime import UTC as _UTC
     from datetime import datetime as _dt
 
-    # 5% tolerance — per sprint plan; tighter than typical estimate-
-    # based recalcs (10-15%) but loose enough to absorb depreciation-
-    # convention noise (half-year, mid-quarter, etc.).
+    # 5% tolerance — per sprint plan; tighter than typical estimate-based
+    # recalcs (10-15%). Sprint 846 (A5): it does *not* absorb a first-year
+    # convention — half a year on a five-year asset bought late in the year is
+    # a 30%+ difference two years on — so the half-year convention is
+    # modelled explicitly below instead of being claimed here.
     SL_TOLERANCE = Decimal("0.05")
-    DDB_TOLERANCE = Decimal("0.15")  # wider: switch-to-SL and partial-year conventions vary
+    DDB_TOLERANCE = Decimal("0.15")  # wider: switch-to-SL timing varies
 
     flagged: list[FlaggedFixedAsset] = []
     as_of = config.reference_date or _dt.now(_UTC).date()
@@ -1429,8 +1481,9 @@ def test_depreciation_recalculation(
         # Sprint 827 (A3): the shared parser. Three hand-listed formats silently
         # skipped every row whose date came from an Excel date cell
         # ("2019-01-01 00:00:00") or was written 2019/01/01 — the test then
-        # reported itself as run with nothing flagged.
-        acq_date = parse_date(e.acquisition_date)
+        # reported itself as run with nothing flagged. Sprint 846 (A4): read
+        # day-first when the register's date column is DD/MM.
+        acq_date = _acquisition_date(e)
         if acq_date is None:
             continue
 
@@ -1442,17 +1495,17 @@ def test_depreciation_recalculation(
             continue
 
         method = (e.depreciation_method or "").lower()
-        tolerance = SL_TOLERANCE
-        method_used = ""
         # Sprint 827 (A2): accumulated depreciation never exceeds the depreciable
         # base. Uncapped, an asset between 1.0x and 1.5x its life "expected"
         # more depreciation than its cost and was flagged HIGH.
         depreciable_base = e.cost - e.residual_value
         if depreciable_base <= 0:
             continue
+        life = Decimal(str(e.useful_life))
         if "straight" in method or method in ("sl", "s/l", "s-l"):
-            expected_accum = depreciable_base / Decimal(str(e.useful_life)) * Decimal(str(years_elapsed))
             method_used = "Straight-Line"
+            tolerance = SL_TOLERANCE
+            rate = Decimal("0")
         elif "declining" in method or "ddb" in method or "double" in method:
             # Sprint 827 (A1): compound declining balance. The previous form took
             # rate x the *current* NBV x years elapsed, which is not DDB at all —
@@ -1460,28 +1513,37 @@ def test_depreciation_recalculation(
             # Accumulated after t years at rate r is cost x (1 - (1 - r)^t),
             # floored at salvage. "150" in the method selects 150% DB.
             factor = Decimal("1.5") if "150" in method else Decimal("2")
-            rate = factor / Decimal(str(e.useful_life))
-            if rate >= 1:
-                # The whole base goes in year one (life <= 2y for DDB, <= 1.5y
-                # for 150% DB); the cap below brings it to cost - salvage. It was
-                # skipped, hiding under-depreciation (PR #206 review).
-                expected_accum = e.cost
-            else:
-                remaining = Decimal(str(float(1 - rate) ** years_elapsed))
-                expected_accum = e.cost * (1 - remaining)
+            rate = factor / life
             method_used = "150% Declining Balance" if factor == Decimal("1.5") else "Double-Declining Balance"
             tolerance = DDB_TOLERANCE
         else:
             # Unknown method — skip rather than mis-flag.
             continue
 
-        expected_accum = min(expected_accum, depreciable_base)
-        if expected_accum <= 0:
-            continue
         # Sprint 827 (A6): registers that carry accumulated depreciation as a
         # contra (negative) balance are comparing magnitudes, not signs.
         reported_accum = abs(e.accumulated_depreciation)
-        variance = abs(reported_accum - expected_accum) / expected_accum
+        half_year_t = (as_of - _half_year_midpoint(acq_date, as_of)).days / 365.25
+        candidates: list[tuple[Decimal, Decimal, str, float]] = []
+        for convention, t in (("actual days", years_elapsed), ("half-year", half_year_t)):
+            if t <= 0:
+                continue
+            if rate == 0:
+                expected = depreciable_base / life * Decimal(str(t))
+            elif rate >= 1:
+                # The whole base goes in year one (life <= 2y for DDB, <= 1.5y
+                # for 150% DB); the cap brings it to cost - salvage. It was
+                # skipped, hiding under-depreciation (PR #206 review).
+                expected = e.cost
+            else:
+                expected = e.cost * (1 - Decimal(str(float(1 - rate) ** t)))
+            expected = min(expected, depreciable_base)
+            if expected <= 0:
+                continue
+            candidates.append((abs(reported_accum - expected) / expected, expected, convention, t))
+        if not candidates:
+            continue
+        variance, expected_accum, convention, convention_years = min(candidates, key=lambda c: c[0])
         if variance <= tolerance:
             continue
 
@@ -1495,16 +1557,19 @@ def test_depreciation_recalculation(
                 severity=severity,
                 issue=(
                     f"{method_used}: expected ~${expected_accum:,.2f} accumulated "
-                    f"after {years_elapsed:.1f}y, but reported "
+                    f"after {convention_years:.1f}y ({convention} convention, the closer of "
+                    f"actual days and half-year), but reported "
                     f"${reported_accum:,.2f} (variance {variance:.1%}). "
                     "IAS 16 / ASC 360 — review useful life, method, or salvage value."
                 ),
                 confidence=0.80,
                 details={
                     "method": method_used,
+                    "convention": convention,
                     "expected_accum": float(expected_accum),
                     "reported_accum": float(reported_accum),
                     "years_elapsed": round(years_elapsed, 2),
+                    "convention_years": round(convention_years, 2),
                     "variance_pct": round(float(variance), 4),
                     "tolerance": float(tolerance),
                 },
@@ -1523,7 +1588,8 @@ def test_depreciation_recalculation(
         description=(
             "Recalculates expected depreciation (IAS 16 / ASC 360) when "
             "cost, useful life, method, and acquisition date are present; "
-            "flags variance >5% (SL) or >15% (DDB). "
+            "flags variance >5% (SL) or >15% (DDB) under both the actual-days and "
+            "half-year conventions. "
             f"Elapsed years measured to {as_of.isoformat()} ({reference_date_label(config.reference_date_source)})."
         ),
         flagged_entries=flagged,
@@ -1617,6 +1683,11 @@ class FixedAssetTestingEngine(AuditEngineBase):
         return detect_fa_columns(column_names)
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
+        # Sprint 846 (A8): runs after the manual overrides, so a mapped months column is noted too.
+        if life_column_is_months(detection.useful_life_column):
+            detection.detection_notes.append(
+                f"Useful life column '{detection.useful_life_column}' is in months; converted to years."
+            )
         return parse_fa_entries(rows, detection)
 
     def run_quality_checks(self, entries: list, detection: Any) -> Any:
