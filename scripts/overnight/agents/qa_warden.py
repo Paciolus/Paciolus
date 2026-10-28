@@ -23,6 +23,7 @@ from scripts.overnight.config import (
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
+    run_stamp,
 )
 
 # Budget for the backend pytest subprocess, in seconds.
@@ -69,7 +70,8 @@ def _run_backend_tests() -> dict:
     # non-issue (lessons.md, Sprint 674).
     try:
         result = subprocess.run(
-            cmd_json, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=PYTEST_TIMEOUT_S,
+            cmd_json, check=False, cwd=str(BACKEND_ROOT), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=PYTEST_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
         return {
@@ -109,12 +111,12 @@ def _run_backend_tests() -> dict:
             pass
 
     # json-report plugin not installed or failed — retry without it
-    if "unrecognized arguments" in result.stderr or result.returncode == 4:
+    if "unrecognized arguments" in (result.stderr or "") or result.returncode == 4:
         cmd_plain = [str(python_bin), "-m", "pytest", "--tb=no", "-q"]
         try:
             result = subprocess.run(
-                cmd_plain, cwd=str(BACKEND_ROOT), capture_output=True, text=True,
-                timeout=PYTEST_TIMEOUT_S,
+                cmd_plain, check=False, cwd=str(BACKEND_ROOT), capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=PYTEST_TIMEOUT_S,
             )
         except subprocess.TimeoutExpired:
             return {
@@ -127,7 +129,7 @@ def _run_backend_tests() -> dict:
             }
 
     # Parse stdout summary line
-    output = result.stdout + "\n" + result.stderr
+    output = (result.stdout or "") + "\n" + (result.stderr or "")
     # Pattern: "6531 passed, 2 failed, 1 error in 293.38s"
     m = re.search(
         r"(\d+)\s+passed(?:,\s*(\d+)\s+failed)?(?:,\s*(\d+)\s+error)?.*?in\s+([\d.]+)s",
@@ -167,42 +169,86 @@ def _run_backend_tests() -> dict:
     }
 
 
+def _jest_did_not_run(reason: str) -> dict:
+    """A frontend result that cannot be mistaken for a pass (Sprint 854)."""
+    return {"passed": 0, "failed": 0, "duration_s": 0.0, "did_not_run": reason}
+
+
+def _parse_jest_json(data: dict) -> dict:
+    passed = data.get("numPassedTests", 0)
+    failed = data.get("numFailedTests", 0)
+    start = data.get("startTime") or 0
+    ends = [r.get("endTime", 0) for r in data.get("testResults", []) if r.get("endTime")]
+    duration = (max(ends) - start) / 1000 if start and ends else 0.0
+    return {"passed": passed, "failed": failed, "duration_s": round(duration, 1), "did_not_run": None}
+
+
 def _run_frontend_tests() -> dict:
-    """Run Jest and capture summary."""
-    cmd = ["npm", "test", "--", "--watchAll=false", "--json"]
-    result = subprocess.run(
-        cmd, cwd=str(FRONTEND_ROOT), capture_output=True, text=True,
-        timeout=JEST_TIMEOUT_S, shell=True,
-    )
+    """Run Jest and capture summary.
 
-    passed = failed = 0
-    duration = 0.0
-
-    # Try JSON parse first
-    stdout = result.stdout
+    Sprint 854 — the 2026-10-28 crash. `subprocess.run(..., text=True)` with no
+    `encoding` decodes with the locale codepage (cp1252 on the nightly box).
+    Jest prints UTF-8 glyphs such as `●` (bytes E2 97 8F; 0x8F is undefined in
+    cp1252), so the stdout reader thread died with a UnicodeDecodeError and
+    CPython's Windows `communicate()` returned `stdout=None`. `json.loads(None)`
+    then raised TypeError and the agent wrote no sentinel at all. Fixes: decode
+    as UTF-8 with replacement, have Jest write its JSON to a file instead of
+    sharing stdout with npm's banner, and turn every no-result path into an
+    explicit "did not run" rather than a crash or a silent 0/0.
+    """
+    json_out = REPORTS_DIR / ".jest_results.json"
     try:
-        # Jest --json outputs JSON to stdout
-        data = json.loads(stdout)
-        passed = data.get("numPassedTests", 0)
-        failed = data.get("numFailedTests", 0)
-        duration = (data.get("testResults", [{}])[0].get("endTime", 0)
-                    - data.get("startTime", 0)) / 1000 if data.get("startTime") else 0
-        return {"passed": passed, "failed": failed, "duration_s": round(duration, 1)}
-    except (json.JSONDecodeError, KeyError, IndexError):
+        json_out.unlink()
+    except OSError:
         pass
 
-    # Fallback: parse summary line from stderr (Jest writes summaries to stderr)
-    combined = stdout + "\n" + result.stderr
+    cmd = ["npm", "test", "--", "--watchAll=false", "--json", f"--outputFile={json_out}"]
+    try:
+        result = subprocess.run(
+            cmd, check=False, cwd=str(FRONTEND_ROOT), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=JEST_TIMEOUT_S, shell=True,
+        )
+    except subprocess.TimeoutExpired:
+        return _jest_did_not_run(f"Jest exceeded its {JEST_TIMEOUT_S}s budget and was killed.")
+    except OSError as e:
+        return _jest_did_not_run(f"Jest could not be started: {e}")
+
+    stdout = result.stdout or ""
+    stderr = result.stderr or ""
+
+    # 1. The results file Jest wrote itself.
+    if json_out.exists():
+        try:
+            return _parse_jest_json(json.loads(json_out.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            pass
+
+    # 2. JSON on stdout (the pre-854 path, kept as a fallback).
+    if stdout.strip():
+        try:
+            return _parse_jest_json(json.loads(stdout))
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            pass
+
+    # 3. The human summary line (Jest writes summaries to stderr).
+    combined = stdout + "\n" + stderr
     # Pattern: "Tests:       1339 passed, 1339 total"
     m = re.search(r"Tests:\s+(?:(\d+)\s+failed,\s+)?(\d+)\s+passed", combined)
     if m:
-        failed = int(m.group(1) or 0)
-        passed = int(m.group(2))
-    m_time = re.search(r"Time:\s+([\d.]+)\s*s", combined)
-    if m_time:
-        duration = float(m_time.group(1))
+        duration = 0.0
+        m_time = re.search(r"Time:\s+([\d.]+)\s*s", combined)
+        if m_time:
+            duration = float(m_time.group(1))
+        return {
+            "passed": int(m.group(2)), "failed": int(m.group(1) or 0),
+            "duration_s": round(duration, 1), "did_not_run": None,
+        }
 
-    return {"passed": passed, "failed": failed, "duration_s": round(duration, 1)}
+    tail = " | ".join([ln for ln in combined.strip().splitlines() if ln.strip()][-3:])
+    return _jest_did_not_run(
+        f"Jest produced no parseable result (exit {result.returncode})"
+        + (f": {tail}" if tail else "; no output captured")
+    )
 
 
 def _load_baseline() -> dict:
@@ -230,6 +276,7 @@ def _save_baseline(backend: dict, frontend: dict) -> None:
 def run() -> dict:
     """Execute QA Warden and return structured results."""
     t0 = time.time()
+    stamp = run_stamp()
 
     backend = _run_backend_tests()
     frontend = _run_frontend_tests()
@@ -253,8 +300,15 @@ def run() -> dict:
     # behind a green badge caused the 2026-04-22 false-green incident.
     total_failures = backend["failed"] + backend["errors"] + frontend["failed"]
     collection_error = backend.get("collection_error")
-    if collection_error:
+    frontend_did_not_run = frontend.get("did_not_run")
+    # Sprint 854: a suite that ran zero tests verified nothing. That is not
+    # GREEN — say so, rather than letting "0 failed" read as a pass.
+    backend_empty = backend["passed"] + backend["failed"] + backend["errors"] == 0
+    frontend_empty = frontend["passed"] + frontend["failed"] == 0
+    if collection_error or frontend_did_not_run:
         status = "red"
+    elif total_failures == 0 and (backend_empty or frontend_empty):
+        status = "unverified"
     elif total_failures == 0:
         status = "green"
     elif new_failures:
@@ -275,9 +329,14 @@ def run() -> dict:
         summary_parts.append(
             f"Backend: {backend['passed']} passed / {backend['failed']} failed in {backend['duration_s']}s."
         )
-    summary_parts.append(
-        f"Frontend: {frontend['passed']} passed / {frontend['failed']} failed in {frontend['duration_s']}s."
-    )
+    if frontend_did_not_run:
+        summary_parts.append(f"Frontend: DID NOT RUN — {frontend_did_not_run}")
+    else:
+        summary_parts.append(
+            f"Frontend: {frontend['passed']} passed / {frontend['failed']} failed in {frontend['duration_s']}s."
+        )
+    if status == "unverified":
+        summary_parts.append("UNVERIFIED: a suite ran 0 tests, so nothing was checked.")
     if new_failures:
         summary_parts.append(f"{len(new_failures)} new failure(s) since yesterday.")
     if resolved:
@@ -286,6 +345,7 @@ def run() -> dict:
     result = {
         "agent": "qa_warden",
         "status": status,
+        **stamp,
         "backend": backend,
         "frontend": frontend,
         "summary": " ".join(summary_parts),

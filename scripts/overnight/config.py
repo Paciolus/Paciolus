@@ -33,9 +33,43 @@ SYSTEM_PYTHON = Path("C:/Python312/python.exe")
 REPORTS_DIR = PROJECT_ROOT / "reports/nightly"
 BASELINE_FILE = REPORTS_DIR / ".baseline.json"
 
+REQUIREMENTS_FILE = BACKEND_ROOT / "requirements.txt"
+# Sprint 854: the nightly syncs from the dev file (it `-r`-includes
+# requirements.txt and adds pytest & co, which the agents need).
+REQUIREMENTS_DEV_FILE = BACKEND_ROOT / "requirements-dev.txt"
+
 # ── Date tokens ────────────────────────────────────────────────────────────
 TODAY = datetime.date.today().isoformat()
 REPORT_PATH = REPORTS_DIR / f"{TODAY}.md"
+RUN_MANIFEST_PATH = REPORTS_DIR / f".run_manifest_{TODAY}.json"
+PREFLIGHT_PATH = REPORTS_DIR / f".env_preflight_{TODAY}.json"
+
+
+def git_head_sha(cwd: Path = PROJECT_ROOT) -> str | None:
+    """HEAD of the repo at `cwd`, or None if git cannot be read."""
+    import subprocess
+
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True,
+            check=True, cwd=cwd, timeout=30,
+        )
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+        return None
+    return completed.stdout.strip() or None
+
+
+def run_stamp() -> dict:
+    """Sprint 854: what tree an agent tested, and when — recorded as the agent runs.
+
+    The brief used to read HEAD at 04:00 and present it as the tested commit;
+    the suites ran at 02:00-03:00. Each test-running agent now stamps its own
+    sentinel at the moment it starts.
+    """
+    return {
+        "tested_sha": git_head_sha(),
+        "tested_at": datetime.datetime.now().isoformat(timespec="seconds"),
+    }
 
 # ── API credentials ────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")

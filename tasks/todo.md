@@ -432,21 +432,23 @@
 > section. One PR per sprint; each fix lands with a test that fails before it.
 
 ### Sprint 854: Nightly environment parity
-**Status:** PENDING. **Priority:** P1 (Phase 0). **Source:** 2026-10-28 council (Guardian, Critic).
+**Status:** COMPLETE 2026-10-28. **Priority:** P1 (Phase 0). **Source:** 2026-10-28 council (Guardian, Critic).
 
 The 2026-10-28 nightly went RED with no defect in the code. `backend/venv` still has fastapi 0.136.1, but Sprint 786
 moved `requirements.txt` to `fastapi==0.162.0`, so `tests/helpers/route_inventory.py:22` (`RouteContext`) fails to
 import → 99 collection errors in Coverage Sentinel. QA Warden crashed separately on the Jest side.
 
-- [ ] Orchestrator **syncs the venv from `requirements.txt` before every run** (`pip install -r`), not a one-off rebuild —
+- [x] Orchestrator **syncs the venv from `requirements.txt` before every run** (`pip install -r`), not a one-off rebuild —
       a hand rebuild rots again (Sprint 786 already flagged this venv as matching neither the pins nor production).
-- [ ] Pre-flight: fail the nightly RED with a named reason if installed versions still differ from the `==` pins after the sync.
-- [ ] `scripts/overnight/agents/qa_warden.py:185` — `json.loads(stdout)` with `None` → report "did not run", not a TypeError.
-- [ ] **Did-it-run check:** an agent whose sentinel is missing or crashed fails the brief visibly (only 43 of 109
+- [x] Pre-flight: fail the nightly RED with a named reason if installed versions still differ from the `==` pins after the sync.
+- [x] `scripts/overnight/agents/qa_warden.py:185` — `json.loads(stdout)` with `None` → report "did not run", not a TypeError.
+- [x] **Did-it-run check:** an agent whose sentinel is missing or crashed fails the brief visibly (only 43 of 109
       dormant-period nights produced a qa_warden sentinel and nobody noticed).
-- [ ] The daily brief states the SHA and timestamp it tested, as-of its run time (the 10-28 brief's `a9dfeb69` was
+- [x] The daily brief states the SHA and timestamp it tested, as-of its run time (the 10-28 brief's `a9dfeb69` was
       HEAD at 04:00 — the defect is unstated staleness, not a wrong SHA).
-- [ ] Report Auditor on 0/0 tests reports **UNVERIFIED**, not GREEN.
+- [x] Report Auditor on 0/0 tests reports **UNVERIFIED**, not GREEN.
+
+**Verification:** `python -m pytest scripts/overnight/tests/` 75 passed (39 new in `test_env_parity.py`); `backend/tests/test_briefing_sha_stamp.py` 8 passed; ruff clean on new/changed lines; live pre-flight against a worktree venv GREEN (17/17 `==` pins, sync 2.5s) and RED with a named reason on a bad path. Jest root cause: `text=True` decoded with cp1252, Jest's `●` (E2 97 8F) killed the reader thread so `stdout` was None (reproduced in-test); fixed with `encoding="utf-8"` + `--outputFile`.
 
 **Commit SHA:** TBD.
 

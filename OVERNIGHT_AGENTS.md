@@ -91,12 +91,15 @@ reports/nightly/
   .sprint_shepherd_*.json
   .dependency_sentinel_*.json
   .run_log_*.txt         # Orchestrator execution log
+  .run_manifest_*.json   # Sprint 854: SHA + start time tested, per-agent exit outcome
+  .env_preflight_*.json  # Sprint 854: venv sync + == pin check (RED names the drifted package)
 ```
 
 ## Troubleshooting
 
 - **Check run logs:** `reports/nightly/.run_log_YYYY-MM-DD.txt`
-- **Agent didn't run:** Its section in the morning report says "AGENT DID NOT RUN"
+- **Agent didn't run:** The brief lists it under "AGENTS THAT DID NOT COMPLETE" (crashed / did not run / stale) and the orchestrator exits 1
+- **Environment pre-flight FAILED:** the venv could not be synced or still differs from the `==` pins in `backend/requirements.txt` — fix the environment before reading test failures as code failures
 - **API key missing:** Scout and Briefing Compiler need `ANTHROPIC_API_KEY` in `.env.overnight`
 - **Tests failing:** QA Warden captures all failures — check its JSON output for details
 - **Task not triggering:** Verify in Task Scheduler that "Paciolus-Overnight-Agent" exists and is enabled
