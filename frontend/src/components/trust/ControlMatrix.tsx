@@ -52,7 +52,7 @@ export function ControlMatrix() {
                 <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
                   {domainControls.slice(0, 3).map(ctrl => (
                     <span
-                      key={ctrl.standard}
+                      key={ctrl.name}
                       className="font-mono text-[9px] text-oatmeal-600 px-1.5 py-0.5 rounded bg-obsidian-700/50 border border-obsidian-600/50"
                     >
                       {ctrl.standard}
