@@ -1371,7 +1371,6 @@ def _closest_line(po: PurchaseOrder, candidates: list[Any]) -> Any:
     return min(candidates, key=lambda doc: _line_distance(po, doc))
 
 
-@with_parse_memo
 def _index_by_reference(docs: list[Any], attr: str) -> dict[str, list[Any]]:
     """Group documents by a normalised (stripped, upper-cased) reference field."""
     index: dict[str, list[Any]] = {}
@@ -1676,6 +1675,7 @@ def _build_match_summary(
     return summary
 
 
+@with_parse_memo
 def run_three_way_match(
     pos: list[PurchaseOrder],
     invoices: list[Invoice],
