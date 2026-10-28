@@ -216,6 +216,108 @@ def _payroll_case() -> dict:
     return run_payroll_testing(headers, rows, filename="payroll.csv").to_dict()
 
 
+def _payroll_ghost_case() -> dict:
+    """PR-T9 ghost indicators, in-file and against an HR master (Sprint 642)."""
+    from payroll_testing_engine import PayrollTestingConfig, run_payroll_testing
+
+    headers = ["Employee Name", "Employee ID", "Gross Pay", "Pay Date", "Department", "Address"]
+    rows: list[dict] = []
+    months = ["2025-01-15", "2025-02-15", "2025-03-15", "2025-04-15", "2025-05-15", "2025-06-15"]
+    for n in range(8):  # regular employees, paid every month
+        for d in months:
+            rows.append(
+                {
+                    "Employee Name": f"Regular {n}",
+                    "Employee ID": f"R{n}",
+                    "Gross Pay": f"{4000 + n * 10}.00",
+                    "Pay Date": d,
+                    "Department": "Ops",
+                    "Address": f"{n} Elm St",
+                }
+            )
+    for d in ("2025-01-15", "2025-06-15"):  # boundary-only, no department
+        rows.append(
+            {
+                "Employee Name": "Edge Case",
+                "Employee ID": "G1",
+                "Gross Pay": "5000.00",
+                "Pay Date": d,
+                "Department": "",
+                "Address": "1 Exec Way",
+            }
+        )
+    rows.append(
+        {
+            "Employee Name": "One Shot",
+            "Employee ID": "G2",
+            "Gross Pay": "9000.00",
+            "Pay Date": "2025-03-15",
+            "Department": "Ops",
+            "Address": "9 Oak",
+        }
+    )
+    rows.append(
+        {
+            "Employee Name": "Late Leaver",
+            "Employee ID": "R7",
+            "Gross Pay": "4070.00",
+            "Pay Date": "2025-06-30",
+            "Department": "Ops",
+            "Address": "7 Elm St",
+        }
+    )
+    hr = [
+        {
+            "Employee ID": f"R{n}",
+            "Employee Name": f"Regular {n}",
+            "Status": "Active",
+            "Termination Date": "",
+            "Address": f"{n} Elm St",
+            "Title": "Clerk",
+        }
+        for n in range(8)
+    ]
+    hr[7]["Termination Date"] = "2025-05-31"
+    hr.append(
+        {
+            "Employee ID": "X1",
+            "Employee Name": "Boss",
+            "Status": "Active",
+            "Termination Date": "",
+            "Address": "1 Exec Way",
+            "Title": "Chief Executive Officer",
+        }
+    )
+    hr.append(
+        {
+            "Employee ID": "G1",
+            "Employee Name": "Edge Case",
+            "Status": "Active",
+            "Termination Date": "",
+            "Address": "1 Exec Way",
+            "Title": "Analyst",
+        }
+    )
+
+    def fresh() -> list[dict]:
+        # The engine releases its input rows (zero-storage), so each run gets a copy.
+        return [dict(r) for r in rows]
+
+    return {
+        "in_file": run_payroll_testing(headers, fresh(), filename="ghost.csv").to_dict(),
+        "hr_master": run_payroll_testing(headers, fresh(), filename="ghost.csv", hr_master_rows=hr).to_dict(),
+        "hr_master_min2": run_payroll_testing(
+            headers,
+            fresh(),
+            config=PayrollTestingConfig(ghost_min_indicators=2),
+            filename="ghost.csv",
+            hr_master_rows=hr,
+        ).to_dict(),
+        "disabled": run_payroll_testing(headers, fresh(), config=PayrollTestingConfig(enable_ghost=False)).to_dict(),
+        "no_dates": run_payroll_testing(headers, [{**r, "Pay Date": ""} for r in fresh()]).to_dict(),
+    }
+
+
 def _revenue_case() -> dict:
     from revenue_testing_engine import run_revenue_testing
 
@@ -580,6 +682,7 @@ CASES: dict[str, Callable[[], Any]] = {
     "je": _je_case,
     "ap": _ap_case,
     "payroll": _payroll_case,
+    "payroll_ghost": _payroll_ghost_case,
     "revenue": _revenue_case,
     "ar_aging": _ar_case,
     "fixed_assets": _fa_case,
