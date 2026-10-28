@@ -1248,7 +1248,7 @@ regenerate only with `SPRINT819_UPDATE_SNAPSHOTS=1` when a change is intended. E
 seeded with the per-process `str` `hash()` (`shared/memo_template.py`), so the same report's wording
 changes between server restarts.
 
-**Verification:** full backend suite 10,022 passed / 0 failed (3f3b74df, 56m44s serial; a first run caught the three-way-match `@with_parse_memo` slip, fixed in 3f3b74df); 20 Sprint 819 snapshot tests green; OpenAPI drift check clean (221 paths, 430 schemas); mypy 204 errors (baseline 1011), none in touched code; `ruff check` + `ruff format --check` clean on touched files.
+**Verification:** full backend suite 10,022 passed / 0 failed (3f3b74df, 56m44s serial; a first run caught the three-way-match `@with_parse_memo` slip, fixed in 3f3b74df); 22 Sprint 819 snapshot tests green; OpenAPI drift check clean (221 paths, 430 schemas); mypy 204 errors (baseline 1011), none in touched code; `ruff check` + `ruff format --check` clean on touched files.
 
 **Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9); 2026-10-27 branch
 `sprint-819-backend-dedup`: 4fe89870 (snapshots), 5601d850 (3), 17bdcf41 (4), e3ba87fe (8), 54ff41c2 + a9c5f5f2 (7),
