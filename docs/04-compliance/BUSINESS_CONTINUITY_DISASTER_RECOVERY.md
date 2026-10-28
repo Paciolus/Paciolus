@@ -24,7 +24,9 @@ service available and to restore it quickly, and we will tell customers what hap
 ## What does not exist yet
 
 - **An independent, off-provider backup.** A scheduled `pg_dump` to Cloudflare R2 (`paciolus-backups`)
-  is planned and the bucket is provisioned, but nothing writes to it yet (Sprint 778b).
+  is provisioned. Sprint 778b adds the backup job, a weekly integrity check against R2 and the Neon API,
+  and a monthly restore drill, but none of them can run until their secrets are configured — so nothing
+  writes to the bucket yet. Procedure and required secrets: `docs/runbooks/backup-restore.md`.
 - **A tested restore.** No restore from Neon PITR or from any backup has been performed. Until one has,
   recovery is unproven.
 - The monthly DR and backup-integrity workflows report **UNVERIFIED** rather than pass until both exist.
