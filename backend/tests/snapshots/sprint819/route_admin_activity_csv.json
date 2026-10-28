@@ -1,8 +1,0 @@
-{
- "status": 200,
- "content_type": "text/csv; charset=utf-8",
- "content_disposition": "attachment; filename=team-activity.csv",
- "cache_control": "no-store",
- "content_encoding": "gzip",
- "text": "Date,User,Action,Tool\r\n"
-}

@@ -16,6 +16,7 @@ Regenerate only when a change to the output is intended::
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import random
@@ -866,15 +867,17 @@ def _render(obj: Any) -> str:
 
 
 def check_snapshot(name: str, payload: Any) -> None:
-    path = SNAPSHOT_DIR / f"{name}.json"
+    # Goldens are gzipped (mtime=0, so regenerating unchanged output gives
+    # identical bytes): as plain JSON they added ~6 MB / 200k lines to the repo.
+    path = SNAPSHOT_DIR / f"{name}.json.gz"
     rendered = _render(payload)
     if UPDATE or not path.exists():
         if not UPDATE:
             pytest.fail(f"missing snapshot {path.name}; run with SPRINT819_UPDATE_SNAPSHOTS=1")
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(rendered, encoding="utf-8", newline="\n")
+        path.write_bytes(gzip.compress(rendered.encode("utf-8"), mtime=0))
         return
-    expected = path.read_text(encoding="utf-8")
+    expected = gzip.decompress(path.read_bytes()).decode("utf-8")
     assert rendered == expected, f"{name}: output changed (snapshot {path.name})"
 
 
