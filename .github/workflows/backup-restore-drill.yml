@@ -1,0 +1,162 @@
+# Restore drill — Sprint 778b (scope item 3: "an untested backup is not a backup")
+#
+# Downloads a pg_dump from R2 `paciolus-backups` (newest by default), checks its
+# sha256, restores it into an ephemeral Postgres service container of the SAME
+# major version as the source, then compares against the backup's manifest:
+# table list, exact row count per table, schema fingerprint (columns + index
+# definitions), and the alembic revision (which must also exist in this repo's
+# migration history).
+#
+# Runs monthly via `dr-test-monthly.yml` (workflow_call) and on demand here.
+# Touches nothing in production: it only reads R2 and writes to a container
+# that is destroyed with the job.
+#
+# Required secrets: R2_BACKUPS_ENDPOINT, R2_BACKUPS_BUCKET,
+#   R2_BACKUPS_ACCESS_KEY_ID, R2_BACKUPS_SECRET_ACCESS_KEY
+#
+# Verdict = status of the final `verdict` job: PASS green; FAIL and
+# UNVERIFIED (named missing secrets) both red.
+
+name: Backup — Restore Drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      stem:
+        description: "Backup to restore (e.g. pg_dump/2026/10/paciolus-20261028T071500Z). Blank = newest."
+        default: ""
+  workflow_call:
+    inputs:
+      stem:
+        type: string
+        default: ""
+    outputs:
+      verdict:
+        description: "PASS | FAIL | UNVERIFIED"
+        value: ${{ jobs.verdict.outputs.verdict }}
+      detail:
+        value: ${{ jobs.verdict.outputs.detail }}
+
+permissions:
+  contents: read
+
+jobs:
+  locate:
+    name: Locate backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      status: ${{ steps.locate.outputs.status }}
+      detail: ${{ steps.locate.outputs.detail }}
+      stem: ${{ steps.locate.outputs.stem }}
+      pg_major: ${{ steps.locate.outputs.pg_major }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # pin: v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r scripts/requirements-backup.txt
+      - name: Find backup
+        id: locate
+        env:
+          R2_BACKUPS_ENDPOINT: ${{ secrets.R2_BACKUPS_ENDPOINT }}
+          R2_BACKUPS_BUCKET: ${{ secrets.R2_BACKUPS_BUCKET }}
+          R2_BACKUPS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUPS_ACCESS_KEY_ID }}
+          R2_BACKUPS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUPS_SECRET_ACCESS_KEY }}
+          STEM: ${{ inputs.stem }}
+        # Always exits 0 and reports status=ok|FAIL|UNVERIFIED; the verdict job decides.
+        run: python scripts/pg_backup.py locate --stem "$STEM"
+
+  restore:
+    name: Restore + compare
+    needs: locate
+    if: needs.locate.outputs.status == 'ok'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      verdict: ${{ steps.drill.outputs.verdict }}
+    services:
+      postgres:
+        # Same major as the source server, read from the manifest by `locate`.
+        image: postgres:${{ needs.locate.outputs.pg_major }}
+        env:
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: drill
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # pin: v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r scripts/requirements-backup.txt
+      - name: Download, verify sha256, pg_restore, compare to manifest
+        id: drill
+        env:
+          R2_BACKUPS_ENDPOINT: ${{ secrets.R2_BACKUPS_ENDPOINT }}
+          R2_BACKUPS_BUCKET: ${{ secrets.R2_BACKUPS_BUCKET }}
+          R2_BACKUPS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUPS_ACCESS_KEY_ID }}
+          R2_BACKUPS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUPS_SECRET_ACCESS_KEY }}
+          STEM: ${{ needs.locate.outputs.stem }}
+          CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          python scripts/pg_backup.py drill \
+            --stem "$STEM" \
+            --container "$CONTAINER" \
+            --target-db drill \
+            --target-url "postgresql://postgres:drill@localhost:5432/drill" \
+            --alembic-ini backend/alembic.ini \
+            --workdir "$RUNNER_TEMP/drill" \
+            --report drill-report.md
+      - name: Upload drill evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
+        with:
+          name: restore-drill-${{ github.run_id }}
+          path: drill-report.md
+          retention-days: 365
+          if-no-files-found: warn
+
+  verdict:
+    name: Drill verdict
+    needs: [locate, restore]
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      verdict: ${{ steps.v.outputs.verdict }}
+      detail: ${{ steps.v.outputs.detail }}
+    steps:
+      - name: Decide
+        id: v
+        env:
+          LOCATE_STATUS: ${{ needs.locate.outputs.status }}
+          LOCATE_DETAIL: ${{ needs.locate.outputs.detail }}
+          RESTORE_VERDICT: ${{ needs.restore.outputs.verdict }}
+          RESTORE_RESULT: ${{ needs.restore.result }}
+        run: |
+          case "$LOCATE_STATUS" in
+            ok)
+              # The drill ran; an empty verdict means it crashed before reporting.
+              VERDICT="${RESTORE_VERDICT:-FAIL}"
+              DETAIL="restore job: ${RESTORE_RESULT}"
+              ;;
+            UNVERIFIED) VERDICT=UNVERIFIED; DETAIL="$LOCATE_DETAIL" ;;
+            FAIL)       VERDICT=FAIL;       DETAIL="$LOCATE_DETAIL" ;;
+            *)          VERDICT=FAIL;       DETAIL="locate job did not report (crashed?)" ;;
+          esac
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+          echo "detail=$DETAIL" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Restore drill verdict: $VERDICT"
+            echo ""
+            echo "$DETAIL"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$VERDICT" != "PASS" ]; then
+            echo "::error::Restore drill $VERDICT — $DETAIL"
+            exit 1
+          fi

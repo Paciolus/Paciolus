@@ -1,5 +1,10 @@
 # Backup Integrity Verification Procedure
 
+> **Superseded by Sprint 778b (2026-10-28).** This procedure describes the Render Postgres
+> check, which addressed a database deleted 2026-04-22. The current procedure — Neon + R2,
+> weekly integrity check, monthly restore drill, required secrets — is
+> `docs/runbooks/backup-restore.md`.
+
 **Version:** 1.0
 **Document Classification:** Internal
 **Owner:** CISO / CTO

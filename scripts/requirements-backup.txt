@@ -1,0 +1,8 @@
+# Sprint 778b — tooling for the backup / integrity / restore-drill workflows.
+# Not a backend runtime dependency (nothing here is imported by the app).
+# psycopg2-binary + alembic match backend/requirements.txt exactly so the drill
+# reads the migration history with the same alembic the app migrates with.
+# boto3 is a floor (security leaf, per the pinning rule in backend/requirements.txt).
+psycopg2-binary==2.9.13
+alembic==1.20.1
+boto3>=1.35.0

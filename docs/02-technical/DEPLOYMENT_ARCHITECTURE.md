@@ -719,10 +719,11 @@ bodies, no session replays.
 
 ### 10.1 Database Backup Strategy
 
-**Automated backups (Render/DigitalOcean managed):**
-- **Frequency:** Daily at 2:00 AM UTC
-- **Retention:** 7 days (free tier), 30 days (paid tier)
-- **Type:** Full database dump
+> **Superseded (Sprint 778b).** Production Postgres is on **Neon**, not Render. The two
+> recovery mechanisms are Neon PITR (window is plan-dependent — read it live with
+> `python scripts/verify_backup_integrity.py --only neon_pitr_window`, never from this page)
+> and a daily `pg_dump` to Cloudflare R2 `paciolus-backups` with a monthly restore drill.
+> See `docs/runbooks/backup-restore.md`.
 
 **Manual backup:**
 

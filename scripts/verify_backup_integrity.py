@@ -1,440 +1,345 @@
 #!/usr/bin/env python3
 """
-Backup Integrity Verification — Sprint 457 (S1.5 / CC4.2)
+Backup integrity verification — Sprint 457, rewritten for Neon + R2 in Sprint 778b.
 
-Verifies that the Render PostgreSQL backup infrastructure is healthy and
-the database instance is reachable and accepting connections.
+The original targeted the Render Postgres API. Production moved to **Neon** in
+Phase 1 (2026-04-09) and the Render instance was deleted 2026-04-22, so every
+check it made addressed a database that no longer existed. This version checks
+the two recovery mechanisms that actually exist:
 
-.. warning::
+  1. ``r2_latest_backup``     — the newest pg_dump in ``paciolus-backups`` is
+                                complete (dump + manifest), fresh enough, and
+                                its bytes hash to the manifest's sha256.
+  2. ``neon_pitr_window``     — Neon's *actual* history-retention window, read
+                                from the Neon API, is at least the floor. The
+                                figure is read live, never assumed from docs.
+  3. ``neon_default_branch``  — the production branch reports ``ready``.
 
-   **This script targets the wrong provider and cannot currently pass.**
-   Production PostgreSQL moved to **Neon** in Phase 1 (2026-04-09) and the
-   orphan Render instance was deleted on 2026-04-22, so every Render API call
-   below addresses a database that no longer exists. Supplying
-   ``RENDER_API_KEY`` would turn a misleading failure into a differently
-   misleading one.
+Each check is independent: a missing Neon key does not stop the R2 check.
 
-   Rewriting it against Neon + the R2 backup bucket is **Sprint 778** scope
-   item 4, and needs the Neon connection string (CEO ask D-1). Until then the
-   monthly ``backup-integrity-check`` run failing is *substantively correct* —
-   backups genuinely are unverified, because the off-provider ``pg_dump`` → R2
-   job (Phase 4.4) was never implemented.
+Verdicts and exit codes (same contract as ``scripts/pg_backup.py``):
+    0  PASS        — every check ran and passed
+    1  FAIL        — at least one check ran and failed
+    2  UNVERIFIED  — nothing failed, but at least one check could not run
+                     because a secret is unset; the missing names are listed
 
-Checks performed:
-  1. Render API health  — service status = "available" via GET /v1/postgres/{id}
-  2. Render backup info — attempts GET /v1/postgres/{id}/backup for metadata
-  3. DB liveness probe  — SELECT 1 + pg_stat_archiver (if DATABASE_URL is set)
+UNVERIFIED exits non-zero on purpose (Sprint 778a): a check that is green
+because it never ran is a false green.
 
-Evidence is written to docs/08-internal/soc2-evidence/s1/backup-integrity-YYYYMM.txt
-when --save is passed.
+Environment:
+    R2_BACKUPS_ENDPOINT, R2_BACKUPS_BUCKET,
+    R2_BACKUPS_ACCESS_KEY_ID, R2_BACKUPS_SECRET_ACCESS_KEY   — check 1
+    NEON_API_KEY, NEON_PROJECT_ID                              — checks 2, 3
+    BACKUP_MAX_AGE_HOURS   optional, default 26 (daily cron + slack)
+    PITR_MIN_DAYS          optional, default 1 (must bridge two daily dumps)
 
 Usage:
-    RENDER_API_KEY=rnd_... RENDER_POSTGRES_ID=postgres-... \\
-        python scripts/verify_backup_integrity.py [--save]
+    python scripts/verify_backup_integrity.py [--save] [--only neon_pitr_window]
+        [--json result.json] [--report report.md]
 
-    With optional DB liveness probe (read-only DATABASE_URL recommended):
-    RENDER_API_KEY=rnd_... RENDER_POSTGRES_ID=postgres-... DATABASE_URL=postgresql://... \\
-        python scripts/verify_backup_integrity.py --save
-
-Environment variables:
-    RENDER_API_KEY        Required. Render personal API token.
-    RENDER_POSTGRES_ID    Required. PostgreSQL service ID (e.g. "postgres-abc123").
-    DATABASE_URL          Optional. PostgreSQL connection string for DB liveness probe.
-
-Exit codes:
-    0 — PASS  (all checks passed)
-    1 — FAIL  (one or more checks failed)
-    2 — ERROR (missing required env vars or unexpected exception)
+Runbook: docs/runbooks/backup-restore.md
 """
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import json
 import os
 import sys
-import argparse
-import hashlib
-from datetime import datetime, timezone, timedelta
+from collections.abc import Callable, Mapping
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-RENDER_API_BASE = "https://api.render.com/v1"
-BACKUP_MAX_AGE_HOURS = 25  # daily backups: FAIL if backup is older than this
+from pg_backup import (  # noqa: E402 — script-relative import
+    DEFAULT_PREFIX,
+    EXIT_CODES,
+    FAIL,
+    PASS,
+    R2_ENV,
+    UNVERIFIED,
+    group_backups,
+    list_objects,
+    make_r2_client,
+    missing_env,
+    overall_verdict,
+    read_manifest,
+    sha256_stream,
+    utf8_stdio,
+)
+
+NEON_API_BASE = "https://console.neon.tech/api/v2"
+NEON_ENV = ("NEON_API_KEY", "NEON_PROJECT_ID")
+DEFAULT_MAX_AGE_HOURS = 26.0
+DEFAULT_PITR_MIN_DAYS = 1.0
 EVIDENCE_DIR = Path(__file__).parent.parent / "docs" / "08-internal" / "soc2-evidence" / "s1"
+CHECK_NAMES = ("r2_latest_backup", "neon_pitr_window", "neon_default_branch")
+
+HttpGet = Callable[[str, Mapping[str, str]], tuple[int, Any]]
+
+
+def _result(check: str, status: str, details: str, **extra: Any) -> dict:
+    return {"check": check, "status": status, "details": details, **extra}
+
+
+def _unverified(check: str, missing: list[str]) -> dict:
+    return _result(check, UNVERIFIED, "UNVERIFIED — missing secret " + ", ".join(missing), missing=missing)
 
 
 # ---------------------------------------------------------------------------
-# Render API helpers
+# Check 1: R2
 # ---------------------------------------------------------------------------
 
-def _render_get(path: str, api_key: str) -> tuple[int, dict | list | None]:
-    """
-    Make an authenticated GET request to the Render API.
-    Returns (status_code, parsed_json | None).
-    """
-    url = f"{RENDER_API_BASE}{path}"
-    req = Request(url, headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"})
+
+def check_r2_latest_backup(
+    client: Any,
+    bucket: str,
+    prefix: str = DEFAULT_PREFIX,
+    max_age_hours: float = DEFAULT_MAX_AGE_HOURS,
+    now: datetime | None = None,
+) -> dict:
+    name = "r2_latest_backup"
+    now = now or datetime.now(timezone.utc)
     try:
-        with urlopen(req, timeout=15) as resp:
+        backups = group_backups(list_objects(client, bucket, prefix))
+    except Exception as exc:  # noqa: BLE001 — credentials present but unusable is a FAIL
+        return _result(name, FAIL, f"R2 listing failed: {type(exc).__name__}: {exc}")
+    if not backups:
+        return _result(name, FAIL, f"no backups under s3://{bucket}/{prefix} — the pg_dump job has never succeeded")
+
+    newest = backups[0]
+    age_h = round((now - newest.ts).total_seconds() / 3600, 2)
+    extra = {"stem": newest.stem, "backup_age_hours": age_h, "backup_count": sum(b.complete for b in backups)}
+    if not newest.complete:
+        part = "manifest" if newest.manifest is None else "dump"
+        # An in-flight run has a dump but no manifest yet; fall back to the
+        # newest complete set for freshness, but say what was seen.
+        complete = [b for b in backups if b.complete]
+        if newest.manifest is not None or not complete:
+            return _result(name, FAIL, f"newest backup {newest.stem} is missing its {part}", **extra)
+        newest = complete[0]
+        age_h = round((now - newest.ts).total_seconds() / 3600, 2)
+        extra.update(stem=newest.stem, backup_age_hours=age_h)
+
+    if age_h > max_age_hours:
+        return _result(name, FAIL, f"newest backup is {age_h}h old (limit {max_age_hours}h): {newest.stem}", **extra)
+
+    try:
+        manifest = read_manifest(client, bucket, newest.stem)
+        body = client.get_object(Bucket=bucket, Key=f"{newest.stem}.dump")["Body"]
+        digest, size = sha256_stream(body)
+    except Exception as exc:  # noqa: BLE001
+        return _result(name, FAIL, f"could not read {newest.stem}: {type(exc).__name__}: {exc}", **extra)
+
+    extra.update(dump_bytes=size, alembic_version=manifest.get("alembic_version"), tables=manifest.get("table_count"))
+    if size != manifest.get("dump_bytes"):
+        return _result(name, FAIL, f"size {size} != manifest {manifest.get('dump_bytes')}", **extra)
+    if digest != manifest.get("dump_sha256"):
+        return _result(name, FAIL, f"sha256 {digest[:16]} != manifest {str(manifest.get('dump_sha256'))[:16]}", **extra)
+    return _result(
+        name,
+        PASS,
+        f"{newest.stem} — {age_h}h old, {size:,} bytes, sha256 verified, "
+        f"{manifest.get('table_count')} tables / {manifest.get('total_rows')} rows",
+        **extra,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Checks 2 + 3: Neon API
+# ---------------------------------------------------------------------------
+
+
+def neon_http_get(url: str, headers: Mapping[str, str]) -> tuple[int, Any]:
+    req = Request(url, headers=dict(headers))
+    try:
+        with urlopen(req, timeout=20) as resp:  # noqa: S310 — fixed https base
             body = resp.read().decode("utf-8")
             return resp.status, json.loads(body) if body else None
     except HTTPError as e:
         return e.code, None
     except URLError as e:
-        raise ConnectionError(f"Render API unreachable: {e}") from e
+        raise ConnectionError(f"Neon API unreachable: {e.reason}") from e
 
 
-def check_render_instance(postgres_id: str, api_key: str) -> dict:
-    """
-    Query GET /v1/postgres/{id} to verify the instance is healthy.
-    Returns a result dict with keys: passed, status, details, raw.
-    """
-    result: dict = {"check": "render_instance_status", "passed": False, "details": ""}
+def _neon(path: str, api_key: str, http_get: HttpGet) -> tuple[int, Any]:
+    return http_get(f"{NEON_API_BASE}{path}", {"Authorization": f"Bearer {api_key}", "Accept": "application/json"})
 
+
+def _neon_error(name: str, code: int) -> dict:
+    hint = {
+        401: "NEON_API_KEY is invalid or revoked",
+        403: "NEON_API_KEY lacks access to the project",
+        404: "NEON_PROJECT_ID not found",
+    }.get(code, "unexpected response")
+    return _result(name, FAIL, f"Neon API HTTP {code}: {hint}")
+
+
+def check_neon_pitr(api_key: str, project_id: str, min_days: float, http_get: HttpGet = neon_http_get) -> dict:
+    """Read ``project.history_retention_seconds`` — the live PITR window."""
+    name = "neon_pitr_window"
     try:
-        status_code, data = _render_get(f"/postgres/{postgres_id}", api_key)
-    except ConnectionError as e:
-        result["details"] = f"Connection failed: {e}"
-        return result
-
-    if status_code == 401:
-        result["details"] = "RENDER_API_KEY is invalid or lacks permissions"
-        return result
-    if status_code == 404:
-        result["details"] = f"PostgreSQL instance '{postgres_id}' not found — verify RENDER_POSTGRES_ID"
-        return result
-    if status_code != 200 or data is None:
-        result["details"] = f"Unexpected status {status_code} from Render API"
-        return result
-
-    instance_status = data.get("status", "unknown")
-    result["raw"] = {
-        "id": data.get("id"),
-        "name": data.get("name"),
-        "status": instance_status,
-        "plan": data.get("plan"),
-        "region": data.get("region"),
-        "updatedAt": data.get("updatedAt"),
+        code, data = _neon(f"/projects/{project_id}", api_key, http_get)
+    except ConnectionError as exc:
+        return _result(name, FAIL, str(exc))
+    if code != 200 or not isinstance(data, dict) or "project" not in data:
+        return _neon_error(name, code)
+    project = data["project"]
+    seconds = project.get("history_retention_seconds")
+    if seconds is None:
+        return _result(name, FAIL, "Neon API returned no history_retention_seconds")
+    days = round(int(seconds) / 86400, 2)
+    extra = {
+        "retention_seconds": int(seconds),
+        "retention_days": days,
+        "region": project.get("region_id"),
+        "pg_version": project.get("pg_version"),
     }
+    if days < min_days:
+        return _result(name, FAIL, f"PITR window is {days} days, below the {min_days}-day floor", **extra)
+    return _result(
+        name,
+        PASS,
+        f"PITR window {days} days (floor {min_days}), region {project.get('region_id')}, "
+        f"Postgres {project.get('pg_version')}",
+        **extra,
+    )
 
-    if instance_status == "available":
-        result["passed"] = True
-        result["details"] = f"Instance '{data.get('name')}' is available (region: {data.get('region')})"
-    else:
-        result["details"] = f"Instance status is '{instance_status}' — expected 'available'"
 
-    return result
-
-
-def check_render_backup_metadata(postgres_id: str, api_key: str) -> dict:
-    """
-    Attempt GET /v1/postgres/{id}/backup to retrieve backup metadata.
-    Render may not expose this endpoint publicly; 404 is handled gracefully.
-    """
-    result: dict = {"check": "render_backup_metadata", "passed": False, "details": ""}
-
+def check_neon_default_branch(api_key: str, project_id: str, http_get: HttpGet = neon_http_get) -> dict:
+    name = "neon_default_branch"
     try:
-        status_code, data = _render_get(f"/postgres/{postgres_id}/backup", api_key)
-    except ConnectionError as e:
-        result["details"] = f"Connection failed: {e}"
-        return result
+        code, data = _neon(f"/projects/{project_id}/branches", api_key, http_get)
+    except ConnectionError as exc:
+        return _result(name, FAIL, str(exc))
+    if code != 200 or not isinstance(data, dict):
+        return _neon_error(name, code)
+    default = [b for b in data.get("branches", []) if b.get("default")]
+    if not default:
+        return _result(name, FAIL, "no default branch on the Neon project")
+    branch = default[0]
+    state = branch.get("current_state")
+    extra = {"branch": branch.get("name"), "branch_state": state}
+    if state != "ready":
+        return _result(name, FAIL, f"default branch '{branch.get('name')}' is '{state}', expected 'ready'", **extra)
+    return _result(name, PASS, f"default branch '{branch.get('name')}' is ready", **extra)
 
-    if status_code == 404:
-        # Render does not expose backup metadata via public API — this is expected.
-        # Backup existence is inferred from instance health (above check).
-        result["passed"] = True  # not a failure — known limitation
-        result["details"] = (
-            "Render does not expose backup metadata via public API (HTTP 404). "
-            "Backup existence is inferred from instance status=available. "
-            "Semi-annual restore tests (Sprint 452) provide file-level verification."
-        )
-        result["metadata_available"] = False
-        return result
 
-    if status_code == 200 and data:
-        result["metadata_available"] = True
-        result["raw"] = data
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
 
-        # Try to parse last backup timestamp
-        last_backup_at_str = (
-            data.get("lastBackupAt")
-            or data.get("last_backup_at")
-            or data.get("createdAt")
-        )
-        if last_backup_at_str:
+
+def run_checks(
+    env: Mapping[str, str],
+    only: list[str] | None = None,
+    r2_factory: Callable[[Mapping[str, str]], Any] = make_r2_client,
+    http_get: HttpGet = neon_http_get,
+    now: datetime | None = None,
+) -> list[dict]:
+    wanted = only or list(CHECK_NAMES)
+    results: list[dict] = []
+    max_age = float(env.get("BACKUP_MAX_AGE_HOURS") or DEFAULT_MAX_AGE_HOURS)
+    min_days = float(env.get("PITR_MIN_DAYS") or DEFAULT_PITR_MIN_DAYS)
+
+    if "r2_latest_backup" in wanted:
+        missing = missing_env(R2_ENV, env)
+        if missing:
+            results.append(_unverified("r2_latest_backup", missing))
+        else:
             try:
-                last_backup_at = datetime.fromisoformat(last_backup_at_str.replace("Z", "+00:00"))
-                age_hours = (datetime.now(timezone.utc) - last_backup_at).total_seconds() / 3600
-                result["backup_age_hours"] = round(age_hours, 2)
-
-                if age_hours <= BACKUP_MAX_AGE_HOURS:
-                    result["passed"] = True
-                    result["details"] = (
-                        f"Last backup: {last_backup_at_str} "
-                        f"({age_hours:.1f}h ago — within {BACKUP_MAX_AGE_HOURS}h SLA)"
-                    )
-                else:
-                    result["details"] = (
-                        f"Last backup: {last_backup_at_str} "
-                        f"({age_hours:.1f}h ago — EXCEEDS {BACKUP_MAX_AGE_HOURS}h SLA)"
-                    )
-            except (ValueError, TypeError):
-                result["passed"] = True
-                result["details"] = f"Backup metadata found but timestamp unparseable: {last_backup_at_str}"
-        else:
-            result["passed"] = True
-            result["details"] = "Backup metadata found; no timestamp field available"
-    else:
-        result["details"] = f"Unexpected status {status_code} from backup endpoint"
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# DB liveness probe (optional — requires psycopg2)
-# ---------------------------------------------------------------------------
-
-def check_db_liveness(database_url: str) -> dict:
-    """
-    Connect to the PostgreSQL database and run:
-      1. SELECT 1  — basic connectivity
-      2. SELECT last_archived_time, archived_count, failed_count FROM pg_stat_archiver
-         — WAL archiving health (proxy for backup health)
-
-    Returns a result dict.
-    """
-    result: dict = {"check": "db_liveness", "passed": False, "details": ""}
-
-    try:
-        import psycopg2  # type: ignore[import]
-    except ImportError:
-        result["passed"] = True  # optional check — skip if not available
-        result["details"] = "psycopg2 not installed — DB liveness probe skipped"
-        result["skipped"] = True
-        return result
-
-    # Mask credentials from output
-    masked_url = database_url
-    try:
-        from urllib.parse import urlparse
-        parsed = urlparse(database_url)
-        masked_url = database_url.replace(parsed.password or "", "****") if parsed.password else database_url
-    except Exception:
-        pass
-
-    try:
-        conn = psycopg2.connect(database_url, connect_timeout=10)
-        cur = conn.cursor()
-
-        # Basic connectivity
-        cur.execute("SELECT 1")
-        if cur.fetchone() != (1,):
-            result["details"] = "SELECT 1 returned unexpected result"
-            conn.close()
-            return result
-
-        # WAL archiving stats
-        cur.execute(
-            "SELECT last_archived_time, archived_count, failed_count FROM pg_stat_archiver"
-        )
-        row = cur.fetchone()
-        conn.close()
-
-        if row:
-            last_archived_time, archived_count, failed_count = row
-            result["raw"] = {
-                "last_archived_time": str(last_archived_time) if last_archived_time else None,
-                "archived_count": archived_count,
-                "failed_count": failed_count,
-            }
-
-            wal_age_hours: float | None = None
-            if last_archived_time:
-                if last_archived_time.tzinfo is None:
-                    last_archived_time = last_archived_time.replace(tzinfo=timezone.utc)
-                wal_age_hours = (datetime.now(timezone.utc) - last_archived_time).total_seconds() / 3600
-                result["wal_archive_age_hours"] = round(wal_age_hours, 2)
-
-            if failed_count and failed_count > 0:
-                result["details"] = (
-                    f"WAL archiving failures detected: {failed_count}. "
-                    f"Last archive: {last_archived_time}. "
-                    "Investigate pg_stat_archiver.last_failed_time."
-                )
-                result["passed"] = False
-            elif wal_age_hours is not None and wal_age_hours > BACKUP_MAX_AGE_HOURS:
-                result["details"] = (
-                    f"WAL archive age {wal_age_hours:.1f}h exceeds {BACKUP_MAX_AGE_HOURS}h SLA. "
-                    f"Last archive: {last_archived_time}. Check archiver process."
-                )
-                result["passed"] = False
+                client = r2_factory(env)
+            except Exception as exc:  # noqa: BLE001
+                results.append(_result("r2_latest_backup", FAIL, f"R2 client init failed: {type(exc).__name__}"))
             else:
-                result["passed"] = True
-                age_str = f"{wal_age_hours:.1f}h ago" if wal_age_hours is not None else "timestamp unavailable"
-                result["details"] = (
-                    f"DB responsive. WAL archive: {last_archived_time} ({age_str}). "
-                    f"Total archived: {archived_count}. Failures: {failed_count}."
-                )
+                prefix = env.get("BACKUP_PREFIX") or DEFAULT_PREFIX
+                results.append(check_r2_latest_backup(client, env["R2_BACKUPS_BUCKET"].strip(), prefix, max_age, now))
+
+    neon_missing = missing_env(NEON_ENV, env)
+    for name in ("neon_pitr_window", "neon_default_branch"):
+        if name not in wanted:
+            continue
+        if neon_missing:
+            results.append(_unverified(name, neon_missing))
+            continue
+        key, project = env["NEON_API_KEY"].strip(), env["NEON_PROJECT_ID"].strip()
+        if name == "neon_pitr_window":
+            results.append(check_neon_pitr(key, project, min_days, http_get))
         else:
-            result["passed"] = True
-            result["details"] = "DB responsive (SELECT 1 passed). pg_stat_archiver returned no rows."
-
-    except psycopg2.OperationalError as e:
-        result["details"] = f"DB connection failed ({masked_url}): {e}"
-    except Exception as e:
-        result["details"] = f"DB probe error: {type(e).__name__}: {e}"
-
-    return result
+            results.append(check_neon_default_branch(key, project, http_get))
+    return results
 
 
-# ---------------------------------------------------------------------------
-# Report assembly
-# ---------------------------------------------------------------------------
-
-def build_report(
-    run_ts: datetime,
-    postgres_id: str,
-    checks: list[dict],
-) -> tuple[bool, str]:
-    """
-    Assemble a human-readable evidence report from check results.
-    Returns (overall_pass, report_text).
-    """
-    overall_pass = all(c.get("passed", False) for c in checks)
-    status_str = "✅ PASS" if overall_pass else "❌ FAIL"
-
+def build_report(run_ts: datetime, checks: list[dict]) -> tuple[str, str]:
+    verdict = overall_verdict(c["status"] for c in checks)
+    icon = {PASS: "✅", FAIL: "❌", UNVERIFIED: "⚠️"}
     lines = [
-        "# Backup Integrity Check",
-        f"# Status:     {status_str}",
+        "# Backup Integrity Check (Neon + R2)",
+        f"# Verdict:    {icon[verdict]} {verdict}",
         f"# Timestamp:  {run_ts.strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"# Service:    {postgres_id}",
-        f"# Controls:   S1.5 / CC4.2",
+        "# Controls:   S1.5 / CC4.2",
         "",
         "## Check Results",
         "",
     ]
-
     for c in checks:
-        check_pass = c.get("passed", False)
-        skipped = c.get("skipped", False)
-        if skipped:
-            icon = "⏭"
-        elif check_pass:
-            icon = "✅"
-        else:
-            icon = "❌"
-
-        lines.append(f"### {icon} {c['check']}")
-        lines.append(f"  Status:  {'SKIP' if skipped else ('PASS' if check_pass else 'FAIL')}")
-        lines.append(f"  Details: {c.get('details', '')}")
-
-        if "backup_age_hours" in c:
-            lines.append(f"  Backup age: {c['backup_age_hours']}h")
-        if "wal_archive_age_hours" in c:
-            lines.append(f"  WAL archive age: {c['wal_archive_age_hours']}h")
-        if "metadata_available" in c and not c["metadata_available"]:
-            lines.append("  Note: Backup metadata not exposed by Render API (expected).")
-            lines.append("        DR restore test (Sprint 452) provides file-level verification.")
-
+        lines.append(f"### {icon[c['status']]} {c['check']}")
+        lines.append(f"  Status:  {c['status']}")
+        lines.append(f"  Details: {c['details']}")
         lines.append("")
-
-    # Evidence hash for tamper-detection
-    content_bytes = "\n".join(lines).encode("utf-8")
-    content_hash = hashlib.sha256(content_bytes).hexdigest()
-
+    missing = sorted({m for c in checks for m in c.get("missing", [])})
+    if missing:
+        lines += [
+            f"## UNVERIFIED — missing secret {', '.join(missing)}",
+            "  Add them under GitHub → Settings → Secrets and variables → Actions.",
+            "  docs/runbooks/backup-restore.md §2 says where each value comes from.",
+            "",
+        ]
+    digest = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
     lines += [
         "## Evidence Integrity",
-        f"# SHA-256: {content_hash}",
-        f"# Signed by: [operator — fill in before filing]",
-        "",
-        "## Filing",
-        f"# Copy to: docs/08-internal/soc2-evidence/s1/backup-integrity-{run_ts.strftime('%Y%m')}.txt",
-        "# Reference controls: S1.5 (backup integrity), CC4.2 (detective controls)",
+        f"# SHA-256: {digest}",
+        f"# Filing:  docs/08-internal/soc2-evidence/s1/backup-integrity-{run_ts.strftime('%Y%m')}.txt",
         "",
     ]
+    return verdict, "\n".join(lines)
 
-    return overall_pass, "\n".join(lines)
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--save", action="store_true", help="Write evidence file to soc2-evidence/s1/")
-    args = parser.parse_args()
-
-    api_key = os.environ.get("RENDER_API_KEY", "").strip()
-    postgres_id = os.environ.get("RENDER_POSTGRES_ID", "").strip()
-    database_url = os.environ.get("DATABASE_URL", "").strip()
-
-    if not api_key or not postgres_id:
-        missing = " and ".join(
-            n for n, v in (("RENDER_API_KEY", api_key), ("RENDER_POSTGRES_ID", postgres_id)) if not v
-        )
-        # Sprint 778a: say what is actually wrong. "RENDER_API_KEY is not set"
-        # reads as a missing-secret problem a maintainer could fix in a minute,
-        # and sent at least one reader looking for the wrong fix.
-        print(
-            f"UNVERIFIED: {missing} not set — backup integrity was not checked.\n"
-            "\n"
-            "  Setting it would not make this check pass. This script queries the\n"
-            "  Render PostgreSQL API, and production moved to Neon in Phase 1\n"
-            "  (2026-04-09); the orphan Render instance was deleted 2026-04-22.\n"
-            "\n"
-            "  The underlying posture is the real finding: the off-provider\n"
-            "  pg_dump -> R2 backup (Phase 4.4) was never implemented, so Neon PITR\n"
-            "  is the only copy of production data and no restore drill has been run.\n"
-            "\n"
-            "  Rewriting this against Neon + R2 is Sprint 778 scope item 4.",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+    parser.add_argument("--save", action="store_true", help="write evidence to docs/08-internal/soc2-evidence/s1/")
+    parser.add_argument("--only", action="append", choices=CHECK_NAMES, help="run only this check (repeatable)")
+    parser.add_argument("--json", dest="json_path", help="write the results + verdict as JSON")
+    parser.add_argument("--report", help="also write the text report to this path")
+    args = parser.parse_args(argv)
+    utf8_stdio()
 
     run_ts = datetime.now(timezone.utc)
-    print(f"Running backup integrity check at {run_ts.strftime('%Y-%m-%d %H:%M:%S UTC')} ...", file=sys.stderr)
-
-    checks: list[dict] = []
-
-    # Check 1: Render instance health
-    print("  [1/3] Render instance status ...", file=sys.stderr)
-    checks.append(check_render_instance(postgres_id, api_key))
-
-    # Check 2: Render backup metadata
-    print("  [2/3] Render backup metadata ...", file=sys.stderr)
-    checks.append(check_render_backup_metadata(postgres_id, api_key))
-
-    # Check 3: DB liveness probe (optional)
-    if database_url:
-        print("  [3/3] DB liveness probe ...", file=sys.stderr)
-        checks.append(check_db_liveness(database_url))
-    else:
-        print("  [3/3] DB liveness probe — skipped (DATABASE_URL not set)", file=sys.stderr)
-        checks.append({
-            "check": "db_liveness",
-            "passed": True,
-            "skipped": True,
-            "details": "DATABASE_URL not set — DB probe skipped",
-        })
-
-    overall_pass, report = build_report(run_ts, postgres_id, checks)
+    checks = run_checks(os.environ, args.only)
+    verdict, report = build_report(run_ts, checks)
     print(report)
 
+    if args.report:
+        Path(args.report).write_text(report, encoding="utf-8")
+    if args.json_path:
+        Path(args.json_path).write_text(json.dumps({"verdict": verdict, "checks": checks}, indent=2), encoding="utf-8")
     if args.save:
         EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
-        filename = f"backup-integrity-{run_ts.strftime('%Y%m')}.txt"
-        output_path = EVIDENCE_DIR / filename
-        output_path.write_text(report, encoding="utf-8")
-        print(f"\nEvidence saved: {output_path}", file=sys.stderr)
-
-    sys.exit(0 if overall_pass else 1)
+        out = EVIDENCE_DIR / f"backup-integrity-{run_ts.strftime('%Y%m')}.txt"
+        out.write_text(report, encoding="utf-8")
+        print(f"\nEvidence saved: {out}", file=sys.stderr)
+    gh_out = os.environ.get("GITHUB_OUTPUT")
+    if gh_out:
+        missing = sorted({m for c in checks for m in c.get("missing", [])})
+        with open(gh_out, "a", encoding="utf-8") as fh:
+            fh.write(f"verdict={verdict}\nmissing={','.join(missing)}\n")
+    return EXIT_CODES[verdict]
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
