@@ -768,8 +768,9 @@ every IC revenue/expense pair.
 ---
 
 ### Sprint 813: Memo PDFs — missing footers, ignored branding, and the hand-built skeleton behind both
-**Status:** PARTIAL — the customer-facing defects (items 1, 2, 6, 8, 10 + two found on the way) are
-fixed and pinned by an output-level test; the structural cleanups (3, 4, 5, 7, 9) remain.
+**Status:** COMPLETE 2026-10-27 (pending CI + merge) — customer-facing defects (1, 2, 6, 8, 10)
+and item 7 merged earlier; structural items 3, 4, 5, 9 done 2026-10-27 with byte-independent
+rendering equivalence on every memo. Remaining work is listed under "Left open" below.
 **Priority:** **P1** — items 1–2 ship defective PDFs today.
 **Source:** Code health review 2026-10-23, memos/PDF pass.
 
@@ -786,12 +787,14 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
    the ContextVar for all: bank rec, currency, multi-period, preflight, both sampling,
    three-way match, accrual, expense, flux, population profile. Reproduced with
    `apply_pdf_branding(footer_text=...)`: JE memo carries it, preflight does not.
-3. [ ] Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
+3. [x] *(Done 2026-10-27: all 14 + `generate_testing_memo` on `memo_base.render_memo`; guard test.)*
+   Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
    in `shared/memo_base.py`; route the 14 hand-built memos **and** `generate_testing_memo`
    through it. Keep each memo's current margins as parameters (they drift 0.75in/1.0in today)
    so output does not move. ~500–700 lines; closes 1 and 2 permanently.
-4. [ ] `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
-5. [ ] `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
+4. [x] *(Done 2026-10-27: 20 true copies replaced; ~20 near-copies are genuine variants, left inline.)*
+   `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
+5. [x] *(Done 2026-10-27: 10 memos + `build_scope_section`.)* `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
    "Source File" vs "Source" as a parameter (no wording change).
 6. [x] `tests/test_memo_boundary_phrasing.py:101` matches only `*_memo_generator.py`, so
    accrual/expense/flux/population-profile `*_memo.py` are never scanned. Widen the glob.
@@ -806,7 +809,7 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 8. [x] Engagement ZIP (`engagements_exports.py` ~`:85-110`) ships the anomaly summary **unbranded**
    while the standalone route brands it; also passes neither engagement nor client, so access
    check + client lookup run twice.
-9. [ ] Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
+9. [x] *(Done 2026-10-27; shim kept for 7 test files.)* Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
    prefix arg on `generate_reference_number` (replaces 21 `.replace("PAC-", ...)`);
    point the ~30 `pdf_generator` shim importers at `pdf` directly.
 10. [x] `generate_sample_reports.py:4076-~4325` `gen_anomaly_summary` re-implements the production
@@ -842,15 +845,43 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - **Branded header struck through by the gold rule** on the accrual memo, which draws its own
   page header at the same 0.5in line. Branded header moved to 0.35in for all memos.
 
-**Structural items (2026-10-27, branch `sprint-813-memo-skeleton`, in progress):**
-- [x] Rendering-equivalence harness `tests/test_memo_render_equivalence.py` recorded on the
-  unmodified code before any refactor.
-- [x] Item 5: `memo_base.source_line()` replaces the Source block in 10 memos + `build_scope_section`.
-- [x] Item 4: `ledger_table_style(font_size=, extra=)`; 20 inline copies replaced.
-- [x] Item 9: cached styles, Excel constants, `generate_reference_number(prefix)`, 29 importers on `pdf`.
-- [x] Item 3: `memo_base.render_memo()`; all 14 hand-built memos + `generate_testing_memo` on it.
+**Delivered 2026-10-27 (items 3, 4, 5, 9 — branch `sprint-813-memo-skeleton`, on top of Sprint 846):**
+- [x] **Equivalence harness first.** `tests/test_memo_render_equivalence.py` renders all 24 memo/report
+  PDFs (21 samples + engagement dashboard, analytical expectations, SUM schedule), unbranded and
+  under Enterprise branding (header, footer, logo), clock frozen; pins page count, media box,
+  per-page text, positioned text runs, text bbox and content-stream digest (byte-independent),
+  plus the Excel workpaper's cell styles. Recorded on the pre-refactor code; green after every item;
+  stable across hash seeds.
+- [x] Item 5: `memo_base.source_line(title, filename, *, filename_label=, always=)`.
+- [x] Item 4: `ledger_table_style(*, font_size=, extra=)`. A copy was converted only when moving its
+  extra commands after the ledger block cannot change the drawing (no extra precedes a ledger
+  command on the same attribute).
+- [x] Item 9: `create_memo_styles()` cached (fresh dict per call); Excel per-row fill/border/fonts are
+  module constants; `generate_reference_number(prefix)` replaces 17 `.replace("PAC-", ...)`;
+  29 production modules import `pdf` directly.
+- [x] Item 3: `render_memo(title, ref_prefix, body_builder, *, cover=, running_header=, margins=,
+  branding=, page_footer=)`; per-memo margins kept (`MEMO_MARGINS` / `TESTING_MEMO_MARGINS`).
+  Analytical expectations, SUM and anomaly summary build their own cover (banner precedes it) and
+  take `render_memo`'s reference. `current_page_footer()` removed (no callers). Guard test fails any
+  memo module that builds its own `SimpleDocTemplate`.
+- [x] Found on the way: the anomaly summary's "Tools with Clean Results" list printed in set order
+  (varied per process) — now catalog order.
 
-**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
+**Left open (and why):**
+- Engagement dashboard still uses the unbranded `draw_page_footer` (kept via `page_footer=` so output
+  does not change; no route serves it today). Making it brand-aware is a one-line product call.
+- ~20 TableStyle near-copies of the ledger style (4pt padding, no body font, no flush-left padding,
+  MIDDLE valign) stay inline — they are variants, not copies.
+- TB diagnostic / financial statements (`pdf/orchestrator.py`) and the loan-amortization PDF still
+  own their page setup — reports, not memos, with different chrome.
+- `pdf_generator.py` shim stays for the 7 test files that import it.
+
+**Verification:** full backend suite 10,052 passed / 1 failed — `test_alembic_head_matches_base_metadata_foreign_keys`
+hit its 180s subprocess timeout under full-suite load; the file passes alone (5/5). Equivalence harness
+50/50, memo/report/export test set 1,705 passed; ruff check clean.
+
+**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7); 4f38ecd5 (harness),
+cb65fb58 (item 5), 5f42d192 (item 4), a2b5f373 (item 9), 2ebcaf84 (item 3) — branch `sprint-813-memo-skeleton`.
 
 ---
 
