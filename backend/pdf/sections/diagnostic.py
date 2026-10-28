@@ -68,7 +68,7 @@ def render_data_intake_summary(story: list, styles: dict, audit_result: dict, fi
     story.append(Spacer(1, 4))
 
     row_count = audit_result.get("row_count", 0)
-    col_detection = audit_result.get("column_detection", {})
+    col_detection = audit_result.get("column_detection") or {}
     data_quality = audit_result.get("data_quality", {})
 
     rows_accepted = row_count
@@ -369,7 +369,7 @@ def render_population_composition(story: list, styles: dict, audit_result: dict)
     story.append(Spacer(1, 2))
     story.append(Paragraph(f"<i>{gross_footnote}</i>", styles["BodyText"]))
 
-    col_detection = audit_result.get("column_detection", {})
+    col_detection = audit_result.get("column_detection") or {}
     if col_detection:
         acct_confidence = col_detection.get("account_confidence", 1.0)
         if acct_confidence < 0.9:
@@ -397,7 +397,7 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 6))
 
-    risk_summary = audit_result.get("risk_summary", {})
+    risk_summary = audit_result.get("risk_summary") or {}
     material_count = audit_result.get("material_count", 0)
     immaterial_count = audit_result.get("immaterial_count", 0)
     informational_count = audit_result.get("informational_count", 0)
