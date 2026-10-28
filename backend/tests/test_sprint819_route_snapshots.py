@@ -67,15 +67,20 @@ def _pdf_text(body: bytes) -> list[str]:
 def _zip_member(name: str, data: bytes) -> Any:
     """Pin one archive member. PDF bytes vary between environments (object
     layout), so a PDF member is pinned by its text, and a package manifest's
-    per-file size and SHA-256 are dropped for the same reason."""
+    per-file size and SHA-256 are dropped for the same reason. The engagement
+    id is assigned by the DB (1 on SQLite, anything on Postgres), so JSON
+    members are pinned with it masked."""
     if data[:5] == b"%PDF-":
         return {"pdf_pages": _pdf_text(data)}
-    if name == "manifest.json":
-        manifest = json.loads(data)
-        for entry in manifest.get("files", []):
-            entry.pop("size_bytes", None)
-            entry.pop("sha256", None)
-        return {"manifest": manifest}
+    if name.endswith(".json"):
+        doc = json.loads(data)
+        if "engagement_id" in doc:
+            doc["engagement_id"] = "<id>"
+        if name == "manifest.json":
+            for entry in doc.get("files", []):
+                entry.pop("size_bytes", None)
+                entry.pop("sha256", None)
+        return {"json": doc}
     return hashlib.sha256(data).hexdigest()
 
 
