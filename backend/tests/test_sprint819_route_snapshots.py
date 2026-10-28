@@ -58,6 +58,27 @@ def _override(user: Any, db_session: Any) -> None:
     app.dependency_overrides[get_db] = lambda: db_session
 
 
+def _pdf_text(body: bytes) -> list[str]:
+    from pypdf import PdfReader
+
+    return [page.extract_text() for page in PdfReader(io.BytesIO(body)).pages]
+
+
+def _zip_member(name: str, data: bytes) -> Any:
+    """Pin one archive member. PDF bytes vary between environments (object
+    layout), so a PDF member is pinned by its text, and a package manifest's
+    per-file size and SHA-256 are dropped for the same reason."""
+    if data[:5] == b"%PDF-":
+        return {"pdf_pages": _pdf_text(data)}
+    if name == "manifest.json":
+        manifest = json.loads(data)
+        for entry in manifest.get("files", []):
+            entry.pop("size_bytes", None)
+            entry.pop("sha256", None)
+        return {"manifest": manifest}
+    return hashlib.sha256(data).hexdigest()
+
+
 def _capture(response: httpx.Response) -> dict[str, Any]:
     headers = response.headers
     body = response.content
@@ -82,13 +103,11 @@ def _capture(response: httpx.Response) -> dict[str, Any]:
         # xlsx / zip: the archive bytes carry wall-clock entry timestamps, so pin
         # each member's content instead.
         with zipfile.ZipFile(io.BytesIO(body)) as zf:
-            out["zip_members"] = {name: hashlib.sha256(zf.read(name)).hexdigest() for name in sorted(zf.namelist())}
+            out["zip_members"] = {name: _zip_member(name, zf.read(name)) for name in sorted(zf.namelist())}
     elif body[:5] == b"%PDF-":
         # PDF bytes are not stable run to run (object layout), so pin the text
         # of every page.
-        from pypdf import PdfReader
-
-        out["pdf_pages"] = [page.extract_text() for page in PdfReader(io.BytesIO(body)).pages]
+        out["pdf_pages"] = _pdf_text(body)
     else:
         out["sha256"] = hashlib.sha256(body).hexdigest()
         out["length"] = len(body)
