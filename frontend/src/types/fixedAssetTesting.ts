@@ -17,7 +17,8 @@ import type {
   BaseFlaggedEntry,
   BaseTestResult,
   BaseCompositeScore,
-  BaseDataQuality,
+  RowDataQuality,
+  BaseColumnDetection,
 } from './testingShared'
 
 // Re-export shared types as domain aliases (backward compatibility)
@@ -49,9 +50,9 @@ export interface FACompositeScore extends BaseCompositeScore {
   flag_rate: number
 }
 
-export interface FADataQuality extends BaseDataQuality {}
+export interface FADataQuality extends RowDataQuality {}
 
-export interface FAColumnDetection {
+export interface FAColumnDetection extends BaseColumnDetection {
   asset_id_column: string | null
   description_column: string | null
   cost_column: string | null
@@ -63,9 +64,6 @@ export interface FAColumnDetection {
   location_column: string | null
   category_column: string | null
   net_book_value_column: string | null
-  overall_confidence: number
-  all_columns: string[]
-  detection_notes: string[]
 }
 
 export interface FixedAssetTestingResult {

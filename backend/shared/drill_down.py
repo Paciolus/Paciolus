@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors
+from pdf import ClassicalColors
 from shared.safe_paragraph import Paragraph
 
 # Maximum rows to render per drill-down table

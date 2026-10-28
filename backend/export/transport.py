@@ -1,7 +1,7 @@
 """
 HTTP transport layer for Paciolus diagnostic exports.
 
-Builds StreamingResponse objects from raw file bytes, handling filename
+Builds Response objects from raw file bytes, handling filename
 generation and media-type selection. All response-building concerns are
 centralized here so that route handlers and the pipeline never touch
 HTTP response construction directly.
@@ -11,10 +11,10 @@ import logging
 from typing import NoReturn
 
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 
 from shared.error_messages import sanitize_error
-from shared.export_helpers import streaming_csv_response, streaming_excel_response, streaming_pdf_response
+from shared.export_helpers import csv_response, excel_response, pdf_response
 from shared.filenames import safe_download_filename
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ def build_streaming_response(
     source_filename: str,
     filename_suffix: str,
     fmt: str,
-) -> StreamingResponse:
-    """Build an appropriate StreamingResponse based on the output format.
+) -> Response:
+    """Build an appropriate Response based on the output format.
 
     Args:
         file_bytes: The serialized file content (PDF, Excel, or CSV bytes).
@@ -36,17 +36,16 @@ def build_streaming_response(
         fmt: Output format — one of "pdf", "xlsx", "csv".
 
     Returns:
-        A FastAPI StreamingResponse with correct media type and Content-Disposition.
+        A FastAPI Response with correct media type and Content-Disposition.
     """
-    extension = fmt if fmt != "xlsx" else "xlsx"
-    download_filename = safe_download_filename(source_filename, filename_suffix, extension)
+    download_filename = safe_download_filename(source_filename, filename_suffix, fmt)
 
     if fmt == "pdf":
-        return streaming_pdf_response(file_bytes, download_filename)
-    elif fmt in ("xlsx", "excel"):
-        return streaming_excel_response(file_bytes, download_filename)
+        return pdf_response(file_bytes, download_filename)
+    elif fmt == "xlsx":
+        return excel_response(file_bytes, download_filename)
     elif fmt == "csv":
-        return streaming_csv_response(file_bytes, download_filename)
+        return csv_response(file_bytes, download_filename)
     else:
         raise ValueError(f"Unsupported export format: {fmt}")
 

@@ -38,6 +38,16 @@ class ExcelColors:
     LIGHT_GRAY = "F5F4F2"
 
 
+# Sprint 813: per-row styles hoisted out of the TB / anomaly loops — one object
+# each instead of one per cell. openpyxl copies a style into the workbook's
+# style table on assignment, so sharing the instances is safe.
+_MATERIAL_ROW_FILL = PatternFill("solid", fgColor=ExcelColors.LIGHT_GRAY)
+_MATERIAL_ROW_BORDER = Border(left=Side(style="thick", color=ExcelColors.CLAY))
+_ANOMALY_REF_FONT = Font(color=ExcelColors.OBSIDIAN_500, size=9)
+_MATERIAL_LABEL_FONT = Font(bold=True, color=ExcelColors.CLAY)
+_IMMATERIAL_LABEL_FONT = Font(color=ExcelColors.OBSIDIAN_500)
+
+
 def create_header_style() -> NamedStyle:
     """Create header row style with Obsidian background."""
     style = NamedStyle(name="header_style")
@@ -324,8 +334,8 @@ class PaciolusWorkpaperGenerator:
             # Apply row styling based on materiality
             if materiality == "material":
                 for col in range(1, 7):
-                    ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=ExcelColors.LIGHT_GRAY)
-                ws.cell(row=row, column=1).border = Border(left=Side(style="thick", color=ExcelColors.CLAY))
+                    ws.cell(row=row, column=col).fill = _MATERIAL_ROW_FILL
+                ws.cell(row=row, column=1).border = _MATERIAL_ROW_BORDER
 
             row += 1
 
@@ -386,7 +396,7 @@ class PaciolusWorkpaperGenerator:
                 # Sprint 53: Reference number
                 ref_num = f"TB-M{idx:03d}"
                 ws.cell(row=row, column=1, value=ref_num)
-                ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
+                ws.cell(row=row, column=1).font = _ANOMALY_REF_FONT
                 ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get("account", "Unknown")))
                 ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
                 ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
@@ -395,12 +405,12 @@ class PaciolusWorkpaperGenerator:
                 ws.cell(row=row, column=5).style = "currency_style"
                 ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
                 ws.cell(row=row, column=7, value="MATERIAL")
-                ws.cell(row=row, column=7).font = Font(bold=True, color=ExcelColors.CLAY)
+                ws.cell(row=row, column=7).font = _MATERIAL_LABEL_FONT
 
                 # Apply material styling
-                ws.cell(row=row, column=2).border = Border(left=Side(style="thick", color=ExcelColors.CLAY))
+                ws.cell(row=row, column=2).border = _MATERIAL_ROW_BORDER
                 for col in range(1, 8):
-                    ws.cell(row=row, column=col).fill = PatternFill("solid", fgColor=ExcelColors.LIGHT_GRAY)
+                    ws.cell(row=row, column=col).fill = _MATERIAL_ROW_FILL
 
                 row += 1
 
@@ -417,7 +427,7 @@ class PaciolusWorkpaperGenerator:
                 # Sprint 53: Reference number
                 ref_num = f"TB-I{idx:03d}"
                 ws.cell(row=row, column=1, value=ref_num)
-                ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
+                ws.cell(row=row, column=1).font = _ANOMALY_REF_FONT
                 ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get("account", "Unknown")))
                 ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
                 ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
@@ -426,7 +436,7 @@ class PaciolusWorkpaperGenerator:
                 ws.cell(row=row, column=5).style = "currency_style"
                 ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
                 ws.cell(row=row, column=7, value="IMMATERIAL")
-                ws.cell(row=row, column=7).font = Font(color=ExcelColors.OBSIDIAN_500)
+                ws.cell(row=row, column=7).font = _IMMATERIAL_LABEL_FONT
 
                 row += 1
 

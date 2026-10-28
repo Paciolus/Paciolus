@@ -860,6 +860,9 @@ def _parse_date_to_str(val: object) -> Optional[str]:
     return s if s else None
 
 
+_REFERENCE_DATE_FORMATS = ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y")
+
+
 def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optional[str] = None) -> Optional[int]:
     """Compute aging days from due date. Positive = past due.
 
@@ -881,7 +884,6 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
     """
     if not due_date_str:
         return None
-    from datetime import datetime
 
     try:
         # Sprint 829: the shared parser. It tries the same six date formats in
@@ -895,12 +897,9 @@ def _compute_aging_days(due_date_str: Optional[str], reference_date_str: Optiona
 
         ref = None
         if reference_date_str:
-            for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
-                try:
-                    ref = datetime.strptime(reference_date_str.strip(), fmt).date()
-                    break
-                except ValueError:
-                    continue
+            # Narrower than the shared default on purpose: the error below names
+            # exactly these three forms (Sprint 819 item 4).
+            ref = parse_date(reference_date_str, formats=_REFERENCE_DATE_FORMATS)
             if ref is None:
                 # An as_of_date was supplied but no format matched — surface
                 # the problem rather than silently shifting to today().

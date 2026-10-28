@@ -32,7 +32,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import Flowable, Image, PageBreak, Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     format_classical_date,
 )
@@ -593,21 +593,6 @@ def _draw_footer_impl(
             canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, _DISCLAIMER_LINE)
 
     canvas.restoreState()
-
-
-def current_page_footer() -> Any:
-    """Sprint 813: page callback honouring the active Enterprise branding.
-
-    Reads the ``PDFBrandingContext`` the route scoped with
-    ``apply_pdf_branding`` and returns ``draw_page_footer`` when none is
-    active. Pass the result as **both** ``onFirstPage`` and ``onLaterPages``
-    — a memo that passes only ``onFirstPage`` ships every content page
-    without its page number and disclaimer.
-    """
-    from shared.pdf_branding import current_pdf_branding
-
-    branding = current_pdf_branding()
-    return make_branded_page_footer(branding.effective_header_text(), branding.effective_footer_text())
 
 
 def make_branded_page_footer(

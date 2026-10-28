@@ -41,7 +41,6 @@ from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
 from shared.testing_enums import (
-    SEVERITY_WEIGHTS,  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
@@ -695,6 +694,7 @@ def assess_ap_data_quality(
 # =============================================================================
 
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER as AP_ROUND_AMOUNT_PATTERNS  # noqa: E402
+from shared.round_amounts import keep_most_severe, match_round_amount  # noqa: E402
 
 # =============================================================================
 # TIER 1 TESTS
@@ -926,32 +926,31 @@ def test_round_dollar_amounts(
         if amt < config.round_amount_threshold:
             continue
 
-        for divisor, name, severity in AP_ROUND_AMOUNT_PATTERNS:
-            d = Decimal(str(divisor))
-            if amt >= d and amt % d == 0:
-                flagged.append(
-                    FlaggedPayment(
-                        entry=p,
-                        test_name="Round Dollar Amounts",
-                        test_key="round_dollar_amounts",
-                        test_tier=TestTier.STRUCTURAL,
-                        severity=severity,
-                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                        confidence=0.70,
-                        details={"amount": amt, "pattern": name, "divisor": divisor},
-                    )
-                )
-                break  # Only flag the largest pattern match
+        match = match_round_amount(amt, AP_ROUND_AMOUNT_PATTERNS)  # largest pattern only
+        if match is None:
+            continue
+        divisor, name, severity = match
+        flagged.append(
+            FlaggedPayment(
+                entry=p,
+                test_name="Round Dollar Amounts",
+                test_key="round_dollar_amounts",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                confidence=0.70,
+                details={"amount": amt, "pattern": name, "divisor": divisor},
+            )
+        )
 
-    # Sprint 829: count every round amount, then keep the largest for display.
-    # Sprint 831 (PR #225 review): most severe first, then largest, so a large
-    # LOW match can never push a HIGH one out of the kept list (the severity
-    # floors read only the kept flags).
-    # The loop used to stop at the cap in file order, so a $500K round entry
-    # after fifty $10K ones was never seen and the count stopped at 50.
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
-    total_flagged = len(flagged)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 829/831: count every round amount, keep the most severe then the
+    # largest (shared helper since Sprint 819 item 3).
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: f.severity,
+        amount_of=lambda f: abs(f.entry.amount),
+        cap=config.round_amount_max_flags,
+    )
 
     flag_rate = total_flagged / max(len(payments), 1)
     return APTestResult(
@@ -2041,34 +2040,25 @@ class APTestingEngine(AuditEngineBase):
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_ap_columns(column_names)
 
-    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
-        if "vendor_name_column" in column_mapping:
-            detection.vendor_name_column = column_mapping["vendor_name_column"]
-        if "amount_column" in column_mapping:
-            detection.amount_column = column_mapping["amount_column"]
-        if "payment_date_column" in column_mapping:
-            detection.payment_date_column = column_mapping["payment_date_column"]
-        if "invoice_number_column" in column_mapping:
-            detection.invoice_number_column = column_mapping["invoice_number_column"]
-        if "invoice_date_column" in column_mapping:
-            detection.invoice_date_column = column_mapping["invoice_date_column"]
-            if detection.payment_date_column:
-                detection.has_dual_dates = True
-        if "vendor_id_column" in column_mapping:
-            detection.vendor_id_column = column_mapping["vendor_id_column"]
+    OVERRIDABLE_COLUMNS = (
+        "vendor_name_column",
+        "amount_column",
+        "payment_date_column",
+        "invoice_number_column",
+        "invoice_date_column",
+        "vendor_id_column",
+        "check_number_column",
+        "description_column",
+        "gl_account_column",
+        "payment_method_column",
+        "po_number_column",
+    )
+
+    def after_column_overrides(self, detection: Any, column_mapping: dict) -> None:
+        if "invoice_date_column" in column_mapping and detection.payment_date_column:
+            detection.has_dual_dates = True
         if "check_number_column" in column_mapping:
-            detection.check_number_column = column_mapping["check_number_column"]
             detection.has_check_numbers = True
-        if "description_column" in column_mapping:
-            detection.description_column = column_mapping["description_column"]
-        if "gl_account_column" in column_mapping:
-            detection.gl_account_column = column_mapping["gl_account_column"]
-        if "payment_method_column" in column_mapping:
-            detection.payment_method_column = column_mapping["payment_method_column"]
-        if "po_number_column" in column_mapping:
-            detection.po_number_column = column_mapping["po_number_column"]
-        detection.overall_confidence = 1.0
-        return detection
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
         return parse_ap_payments(rows, detection)

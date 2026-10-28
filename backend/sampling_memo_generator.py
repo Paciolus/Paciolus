@@ -15,37 +15,31 @@ Custom PDF structure (NOT using testing_memo_template — different workflow):
     VII. Next Steps (evaluation-phase), Signoff, Disclaimer
 """
 
-import io
 from typing import Any, Optional
 
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
-    generate_reference_number,
 )
 from sampling_engine import _get_incremental_factors
 from security_utils import log_secure_operation
 from shared import audit_figure_registry as _registry
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
     build_memo_header,
     build_workpaper_signoff,
-    create_memo_styles,
+    render_memo,
+    source_line,
 )
 from shared.memo_template import _roman
-from shared.report_chrome import (
-    ReportMetadata,
-    build_cover_page,
-    current_page_footer,
-    find_logo,
-)
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -552,488 +546,241 @@ def _generate_sampling_memo(
 
     is_evaluation = evaluation_result is not None
 
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-    )
-
-    styles = create_memo_styles()
-    story: list = []
-    doc_width = letter[0] - 1.5 * inch
-    ref_number = generate_reference_number().replace("PAC-", "SSM-")
-
     # ─── BUG-01: Phase-specific title ─────────────────────────
     if is_evaluation:
         report_title = "STATISTICAL SAMPLING MEMO \u2014 EVALUATION"
     else:
         report_title = "STATISTICAL SAMPLING MEMO \u2014 DESIGN"
 
-    # ─── 0. Cover Page ───────────────────────────────────────
-    logo_path = find_logo()
-    cover_metadata = ReportMetadata(
-        title=report_title,
-        client_name=client_name or "",
-        engagement_period=period_tested or "",
-        source_document=filename,
-        source_document_title=source_document_title or "",
-        source_context_note=source_context_note or "",
-        reference=ref_number,
-        fiscal_year_end=fiscal_year_end or "",
-    )
-    build_cover_page(story, styles, cover_metadata, doc_width, logo_path)
-
-    # ─── 1. Header ───────────────────────────────────────────
-    build_memo_header(
-        story,
-        styles,
-        doc_width,
-        title=report_title,
-        reference=ref_number,
-        client_name=client_name,
-    )
-
-    # ─── 2. Scope ────────────────────────────────────────────
-    story.append(Paragraph("I. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    # Source document transparency (Sprint 6)
-    if source_document_title and filename:
-        story.append(
-            Paragraph(create_leader_dots("Source", f"{source_document_title} ({filename})"), styles["MemoLeader"])
-        )
-    elif source_document_title:
-        story.append(Paragraph(create_leader_dots("Source", source_document_title), styles["MemoLeader"]))
-    elif filename:
-        story.append(Paragraph(create_leader_dots("Source", filename), styles["MemoLeader"]))
-
-    scope_text = (
-        "This memo documents the statistical sampling procedures performed in accordance with "
-        "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
-    )
-    if period_tested:
-        scope_text += f"Period under examination: {period_tested}. "
-
-    # Determine method display name
-    method = "N/A"
-    if design_result:
-        method = "Monetary Unit Sampling (MUS)" if design_result.get("method") == "mus" else "Simple Random Sampling"
-    elif evaluation_result:
-        method = (
-            "Monetary Unit Sampling (MUS)" if evaluation_result.get("method") == "mus" else "Simple Random Sampling"
+    def _body(memo: MemoContext) -> None:
+        story, styles, doc_width = memo.story, memo.styles, memo.doc_width
+        ref_number = memo.reference
+        # ─── 1. Header ───────────────────────────────────────────
+        build_memo_header(
+            story,
+            styles,
+            doc_width,
+            title=report_title,
+            reference=ref_number,
+            client_name=client_name,
         )
 
-    scope_text += f"Sampling method: {method}."
-    story.append(Paragraph(scope_text, styles["MemoBody"]))
-    story.append(Spacer(1, 8))
-
-    build_scope_statement(
-        story,
-        styles,
-        doc_width,
-        tool_domain="statistical_sampling",
-        framework=resolved_framework,
-        domain_label="statistical sampling",
-    )
-
-    # ─── 3. Design Parameters ────────────────────────────────
-    if design_result:
-        story.append(Paragraph("II. Design Parameters", styles["MemoSection"]))
+        # ─── 2. Scope ────────────────────────────────────────────
+        story.append(Paragraph("I. Scope", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        scope_lines = [
-            create_leader_dots("Population Size", f"{design_result.get('population_size', 0):,}"),
-            create_leader_dots("Population Value", f"${design_result.get('population_value', 0):,.2f}"),
-        ]
+        # Source document transparency (Sprint 6)
+        source = source_line(source_document_title, filename)
+        if source:
+            story.append(Paragraph(source, styles["MemoLeader"]))
 
-        for line in scope_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
-
-        # ─── BUG-02: Population value clarifying note ──────────
-        pop_note = design_result.get("population_value_note")
-        if pop_note:
-            story.append(
-                Paragraph(
-                    f"<i>{pop_note}</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-            story.append(Spacer(1, 4))
-
-        confidence_lines = [
-            create_leader_dots("Confidence Level", f"{design_result.get('confidence_level', 0):.0%}"),
-            create_leader_dots("Confidence Factor", f"{design_result.get('confidence_factor', 0):.4f}"),
-        ]
-        for line in confidence_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
-
-        # ─── BUG-04: Confidence factor derivation note ──────────
-        conf_level = design_result.get("confidence_level", 0)
-        conf_note = CONFIDENCE_FACTOR_NOTES.get(conf_level)
-        if conf_note:
-            conf_factor = design_result.get("confidence_factor", 0)
-            story.append(
-                Paragraph(
-                    f"<i>Confidence factor of {conf_factor:.4f} corresponds to the "
-                    f"{conf_note}. Per the Poisson distribution table used in MUS, "
-                    f"the factor is derived as -ln(1 - confidence level).</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-            story.append(Spacer(1, 4))
-
-        tm_em_lines = [
-            create_leader_dots("Tolerable Misstatement", f"${design_result.get('tolerable_misstatement', 0):,.2f}"),
-            create_leader_dots("Expected Misstatement", f"${design_result.get('expected_misstatement', 0):,.2f}"),
-        ]
-        for line in tm_em_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
-
-        interval = design_result.get("sampling_interval")
-        if interval is not None:
-            story.append(Paragraph(create_leader_dots("Sampling Interval", f"${interval:,.2f}"), styles["MemoLeader"]))
-
-        story.append(
-            Paragraph(
-                create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0))),
-                styles["MemoLeader"],
-            )
+        scope_text = (
+            "This memo documents the statistical sampling procedures performed in accordance with "
+            "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
         )
-        story.append(
-            Paragraph(
-                create_leader_dots("Actual Sample Size", str(design_result.get("actual_sample_size", 0))),
-                styles["MemoLeader"],
+        if period_tested:
+            scope_text += f"Period under examination: {period_tested}. "
+
+        # Determine method display name
+        method = "N/A"
+        if design_result:
+            method = (
+                "Monetary Unit Sampling (MUS)" if design_result.get("method") == "mus" else "Simple Random Sampling"
             )
-        )
+        elif evaluation_result:
+            method = (
+                "Monetary Unit Sampling (MUS)" if evaluation_result.get("method") == "mus" else "Simple Random Sampling"
+            )
 
-        # ─── BUG-03: Sample size gap explanation ───────────────
-        calc_size = design_result.get("calculated_sample_size", 0)
-        actual_size = design_result.get("actual_sample_size", 0)
-        if actual_size != calc_size and actual_size > 0 and calc_size > 0:
-            diff = actual_size - calc_size
-            hv_count = design_result.get("high_value_count", 0)
-            rem_sample = design_result.get("remainder_sample_size", 0)
-            strata = design_result.get("strata_summary", [])
-            hv_threshold = ""
-            if strata:
-                hv_threshold = strata[0].get("threshold", "")
-
-            sample_size_note = design_result.get("sample_size_note")
-            if sample_size_note:
-                note_text = sample_size_note
-            elif hv_count > 0:
-                note_text = (
-                    f"Actual sample size increased from calculated {calc_size} to {actual_size} "
-                    f"(+{diff} items, +{diff / calc_size:.1%}) due to stratification. "
-                    f"All {hv_count} items in the High Value stratum ({hv_threshold}) are tested "
-                    f"100%, plus {rem_sample} items selected from the Remainder stratum via "
-                    f"systematic interval selection ({hv_count} + {rem_sample} = {actual_size})."
-                )
-            else:
-                note_text = (
-                    f"Actual sample size ({actual_size}) differs from calculated size "
-                    f"({calc_size}) by {diff:+d} items due to interval rounding."
-                )
-            story.append(Paragraph(f"<i>{note_text}</i>", styles["MemoBodySmall"]))
-            story.append(Spacer(1, 4))
-
+        scope_text += f"Sampling method: {method}."
+        story.append(Paragraph(scope_text, styles["MemoBody"]))
         story.append(Spacer(1, 8))
 
-        # ─── TM Derivation Note (CONTENT-10) ──────────────────
-        tm_value = design_result.get("tolerable_misstatement", 0)
-        story.append(Paragraph("<b>Tolerable Misstatement Derivation</b>", styles["MemoBody"]))
-        story.append(
-            Paragraph(
-                f"The tolerable misstatement of ${tm_value:,.2f} was entered by the practitioner "
-                "based on the engagement's overall materiality assessment. Per ISA 320.11, "
-                "tolerable misstatement is the amount set by the auditor at less than materiality "
-                "for the financial statements as a whole to reduce to an appropriately low level "
-                "the probability that the aggregate of uncorrected and undetected misstatements "
-                "exceeds materiality. The practitioner should document the basis for this amount "
-                "in the engagement's materiality workpaper (e.g., WP-MAT-001).",
-                styles["MemoBody"],
-            )
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="statistical_sampling",
+            framework=resolved_framework,
+            domain_label="statistical sampling",
         )
-        story.append(Spacer(1, 8))
 
-        # ─── IMP-01: Expected Misstatement Derivation ──────────
-        em_value = design_result.get("expected_misstatement", 0)
-        if em_value > 0:
-            story.append(Paragraph("<b>Expected Misstatement Derivation</b>", styles["MemoBody"]))
-            em_note = design_result.get("expected_misstatement_note")
-            if em_note:
-                em_text = em_note
-            elif tm_value > 0:
-                em_pct = em_value / tm_value * 100
-                em_text = (
-                    f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner. "
-                    f"This represents {em_pct:.1f}% of tolerable misstatement (${tm_value:,.2f}), "
-                    "which is a common planning estimate when no prior year misstatement history is "
-                    "available. Per ISA 530.A4, the expected misstatement should be based "
-                    "on the auditor's knowledge of the client, including misstatements "
-                    "identified in prior periods. If prior year misstatement data is "
-                    "available, it should be used to refine this estimate."
+        # ─── 3. Design Parameters ────────────────────────────────
+        if design_result:
+            story.append(Paragraph("II. Design Parameters", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+
+            scope_lines = [
+                create_leader_dots("Population Size", f"{design_result.get('population_size', 0):,}"),
+                create_leader_dots("Population Value", f"${design_result.get('population_value', 0):,.2f}"),
+            ]
+
+            for line in scope_lines:
+                story.append(Paragraph(line, styles["MemoLeader"]))
+
+            # ─── BUG-02: Population value clarifying note ──────────
+            pop_note = design_result.get("population_value_note")
+            if pop_note:
+                story.append(
+                    Paragraph(
+                        f"<i>{pop_note}</i>",
+                        styles["MemoBodySmall"],
+                    )
                 )
-            else:
-                em_text = f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner."
-            story.append(Paragraph(em_text, styles["MemoBody"]))
+                story.append(Spacer(1, 4))
+
+            confidence_lines = [
+                create_leader_dots("Confidence Level", f"{design_result.get('confidence_level', 0):.0%}"),
+                create_leader_dots("Confidence Factor", f"{design_result.get('confidence_factor', 0):.4f}"),
+            ]
+            for line in confidence_lines:
+                story.append(Paragraph(line, styles["MemoLeader"]))
+
+            # ─── BUG-04: Confidence factor derivation note ──────────
+            conf_level = design_result.get("confidence_level", 0)
+            conf_note = CONFIDENCE_FACTOR_NOTES.get(conf_level)
+            if conf_note:
+                conf_factor = design_result.get("confidence_factor", 0)
+                story.append(
+                    Paragraph(
+                        f"<i>Confidence factor of {conf_factor:.4f} corresponds to the "
+                        f"{conf_note}. Per the Poisson distribution table used in MUS, "
+                        f"the factor is derived as -ln(1 - confidence level).</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+                story.append(Spacer(1, 4))
+
+            tm_em_lines = [
+                create_leader_dots("Tolerable Misstatement", f"${design_result.get('tolerable_misstatement', 0):,.2f}"),
+                create_leader_dots("Expected Misstatement", f"${design_result.get('expected_misstatement', 0):,.2f}"),
+            ]
+            for line in tm_em_lines:
+                story.append(Paragraph(line, styles["MemoLeader"]))
+
+            interval = design_result.get("sampling_interval")
+            if interval is not None:
+                story.append(
+                    Paragraph(create_leader_dots("Sampling Interval", f"${interval:,.2f}"), styles["MemoLeader"])
+                )
+
             story.append(
                 Paragraph(
-                    "The expansion factor used to derive the MUS sample size from this "
-                    "expected misstatement is drawn from the AICPA Audit Sampling Guide, "
-                    "Table A-1, with linear interpolation between the guide's published "
-                    "expected-to-tolerable ratio buckets.",
+                    create_leader_dots("Calculated Sample Size", str(design_result.get("calculated_sample_size", 0))),
+                    styles["MemoLeader"],
+                )
+            )
+            story.append(
+                Paragraph(
+                    create_leader_dots("Actual Sample Size", str(design_result.get("actual_sample_size", 0))),
+                    styles["MemoLeader"],
+                )
+            )
+
+            # ─── BUG-03: Sample size gap explanation ───────────────
+            calc_size = design_result.get("calculated_sample_size", 0)
+            actual_size = design_result.get("actual_sample_size", 0)
+            if actual_size != calc_size and actual_size > 0 and calc_size > 0:
+                diff = actual_size - calc_size
+                hv_count = design_result.get("high_value_count", 0)
+                rem_sample = design_result.get("remainder_sample_size", 0)
+                strata = design_result.get("strata_summary", [])
+                hv_threshold = ""
+                if strata:
+                    hv_threshold = strata[0].get("threshold", "")
+
+                sample_size_note = design_result.get("sample_size_note")
+                if sample_size_note:
+                    note_text = sample_size_note
+                elif hv_count > 0:
+                    note_text = (
+                        f"Actual sample size increased from calculated {calc_size} to {actual_size} "
+                        f"(+{diff} items, +{diff / calc_size:.1%}) due to stratification. "
+                        f"All {hv_count} items in the High Value stratum ({hv_threshold}) are tested "
+                        f"100%, plus {rem_sample} items selected from the Remainder stratum via "
+                        f"systematic interval selection ({hv_count} + {rem_sample} = {actual_size})."
+                    )
+                else:
+                    note_text = (
+                        f"Actual sample size ({actual_size}) differs from calculated size "
+                        f"({calc_size}) by {diff:+d} items due to interval rounding."
+                    )
+                story.append(Paragraph(f"<i>{note_text}</i>", styles["MemoBodySmall"]))
+                story.append(Spacer(1, 4))
+
+            story.append(Spacer(1, 8))
+
+            # ─── TM Derivation Note (CONTENT-10) ──────────────────
+            tm_value = design_result.get("tolerable_misstatement", 0)
+            story.append(Paragraph("<b>Tolerable Misstatement Derivation</b>", styles["MemoBody"]))
+            story.append(
+                Paragraph(
+                    f"The tolerable misstatement of ${tm_value:,.2f} was entered by the practitioner "
+                    "based on the engagement's overall materiality assessment. Per ISA 320.11, "
+                    "tolerable misstatement is the amount set by the auditor at less than materiality "
+                    "for the financial statements as a whole to reduce to an appropriately low level "
+                    "the probability that the aggregate of uncorrected and undetected misstatements "
+                    "exceeds materiality. The practitioner should document the basis for this amount "
+                    "in the engagement's materiality workpaper (e.g., WP-MAT-001).",
                     styles["MemoBody"],
                 )
             )
             story.append(Spacer(1, 8))
 
-        # ─── Stratification Table ─────────────────────────────
-        strata = design_result.get("strata_summary", [])
-        if strata:
-            story.append(Paragraph("III. Stratification", styles["MemoSection"]))
-            story.append(LedgerRule(doc_width))
-
-            strata_data = [["Stratum", "Threshold", "Count", "Value", "Sample"]]
-            for s in strata:
-                strata_data.append(
-                    [
-                        s.get("stratum", ""),
-                        s.get("threshold", ""),
-                        str(s.get("count", 0)),
-                        f"${s.get('total_value', 0):,.2f}",
-                        str(s.get("sample_size", 0)),
-                    ]
-                )
-
-            strata_table = Table(strata_data, colWidths=[1.6 * inch, 1.4 * inch, 0.7 * inch, 1.4 * inch, 0.7 * inch])
-            strata_table.setStyle(
-                TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
-                )
-            )
-            story.append(strata_table)
-            story.append(Spacer(1, 8))
-
-    # ─── 4. Evaluation Results ────────────────────────────────
-    if evaluation_result:
-        section_num = (
-            "IV" if design_result and design_result.get("strata_summary") else ("III" if design_result else "II")
-        )
-        story.append(Paragraph(f"{section_num}. Evaluation Results", styles["MemoSection"]))
-        story.append(LedgerRule(doc_width))
-
-        # Sprint 825 (S6): when the understatement bound is present, label the
-        # legacy fields as the overstatement side and print both. Absent (an
-        # older client), keep the legacy labels rather than printing a $0 bound.
-        has_under = _has_understatement_bound(evaluation_result)
-        side = " — Overstatements" if has_under else ""
-
-        eval_lines = [
-            create_leader_dots("Sample Size", str(evaluation_result.get("sample_size", 0))),
-            create_leader_dots("Errors Found", str(evaluation_result.get("errors_found", 0))),
-            create_leader_dots("Total Misstatement", f"${evaluation_result.get('total_misstatement', 0):,.2f}"),
-            create_leader_dots(
-                f"Projected Misstatement{side}", f"${evaluation_result.get('projected_misstatement', 0):,.2f}"
-            ),
-            create_leader_dots("Basic Precision", f"${evaluation_result.get('basic_precision', 0):,.2f}"),
-        ]
-
-        if evaluation_result.get("incremental_allowance", 0) > 0:
-            eval_lines.append(
-                create_leader_dots(
-                    f"Incremental Allowance{side}",
-                    f"${evaluation_result.get('incremental_allowance', 0):,.2f}",
-                )
-            )
-
-        eval_lines.append(
-            create_leader_dots(
-                f"Upper Error Limit (UEL){side}",
-                f"${evaluation_result.get('upper_error_limit', 0):,.2f}",
-            )
-        )
-        if has_under:
-            eval_lines.append(
-                create_leader_dots(
-                    "Projected Misstatement — Understatements",
-                    f"${evaluation_result.get('understatement_projected_misstatement') or 0:,.2f}",
-                )
-            )
-            if (evaluation_result.get("understatement_incremental_allowance") or 0) > 0:
-                eval_lines.append(
-                    create_leader_dots(
-                        "Incremental Allowance — Understatements",
-                        f"${evaluation_result.get('understatement_incremental_allowance') or 0:,.2f}",
+            # ─── IMP-01: Expected Misstatement Derivation ──────────
+            em_value = design_result.get("expected_misstatement", 0)
+            if em_value > 0:
+                story.append(Paragraph("<b>Expected Misstatement Derivation</b>", styles["MemoBody"]))
+                em_note = design_result.get("expected_misstatement_note")
+                if em_note:
+                    em_text = em_note
+                elif tm_value > 0:
+                    em_pct = em_value / tm_value * 100
+                    em_text = (
+                        f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner. "
+                        f"This represents {em_pct:.1f}% of tolerable misstatement (${tm_value:,.2f}), "
+                        "which is a common planning estimate when no prior year misstatement history is "
+                        "available. Per ISA 530.A4, the expected misstatement should be based "
+                        "on the auditor's knowledge of the client, including misstatements "
+                        "identified in prior periods. If prior year misstatement data is "
+                        "available, it should be used to refine this estimate."
+                    )
+                else:
+                    em_text = f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner."
+                story.append(Paragraph(em_text, styles["MemoBody"]))
+                story.append(
+                    Paragraph(
+                        "The expansion factor used to derive the MUS sample size from this "
+                        "expected misstatement is drawn from the AICPA Audit Sampling Guide, "
+                        "Table A-1, with linear interpolation between the guide's published "
+                        "expected-to-tolerable ratio buckets.",
+                        styles["MemoBody"],
                     )
                 )
-            eval_lines.append(
-                create_leader_dots(
-                    "Upper Error Limit (UEL) — Understatements",
-                    f"${evaluation_result.get('understatement_upper_error_limit') or 0:,.2f}",
-                )
-            )
-        eval_lines.append(
-            create_leader_dots(
-                "Tolerable Misstatement",
-                f"${evaluation_result.get('tolerable_misstatement', 0):,.2f}",
-            )
-        )
+                story.append(Spacer(1, 8))
 
-        for line in eval_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
-        if has_under:
-            story.append(
-                Paragraph(
-                    "<i>Overstatements and understatements are evaluated separately, each with its "
-                    "own upper error limit, and are not netted against each other (AICPA Audit "
-                    "Sampling Guide). Basic precision applies to both. The conclusion is a fail if "
-                    "either limit exceeds tolerable misstatement.</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-        story.append(Spacer(1, 8))
+            # ─── Stratification Table ─────────────────────────────
+            strata = design_result.get("strata_summary", [])
+            if strata:
+                story.append(Paragraph("III. Stratification", styles["MemoSection"]))
+                story.append(LedgerRule(doc_width))
 
-        # ─── BUG-05: Error Details Table (with Nature + Direction) ──
-        errors = evaluation_result.get("errors", [])
-        if errors:
-            story.append(Paragraph("Error Details", styles["MemoSection"]))
-            story.append(LedgerRule(doc_width))
-
-            # Check if any error has nature/direction fields
-            has_nature = any(e.get("error_nature") for e in errors)
-            has_direction = any(e.get("direction") for e in errors)
-
-            if has_nature or has_direction:
-                # 8-column table with Nature + Direction
-                error_data = [
-                    ["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting", "Nature", "Direction"]
-                ]
-                total_misstatement_sum = 0.0
-                all_directions = set()
-                for i, err in enumerate(errors[:20], 1):
-                    nature = err.get("error_nature", "Not specified")
-                    direction = err.get("direction", "")
-                    if not direction:
-                        if err.get("recorded_amount", 0) > err.get("audited_amount", 0):
-                            direction = "Overstatement"
-                        elif err.get("recorded_amount", 0) < err.get("audited_amount", 0):
-                            direction = "Understatement"
-                        else:
-                            direction = "N/A"
-                    all_directions.add(direction)
-                    total_misstatement_sum += err.get("misstatement", 0)
-                    error_data.append(
+                strata_data = [["Stratum", "Threshold", "Count", "Value", "Sample"]]
+                for s in strata:
+                    strata_data.append(
                         [
-                            str(i),
-                            Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
-                            f"${err.get('recorded_amount', 0):,.2f}",
-                            f"${err.get('audited_amount', 0):,.2f}",
-                            f"${err.get('misstatement', 0):,.2f}",
-                            f"{err.get('tainting', 0):.1%}",
-                            Paragraph(str(nature), styles["MemoTableCell"]),
-                            Paragraph(str(direction), styles["MemoTableCell"]),
+                            s.get("stratum", ""),
+                            s.get("threshold", ""),
+                            str(s.get("count", 0)),
+                            f"${s.get('total_value', 0):,.2f}",
+                            str(s.get("sample_size", 0)),
                         ]
                     )
 
-                # Totals row
-                dir_summary = (
-                    "All overstated"
-                    if all_directions == {"Overstatement"}
-                    else ("All understated" if all_directions == {"Understatement"} else "Mixed")
+                strata_table = Table(
+                    strata_data, colWidths=[1.6 * inch, 1.4 * inch, 0.7 * inch, 1.4 * inch, 0.7 * inch]
                 )
-                error_data.append(
-                    [
-                        "",
-                        Paragraph("<b>Total</b>", styles["MemoTableCell"]),
-                        "",
-                        "",
-                        f"${total_misstatement_sum:,.2f}",
-                        "",
-                        "",
-                        Paragraph(f"<b>{dir_summary}</b>", styles["MemoTableCell"]),
-                    ]
-                )
-
-                col_widths = [
-                    0.25 * inch,
-                    0.75 * inch,
-                    0.85 * inch,
-                    0.85 * inch,
-                    0.85 * inch,
-                    0.6 * inch,
-                    0.95 * inch,
-                    0.9 * inch,
-                ]
-                error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
-                total_row_idx = len(error_data) - 1
-                error_table.setStyle(
-                    TableStyle(
-                        [
-                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                            ("FONTSIZE", (0, 0), (-1, -1), 8),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("LINEABOVE", (0, total_row_idx), (-1, total_row_idx), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
-                            ("ALIGN", (2, 0), (5, -1), "RIGHT"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                            ("LEFTPADDING", (0, 0), (0, -1), 0),
-                        ]
-                    )
-                )
-            else:
-                # 6-column table (legacy — no nature/direction)
-                error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
-                total_misstatement_sum = 0.0
-                for i, err in enumerate(errors[:20], 1):
-                    total_misstatement_sum += err.get("misstatement", 0)
-                    error_data.append(
-                        [
-                            str(i),
-                            Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
-                            f"${err.get('recorded_amount', 0):,.2f}",
-                            f"${err.get('audited_amount', 0):,.2f}",
-                            f"${err.get('misstatement', 0):,.2f}",
-                            f"{err.get('tainting', 0):.1%}",
-                        ]
-                    )
-
-                # Totals row
-                error_data.append(
-                    [
-                        "",
-                        Paragraph("<b>Total</b>", styles["MemoTableCell"]),
-                        "",
-                        "",
-                        f"${total_misstatement_sum:,.2f}",
-                        "",
-                    ]
-                )
-
-                col_widths = [0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch]
-                error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
-                total_row_idx = len(error_data) - 1
-                error_table.setStyle(
+                strata_table.setStyle(
                     TableStyle(
                         [
                             ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
@@ -1041,342 +788,568 @@ def _generate_sampling_memo(
                             ("FONTSIZE", (0, 0), (-1, -1), 9),
                             ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
                             ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("LINEABOVE", (0, total_row_idx), (-1, total_row_idx), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
+                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
                             ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                            ("TOPPADDING", (0, 0), (-1, -1), 4),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                             ("LEFTPADDING", (0, 0), (0, -1), 0),
                         ]
                     )
                 )
+                story.append(strata_table)
+                story.append(Spacer(1, 8))
 
-            story.append(error_table)
+        # ─── 4. Evaluation Results ────────────────────────────────
+        if evaluation_result:
+            section_num = (
+                "IV" if design_result and design_result.get("strata_summary") else ("III" if design_result else "II")
+            )
+            story.append(Paragraph(f"{section_num}. Evaluation Results", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
 
-            if len(errors) > 20:
+            # Sprint 825 (S6): when the understatement bound is present, label the
+            # legacy fields as the overstatement side and print both. Absent (an
+            # older client), keep the legacy labels rather than printing a $0 bound.
+            has_under = _has_understatement_bound(evaluation_result)
+            side = " — Overstatements" if has_under else ""
+
+            eval_lines = [
+                create_leader_dots("Sample Size", str(evaluation_result.get("sample_size", 0))),
+                create_leader_dots("Errors Found", str(evaluation_result.get("errors_found", 0))),
+                create_leader_dots("Total Misstatement", f"${evaluation_result.get('total_misstatement', 0):,.2f}"),
+                create_leader_dots(
+                    f"Projected Misstatement{side}", f"${evaluation_result.get('projected_misstatement', 0):,.2f}"
+                ),
+                create_leader_dots("Basic Precision", f"${evaluation_result.get('basic_precision', 0):,.2f}"),
+            ]
+
+            if evaluation_result.get("incremental_allowance", 0) > 0:
+                eval_lines.append(
+                    create_leader_dots(
+                        f"Incremental Allowance{side}",
+                        f"${evaluation_result.get('incremental_allowance', 0):,.2f}",
+                    )
+                )
+
+            eval_lines.append(
+                create_leader_dots(
+                    f"Upper Error Limit (UEL){side}",
+                    f"${evaluation_result.get('upper_error_limit', 0):,.2f}",
+                )
+            )
+            if has_under:
+                eval_lines.append(
+                    create_leader_dots(
+                        "Projected Misstatement — Understatements",
+                        f"${evaluation_result.get('understatement_projected_misstatement') or 0:,.2f}",
+                    )
+                )
+                if (evaluation_result.get("understatement_incremental_allowance") or 0) > 0:
+                    eval_lines.append(
+                        create_leader_dots(
+                            "Incremental Allowance — Understatements",
+                            f"${evaluation_result.get('understatement_incremental_allowance') or 0:,.2f}",
+                        )
+                    )
+                eval_lines.append(
+                    create_leader_dots(
+                        "Upper Error Limit (UEL) — Understatements",
+                        f"${evaluation_result.get('understatement_upper_error_limit') or 0:,.2f}",
+                    )
+                )
+            eval_lines.append(
+                create_leader_dots(
+                    "Tolerable Misstatement",
+                    f"${evaluation_result.get('tolerable_misstatement', 0):,.2f}",
+                )
+            )
+
+            for line in eval_lines:
+                story.append(Paragraph(line, styles["MemoLeader"]))
+            if has_under:
                 story.append(
                     Paragraph(
-                        f"... and {len(errors) - 20} additional errors.",
+                        "<i>Overstatements and understatements are evaluated separately, each with its "
+                        "own upper error limit, and are not netted against each other (AICPA Audit "
+                        "Sampling Guide). Basic precision applies to both. The conclusion is a fail if "
+                        "either limit exceeds tolerable misstatement.</i>",
                         styles["MemoBodySmall"],
                     )
                 )
             story.append(Spacer(1, 8))
 
-            # ─── IMP-01: Error Summary Statistics ────────────────
-            _build_error_summary(story, styles, doc_width, evaluation_result)
+            # ─── BUG-05: Error Details Table (with Nature + Direction) ──
+            errors = evaluation_result.get("errors", [])
+            if errors:
+                story.append(Paragraph("Error Details", styles["MemoSection"]))
+                story.append(LedgerRule(doc_width))
 
-        # ─── BUG-03: UEL Derivation ─────────────────────────────
-        _build_uel_derivation(story, styles, doc_width, evaluation_result, design_result)
+                # Check if any error has nature/direction fields
+                has_nature = any(e.get("error_nature") for e in errors)
+                has_direction = any(e.get("direction") for e in errors)
 
-    # ─── 5. Methodology ──────────────────────────────────────
-    next_num = _next_section_number(design_result, evaluation_result)
-    story.append(Paragraph(f"{next_num}. Methodology", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
+                if has_nature or has_direction:
+                    # 8-column table with Nature + Direction
+                    error_data = [
+                        ["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting", "Nature", "Direction"]
+                    ]
+                    total_misstatement_sum = 0.0
+                    all_directions = set()
+                    for i, err in enumerate(errors[:20], 1):
+                        nature = err.get("error_nature", "Not specified")
+                        direction = err.get("direction", "")
+                        if not direction:
+                            if err.get("recorded_amount", 0) > err.get("audited_amount", 0):
+                                direction = "Overstatement"
+                            elif err.get("recorded_amount", 0) < err.get("audited_amount", 0):
+                                direction = "Understatement"
+                            else:
+                                direction = "N/A"
+                        all_directions.add(direction)
+                        total_misstatement_sum += err.get("misstatement", 0)
+                        error_data.append(
+                            [
+                                str(i),
+                                Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                                f"${err.get('recorded_amount', 0):,.2f}",
+                                f"${err.get('audited_amount', 0):,.2f}",
+                                f"${err.get('misstatement', 0):,.2f}",
+                                f"{err.get('tainting', 0):.1%}",
+                                Paragraph(str(nature), styles["MemoTableCell"]),
+                                Paragraph(str(direction), styles["MemoTableCell"]),
+                            ]
+                        )
 
-    build_methodology_statement(
-        story,
-        styles,
-        doc_width,
-        tool_domain="statistical_sampling",
-        framework=resolved_framework,
-        domain_label="statistical sampling",
-    )
+                    # Totals row
+                    dir_summary = (
+                        "All overstated"
+                        if all_directions == {"Overstatement"}
+                        else ("All understated" if all_directions == {"Understatement"} else "Mixed")
+                    )
+                    error_data.append(
+                        [
+                            "",
+                            Paragraph("<b>Total</b>", styles["MemoTableCell"]),
+                            "",
+                            "",
+                            f"${total_misstatement_sum:,.2f}",
+                            "",
+                            "",
+                            Paragraph(f"<b>{dir_summary}</b>", styles["MemoTableCell"]),
+                        ]
+                    )
 
-    if method.startswith("Monetary"):
-        methodology_text = (
-            "Monetary Unit Sampling (MUS) was applied in accordance with ISA 530 and "
-            "PCAOB AS 2315. The sample was selected using systematic dollar-interval "
-            "selection with a cryptographically secure random start (Python secrets module). "
-            "Sample evaluation uses the Stringer bound method, which calculates the "
-            "upper error limit as: Basic Precision + Projected Misstatement + "
-            "Incremental Allowance for sampling risk. Basic precision (the zero-misstatement "
-            "confidence factor multiplied by the sampling interval) is included even when no "
-            "misstatement is found (AICPA Audit Sampling Guide). Overstatements and "
-            "understatements are evaluated separately, each with its own upper error limit, "
-            "and are not netted (AICPA Audit Sampling Guide). Understatement taintings are not "
-            "capped at 100%; that is a Paciolus convention, not prescribed by the standard."
-        )
-    else:
-        methodology_text = (
-            "Simple random sampling was applied using Fisher-Yates shuffle with "
-            "cryptographically secure random number generation (Python secrets module). "
-            "Sample evaluation uses ratio estimation to project the sample misstatement "
-            "rate to the population, separately for overstatements and understatements, which "
-            "are not netted. ISA 530 and PCAOB AS 2315 require sampling risk to be considered "
-            "even when no misstatement is found, so each upper error limit includes basic "
-            "precision of Population Value × zero-misstatement confidence factor ÷ "
-            "sample size. That formula adapts the AICPA Audit Sampling Guide's monetary-unit "
-            "basic precision (confidence factor × sampling interval) by using the average "
-            "value per sampled item as the interval; the adaptation, and the additional "
-            "allowance of Projected Misstatement × confidence factor ÷ √n for "
-            "misstatements found, are Paciolus conventions, not prescribed by the standard."
-        )
+                    col_widths = [
+                        0.25 * inch,
+                        0.75 * inch,
+                        0.85 * inch,
+                        0.85 * inch,
+                        0.85 * inch,
+                        0.6 * inch,
+                        0.95 * inch,
+                        0.9 * inch,
+                    ]
+                    error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
+                    total_row_idx = len(error_data) - 1
+                    error_table.setStyle(
+                        TableStyle(
+                            [
+                                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                                ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                                (
+                                    "LINEABOVE",
+                                    (0, total_row_idx),
+                                    (-1, total_row_idx),
+                                    1,
+                                    ClassicalColors.OBSIDIAN_DEEP,
+                                ),
+                                ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
+                                ("ALIGN", (2, 0), (5, -1), "RIGHT"),
+                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                                ("LEFTPADDING", (0, 0), (0, -1), 0),
+                            ]
+                        )
+                    )
+                else:
+                    # 6-column table (legacy — no nature/direction)
+                    error_data = [["#", "Item ID", "Recorded", "Audited", "Misstatement", "Tainting"]]
+                    total_misstatement_sum = 0.0
+                    for i, err in enumerate(errors[:20], 1):
+                        total_misstatement_sum += err.get("misstatement", 0)
+                        error_data.append(
+                            [
+                                str(i),
+                                Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                                f"${err.get('recorded_amount', 0):,.2f}",
+                                f"${err.get('audited_amount', 0):,.2f}",
+                                f"${err.get('misstatement', 0):,.2f}",
+                                f"{err.get('tainting', 0):.1%}",
+                            ]
+                        )
 
-    story.append(Paragraph(methodology_text, styles["MemoBody"]))
-    story.append(Spacer(1, 8))
+                    # Totals row
+                    error_data.append(
+                        [
+                            "",
+                            Paragraph("<b>Total</b>", styles["MemoTableCell"]),
+                            "",
+                            "",
+                            f"${total_misstatement_sum:,.2f}",
+                            "",
+                        ]
+                    )
 
-    build_authoritative_reference_block(
-        story,
-        styles,
-        doc_width,
-        tool_domain="statistical_sampling",
-        framework=resolved_framework,
-        domain_label="statistical sampling",
-    )
+                    col_widths = [0.3 * inch, 1.2 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.8 * inch]
+                    error_table = Table(error_data, colWidths=col_widths, repeatRows=1)
+                    total_row_idx = len(error_data) - 1
+                    error_table.setStyle(
+                        TableStyle(
+                            [
+                                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                                ("LINEBELOW", (0, 1), (-1, -2), 0.25, ClassicalColors.LEDGER_RULE),
+                                (
+                                    "LINEABOVE",
+                                    (0, total_row_idx),
+                                    (-1, total_row_idx),
+                                    1,
+                                    ClassicalColors.OBSIDIAN_DEEP,
+                                ),
+                                ("FONTNAME", (0, total_row_idx), (-1, total_row_idx), "Times-Bold"),
+                                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                                ("LEFTPADDING", (0, 0), (0, -1), 0),
+                            ]
+                        )
+                    )
 
-    # ─── IMP-02: ASC 450-20 relevance footnote ────────────────
-    if is_evaluation:
-        story.append(
-            Paragraph(
-                "<i>\u2020 ASC 450-20 applies when identified misstatements indicate a "
-                "probable loss contingency meeting recognition criteria under "
-                "ASC 450-20-25. Relevant if projected misstatements suggest a probable "
-                "loss contingency requiring accrual or disclosure.</i>",
-                styles["MemoBodySmall"],
-            )
-        )
-        story.append(Spacer(1, 8))
+                story.append(error_table)
 
-    # ─── 6. Conclusion / Status ───────────────────────────────
-    if evaluation_result:
-        next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. Conclusion", styles["MemoSection"]))
+                if len(errors) > 20:
+                    story.append(
+                        Paragraph(
+                            f"... and {len(errors) - 20} additional errors.",
+                            styles["MemoBodySmall"],
+                        )
+                    )
+                story.append(Spacer(1, 8))
+
+                # ─── IMP-01: Error Summary Statistics ────────────────
+                _build_error_summary(story, styles, doc_width, evaluation_result)
+
+            # ─── BUG-03: UEL Derivation ─────────────────────────────
+            _build_uel_derivation(story, styles, doc_width, evaluation_result, design_result)
+
+        # ─── 5. Methodology ──────────────────────────────────────
+        next_num = _next_section_number(design_result, evaluation_result)
+        story.append(Paragraph(f"{next_num}. Methodology", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        conclusion = evaluation_result.get("conclusion", "")
-        detail = evaluation_result.get("conclusion_detail", "")
-        uel = evaluation_result.get("upper_error_limit", 0)
-        tm = evaluation_result.get("tolerable_misstatement", 0)
-        conf_level = evaluation_result.get("confidence_level", 0.95)
-        errors_found = evaluation_result.get("errors_found", 0)
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="statistical_sampling",
+            framework=resolved_framework,
+            domain_label="statistical sampling",
+        )
 
-        # ─── BUG-04: PASS/FAIL Visual Conclusion Block ──────────
-        is_pass = conclusion == "pass"
-        under_uel = (
-            evaluation_result.get("understatement_upper_error_limit")
-            if _has_understatement_bound(evaluation_result)
-            else None
-        )
-        _build_pass_fail_block(
-            story, styles, doc_width, is_pass, uel, tm, conf_level, errors_found, under_uel=under_uel
-        )
+        if method.startswith("Monetary"):
+            methodology_text = (
+                "Monetary Unit Sampling (MUS) was applied in accordance with ISA 530 and "
+                "PCAOB AS 2315. The sample was selected using systematic dollar-interval "
+                "selection with a cryptographically secure random start (Python secrets module). "
+                "Sample evaluation uses the Stringer bound method, which calculates the "
+                "upper error limit as: Basic Precision + Projected Misstatement + "
+                "Incremental Allowance for sampling risk. Basic precision (the zero-misstatement "
+                "confidence factor multiplied by the sampling interval) is included even when no "
+                "misstatement is found (AICPA Audit Sampling Guide). Overstatements and "
+                "understatements are evaluated separately, each with its own upper error limit, "
+                "and are not netted (AICPA Audit Sampling Guide). Understatement taintings are not "
+                "capped at 100%; that is a Paciolus convention, not prescribed by the standard."
+            )
+        else:
+            methodology_text = (
+                "Simple random sampling was applied using Fisher-Yates shuffle with "
+                "cryptographically secure random number generation (Python secrets module). "
+                "Sample evaluation uses ratio estimation to project the sample misstatement "
+                "rate to the population, separately for overstatements and understatements, which "
+                "are not netted. ISA 530 and PCAOB AS 2315 require sampling risk to be considered "
+                "even when no misstatement is found, so each upper error limit includes basic "
+                "precision of Population Value × zero-misstatement confidence factor ÷ "
+                "sample size. That formula adapts the AICPA Audit Sampling Guide's monetary-unit "
+                "basic precision (confidence factor × sampling interval) by using the average "
+                "value per sampled item as the interval; the adaptation, and the additional "
+                "allowance of Projected Misstatement × confidence factor ÷ √n for "
+                "misstatements found, are Paciolus conventions, not prescribed by the standard."
+            )
+
+        story.append(Paragraph(methodology_text, styles["MemoBody"]))
         story.append(Spacer(1, 8))
 
-        if is_pass:
-            conclusion_label = "UEL Within Tolerable Misstatement"
-            color = ClassicalColors.SAGE
-        else:
-            conclusion_label = "UEL Exceeds Tolerable Misstatement \u2014 Further Evaluation Required"
-            color = ClassicalColors.CLAY
-
-        story.append(
-            Paragraph(
-                f'<font color="{color.hexval()}">{conclusion_label}</font>',
-                styles["MemoSection"],
-            )
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="statistical_sampling",
+            framework=resolved_framework,
+            domain_label="statistical sampling",
         )
-        story.append(Paragraph(detail, styles["MemoBody"]))
-        story.append(Spacer(1, 6))
 
-        # ─── BUG-06: Conditional correction status ───────────────
-        correction_status = evaluation_result.get("correction_status")
-        if correction_status == "confirmed":
-            correction_note = evaluation_result.get("correction_note", "")
+        # ─── IMP-02: ASC 450-20 relevance footnote ────────────────
+        if is_evaluation:
             story.append(
                 Paragraph(
-                    f"<i>Management has indicated the identified errors were corrected in "
-                    f"the subsequent period. {correction_note}"
-                    "Obtain written confirmation and the correcting journal entry reference "
-                    "before relying on this assertion. Document in the engagement file "
-                    "per ISA 450.</i>",
-                    styles["MemoBody"],
+                    "<i>\u2020 ASC 450-20 applies when identified misstatements indicate a "
+                    "probable loss contingency meeting recognition criteria under "
+                    "ASC 450-20-25. Relevant if projected misstatements suggest a probable "
+                    "loss contingency requiring accrual or disclosure.</i>",
+                    styles["MemoBodySmall"],
                 )
             )
-        else:
-            story.append(
-                Paragraph(
-                    "<i>Correction status: Not confirmed. Obtain management's response to "
-                    "the identified errors and document whether correcting entries were "
-                    "posted. See Next Steps \u2014 Step 1.</i>",
-                    styles["MemoBody"],
-                )
-            )
+            story.append(Spacer(1, 8))
 
-        story.append(Spacer(1, 12))
-    elif design_result:
-        next_num2 = _roman_after(next_num)
-        story.append(Paragraph(f"{next_num2}. Status", styles["MemoSection"]))
-        story.append(LedgerRule(doc_width))
-        story.append(
-            Paragraph(
-                f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
-                "Evaluation pending \u2014 auditor must complete testing of selected items and "
-                "upload results for evaluation.",
-                styles["MemoBody"],
-            )
-        )
-        story.append(Spacer(1, 12))
-
-    # ─── 7. Sample Selection Preview (DESIGN ONLY) ────────────
-    if design_result and not is_evaluation:
-        selected_items = design_result.get("selected_items", [])
-        if selected_items:
-            preview_num = _roman_after(next_num2)
-
-            actual_size = design_result.get("actual_sample_size", len(selected_items))
-            story.append(Paragraph(f"{preview_num}. Sample Selection Preview", styles["MemoSection"]))
+        # ─── 6. Conclusion / Status ───────────────────────────────
+        if evaluation_result:
+            next_num2 = _roman_after(next_num)
+            story.append(Paragraph(f"{next_num2}. Conclusion", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
-            preview_count = min(len(selected_items), 10)
+            conclusion = evaluation_result.get("conclusion", "")
+            detail = evaluation_result.get("conclusion_detail", "")
+            uel = evaluation_result.get("upper_error_limit", 0)
+            tm = evaluation_result.get("tolerable_misstatement", 0)
+            conf_level = evaluation_result.get("confidence_level", 0.95)
+            errors_found = evaluation_result.get("errors_found", 0)
+
+            # ─── BUG-04: PASS/FAIL Visual Conclusion Block ──────────
+            is_pass = conclusion == "pass"
+            under_uel = (
+                evaluation_result.get("understatement_upper_error_limit")
+                if _has_understatement_bound(evaluation_result)
+                else None
+            )
+            _build_pass_fail_block(
+                story, styles, doc_width, is_pass, uel, tm, conf_level, errors_found, under_uel=under_uel
+            )
+            story.append(Spacer(1, 8))
+
+            if is_pass:
+                conclusion_label = "UEL Within Tolerable Misstatement"
+                color = ClassicalColors.SAGE
+            else:
+                conclusion_label = "UEL Exceeds Tolerable Misstatement \u2014 Further Evaluation Required"
+                color = ClassicalColors.CLAY
+
             story.append(
                 Paragraph(
-                    f"The following table shows the first {preview_count} items selected for testing, "
-                    f"sorted by sampling order. The complete sample of {actual_size} items is available "
-                    "as a CSV export from this report.",
+                    f'<font color="{color.hexval()}">{conclusion_label}</font>',
+                    styles["MemoSection"],
+                )
+            )
+            story.append(Paragraph(detail, styles["MemoBody"]))
+            story.append(Spacer(1, 6))
+
+            # ─── BUG-06: Conditional correction status ───────────────
+            correction_status = evaluation_result.get("correction_status")
+            if correction_status == "confirmed":
+                correction_note = evaluation_result.get("correction_note", "")
+                story.append(
+                    Paragraph(
+                        f"<i>Management has indicated the identified errors were corrected in "
+                        f"the subsequent period. {correction_note}"
+                        "Obtain written confirmation and the correcting journal entry reference "
+                        "before relying on this assertion. Document in the engagement file "
+                        "per ISA 450.</i>",
+                        styles["MemoBody"],
+                    )
+                )
+            else:
+                story.append(
+                    Paragraph(
+                        "<i>Correction status: Not confirmed. Obtain management's response to "
+                        "the identified errors and document whether correcting entries were "
+                        "posted. See Next Steps \u2014 Step 1.</i>",
+                        styles["MemoBody"],
+                    )
+                )
+
+            story.append(Spacer(1, 12))
+        elif design_result:
+            next_num2 = _roman_after(next_num)
+            story.append(Paragraph(f"{next_num2}. Status", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+            story.append(
+                Paragraph(
+                    f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
+                    "Evaluation pending \u2014 auditor must complete testing of selected items and "
+                    "upload results for evaluation.",
                     styles["MemoBody"],
-                )
-            )
-            story.append(Spacer(1, 6))
-
-            preview_data = [["#", "Item Ref", "Description", "Amount", "Stratum"]]
-            for i, item in enumerate(selected_items[:10], 1):
-                desc = str(item.get("description", ""))[:40]
-                if len(str(item.get("description", ""))) > 40:
-                    desc += "..."
-                preview_data.append(
-                    [
-                        str(i),
-                        Paragraph(str(item.get("item_id", "")), styles["MemoTableCell"]),
-                        Paragraph(desc, styles["MemoTableCell"]),
-                        f"${item.get('recorded_amount', 0):,.2f}",
-                        _format_stratum(item.get("stratum", "")),
-                    ]
-                )
-
-            preview_table = Table(
-                preview_data,
-                colWidths=[0.3 * inch, 1.1 * inch, 2.2 * inch, 1.1 * inch, 1.1 * inch],
-                repeatRows=1,
-            )
-            preview_table.setStyle(
-                TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (3, 0), (3, -1), "RIGHT"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
-                )
-            )
-            story.append(preview_table)
-            story.append(Spacer(1, 6))
-
-            story.append(
-                Paragraph(
-                    f"<i>Full sample listing ({actual_size} items) should be exported and "
-                    "provided to the client as a document request. Items are listed in "
-                    "systematic selection order \u2014 the random start was generated using a "
-                    "cryptographically secure method (Python secrets module) to ensure "
-                    "defensible randomness per ISA 530.</i>",
-                    styles["MemoBodySmall"],
                 )
             )
             story.append(Spacer(1, 12))
 
-    # ─── 8. Next Steps ─────────────────────────────────────────
-    # Determine section number for Next Steps
-    if not is_evaluation and design_result and design_result.get("selected_items"):
-        next_steps_num = _roman_after(preview_num)
-    elif evaluation_result or design_result:
-        next_steps_num = _roman_after(next_num2)
-    else:
-        next_steps_num = _roman_after(next_num)
+        # ─── 7. Sample Selection Preview (DESIGN ONLY) ────────────
+        if design_result and not is_evaluation:
+            selected_items = design_result.get("selected_items", [])
+            if selected_items:
+                preview_num = _roman_after(next_num2)
 
-    story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
+                actual_size = design_result.get("actual_sample_size", len(selected_items))
+                story.append(Paragraph(f"{preview_num}. Sample Selection Preview", styles["MemoSection"]))
+                story.append(LedgerRule(doc_width))
 
-    # ─── BUG-02: Evaluation-phase next steps ─────────────────
-    if is_evaluation and evaluation_result is not None:
-        eval_steps, intro_text = _build_evaluation_next_steps(evaluation_result, design_result)
-        story.append(Paragraph(intro_text, styles["MemoBody"]))
-        story.append(Spacer(1, 6))
-        for eval_step in eval_steps:
-            story.append(Paragraph(f"<b>{eval_step['title']}</b>", styles["MemoBody"]))
-            story.append(Paragraph(eval_step["body"], styles["MemoBody"]))
-            story.append(Spacer(1, 4))
-    else:
-        # Design-phase: population-type-specific steps
-        pop_type = ""
-        if design_result:
-            pop_type = design_result.get("population_type", "")
-        steps = NEXT_STEPS_BY_POPULATION_TYPE.get(pop_type.upper(), _NEXT_STEPS_GENERIC)
-
-        actual_size = 0
-        tm_value = 0.0
-        if design_result:
-            actual_size = design_result.get("actual_sample_size", 0)
-            tm_value = design_result.get("tolerable_misstatement", 0)
-
-        if pop_type and actual_size > 0:
-            story.append(
-                Paragraph(
-                    f"The following {actual_size} items have been selected for "
-                    f"{pop_type.upper()} balance testing using "
-                    f"{method}. To complete the sampling procedure:",
-                    styles["MemoBody"],
+                preview_count = min(len(selected_items), 10)
+                story.append(
+                    Paragraph(
+                        f"The following table shows the first {preview_count} items selected for testing, "
+                        f"sorted by sampling order. The complete sample of {actual_size} items is available "
+                        "as a CSV export from this report.",
+                        styles["MemoBody"],
+                    )
                 )
-            )
+                story.append(Spacer(1, 6))
+
+                preview_data = [["#", "Item Ref", "Description", "Amount", "Stratum"]]
+                for i, item in enumerate(selected_items[:10], 1):
+                    desc = str(item.get("description", ""))[:40]
+                    if len(str(item.get("description", ""))) > 40:
+                        desc += "..."
+                    preview_data.append(
+                        [
+                            str(i),
+                            Paragraph(str(item.get("item_id", "")), styles["MemoTableCell"]),
+                            Paragraph(desc, styles["MemoTableCell"]),
+                            f"${item.get('recorded_amount', 0):,.2f}",
+                            _format_stratum(item.get("stratum", "")),
+                        ]
+                    )
+
+                preview_table = Table(
+                    preview_data,
+                    colWidths=[0.3 * inch, 1.1 * inch, 2.2 * inch, 1.1 * inch, 1.1 * inch],
+                    repeatRows=1,
+                )
+                preview_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (3, 0), (3, -1), "RIGHT")])))
+                story.append(preview_table)
+                story.append(Spacer(1, 6))
+
+                story.append(
+                    Paragraph(
+                        f"<i>Full sample listing ({actual_size} items) should be exported and "
+                        "provided to the client as a document request. Items are listed in "
+                        "systematic selection order \u2014 the random start was generated using a "
+                        "cryptographically secure method (Python secrets module) to ensure "
+                        "defensible randomness per ISA 530.</i>",
+                        styles["MemoBodySmall"],
+                    )
+                )
+                story.append(Spacer(1, 12))
+
+        # ─── 8. Next Steps ─────────────────────────────────────────
+        # Determine section number for Next Steps
+        if not is_evaluation and design_result and design_result.get("selected_items"):
+            next_steps_num = _roman_after(preview_num)
+        elif evaluation_result or design_result:
+            next_steps_num = _roman_after(next_num2)
+        else:
+            next_steps_num = _roman_after(next_num)
+
+        story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        # ─── BUG-02: Evaluation-phase next steps ─────────────────
+        if is_evaluation and evaluation_result is not None:
+            eval_steps, intro_text = _build_evaluation_next_steps(evaluation_result, design_result)
+            story.append(Paragraph(intro_text, styles["MemoBody"]))
             story.append(Spacer(1, 6))
+            for eval_step in eval_steps:
+                story.append(Paragraph(f"<b>{eval_step['title']}</b>", styles["MemoBody"]))
+                story.append(Paragraph(eval_step["body"], styles["MemoBody"]))
+                story.append(Spacer(1, 4))
+        else:
+            # Design-phase: population-type-specific steps
+            pop_type = ""
+            if design_result:
+                pop_type = design_result.get("population_type", "")
+            steps = NEXT_STEPS_BY_POPULATION_TYPE.get(pop_type.upper(), _NEXT_STEPS_GENERIC)
 
-        for design_step in steps:
-            story.append(Paragraph(f"<b>{design_step['title']}</b>", styles["MemoBody"]))
-            body = design_step["body"]
-            if tm_value > 0 and "Tolerable Misstatement" in body:
-                body = body.replace(
-                    "exceeds Tolerable Misstatement",
-                    f"exceeds ${tm_value:,.2f} (Tolerable Misstatement)",
+            actual_size = 0
+            tm_value = 0.0
+            if design_result:
+                actual_size = design_result.get("actual_sample_size", 0)
+                tm_value = design_result.get("tolerable_misstatement", 0)
+
+            if pop_type and actual_size > 0:
+                story.append(
+                    Paragraph(
+                        f"The following {actual_size} items have been selected for "
+                        f"{pop_type.upper()} balance testing using "
+                        f"{method}. To complete the sampling procedure:",
+                        styles["MemoBody"],
+                    )
                 )
-            story.append(Paragraph(body, styles["MemoBody"]))
-            story.append(Spacer(1, 4))
+                story.append(Spacer(1, 6))
 
-    story.append(Spacer(1, 8))
+            for design_step in steps:
+                story.append(Paragraph(f"<b>{design_step['title']}</b>", styles["MemoBody"]))
+                body = design_step["body"]
+                if tm_value > 0 and "Tolerable Misstatement" in body:
+                    body = body.replace(
+                        "exceeds Tolerable Misstatement",
+                        f"exceeds ${tm_value:,.2f} (Tolerable Misstatement)",
+                    )
+                story.append(Paragraph(body, styles["MemoBody"]))
+                story.append(Spacer(1, 4))
 
-    # ─── 9. Workpaper Signoff ─────────────────────────────────
-    build_workpaper_signoff(
-        story,
-        styles,
-        doc_width,
-        prepared_by=prepared_by,
-        reviewed_by=reviewed_by,
-        workpaper_date=workpaper_date,
-        include_signoff=include_signoff,
+        story.append(Spacer(1, 8))
+
+        # ─── 9. Workpaper Signoff ─────────────────────────────────
+        build_workpaper_signoff(
+            story,
+            styles,
+            doc_width,
+            prepared_by=prepared_by,
+            reviewed_by=reviewed_by,
+            workpaper_date=workpaper_date,
+            include_signoff=include_signoff,
+        )
+
+        # ─── Intelligence Stamp ────────────────────────────────────
+        build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
+
+        # ─── 10. Disclaimer ────────────────────────────────────────
+        build_disclaimer(
+            story,
+            styles,
+            domain="statistical sampling",
+            isa_reference="ISA 530 (Audit Sampling) and PCAOB AS 2315",
+        )
+
+    pdf_bytes = render_memo(
+        report_title,
+        "SSM",
+        _body,
+        cover={
+            "client_name": client_name or "",
+            "engagement_period": period_tested or "",
+            "source_document": filename,
+            "source_document_title": source_document_title or "",
+            "source_context_note": source_context_note or "",
+            "fiscal_year_end": fiscal_year_end or "",
+        },
     )
-
-    # ─── Intelligence Stamp ────────────────────────────────────
-    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
-
-    # ─── 10. Disclaimer ────────────────────────────────────────
-    build_disclaimer(
-        story,
-        styles,
-        domain="statistical sampling",
-        isa_reference="ISA 530 (Audit Sampling) and PCAOB AS 2315",
-    )
-
-    # Build (cover page gets footer; existing pages unchanged)
-    page_footer = current_page_footer()
-    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
 
     log_secure_operation("sampling_memo_complete", f"Sampling memo generated ({len(pdf_bytes)} bytes)")
     return pdf_bytes

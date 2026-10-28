@@ -19,7 +19,7 @@ from auth import require_current_user
 from database import get_db
 from firm_branding_model import FirmBranding
 from models import User
-from organization_model import OrganizationMember
+from organization_model import OrganizationMember, OrgRole
 from shared.entitlement_checks import check_custom_branding_access
 from shared.organization_schemas import BrandingResponse, DetailResponse
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -75,14 +75,24 @@ class UpdateBrandingRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _get_branding(db: Session, user: User) -> tuple[FirmBranding, int]:
-    """Get or create branding for user's org. Returns (branding, org_id)."""
+def _get_branding(db: Session, user: User, *, write: bool = False) -> tuple[FirmBranding, int]:
+    """Get or create branding for user's org. Returns (branding, org_id).
+
+    Any member may read the branding. ``write=True`` also requires the owner
+    or an admin role (Sprint 848, security review M8): the branding appears on
+    every memo PDF the firm exports, so a plain member must not be able to
+    change it.
+    """
     # AUDIT-08: correct arg order — signature is (user: User, db: Session)
     check_custom_branding_access(user, db)
 
     member = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
     if not member:
         raise HTTPException(status_code=404, detail="No organization found.")
+
+    # Same rule and response as shared.organization_policy.require_admin.
+    if write and member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
+        raise HTTPException(status_code=403, detail="Access denied.")
 
     branding = db.query(FirmBranding).filter(FirmBranding.organization_id == member.organization_id).first()
     if not branding:
@@ -117,7 +127,7 @@ def update_branding(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Update header/footer text."""
-    branding, _ = _get_branding(db, user)
+    branding, _ = _get_branding(db, user, write=True)
 
     if body.header_text is not None:
         branding.header_text = body.header_text
@@ -138,7 +148,7 @@ async def upload_logo(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Upload a logo image. Enterprise only. Max 500KB, PNG/JPG."""
-    branding, org_id = _get_branding(db, user)
+    branding, org_id = _get_branding(db, user, write=True)
 
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="Only PNG and JPG images are allowed.")
@@ -196,7 +206,7 @@ def delete_logo(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Remove the logo."""
-    branding, _ = _get_branding(db, user)
+    branding, _ = _get_branding(db, user, write=True)
 
     if branding.logo_s3_key:
         try:

@@ -5,10 +5,9 @@ Split from engagements.py (Sprint 539).
 """
 
 import io
-from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from analytical_expectation_memo_generator import AnalyticalExpectationMemoGenerator
@@ -20,6 +19,7 @@ from engagement_manager import EngagementManager
 from models import User
 from security_utils import log_secure_operation
 from shared.entitlement_checks import check_export_access
+from shared.export_helpers import MEDIA_ZIP, attachment_response, csv_response, pdf_response
 from shared.pdf_branding import apply_pdf_branding, load_pdf_branding_context
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 from sum_schedule_memo_generator import SumScheduleMemoGenerator
@@ -37,7 +37,7 @@ def export_anomaly_summary(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate anomaly summary PDF for an engagement."""
     log_secure_operation(
         "anomaly_summary_export",
@@ -55,19 +55,7 @@ def export_anomaly_summary(
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
-    def iter_pdf() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_pdf(),
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="anomaly_summary.pdf"',
-            "Content-Length": str(len(pdf_bytes)),
-        },
-    )
+    return pdf_response(pdf_bytes, "anomaly_summary.pdf")
 
 
 @router.post(
@@ -80,7 +68,7 @@ def export_engagement_package(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Generate and stream diagnostic package ZIP for an engagement."""
     log_secure_operation(
         "engagement_package_export",
@@ -98,19 +86,7 @@ def export_engagement_package(
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
-    def iter_zip() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(zip_bytes), chunk_size):
-            yield zip_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_zip(),
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Content-Length": str(len(zip_bytes)),
-        },
-    )
+    return attachment_response(zip_bytes, filename, MEDIA_ZIP)
 
 
 @router.post(
@@ -123,7 +99,7 @@ def export_convergence_csv(
     engagement_id: int,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Export convergence index as CSV."""
     from shared.filenames import sanitize_csv_value
 
@@ -150,14 +126,7 @@ def export_convergence_csv(
 
     csv_bytes = output.getvalue().encode("utf-8")
 
-    return StreamingResponse(
-        iter([csv_bytes]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="convergence_index_{engagement_id}.csv"',
-            "Content-Length": str(len(csv_bytes)),
-        },
-    )
+    return csv_response(csv_bytes, f"convergence_index_{engagement_id}.csv")
 
 
 @router.post(
@@ -170,7 +139,7 @@ def export_analytical_expectations(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Sprint 728a (ISA 520): export the analytical-expectations workpaper PDF."""
     log_secure_operation(
         "analytical_expectations_export",
@@ -186,19 +155,7 @@ def export_analytical_expectations(
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
-    def iter_pdf() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_pdf(),
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="analytical_expectations.pdf"',
-            "Content-Length": str(len(pdf_bytes)),
-        },
-    )
+    return pdf_response(pdf_bytes, "analytical_expectations.pdf")
 
 
 @router.post(
@@ -211,7 +168,7 @@ def export_sum_schedule(
     engagement_id: int,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     """Sprint 729a (ISA 450): export the SUM-schedule workpaper PDF."""
     log_secure_operation(
         "sum_schedule_export",
@@ -227,16 +184,4 @@ def export_sum_schedule(
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
-    def iter_pdf() -> Iterator[bytes]:
-        chunk_size = 8192
-        for i in range(0, len(pdf_bytes), chunk_size):
-            yield pdf_bytes[i : i + chunk_size]
-
-    return StreamingResponse(
-        iter_pdf(),
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": 'attachment; filename="sum_schedule.pdf"',
-            "Content-Length": str(len(pdf_bytes)),
-        },
-    )
+    return pdf_response(pdf_bytes, "sum_schedule.pdf")

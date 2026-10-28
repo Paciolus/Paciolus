@@ -83,6 +83,18 @@ class TestExportPdf:
         assert "application/pdf" in response.headers["content-type"]
 
     @pytest.mark.asyncio
+    async def test_null_optional_sections_render_a_real_pdf(self, override_auth_verified):
+        """Explicit nulls for the optional dict fields used to 500 (`None.get`) in pdf/sections/diagnostic.py."""
+        from main import app
+
+        payload = {**BASE_AUDIT, "risk_summary": None, "column_detection": None}
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/export/pdf", json=payload)
+
+        assert response.status_code == 200, response.text
+        assert response.content.startswith(b"%PDF")
+
+    @pytest.mark.asyncio
     async def test_download_filename_uses_input_filename(self, override_auth_verified):
         from main import app
 

@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from auth import require_current_user, require_verified_user
+from auth import reject_impersonation, require_current_user, require_verified_user
 from database import get_db
 from models import User
 from schemas.billing_schemas import (  # noqa: F401 — backward compat re-exports
@@ -274,7 +274,9 @@ def remove_seats_endpoint(
 @limiter.limit(RATE_LIMIT_WRITE)
 def get_portal_session(
     request: Request,
-    user: Annotated[User, Depends(require_current_user)],
+    # Sprint 848 (M9): the portal URL can cancel or change the plan, so an
+    # impersonation session (read-only, but this is a GET) may not have it.
+    user: Annotated[User, Depends(reject_impersonation)],
     db: Session = Depends(get_db),
 ) -> PortalResponse:
     """Get a Stripe Billing Portal URL for self-service management."""

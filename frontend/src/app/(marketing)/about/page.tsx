@@ -1,19 +1,9 @@
-'use client'
-
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { Blockquote } from '@/components/marketing/Blockquote'
+import * as motion from '@/components/ui/motionClient'
+import { marketingFadeUpAt } from '@/lib/motion'
 
 /* ---------- Animation helpers ---------- */
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.5, ease: 'easeOut' as const },
-  }),
-}
-
 const staggerContainer = {
   hidden: {},
   visible: {
@@ -239,8 +229,7 @@ export default function AboutPage() {
               <motion.div
                 key={card.title}
                 className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
-                custom={i}
-                variants={fadeUp}
+                variants={marketingFadeUpAt(i)}
               >
                 <div className="mb-4">
                   {card.icon}

@@ -47,7 +47,6 @@ ACCRUAL_KEYWORDS = [
 PROVISION_KEYWORDS = ["reserve", "provision", "allowance"]
 DEFERRED_REVENUE_KEYWORDS = ["deferred revenue", "unearned revenue", "unearned"]
 DEFERRED_LIABILITY_KEYWORDS = ["deferred"]
-PREPAID_KEYWORDS = ["prepaid"]
 
 NEAR_ZERO = 1e-10
 DEFAULT_THRESHOLD_PCT = 50.0

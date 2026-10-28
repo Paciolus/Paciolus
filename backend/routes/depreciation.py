@@ -12,7 +12,7 @@ import logging
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from auth import User, require_verified_user
@@ -25,6 +25,7 @@ from depreciation_engine import (
     generate_depreciation_schedule,
 )
 from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -133,7 +134,7 @@ def export_depreciation_csv(
     request: Request,
     payload: DepreciationRequest,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """CSV export of the depreciation schedules + book/tax comparison."""
     try:
         config = _build_config(payload)
@@ -221,8 +222,4 @@ def export_depreciation_csv(
 
     buffer.seek(0)
     safe_name = "".join(c if c.isalnum() else "_" for c in config.asset_name)[:60]
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=depreciation_{safe_name}.csv"},
-    )
+    return attachment_response(buffer.getvalue(), f"depreciation_{safe_name}.csv", MEDIA_CSV, quote_filename=False)

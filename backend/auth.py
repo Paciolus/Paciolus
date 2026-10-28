@@ -308,6 +308,10 @@ def require_current_user(
     # dead. Enforced here — on the token this dependency actually resolved —
     # rather than only in ImpersonationMiddleware, so no header spelling or
     # cookie path can reach a write as the impersonated user.
+    # Sprint 848 (security review M9): recorded for reject_impersonation, which
+    # guards the read routes that hand out account-changing capabilities.
+    request.state.impersonation = token_data.impersonation is True
+
     if token_data.impersonation is True:
         from shared.impersonation_revocation import is_revoked
 
@@ -397,6 +401,30 @@ def require_verified_user(
             },
         )
 
+    return user
+
+
+def reject_impersonation(
+    request: Request,
+    user: Annotated[User, Depends(require_current_user)],
+) -> User:
+    """
+    FastAPI dependency that refuses impersonation sessions, even on GET.
+
+    Sprint 848 (security review M9): the read-only guard in
+    ``require_current_user`` blocks mutating methods only. Some GET routes
+    return a capability that changes the account elsewhere — the Stripe
+    billing portal URL lets its holder cancel, change plan or change the
+    payment method — so those routes add this dependency.
+    """
+    if getattr(request.state, "impersonation", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "IMPERSONATION_READ_ONLY",
+                "message": "Impersonation sessions are read-only.",
+            },
+        )
     return user
 
 

@@ -471,6 +471,16 @@ def log_tool_activity(
     """Log a tool execution to the unified activity feed."""
     display_name = get_filename_display(filename) if filename else None
 
+    # Sprint 848 (security review L1): attach the engagement only if this user
+    # can see it, as shared.tool_run_recorder does. Storing the raw ID made an
+    # unknown ID a foreign-key 500 and an existing one a 201, which told the
+    # caller which engagement IDs exist across tenants.
+    if engagement_id is not None:
+        from engagement_manager import EngagementManager
+
+        if not EngagementManager(db).get_engagement(current_user.id, engagement_id):
+            engagement_id = None
+
     db_activity = ToolActivity(
         user_id=current_user.id,
         tool_name=tool_name,

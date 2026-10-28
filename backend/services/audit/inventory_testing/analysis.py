@@ -1519,12 +1519,7 @@ class InventoryTestingEngine(AuditEngineBase):
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_inv_columns(column_names)
 
-    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
-        for attr in _INV_OVERRIDABLE_COLUMNS:
-            if attr in column_mapping:
-                setattr(detection, attr, column_mapping[attr])
-        detection.overall_confidence = 1.0
-        return detection
+    OVERRIDABLE_COLUMNS = _INV_OVERRIDABLE_COLUMNS
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
         return parse_inv_entries(rows, detection)

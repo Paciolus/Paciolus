@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-27] (this PR): `/export/pdf` returned 500 when `risk_summary` or `column_detection` was sent as `null` (`.get(k, {})` yields `None` for a present-but-null key); now `or {}`. Found by the Sprint 819 snapshot work. Same pattern remains in 5 memo generators, left alone to avoid conflicting with PR #285 (pdf/sections/diagnostic.py, tests/test_export_diagnostics_routes.py)
 - [2026-10-27] (this PR): `@testing-library/jest-dom` 6.9.1→7.0.1 (Dependabot #248) and `lint-staged` 16.4.0→17.6.0 (#252), both unblocked by upgrading the dev machine to Node 22.23.4 / npm 10.9.9 — the arborist `edgesOut` crash no longer reproduces, and lint-staged 17 needs Node ≥ 22.22.1. `npm audit fix` cleared 2 high (`brace-expansion` 1.1.14→1.1.21, `zod` 4.3.6→4.6.7); in-range patches for `@typescript-eslint/*` 8.72.1, `postcss` 8.5.32, `framer-motion` 12.43.0. Lockfile audited, not trusted: 0 added, 24 removed — all lint-staged 16's own terminal-UI deps (`listr2`, `log-update`, …), no peer-derived entries lost. Verified: build (all pages `ƒ`), 208 suites / 2,072 tests, `tsc`, eslint, 0 audit findings (frontend/package.json, frontend/package-lock.json)
 - [2026-10-24] (this PR): claims-review backlog — full findings saved to `reports/claims-review-2026-10-24.md`; Sprints 840–845 filed with a next-session start block; merge SHAs recorded for 836–839; Sprint 834 marked superseded; `ceo-actions.md` and `SESSION_STATE.md` refreshed (tasks/todo.md, tasks/ceo-actions.md, SESSION_STATE.md, reports/)
 - [2026-10-23] (this PR): record the 2026-10-23 merges — statuses and commit SHAs for Sprints 812–829; SESSION_STATE refreshed (tasks/todo.md, SESSION_STATE.md)
@@ -380,6 +381,7 @@
 > suite locally (~13 min) before pushing; every automated review thread must be fixed, replied to and resolved.
 > Sprints 836–840 archived to `tasks/archive/sprints-836-840-details.md`.
 > Sprints 841, 842, 846, 847 archived to `tasks/archive/sprints-841-847-details.md`.
+> Sprints 849, 850, 851, 852 archived to `tasks/archive/sprints-849-852-details.md`.
 
 > **▶ SECURITY REVIEW 2026-10-27 — Sprints 846–853.** The CEO ran a vibecoder-style security triage. It found
 > **0 critical, 0 high, 9 medium and 14 low** issues; secrets, dependencies and cross-tenant isolation are clean.
@@ -399,274 +401,33 @@
 > - When a sprint closes, set the doc's Status dropdown to Done, or tell the CEO to.
 
 ### Sprint 848: Authorization gaps (M8, M9, L1, L5)
-**Status:** NOT STARTED. **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
+**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
 
-- [ ] **M8: any org member can change firm branding**, which then appears on every memo PDF.
-  - The defect: `routes/branding.py:45-61` `_get_branding` checks only `check_custom_branding_access` and
-    membership.
-  - Split it into a read path (any member) and a write path that calls
-    `shared/organization_policy.require_admin(db, user, org)` (owner or admin; 403 otherwise).
-  - Use the write path in `PUT /branding/` (`:79`), `POST /branding/logo` (`:100`) and `DELETE /branding/logo`
-    (`:158`).
-  - Tests: a member gets 403 on all three writes and 200 on GET; an admin and the owner get 200.
-- [ ] **M9: a "read-only" impersonation session can open the customer's Stripe billing portal.**
-  - The defect: `routes/billing.py:273-292` `GET /billing/portal-session` uses `require_current_user`. GETs pass
-    the impersonation guard (`auth.py:298-310` blocks only mutating methods), and the portal URL lets the holder
-    cancel, change the plan or change the payment method.
-  - Fix: in `require_current_user`, set `request.state.impersonation = token_data.impersonation is True`. Add a
-    `reject_impersonation` dependency (403, `code: IMPERSONATION_READ_ONLY`) and apply it to the portal route and
-    any checkout-session route.
-  - Then grep `routes/` for other GET routes that return Stripe URLs, share tokens, download tokens or passcodes,
-    and apply it there too.
-  - Test: an impersonation token on the portal route → 403.
-- [ ] **L1: `POST /activity/tool-log` stores an unvalidated `engagement_id`.**
-  - The defect: `routes/activity.py:459-481` writes the query-string `engagement_id` straight into `ToolActivity`.
-    An unknown ID causes a foreign-key 500 and an existing one returns 201, which reveals which engagement IDs
-    exist across tenants.
-  - Fix: resolve it the way `shared/tool_run_recorder.py:87-102` does
-    (`EngagementManager(db).get_engagement(user_id, engagement_id)`), and store `None` when it does not resolve.
-  - Test: another user's engagement ID → 201 with `engagement_id` null; a nonexistent ID → 201, not 500.
-- [ ] **L5: admin billing actions can hit the wrong customer.**
-  - **Do NOT simply remove the fallback.** The `org_id → user_id` fallback is intentional: solo customers have no
-    org, and the admin UI passes their user ID as `org_id` (`billing/admin_customers.py:212-221`).
-  - The bug is that a stale or nonexistent org ID silently resolves to an unrelated user with that ID.
-  - Apply the Sprint 840 S3 pattern from `routes/internal_admin.py:325-341`:
-    - require `target_user_id` in the request body of every admin action that resolves this way — plan override
-      (`admin_customers.py:366-371`), the action at `:409-410`, the action at `:452-453`, and force cancel
-      (`:498-499`);
-    - return 409 "Customer ID does not resolve to the requested user" when the resolved owner's ID differs.
-  - Update the admin frontend calls to send `target_user_id`.
-  - Tests: mismatch → 409 and nothing changed; a solo customer (user ID passed as `org_id`) still works.
+- [x] **M8: any org member could change firm branding.** `_get_branding(..., write=True)` also requires the
+  owner or admin role (same rule and 403 as `organization_policy.require_admin`, checked on the membership row
+  the helper already loads, so no second query). Used by `PUT /branding/`, `POST /branding/logo` and
+  `DELETE /branding/logo`; `GET` stays open to every member.
+- [x] **M9: an impersonation session could open the Stripe billing portal.** `require_current_user` sets
+  `request.state.impersonation`; new `auth.reject_impersonation` dependency (403, `IMPERSONATION_READ_ONLY`)
+  guards `GET /billing/portal-session`. Checkout is a POST, already blocked by the mutating-method guard.
+  Grep of all 82 GET routes for Stripe URLs, share tokens, download tokens and passcodes: none other —
+  `ExportShareResponse` and `OrganizationInviteResponse` carry no tokens, and `GET /auth/csrf` only enables
+  writes, which impersonation cannot make.
+- [x] **L1: `POST /activity/tool-log` stored an unvalidated `engagement_id`.** Resolved through
+  `EngagementManager.get_engagement` as `tool_run_recorder` does; unresolved → stored as `None`, still 201.
+- [x] **L5: admin billing actions could hit the wrong customer.** Fallback kept (solo customers). New
+  `_require_target_user` in `routes/internal_admin.py` (404 unknown, 409 mismatch) runs before plan override,
+  extend trial, credit, refund, force cancel **and revoke sessions** (same fallback, so it gets the same
+  guard; it now takes a `RevokeSessionsRequest` body). Impersonation reuses the helper. Every request schema
+  requires `target_user_id`; the admin hook and customer page send `d.user_id`.
 
-**Commit SHA:** TBD.
+Tests: `tests/test_authorization_gaps.py` (23; 16 fail on the pre-fix routes — including the FK 500 on an
+unknown engagement — and pass after); `test_internal_admin.py` requests now name their target;
+`useInternalAdmin.test.ts` +1.
 
----
+**Verification:** ruff clean; frontend `tsc` + eslint clean, `useInternalAdmin` 10/10; full backend suite 9,990 passed (before stacking on 847–852); after stacking, the auth, admin, branding, impersonation, 847 and 849 test files pass (117). The branding test uploads a real 4×4 PNG, because Sprint 852's logo-dimension check opens the image with Pillow. OpenAPI snapshot regenerated (`target_user_id`, `RevokeSessionsRequest`).
 
-### Sprint 849: Org members' entitlements follow the owner's live plan (M5)
-**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1 (revenue leak). **Source:** security review M5 (verified).
-
-**Defect:**
-- `shared/organization_policy.py` (`apply_org_subscription_to_user`) copies `sub.tier` onto `user.tier` when a
-  member joins.
-- `shared/entitlement_checks.py` (`get_effective_entitlements`) trusts `user.tier` when the user has no
-  Subscription row, and members never have one.
-- `billing/subscription_manager.py` (`sync_subscription_from_stripe`) updates only the owner.
-- `_downgrade_org_members_to_free` (`billing/webhook_handler.py`) runs only for non-entitled statuses.
-
-So when an owner moves Enterprise → Solo, members keep Enterprise (bulk upload, branding) indefinitely.
-`admin_force_cancel(immediate=True)` (`billing/admin_customers.py`) has the same gap: it sets `CANCELED`
-locally and calls no Stripe API, so no webhook follows and members stay paid.
-
-- [x] In `entitlement_checks`, when the user belongs to an org and is not its owner, use the **owner's**
-      Subscription instead of the "no row → trust tier" branch. Active or trialing → the owner's tier; anything
-      else → FREE. Keep `user.tier` only as a display cache.
-      — New `_org_member_entitlements` resolves the org through the existing seat-check resolver
-      (`_resolve_org_subscription`, split into `_resolve_subscription_for_org` so the org is loaded once):
-      `org.subscription_id` first, then the owner's ACTIVE/TRIALING row; no row or a non-entitled status → FREE.
-      It runs only when the member has **no** Subscription row of their own (as the item says); a member's own row
-      keeps the existing rules, and the owner still resolves from their own row. The `user.tier == FREE`
-      short-circuit now applies only to users in no org, so a member whose cache says FREE still follows the owner.
-      Extra: `apply_org_subscription_to_user` assigned the raw string to `user.tier` (`type: ignore`), so
-      `user.tier.value` raised until the row reloaded; it now assigns `UserTier(sub.tier)`.
-- [x] Refresh members' cached `tier` in `sync_subscription_from_stripe` whenever the owner's tier changes, so
-      `/users/me` shows the right plan.
-      — New `_refresh_org_member_tiers(db, owner_id, tier)` runs after the owner's tier is set on every sync (an
-      idempotent no-op when nothing changed, or when the user owns no org). It sets each non-owner member to the
-      owner's effective tier (FREE for a non-entitled status). It skips members with their own Subscription row,
-      because their entitlements read their `tier`.
-- [x] Make `admin_force_cancel(immediate=True)` call `_downgrade_org_members_to_free` (or the shared helper the
-      webhook uses).
-      — Calls `billing.webhook_handler._downgrade_org_members_to_free` (lazy import). Cancel-at-period-end is
-      unchanged: Stripe's `customer.subscription.deleted` webhook downgrades the org at period end.
-- [x] Check the JWT `tier` claim. It is used for rate-limit tiers only (per the review), so stale claims are fine,
-      but confirm.
-      — **Confirmed.** The claim is written by `auth.create_access_token` / `create_impersonation_token` from
-      `user.tier`. Its only reader is `RateLimitIdentityMiddleware` (`security_middleware.py`,
-      `payload.get("tier")`). That reader sets the `shared.rate_limits._current_tier` ContextVar, which
-      `TieredLimit` uses, and `request.state.rate_limit_user_tier`, which nothing reads. Entitlement checks and
-      `require_current_user` load the `User` row and never read the claim. The frontend does not decode it. A stale
-      claim only keeps the old rate-limit tier until the access token expires.
-- [x] Tests (`tests/test_sprint_849_org_member_entitlements.py`, 17 tests):
-  - owner Enterprise → Solo via the sync path → the member's entitlements equal Solo's (and the cache says Solo);
-  - owner past_due → member is FREE (via sync, and with no refresh at all: live read with a stale cache);
-  - admin immediate force-cancel → member is FREE (cancel-at-period-end leaves the member paid);
-  - a solo user with no org is unchanged (6 parametrised tier/status cases);
-  - plus: stale-cache tier change, reactivation restores the member, an org with no subscription → FREE, the owner
-    keeps their own rules, and the refresh skips a member with their own row.
-  - 10 of the 17 fail on the unfixed code. They were checked by reverting the three source files (the other 7 are
-    the solo-user and owner baselines). Two of the 10 failed on the old `str` assignment rather than on the
-    entitlement logic.
-
-**Not in scope (noted):** other owner-only cache writes (`admin_plan_override`, `invoice.payment_succeeded` /
-dispute-won restores, the dunning-engine cancel) still leave members' *display* cache stale. Their *entitlements*
-are correct now, because they read the owner's row live.
-
-**Verification:** ruff check + ruff format --check clean on the 5 touched files; mypy reports no errors in the 4
-touched source files; new tests 17/17; full backend suite **9,984 passed, 0 failed** (serial, 18m42s). A first full
-run failed 30 tests (compare-periods / three-way / rate-limit). Those tests use `MagicMock` users whose
-auto-attribute `organization_id` is truthy. Org membership is now detected by `isinstance(..., int)`.
-
-**Commit SHA:** `ec1c00b2` (stacked on PR #276).
-
----
-
-### Sprint 850: PDF upload parsing in a resource-limited subprocess (M6)
-**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P2 (DoS; needs a verified paid account). **Source:** security review M6.
-
-**Defect:**
-- `shared/pdf_parser.py` `_extract_tables_from_pages`: the 5 s per-page "timeout" is compared *after*
-  `page.extract_table()` returns, so it never interrupts.
-- pdfminer's FlateDecode does `zlib.decompress(data)` with no output cap.
-- The ZIP ratio and size checks (`shared/upload_pipeline.py`) don't apply to PDF streams.
-- Parsing runs in `asyncio.to_thread` with no overall timeout.
-
-A roughly 5 MB PDF whose stream inflates to gigabytes can kill a Render worker; repeated uploads take the API down.
-Reproduced on the old code: a 34 KB PDF (32 MiB of deflated zeros) held the API process for 43 s, logged
-`took 43.1s (limit 5.0s), dropping` *after the fact*, then returned the generic "No tables" 422.
-
-- [x] Move the PDF parse into a child process: `multiprocessing` with the **spawn** context, so it doesn't fork the
-      app. — Extraction core split out to new `shared/pdf_extraction.py` (stdlib + pdfplumber only; no FastAPI,
-      pandas or app imports, so the child stays cheap); `shared/pdf_parser.py` is the parent side and re-exports the
-      old names, so `routes/audit_preview.py`, `upload_pipeline` and the route-test patches are unchanged.
-      `extract_pdf_tables()` checks `%PDF` magic in the parent (no spawn for non-PDFs), then runs
-      `pdf_extraction.sandbox_main` in a `spawn`-context `Process`.
-  - The child sets `resource.setrlimit(resource.RLIMIT_AS, (1 GiB, 1 GiB))`, guarded by
-    `if sys.platform != "win32"`.
-  - The parent waits at most 30 s overall (`PDF_PARSE_TIMEOUT_SECONDS`, covering child start-up too), then
-    `terminate()` → `kill()` with a 2 s grace each.
-  - The parsed rows come back across a one-way `Pipe` as a tagged tuple (`ok` / `rejected` / `aborted` / `error`);
-    a corrupt or >500-page PDF still reaches the client as the same 400 (via a FastAPI-free `PdfRejectedError`).
-  - Found while testing: pdfplumber re-wraps any interpreter error as `PdfminerException(e)`, and the per-page
-    `except Exception` would have swallowed the RLIMIT `MemoryError` as "page dropped". `_is_memory_error()`
-    unwraps it and the parse aborts instead.
-- [x] On a memory error, a kill or a timeout, return 422 `"This PDF is too complex to parse. Export the trial
-      balance as Excel or CSV instead."` (`PDF_TOO_COMPLEX_DETAIL`, raised as `HTTPException(422)` — the same
-      path `parse_pdf`'s other 422s use, so `upload_pipeline` also counts it in `parse_errors_total`), and
-      increment `pdf_parse_aborted_total{reason}` (`memory` / `killed` / `timeout`). Deviation: the exported
-      metric name is `paciolus_pdf_parse_aborted_total` in `PARSER_REGISTRY`, matching every other counter in
-      `shared/parser_metrics.py`. `killed` = the child exited without a result (OOM-kill, signal, crash).
-- [x] Delete the misleading post-hoc per-page timeout check — deleted with `PER_PAGE_TIMEOUT_SECONDS`; the
-      docstring of `_extract_tables_from_pages` says why and what bounds time/work now (parent deadline +
-      `MAX_PDF_PAGES`). The old `TestPdfTimeout` (which asserted `dropped_rows >= 0`) went with it.
-- [x] Tests (`tests/test_pdf_parser.py::TestPdfSandbox`, 7 new + 1 new 400-translation test):
-  - deflate bomb generated in the test from one full-flushed 1 MiB block repeated (a 2 GiB bomb is ~2 MB and no
-    big buffer exists in the test process); a 32 MiB bomb with the deadline patched to 3 s → exact 422 message in
-    ~3.0 s, `timeout` counter +1, no live children. 32 MiB is harmless on Windows, where only the deadline applies.
-  - Linux only (`skipif(sys.platform == "win32")`): a 2 GiB bomb trips the 1 GiB RLIMIT_AS → 422, `memory` +1,
-    well inside the deadline. **Not run locally (Windows dev box); first run is CI.**
-  - child dying without a result (target swapped for `os._exit`, which dies on the extra args) → 422, `killed` +1;
-    a wrapped `MemoryError` inside a page aborts the parse; non-PDF bytes are rejected before spawning; a normal
-    PDF parses with the in-process core patched to raise (so it really ran in the child).
-  - The existing normal-fixture tests (`extract_pdf_tables` / `parse_pdf`) all go through the sandbox and pass;
-    the mocked >500-page test now drives `extract_tables_in_process`, since a mock can't cross the process.
-  - Fail-before-fix: the new tests import names that don't exist pre-fix; the bomb case was also run against the
-    unfixed parser (43 s, wrong 422 — fails both the 13 s bound and the message assert).
-- [x] Measure the latency overhead of spawn on a normal PDF. **~0.40 s** on the Windows dev box (median of 10:
-      1-page fixture 17 ms in-process vs 416 ms sandboxed; 3-page 71 ms vs 466 ms); Linux spawn is typically
-      faster. Under the ~1 s bar, so **no persistent pool**: one fresh child per parse also means no state or heap
-      fragmentation carries between uploads. Caveat found while measuring: `spawn` re-imports the parent's
-      `__main__` in the child — when `__main__` imported the app, overhead was 2.2 s. Production's `__main__` is
-      the gunicorn launcher (light); running the API as `python main.py` would pay that cost per PDF.
-
-**Not done / follow-up:** no cap on concurrent PDF children per worker — several simultaneous bomb uploads could
-still hold 1 GiB each; the per-user rate limit is the only bound today.
-
-**Verification:** `test_pdf_parser.py` + `test_pdf_upload_integration.py` + `test_audit_preview_routes.py`
-**73 passed, 1 skipped** (the Linux-only RLIMIT test) in 28.5 s; **full backend suite 9,973 passed, 1 skipped,
-0 failed** (serial, 18m59s, origin/main venv: FastAPI 0.162 / SQLAlchemy 2.1.6). `ruff check` + `ruff format --check`
-clean on the 4 touched Python files; mypy clean on `shared/pdf_parser.py` + `shared/pdf_extraction.py`.
-
-**Commit SHA:** `3f001479` (stacked on PR #277).
-
----
-
-### Sprint 851: Client IP derivation behind Render's proxy (M2)
-**Status:** COMPLETE 2026-10-27 (code; pending CI + merge) — **one CEO step after deploy** (below). **Priority:** P1. **Source:** security review M2.
-
-**Unblocked because** the code fix is correct whatever `TRUSTED_PROXY_IPS` currently holds; only the post-deploy
-setting needs the console. Checked via the Render API 2026-10-27: paciolus-api is a Docker service with an empty
-`dockerCommand` (it runs the Dockerfile `CMD`, which passes no `--forwarded-allow-ips`), so uvicorn's
-`request.client.host` is the Render proxy. The API can't read env-var values, so whether `TRUSTED_PROXY_IPS` is
-set is still unknown.
-
-**Defect:** `get_client_ip` returned the **leftmost** `X-Forwarded-For` entry when the peer was a trusted proxy.
-Render's proxy *appends* the real client IP, so the leftmost entry is attacker-controlled. If `TRUSTED_PROXY_IPS` is
-set, rotating spoofed values bypasses every per-IP limit; if it is unset, every request's peer is the proxy and all
-users share one bucket.
-
-- [x] `get_client_ip` (the single implementation; `shared/rate_limits._get_client_ip` delegates to it) walks
-      `X-Forwarded-For` right to left when the peer is trusted, skips trusted-proxy hops and entries that are not
-      valid IPs (`ipaddress.ip_address`), and returns the first untrusted entry. No usable entry → the peer.
-- [x] Tests (`test_transport_hardening.py`, +7): spoofed leftmost ignored; rotating it keeps one bucket; multi-hop;
-      untrusted peer ignores XFF; garbage skipped; IPv6; all-trusted → peer. 4 fail on the old code.
-      `test_rate_limit_tiered.py::test_proxy_aware_extraction_exact_ip` encoded the leftmost behaviour; its expected
-      value is now the entry the trusted proxy appended.
-- [x] Comment at the `/metrics` loopback gate: never set `FORWARDED_ALLOW_IPS='*'` / `--forwarded-allow-ips='*'`.
-- [ ] **CEO, after this deploys** (also in `ceo-actions.md`): Render dashboard → paciolus-api → Environment → set
-      `TRUSTED_PROXY_IPS` to the address range Render's proxy connects from (confirm with Render support; it is
-      not something to guess). Trusting a whole private range is safe with the right-to-left walk, because a client
-      cannot append entries after the proxy's. **Never** set `FORWARDED_ALLOW_IPS='*'`. Then confirm in logs that
-      hashed client IPs vary per user. Until it is set, behaviour is unchanged from today (all traffic shares the
-      proxy's bucket).
-
-**Verification:** ruff clean; targeted 89 passed; full backend suite 9,974 passed (on `main`, before stacking).
-
-**Commit SHA:** `2733c8f1` (stacked on PR #278).
----
-
-### Sprint 852: Security hygiene batch (L2, L6, L7, L8, L9, L10, L13)
-**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P2. **Source:** security review lows.
-
-> **Checked by Claude via the Render API, 2026-10-27 (no CEO action needed for L2/L6):** the live startup log reads
-> `Sentry APM initialized (env=production, ...)`, which prints `ENV_MODE` verbatim, so the new allow-list and the
-> `RENDER` check pass in production. paciolus-api is a Docker service with an empty `dockerCommand`, so it runs the
-> Dockerfile `CMD` and the `--access-logfile -` removal there fully closes L6.
-
-- [x] **L2: `ENV_MODE` fails open.** `config.py` now accepts only `{"development", "test", "production"}`
-      (case-sensitive) and hard-fails on anything else, and hard-fails when `RENDER` is set and `ENV_MODE !=
-      "production"`. Repo-wide audit of values set: `ci.yml` ×4 `development`, `dr-test-monthly.yml` `test`,
-      `.env.example` / `docker-compose.yml` default `development`, OpenAPI scripts `development`; no workflow or test
-      sets `RENDER`. Deviation: `test_security_hardening_2026_04_20.py` used `ENV_MODE=staging` for the
-      `create_dev_user` refusal tests → switched to `test`; `docs/ops/ENVIRONMENT_VARIABLES.md` listed `staging` as
-      valid → corrected. Tests: `tests/test_env_mode_allowlist.py` (8 of 12 fail on the old config).
-- [x] **L6: share tokens appear in raw access logs.** The premise was wrong: the app's access log
-      (`http_metrics_middleware.py`) logged the **raw** path, and its share-token pattern was hex-only, while tokens
-      are `token_urlsafe(32)`. Fixed first: new `_SECRET_PATH_REDACTIONS` (share token and
-      `/organization/invite/accept/{token}`) are applied to the access-log line, with numeric IDs kept for debugging,
-      and to metric labels. Then removed `--access-logfile -` from `backend/Dockerfile` and the documented Render
-      start command in `DEPLOYMENT_ARCHITECTURE.md`. Tests: `tests/test_access_log_redaction.py` (5 of 6 fail
-      before).
-- [x] **L7:** the passcode-mismatch log now records `ip_hash=hash_ip_address(ip)`. Test asserts the raw IP is absent
-      and the hash is present (fails before).
-- [x] **L8: shared exports are client-supplied bytes.** CSV shares are parsed and re-written through `SafeCsvWriter`
-      before storage (`_rewrite_csv_share`). Escaping is idempotent, a UTF-8 BOM is kept, and a non-UTF-8 or
-      malformed CSV gets a 400. A code comment says PDF and XLSX shares remain client-supplied, with server-side
-      generation as the long-term fix. Tests: `tests/test_export_sharing_hygiene.py`.
-- [x] **L9: logo dimensions are not checked.** Pillow was already a direct dependency (`pillow>=12.2.0`).
-      `routes/branding.py` reads the header only with lazy `Image.open`, rejects over 4000 px per side or over 25 MP
-      (Pillow's own `DecompressionBombError` is mapped to the same 400), requires format PNG/JPEG (plus MPO, which is
-      how Pillow reports a multi-picture camera JPEG), and keeps the magic-byte allow-list. Tests: a crafted
-      20000×20000 IHDR, 4001×10, 10×4001, a truncated PNG, and 4000×4000 plus a real JPEG accepted (4 fail before).
-      `test_post_audit_2026_04_20_batch2.py` uploaded magic bytes plus zero padding as a "PNG"; it now uses a real
-      4×4 PNG.
-- [x] **L10: rate limits loosen during a Redis outage.** The workflow already failed on any body status other than
-      `"healthy"` (Sprint 775), so this was already true. Added an explicit `degraded` branch whose verdict names the
-      per-worker rate-limit consequence. Kept the existing `python3` parse rather than switching to jq: same
-      robustness, and the test can run it. `tests/test_uptime_check_workflow.py` runs the real probe step under bash
-      with `curl` stubbed: healthy passes; degraded behind a 200, non-JSON, `{}` and 503 all fail; FAIL reaches
-      `exit 1`.
-- [x] **L13:** top-level `permissions: contents: read` in `dependency-compliance.yml`. No job needs more: there is
-      no issue or PR write, and the artifact upload/download is same-run and uses the runtime token.
-      `tests/test_workflow_permissions.py` guards it.
-
-**Verification:** full backend suite run serially in a fresh venv matching origin/main: **10,003 passed, 0 failed**
-(14m19s). The first full run caught two `test_post_audit_2026_04_20_batch2` logo tests using fake PNGs, fixed above.
-Each new regression test was confirmed failing against the unfixed source (counts per item above).
-`ruff check` + `ruff format --check` are clean on touched files. mypy shows no new errors in touched modules
-(`config.py:253` is pre-existing).
-
-**Commit SHA:** `7e317874` (stacked on PR #279).
-
+**Commit SHA:** `5a9df962` (stacked on PR #280).
 ---
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)
@@ -819,7 +580,7 @@ Each new regression test was confirmed failing against the unfixed source (count
 ---
 
 ### Sprint 823: Seven of the eighteen tools have never been exercised against realistic input
-**Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (items 3 and 5) not yet done.
+**Status:** PARTIAL — discovery done 2026-10-23 (58 findings, 21 P1; register in `reports/sprint-823-discovery-2026-10-23.md`, merged in PR #205 `40044bc7`); remediation in Sprints 824–827. Generator registration (item 3) done 2026-10-27; item 5 is 10/11 (multi-period remains); the CEO usefulness judgement remains.
 **Priority:** **P1 for discovery** — not a known defect, but the highest-yield unexamined
 surface in the product. The full-spectrum review found three P1s in its first hour of doing
 exactly this, on fewer than 70 synthetic accounts.
@@ -860,11 +621,29 @@ product, reached through a UI that presents them identically to the mature eleve
       (the pattern used for `W2ReconciliationConfig` in Sprint 811)
 - [x] Drive each of the seven engines end-to-end and record the output, not just the absence
       of an exception — A-5 returned `0.0` happily for the life of the product
-- [ ] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
+- [x] Register each generator in `tests/anomaly_framework/registry.py` and add its row to
       `COVERAGE_MAP.md`, which `test_coverage_map.py` already enforces
+      **Done 2026-10-27.** The registry was TB-only (`ANOMALY_REGISTRY` injects into a TB
+      DataFrame), so non-TB generators could not join it. Added `TOOL_GENERATOR_REGISTRY`
+      (all 18 slugs → their generator lists) and `CONFIG_TOOL_HARNESSES`; a new
+      "Per-Tool Generator Coverage" table in `COVERAGE_MAP.md` with a row per tool;
+      `test_coverage_map.py` now requires registry == map == `tools_registry` catalog, counts equal,
+      names unique. **28 new generators** for the six config-shaped tools (SoD 5, intercompany 4,
+      W-2 5, 1099 5, book-to-tax 5, cash flow 4) in `generators/*_generators.py`, baselines in
+      `fixtures/base_config_tools.py`, run by `test_config_tool_anomaly_detected` — each asserts
+      **clean on baseline, detected after injection**. Reverting Sprint 827 D1 (role rows overwrite)
+      fails 2 of them. **Correction:** FA was never generator-less — `fa_generators.py` (9) predates
+      823; it is now registered, so the uncovered count was six, not seven. **Found:** 16
+      `requires_large_population` generators (AP 2, revenue 3, AR 4, payroll 3, FA 2, inventory 2)
+      are registered but never parametrized — only JE runs its large-population set; recorded as
+      PARTIAL in the map, not fixed. Book-to-tax is a calculator, so its five are known-answer
+      checks rather than detections.
 - [x] File each abnormal output as a finding with its measurement, in the A-1…A-6 style
 - [ ] Then the remaining eleven, which have generators but whose *application* was never
       exercised end-to-end either
+      **10 of 11 done:** Sprint 829 (discovery round 2, PR #218 `106c5782`) drove JE, AP, payroll,
+      revenue, AR, inventory, TB, bank rec and three-way match; statistical sampling was driven by
+      823 itself (S1–S9). **Multi-period comparison was driven by neither** — it is the one left.
 - [ ] **CEO, after the engineering half:** judge whether the output is professionally useful
       to a practitioner. That part is not mechanisable and is the half the action item was
       really asking for.
@@ -957,7 +736,14 @@ every IC revenue/expense pair.
       now produce 0 flags (every asset was flagged HIGH).
 - [x] **A2** — expected accumulation capped at the depreciable base.
 - [x] **A3** — FA-T11 uses the shared `parse_date`, so Excel date cells and `YYYY/MM/DD` are
-      tested rather than silently skipped. (`01-Jan-2019` is still outside the shared parser.)
+      tested rather than silently skipped. ~~(`01-Jan-2019` is still outside the shared parser.)~~
+      **Remainder closed 2026-10-27 — no code change needed:** Sprint 829 (D-2, PR #218 `106c5782`)
+      had already added `%d-%b-%Y`, `%d %b %Y` and `%b %d, %Y` to the shared `parse_date` *for every
+      caller*, so FA-T11 reads `01-Jan-2019` today. So the "widen it only for FA" constraint is moot:
+      it was widened globally, and FA needs no per-call format. Pinned by
+      `test_day_month_name_dates_are_tested_not_skipped` (4 forms; all 4 fail with those three
+      formats removed). **Sprint 819 item 4 interaction:** its optional `formats=` parameter on
+      `parse_date` must keep these three in the *default* list, or this test fails — FA passes none.
 - [x] **A6** — FA-T11 compares magnitudes, so contra-negative accumulated depreciation no longer
       flags every row. FA-03 still flags negative accumulated depreciation; whether a contra
       presentation is "negative" there is a product call.
@@ -982,8 +768,9 @@ every IC revenue/expense pair.
 ---
 
 ### Sprint 813: Memo PDFs — missing footers, ignored branding, and the hand-built skeleton behind both
-**Status:** PARTIAL — the customer-facing defects (items 1, 2, 6, 8, 10 + two found on the way) are
-fixed and pinned by an output-level test; the structural cleanups (3, 4, 5, 7, 9) remain.
+**Status:** COMPLETE 2026-10-27 (pending CI + merge) — customer-facing defects (1, 2, 6, 8, 10)
+and item 7 merged earlier; structural items 3, 4, 5, 9 done 2026-10-27 with byte-independent
+rendering equivalence on every memo. Remaining work is listed under "Left open" below.
 **Priority:** **P1** — items 1–2 ship defective PDFs today.
 **Source:** Code health review 2026-10-23, memos/PDF pass.
 
@@ -1000,12 +787,14 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
    the ContextVar for all: bank rec, currency, multi-period, preflight, both sampling,
    three-way match, accrual, expense, flux, population profile. Reproduced with
    `apply_pdf_branding(footer_text=...)`: JE memo carries it, preflight does not.
-3. [ ] Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
+3. [x] *(Done 2026-10-27: all 14 + `generate_testing_memo` on `memo_base.render_memo`; guard test.)*
+   Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
    in `shared/memo_base.py`; route the 14 hand-built memos **and** `generate_testing_memo`
    through it. Keep each memo's current margins as parameters (they drift 0.75in/1.0in today)
    so output does not move. ~500–700 lines; closes 1 and 2 permanently.
-4. [ ] `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
-5. [ ] `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
+4. [x] *(Done 2026-10-27: 20 true copies replaced; ~20 near-copies are genuine variants, left inline.)*
+   `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
+5. [x] *(Done 2026-10-27: 10 memos + `build_scope_section`.)* `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
    "Source File" vs "Source" as a parameter (no wording change).
 6. [x] `tests/test_memo_boundary_phrasing.py:101` matches only `*_memo_generator.py`, so
    accrual/expense/flux/population-profile `*_memo.py` are never scanned. Widen the glob.
@@ -1020,7 +809,7 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 8. [x] Engagement ZIP (`engagements_exports.py` ~`:85-110`) ships the anomaly summary **unbranded**
    while the standalone route brands it; also passes neither engagement nor client, so access
    check + client lookup run twice.
-9. [ ] Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
+9. [x] *(Done 2026-10-27; shim kept for 7 test files.)* Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
    prefix arg on `generate_reference_number` (replaces 21 `.replace("PAC-", ...)`);
    point the ~30 `pdf_generator` shim importers at `pdf` directly.
 10. [x] `generate_sample_reports.py:4076-~4325` `gen_anomaly_summary` re-implements the production
@@ -1056,7 +845,43 @@ page setup, cover, footer and `doc.build` by hand. Both defects below come from 
 - **Branded header struck through by the gold rule** on the accrual memo, which draws its own
   page header at the same 0.5in line. Branded header moved to 0.35in for all memos.
 
-**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7).
+**Delivered 2026-10-27 (items 3, 4, 5, 9 — branch `sprint-813-memo-skeleton`, on top of Sprint 846):**
+- [x] **Equivalence harness first.** `tests/test_memo_render_equivalence.py` renders all 24 memo/report
+  PDFs (21 samples + engagement dashboard, analytical expectations, SUM schedule), unbranded and
+  under Enterprise branding (header, footer, logo), clock frozen; pins page count, media box,
+  per-page text, positioned text runs, text bbox and content-stream digest (byte-independent),
+  plus the Excel workpaper's cell styles. Recorded on the pre-refactor code; green after every item;
+  stable across hash seeds.
+- [x] Item 5: `memo_base.source_line(title, filename, *, filename_label=, always=)`.
+- [x] Item 4: `ledger_table_style(*, font_size=, extra=)`. A copy was converted only when moving its
+  extra commands after the ledger block cannot change the drawing (no extra precedes a ledger
+  command on the same attribute).
+- [x] Item 9: `create_memo_styles()` cached (fresh dict per call); Excel per-row fill/border/fonts are
+  module constants; `generate_reference_number(prefix)` replaces 17 `.replace("PAC-", ...)`;
+  29 production modules import `pdf` directly.
+- [x] Item 3: `render_memo(title, ref_prefix, body_builder, *, cover=, running_header=, margins=,
+  branding=, page_footer=)`; per-memo margins kept (`MEMO_MARGINS` / `TESTING_MEMO_MARGINS`).
+  Analytical expectations, SUM and anomaly summary build their own cover (banner precedes it) and
+  take `render_memo`'s reference. `current_page_footer()` removed (no callers). Guard test fails any
+  memo module that builds its own `SimpleDocTemplate`.
+- [x] Found on the way: the anomaly summary's "Tools with Clean Results" list printed in set order
+  (varied per process) — now catalog order.
+
+**Left open (and why):**
+- Engagement dashboard still uses the unbranded `draw_page_footer` (kept via `page_footer=` so output
+  does not change; no route serves it today). Making it brand-aware is a one-line product call.
+- ~20 TableStyle near-copies of the ledger style (4pt padding, no body font, no flush-left padding,
+  MIDDLE valign) stay inline — they are variants, not copies.
+- TB diagnostic / financial statements (`pdf/orchestrator.py`) and the loan-amortization PDF still
+  own their page setup — reports, not memos, with different chrome.
+- `pdf_generator.py` shim stays for the 7 test files that import it.
+
+**Verification:** full backend suite 10,052 passed / 1 failed — `test_alembic_head_matches_base_metadata_foreign_keys`
+hit its 180s subprocess timeout under full-suite load; the file passes alone (5/5). Equivalence harness
+50/50, memo/report/export test set 1,705 passed; ruff check clean.
+
+**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7); 4f38ecd5 (harness),
+cb65fb58 (item 5), 5f42d192 (item 4), a2b5f373 (item 9), 2ebcaf84 (item 3) — branch `sprint-813-memo-skeleton`.
 
 ---
 
@@ -1127,6 +952,11 @@ matching is the likely fix; it needs a sweep of real column names first.
 
 **Also observed:** both sampling routes accept `nan`/`inf` form floats (Pydantic's default) and
 return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family as above; filed here.
+- [x] **Done — fixed in Sprint 824 (S9, PR #205 `40044bc7`, `routes/sampling.py::_require_finite`), and now
+  swept.** 2026-10-27: re-verified both routes return 422; the four Sprint 824 cases only pinned the
+  fields the review tried, so `test_every_float_form_field_on_both_sampling_routes_rejects_non_finite`
+  derives every float form field from the two handler signatures (4 + 5) × `nan`/`inf`/`-inf`.
+  Removing `stratification_threshold` from the guard fails 3 of the new cases and none of the old four.
 
 **Commit SHA:** 91753ba2 (PR #202).
 
@@ -1187,8 +1017,8 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 ---
 
 ### Sprint 817: Dead-code sweep
-**Status:** PARTIAL — items 1, 2, 6 done and most of 5; items 3–4 await CEO decisions; the
-`package.json` half of item 6 waits for PR #197 (it rewrites the same lockfile).
+**Status:** PARTIAL — items 1, 2, 5, 6 done (5 with two findings left for a product call, see
+"Delivered 2026-10-27"); items 3–4 await CEO decisions.
 **Priority:** P2 — ~7,000 lines with no runtime effect except bundle size and reader cost.
 **Source:** Code health review 2026-10-23. Every item grep-verified repo-wide; re-grep before deleting.
 
@@ -1212,7 +1042,7 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
 4. [ ] **Product decision 1 (bulk upload):** `components/batch/*`, `contexts/BatchUploadContext.tsx`,
    `hooks/useBatchUpload.ts`, `routes/bulk_upload.py`, `shared/bulk_job_store.py` — wire or delete,
    and fix the pricing/UpgradeModal claim to match. **Do not delete the route before Sprint 790 lands.**
-5. [ ] **Unused helpers/constants:** entitlement `check_client_limit`, `check_tool_access`,
+5. [x] **Unused helpers/constants:** entitlement `check_client_limit`, `check_tool_access`,
    `check_workspace_access`, `check_activity_log_access` (routes re-implement them inline — keep
    one implementation each); `auth.get_current_user` (unreferenced and skips the password-change
    check — unsafe to adopt); `ratio_engine.calculate_dupont_decomposition`;
@@ -1221,7 +1051,7 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
    `CURRENT_RATIO_THRESHOLD`, `LOW_CONFIDENCE_THRESHOLD`; `export/transport.py:41` no-op and
    unused `"excel"` branch at `:46`; the 10 unused `DEFAULT_*` aliases in
    `w2_reconciliation_engine.py:160-172` and their stale comment (**fix in the current branch before merge**).
-6. [ ] **Assets/deps:** delete `frontend/public/backgrounds/background4.jpg` (22 MB, unreferenced);
+6. [x] **Assets/deps:** delete `frontend/public/backgrounds/background4.jpg` (22 MB, unreferenced);
    compress `background5.jpg` (7.1 MB raw CSS background on `pricing/page.tsx:774`);
    remove `ts-jest`, `@eslint/eslintrc`; move `@testing-library/dom` to devDependencies; declare
    `eslint` explicitly; fix or drop `npm run generate:types` (`openapi-typescript` not installed).
@@ -1250,6 +1080,55 @@ return a result rather than a 422 — e.g. `sampling_interval=nan`. Same family 
   (1920px, q72 progressive — it renders at 6% opacity).
 
 **Commit SHA:** 1f058c4b (PR #207).
+
+**Delivered 2026-10-27 (items 5 and 6 remainder):**
+- **`check_client_limit`:** `POST /clients` re-implemented it inline; the route now calls the shared
+  function. New `TestCreateClientLimit` (4 HTTP tests in `test_clients_api.py`: under limit, exact
+  403 body at limit, soft mode, unlimited tier) was run green against the *old* inline route first,
+  then against the new one. Only difference: soft mode now also logs the standard "SOFT entitlement
+  block" warning (the inline copy was silent). Hard-mode 403 body byte-identical.
+- **`check_tool_access`:** deleted. The live implementation is `shared.testing_route.enforce_tool_access`
+  (21 call sites); the factory had no route callers and a different message. Its unit tests were
+  ported to `enforce_tool_access` (exact 403 body, soft mode, no-db fallback); the runbook line in
+  `format-rollout.md` that pointed at it now names `enforce_format_access`.
+- **`check_workspace_access` / `check_activity_log_access`: kept, and flagged — CEO/product call.**
+  There is no inline duplicate: *nothing* on the backend enforces the `workspace` or `activity_logs`
+  entitlements. Free tier is `workspace=False`, yet every `/engagements` route depends only on
+  `require_current_user`. (Team activity is reachable only through `/admin/*`, gated by
+  `admin_dashboard`, which has the same tier values — so `activity_logs` is effectively covered;
+  `workspace` is not.) Wiring the check would change what Free users get, so it is not done here.
+  Decide: wire `check_workspace_access` onto the engagement routes, or delete both and drop the
+  flags from `TierEntitlements`.
+- **`export/transport.py`:** removed the no-op `extension = fmt if fmt != "xlsx" else "xlsx"` and the
+  `"excel"` alias (every caller passes a literal `pdf`/`xlsx`/`csv`; `"excel"` would also have
+  produced a `.excel` filename). New `test_export_transport.py` (7).
+- **`PREPAID_KEYWORDS`: deleted as dead.** Added in Sprint 513, never referenced. The engine filters to
+  liability-classified accounts before any keyword runs, and prepaid balances are assets, so there is
+  no detection it could have fed. `TestPrepaidAccountsNotInScope` pins the output, and the
+  engine's `to_dict()` on that fixture was byte-identical before and after the deletion.
+- **`PAYROLL_SUSPICIOUS_KEYWORDS`: kept — looks like an unwired check, needs a product call.** Added
+  in Sprint 86 with weights in the `classification_rules` tuple shape, under "Keywords for ghost
+  employee pattern detection", and never read. PR-T9's "No department assignment" indicator only
+  fires on an *empty* department, so placeholder values the list names (`"N/A"`, `"Unassigned"`,
+  `"No Department"`, `"Unknown"`) pass as assigned departments, and the status words (`terminated`,
+  `inactive`) have no field to match since `PayrollEntry` carries no status column. Wiring it changes
+  PR-T9 output. Decide: wire (placeholder-department matching at minimum), or delete.
+- **npm:** removed `ts-jest` (Jest uses `next/jest`/SWC) and `@eslint/eslintrc` (flat config, no
+  `FlatCompat`); `@testing-library/dom` moved to devDependencies (no `src` import — it is the peer of
+  `@testing-library/react`/`jest-dom`); `eslint` declared (`^9.39.5`). **`generate:types` dropped**
+  with `scripts/generate-types.sh`: `src/types/api-generated.ts` does not exist and nothing consumes
+  it, and the script would `npm install -D openapi-typescript` on the fly, mutating the lockfile.
+  **Lockfile audited:** 882 → 871 entries; 0 added; 11 removed (ts-jest and its private tree:
+  `bs-logger`, `handlebars`, `lodash.memoize`, `make-error`, `neo-async`, `source-map@0.6.1`,
+  `uglify-js`, `wordwrap`, nested `semver`/`type-fest`); 2 changed (`eslint`, `@eslint/js`
+  9.39.4 → 9.39.5); 49 flag-only. Of those, 34 are the eslint chain losing `peer: true` — it is now a
+  real devDependency tree rather than peer-derived, which is the fragility the 786b jest-dom note
+  hit with `--legacy-peer-deps` — and 15 are the `@testing-library/dom` subtree becoming `dev`.
+  Nothing unexpected.
+
+**Verification (2026-10-27):** backend full suite 9,979 passed / 0 failed; frontend tsc, eslint,
+2,072 Jest tests and `npm run build` (65 `ƒ` routes + Proxy) all clean. Full detail is in the Sprint 786
+"typescript 6 → 7" entry. **Commit SHA:** 2a6504e4.
 
 ---
 
@@ -1300,38 +1179,52 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
 ---
 
 ### Sprint 819: Backend deduplication
-**Status:** PARTIAL — items 6 (`_to_decimal` half) and 9 done 2026-10-23; the rest pending.
+**Status:** PARTIAL — items 3–10 done 2026-10-27 (branch `sprint-819-backend-dedup`, pending CI + merge); items 1 and 2 (result base classes, `.empty()`/`.from_flags()`) not started — see below.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, engines + routes + exports passes.
+
+**Output-preservation harness (built first, on unmodified code):** `tests/test_sprint819_output_snapshots.py`
+(engine `to_dict()` for JE, AP, Payroll + PR-T9 ghost/HR-master, Revenue, AR, FA, Inventory, three-way
+match, currency, and hand-mapped column overrides; seeded data, frozen clock, key order pinned) and
+`tests/test_sprint819_route_snapshots.py` (six promoted JSON tools incl. error paths + ToolRun rows,
+their CSV exports, form-input / engagement / admin exports, the diagnostic export pipeline incl. log
+events and error paths, testing-tool CSVs + memo PDFs by page text). Goldens in `tests/snapshots/sprint819/`;
+regenerate only with `SPRINT819_UPDATE_SNAPSHOTS=1` when a change is intended. Every refactor below kept them green.
 
 1. [ ] Generic result base classes in `shared/` for the per-tool `FlaggedEntry` / `TestResult` /
    `DataQuality` / `CompositeScore` (~650 lines across 7 tools; e.g. `je_testing/analysis.py:546-665`).
    **JSON output must not change**: Payroll stores severity/tier as strings and rounds
    `completeness_score` to 2 dp; AR adds `skipped`/`skip_reason`; Payroll `top_findings` is list-of-dicts.
-   Snapshot-test every tool's response before and after.
+   *(Not started 2026-10-27: out of safe room in this pass. The snapshot harness above now covers every
+   tool's `to_dict()`, so this is unblocked; do it one tool at a time against those goldens.)*
 2. [ ] `.empty(...)` / `.from_flags(...)` constructors replacing 76 zero-result blocks (~800 lines)
    and ~110 hand-computed `flag_rate`s. AR's `_skipped_result` (`ar_aging/analysis.py:1801`) is the model.
-3. [ ] Round-amount test copied 4× (JE `:1087`, AP `:904`, Revenue `:922`, Payroll `:1163`) — adopt
-   one Decimal-safe helper. *(Ordering decided 2026-10-24 and applied in Sprint 831: count all, keep the
-   largest, in all four. The shared helper itself is still open.)*
-4. [ ] Optional `formats=` on `parse_date`; AR (`:862,873`), FA (`:1429`), currency (`:567`) pass
-   their **current** lists — do not widen what they accept.
-5. [ ] Default `apply_column_overrides` driven by a class-level column list (JE `:2857`, AP `:1996`
-   hand-written); keep Payroll's suffix-less keys (API contract). Finish `AuditEngineBase`
-   adoption for FA, Revenue, AR (feeds the Refactor Intake item).
-6. [x] *(`_to_decimal` half done 2026-10-23: nine byte-identical copies → `shared/request_decimal.py`;
-   the guard that scanned each copy for the finiteness fix now forbids new copies and checks the
-   shared helper. `run_json_tool` not done.)* `_to_decimal` copied verbatim into 9 route files → one `shared/` helper; a `run_json_tool(...)`
-   wrapper for the 6 promoted-tool routes' enforce → quota → record sequence.
-7. [ ] ~20 export endpoints hand-roll `StreamingResponse`/`Content-Disposition` (list in the review:
-   `engagements_exports.py`, `loan_amortization.py`, `bank_reconciliation.py:193`,
-   `multi_period.py:281`, `depreciation.py:243`, `lease_accounting.py:216`, …) → use
-   `shared/export_helpers`. Decide `Cache-Control: no-store` for all financial exports (only
-   `export_sharing.py:222` sets it). In-memory PDFs: plain `Response`, not 8 KB chunking.
-   *(No-store decided and done 2026-10-24: `SecurityHeadersMiddleware` adds `Cache-Control:
-   no-store` to every `Content-Disposition: attachment` response unless the route set its own
-   policy — one place, all ~20 endpoints. The helper consolidation itself is still open.)*
-8. [ ] `export/pipeline.py:47-262` — 11 near-identical functions → one `_run_export(...)` (~120 lines).
+   *(Not started; depends on item 1's base classes. Mind `flag_rate` variants — `x / max(n, 1)` vs
+   `x / n if n else 0.0` agree only for n ≥ 1.)*
+3. [x] Round-amount test copied 4× → `shared/round_amounts.py::match_round_amount` (Decimal tier match) +
+   `keep_most_severe` (count all, keep most severe then largest; stable). Payroll now matches via the 4-tier
+   table but keeps its own wording, string severity and amount-only details.
+4. [x] `parse_date(..., formats=...)`; default list is now `DEFAULT_DATE_FORMATS` (unchanged). AR `as_of_date`
+   and the rate-table `effective_date` pass their existing narrow sets (memo keyed per set); FA already used
+   the shared default since Sprint 827. Guard tests prove nothing new is accepted.
+5. [x] `AuditEngineBase` default `apply_column_overrides` from class-level `OVERRIDABLE_COLUMNS` + an
+   `after_column_overrides` hook (JE debit/credit-vs-amount + dual dates, AP dual dates + check numbers).
+   Inventory uses it too; Payroll keeps its suffix-less override. FA and Revenue now run as
+   `FixedAssetTestingEngine` / `RevenueTestingEngine`. **AR not migrated:** two input files (TB + optional
+   sub-ledger) do not fit the single-input `run_pipeline`; it stays a lint migration target.
+6. [x] *(`_to_decimal` half done 2026-10-23.)* `shared/testing_route.py::run_json_tool` owns enforce →
+   quota → compute → record for the six promoted tools; SoD keeps re-raise-unchanged via `reraise_errors`.
+   The two AST guards that enumerate recording/metering sites count it as the delegate.
+7. [x] Every file download builds its response in `shared/export_helpers` (`attachment_response` +
+   `pdf_/excel_/csv_response`); ~20 hand-rolled blocks and the PDF/ZIP 8 KB chunk generators removed.
+   Bodies, Content-Type and Content-Disposition byte-identical (the bare `filename=` form is kept via
+   `quote_filename=False`). *(No-store done 2026-10-24.)* **Deliberately still a single-chunk
+   `StreamingResponse`, not a plain `Response`:** GZipMiddleware (`minimum_size=500`) gzips every streamed
+   body today; a plain `Response` would stop compressing downloads under 500 B — a wire change. Callers are
+   typed against `Response`, so that switch is one line if wanted. Only framing change: the formerly
+   chunked CSV downloads now also send `Content-Length`.
+8. [x] `export/pipeline.py`: eleven functions → `_run_export(...)`; log events, mapped exceptions and
+   filenames unchanged.
 9. [x] **Env reads through `config.py` only.** *(Done 2026-10-23 for the secret-bearing reads —
    see below.)* Latent bug: `email_service.py:48-50` reads
    `SENDGRID_API_KEY` via `os.getenv` while `config.py:647` validates via `_resolve_secret` —
@@ -1345,16 +1238,28 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    while the probe reported "not_configured" and healthy. Re-checked the rest of the list:
    `export_share_storage` already reads through `_load_optional`, and the remaining direct reads
    (`REDACT_LOG_TRACEBACKS`, `MEMO_RSS_WARN_MB`) are non-secret tuning flags — left as they are.
-10. [ ] Split long functions: `three_way_match_engine.py:1210` (268 lines, 64 branches),
-   `currency_engine.py:821` (254 lines; lookup copied 3×, per-cell `df.at` loop under a
-   "Vectorized" comment), `payroll_testing/analysis.py:1659` (145 lines).
+10. [x] Long functions split: `run_three_way_match` → exact-PO / fuzzy (+ invoice and receipt scorers) /
+   unmatched / summary over a shared `_MatchState`; `convert_trial_balance` → `_detect_account_columns`,
+   `_resolve_currency_rates`, one `_flag()` builder, columns read once (`to_numpy`) instead of per-cell `df.at`;
+   Payroll PR-T9 → grouping + in-file + HR-master indicator functions.
 
-**Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9).
+**Found, not fixed (outside scope, pre-existing):** `/export/pdf` 500s when `risk_summary` is null
+(`pdf/sections/diagnostic.py` calls `.get` on the `None` the schema dumps); memo follow-up wording is
+seeded with the per-process `str` `hash()` (`shared/memo_template.py`), so the same report's wording
+changes between server restarts.
+
+**Verification:** full backend suite 10,022 passed / 0 failed (3f3b74df, 56m44s serial; a first run caught the three-way-match `@with_parse_memo` slip, fixed in 3f3b74df); 22 Sprint 819 snapshot tests green; OpenAPI drift check clean (221 paths, 430 schemas); mypy 204 errors (baseline 1011), none in touched code; `ruff check` + `ruff format --check` clean on touched files.
+
+**Snapshot weight:** the goldens are stored gzipped (`*.json.gz`, `mtime=0` so regeneration is byte-stable): 6.4 MB / ~200k lines of JSON became 441 KB.
+
+**Commit SHA:** 5fa3d72a (PR #216, item 6); 970eb085 (PR #209, item 9); 2026-10-27 branch
+`sprint-819-backend-dedup`: 4fe89870 (snapshots), 5601d850 (3), 17bdcf41 (4), e3ba87fe (8), 54ff41c2 + a9c5f5f2 (7),
+9f9def4d (6), 1bba4172 + 81976abe + 3f3b74df + 4423c770 (10), 7e3aeded (5).
 
 ---
 
 ### Sprint 820: Frontend consolidation and bundle weight
-**Status:** PARTIAL — item 3 (Terms + Privacy as server components) done 2026-10-23; the rest pending.
+**Status:** PARTIAL — items 2–7 done (3 and 5 earlier, 2/4/6/7 and the rest of 3 on 2026-10-27, branch `sprint-820-frontend-consolidation`, pending CI + merge); item 1 (`TestingToolPage` shell) not started — see below.
 **Priority:** P2.
 **Source:** Code health review 2026-10-23, frontend pass.
 
@@ -1362,24 +1267,62 @@ totals). That is a question for the CEO and counsel before anyone edits the copy
    fixed-assets, inventory, journal-entry — 70–80% identical, ~1,650 lines). Use the existing
    `components/shared/FileDropZone`; build `UpgradeGate` in so 814 item 1 cannot recur. ~1,100 lines out.
    Collapse the ~20 pass-through `*ScoreCard`/`*DataQualityBadge` wrappers.
-2. [ ] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
-   `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector` (~530 → ~90 lines).
-3. [x] *(Terms + Privacy done 2026-10-23: server components with `Reveal` wrappers; measured,
-   each page's text went from 1 client JS chunk to 0. About, Approach and the marketing layout are
-   still client — they use ~30 motion elements each.)* `terms` and `privacy` pages: drop `'use client'` (no hooks; ~2,000 lines of legal text in
-   the JS bundle), wrap the 4 animated sections in `components/ui/Reveal`. Same for `about`,
-   `approach`, and `app/(marketing)/layout.tsx`. Compatible with the `headers()`-dynamic root.
-4. [ ] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
+   **Not done — needs a design call first.** The item asks for both "reuse `FileDropZone`" and
+   (this pass) "no visual change", and those conflict: `FileDropZone` is the compact `p-6`
+   labelled zone from bank-rec/AR, while the six pages use a large `p-12 rounded-2xl` zone with an
+   icon disc and `h3` prompt. The six pages have also drifted apart — JE uses raw `sage-50`/`sage-700`
+   classes and plain `<button>`s where the others use theme tokens and `Button`; only AP/Payroll/JE
+   have the settings drawer and `SavedSettingsNotice`; spinner and border shades differ per page — so a
+   pixel-identical shell would be a slot for nearly every line. Collapsing the wrappers also breaks
+   each page test's `jest.mock('@/components/<tool>')` test-ids. Decide which variant is canonical
+   (and whether `FileDropZone` gets a large variant), then do the shell with page-test updates.
+   `ToolPageGating.test.ts` reads `<UpgradeGate toolName=…>` from each page's source; a shell must
+   update that test to recognise the shell's prop.
+2. [x] `createJsonAnalysisHook({...})` for `useSOD`, `useForm1099`, `useW2Reconciliation`,
+   `useBookToTax`, `useIntercompanyElimination`, `useCashFlowProjector`.
+   *(Done 2026-10-27: `hooks/createJsonAnalysisHook.ts` (112 lines) owns status/result/error, the
+   engagement link and CSV export; the six hooks are config + extras (SoD rules, B2T standard
+   adjustments, W-2 error rewrite, `project` alias) — 554 → 276 lines. Public APIs unchanged;
+   existing tests pass unchanged.)*
+3. [x] `terms`, `privacy`, `about`, `approach` and `app/(marketing)/layout.tsx` as server components.
+   *(Terms + Privacy 2026-10-23 with `Reveal` wrappers. About, Approach and the layout 2026-10-27:
+   `'use client'` dropped, motion elements come from `components/ui/motionClient` with the same
+   props, so nothing animates differently; About's `custom`-function variant became a per-card static
+   variant with the same delay. Page-only client chunk About 12.6 → 0.4 KB, Approach 17.5 → 0.4 KB.)*
+4. [x] `trust/page.tsx`: static data → `content/trust.ts`, 4 interactive blocks → `components/trust/*`, page becomes a server component.
+   *(Done 2026-10-27: `ArchitectureDiagram`, `ControlMatrix`, `PlaybookPreview`, `CountUp` are
+   client components; the page, `ModuleSection` and `ComplianceTimeline` are server components.
+   Page-only client chunk 37.6 → 22.6 KB (8.8 → 6.2 KB gz). `test_citation_consistency.py` now
+   scans `content/trust.ts` and `components/trust/`.)*
 5. [x] `ToastContext.tsx:73` — split stable actions from state so 8 consumers stop re-rendering on
-   every toast. Memoize `CanvasAccent`/`AuthSession`/`UserProfile`/`Verification`/`Mapping` values
-   only if profiling shows cost.
-   *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the stable
-   actions, `useToastState()` the list for the container. A render-count test pins it.)*
-6. [ ] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
-7. [ ] Measure first: bundle analyzer on framer-motion (139 importers, no `LazyMotion`); 5 local
-   `fadeUp` copies → `lib/motion.ts:71`.
+   every toast. *(Done 2026-10-24: actions and state in separate contexts; `useToast()` returns the
+   stable actions, `useToastState()` the list for the container. A render-count test pins it.)*
+6. [x] `BaseColumnDetection` type; `ARDataQuality` extends `BaseDataQuality`.
+   *(Done 2026-10-27: `BaseDataQuality` is the 3 shared fields, the six row-based tools extend
+   `RowDataQuality` (+`total_rows`), all six `*ColumnDetection` extend `BaseColumnDetection`. Types only.)*
+7. [x] Measure framer-motion (139 importers, no `LazyMotion`); fold the 5 local `fadeUp` copies into `lib/motion.ts`.
+   *(Done 2026-10-27. `next experimental-analyze`: framer-motion + motion-dom is 145.8 KB raw on
+   every marketing route, 139.3 KB on tool/auth routes — ~12% of client JS. **LazyMotion not
+   adopted:** it only pays once all 139 importers move from `motion` to `m` (one `motion` import
+   pulls the full feature set back in) — a sweep plus a lint rule, bounded by that ~140 KB. The
+   `fadeUp` copies are `marketingFadeUp` / `marketingFadeUpAt` / `marketingFadeUpSoft`, values
+   unchanged. `components/ui/motionClient` (7 re-exports) replaces `framer-motion/client`, whose
+   170-element module had added +2.4 KB to every route.)*
+   Route first-load JS (bytes, `route-bundle-stats.json`) before → after the sprint:
+   `/about` 957,024 → 939,647 · `/approach` 962,082 → 939,647 · `/trust` 982,652 → 962,368 ·
+   `/pricing` 972,526 → 967,584 · `/` 945,612 → 940,986 · `/terms` 944,120 → 939,341 ·
+   tool/auth routes unchanged (±13 bytes). All client chunks 2,877 → 2,830 KB raw.
 
-**Commit SHA:** 391f1c14 (PR #211).
+Also: `jest.config.js` `testPathIgnorePatterns` for `e2e/` and `helpers/` no longer use `<rootDir>` —
+on Windows a `\.` in the root path (worktrees under `.claude\`) is read as an escaped dot, so the
+Playwright specs ran under Jest and the pre-commit gate failed in every worktree.
+
+**Verification:** `npm run build` passes — 65 routes all `ƒ (Dynamic)` (only `/icon.png` and
+`/sitemap.xml` static), `ƒ Proxy (Middleware)` listed; `npm test` 208 suites / 2,072 tests green;
+`npx tsc --noEmit` and `npx eslint src` clean; backend `test_citation_consistency` +
+`test_storage_claims` + `test_catalog_consistency` 57 passed.
+
+**Commit SHA:** 391f1c14 (PR #211); 2026-10-27: 947825c2, aa6dfd8b, c740c5c7, 3c168aaa, 24a76f71 + this todo commit.
 
 ---
 
@@ -1520,6 +1463,16 @@ data-quality report.
 6. **A guard for the class:** no engine may hold a bare statutory constant without a year key. The
    broader version is a test that any module naming a tax year in a comment has a year-selected
    table rather than a flat constant.
+   - [x] **Guard added 2026-10-27** — `tests/test_statutory_constants_year_keyed.py`. Discovers every
+     backend module handling `tax_year` (the three engines + their routes) and AST-scans each
+     `Decimal("<n>")` literal and module-level numeric constant: it must sit in (or be referenced by)
+     a dict keyed by tax years, or be on an exact `(module, name, value)` allow-list with a reason;
+     stale allow-list entries fail. **No figure changed.** The allow-list names the remaining flat
+     statutory constants as debt: 1099 `FORM_THRESHOLDS` (tests only), `MISC_BOX_THRESHOLDS`
+     (**unreferenced** — delete candidate), `LEGACY_GENERAL_THRESHOLD` (review-band floor) and
+     book-to-tax `M3_THRESHOLD_TOTAL_ASSETS` ($10M, never year-keyed). Fail-before: a planted
+     `PLANTED_SS_WAGE_BASE = Decimal("184500")` in the W-2 engine fails it. The narrower
+     `test_no_table_claims_to_be_2026_until_sprint_793b` is unchanged.
 
 **Acceptance bar:** a 2025 and a 2026 reconciliation of the same payroll produce different
 wage-base findings; a year outside the table is reported as unsupported rather than computed; and
@@ -1682,8 +1635,10 @@ binding to lowercase and break the current production database, which holds name
 
 ### Sprint 786: Dependency currency (replaces Sprints 760 and 761)
 **Status:** SPLIT — **786a COMPLETE** (venv reconciled, resolution now recorded in CI),
-**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PENDING** (the reviewed minors and majors;
-`stripe` 16 done in PR — see "786b — stripe 15 → 16").
+**786b step 2 COMPLETE** (the patch batch), **786b steps 3-4 PARTIAL** — merged: `stripe` 16,
+`fastapi` 0.162, SQLAlchemy 2.1 + Alembic 1.20, `jest-dom` 7; `framer-motion` 14 in PR #269;
+**`@types/node` 26 is not on `main`** (lockfile still resolves 22.20.5, though the note below calls it
+done); **`typescript` 7 BLOCKED** until typescript-eslint supports it (see "typescript 6 → 7").
 **Priority:** P2 — the only RED agent in the 2026-10-20 nightly, and 5 of the outdated packages are security-relevant.
 **Source:** `reports/next-actions-2026-10-20.md` B-c / B-d. Supersedes Sprints 760 and 761, both written in April and now wrong in their specifics.
 
@@ -1847,9 +1802,49 @@ baseline.
 false green this sprint has spent its time removing — CI would install from it happily and the lint
 job would then fail for an unrelated-looking reason.
 
-**Still pending in step 3:** `typescript` 7 and `framer-motion` 14 (12 → 14, two majors). Both are
+**Still pending in step 3** *(2026-10-27: typescript 7 tried and blocked by typescript-eslint;
+framer-motion 14 is PR #269)*: `typescript` 7 and `framer-motion` 14 (12 → 14, two majors). Both are
 independent of jest-dom, so the npm bug does not block them unless it proves to be general rather
 than peer-set specific.
+
+#### 786b step 3 — typescript 6 → 7: BLOCKED by typescript-eslint (not forced)
+
+Tried 2026-10-27 on `typescript@7.0.2` (`latest`; 7.1 is still beta). **`tsc --noEmit` passes on
+TS 7 with zero errors** — the codebase itself is ready. What blocks it is the toolchain:
+
+- **ESLint cannot load.** `@typescript-eslint/eslint-plugin` 8.72.1 (latest; the 8.72.2 canary is the
+  same) declares `typescript >=4.8.4 <6.1.0` and hard-throws `typescript-eslint does not support
+  TS 7.0.` at import. TS 7 is the native port: `require('typescript')` exports only `version` /
+  `versionMajorMinor` — there is no JS compiler API for typescript-eslint to call. Upstream tracks
+  support for TS ≥ 7.1 in typescript-eslint#10940. `npm install` does not catch this (it only warns
+  the peer is `invalid`), so a lockfile bump would look green until the lint job ran.
+- **Everything else passes on TS 7.** `next build` (16.4.3) succeeds — 65 `ƒ` routes + `ƒ Proxy
+  (Middleware)` — and its type-check step went 103 s → 2.2 s. That speed was checked rather than
+  trusted: a deliberate `const x: number = "string"` probe fails the TS 7 build with TS2322, so Next
+  really type-checks under TS 7. Jest (SWC, no `typescript` dependency) 208 suites / 2,072 tests.
+  The lockfile also grew 39 entries — the native per-platform binaries plus duplicated nested
+  typescript-eslint trees npm created because the peer range no longer resolves.
+
+**Reverted, nothing committed.** `package.json`/lockfile are back on `typescript ^6.0.2` (6.0.3).
+
+**What would unblock it**, in preference order:
+1. Wait for typescript-eslint's TS 7.1 support (#10940), then bump both together.
+2. Run side by side, as the TS 7 release notes suggest: keep the TS 6 JS API for the tools that
+   need it (`"typescript": "npm:@typescript/typescript6@6.0.2"`, which typescript-eslint and Next
+   resolve) and add TS 7 under another name for `tsc`. That is two compilers in the toolchain and
+   a CI change — a decision, not a version bump.
+
+`framer-motion` 14 is in PR #269, untouched here.
+
+**Verification (2026-10-27, branch `sprint-817-786-cleanup`: Sprint 817 plus the reverted TS 7 trial):**
+backend full suite **9,979 passed / 0 failed** (31 min serial); ruff clean on touched files. Frontend
+on TS 6.0.3: `tsc --noEmit` 0, `eslint src --max-warnings 0` 0, Jest 208 suites / 2,072 tests,
+`npm run build` 65 `ƒ (Dynamic)` routes + `ƒ Proxy (Middleware)` (static only `/icon.png`,
+`/sitemap.xml`). *Local-only quirk:* in this `.claude\worktrees\…` path Jest's `<rootDir>`
+ignore patterns break on Windows (the `\.claude` segment is mis-escaped), so plain `npm test`
+also collects `e2e/` and `__tests__/helpers/` and reports 3 "failed" suites with 0 failed tests.
+Runs were made with explicit `--testPathIgnorePatterns`. Not a repo defect: the main checkout and
+Linux CI are unaffected.
 
 #### 786b step 2 — the patch batch: COMPLETE
 

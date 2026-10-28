@@ -21,17 +21,17 @@ import statistics
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
+from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.monetary import decimals_to_floats
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
-from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER
+from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER, keep_most_severe, match_round_amount
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 from shared.testing_enums import (
-    SEVERITY_WEIGHTS,
     RiskTier,
     Severity,
     TestTier,
@@ -944,30 +944,32 @@ def test_round_revenue_amounts(
         if amt < config.round_amount_threshold:
             continue
 
-        for divisor, name, severity in ROUND_AMOUNT_PATTERNS_4TIER:
-            d = Decimal(str(divisor))
-            if amt >= d and amt % d == 0:
-                flagged.append(
-                    FlaggedRevenue(
-                        entry=e,
-                        test_name="Round Revenue Amounts",
-                        test_key="round_revenue_amounts",
-                        test_tier=TestTier.STRUCTURAL,
-                        severity=severity,
-                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                        confidence=0.70,
-                        details={"amount": amt, "pattern": name, "divisor": divisor},
-                    )
-                )
-                break
+        match = match_round_amount(amt, ROUND_AMOUNT_PATTERNS_4TIER)  # largest pattern only
+        if match is None:
+            continue
+        divisor, name, severity = match
+        flagged.append(
+            FlaggedRevenue(
+                entry=e,
+                test_name="Round Revenue Amounts",
+                test_key="round_revenue_amounts",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                confidence=0.70,
+                details={"amount": amt, "pattern": name, "divisor": divisor},
+            )
+        )
 
-    # Sprint 831 (Sprint 819 item 3): count every round amount, then keep the
-    # most severe, then the largest — the same order as JE and AP (the severity
-    # floors read only the kept flags). The loop used to stop at the cap in
-    # file order, so a large round entry late in the file was never seen.
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], abs(f.entry.amount)), reverse=True)
-    total_flagged = len(flagged)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 831: count every round amount, keep the most severe then the
+    # largest, the same order as JE, AP and Payroll (shared helper since
+    # Sprint 819 item 3).
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: f.severity,
+        amount_of=lambda f: abs(f.entry.amount),
+        cap=config.round_amount_max_flags,
+    )
 
     flag_rate = total_flagged / max(len(entries), 1)
     return RevenueTestResult(
@@ -2469,6 +2471,71 @@ def calculate_revenue_composite_score(
 # =============================================================================
 
 
+class RevenueTestingEngine(AuditEngineBase):
+    """Revenue testing engine on AuditEngineBase (Sprint 819 item 5).
+
+    Same steps, in the same order, as the procedural ``run_revenue_testing``
+    it replaced. The contract-evidence level (ASC 606 / IFRS 15) is assessed
+    from the column detection just before the battery runs, which needs it;
+    it is a pure function of the detection, so its position is immaterial.
+    """
+
+    OVERRIDABLE_COLUMNS = (
+        "date_column",
+        "amount_column",
+        "account_name_column",
+        "account_number_column",
+        "description_column",
+        "entry_type_column",
+        "reference_column",
+        "posted_by_column",
+        "contract_id_column",
+        "performance_obligation_id_column",
+        "recognition_method_column",
+        "contract_modification_column",
+        "allocation_basis_column",
+        "obligation_satisfaction_date_column",
+    )
+
+    def __init__(self, config: Optional[RevenueTestingConfig] = None):
+        super().__init__(config or RevenueTestingConfig())
+        self.evidence: Any = None
+
+    def detect_columns(self, column_names: list[str]) -> Any:
+        return detect_revenue_columns(column_names)
+
+    def parse_data(self, rows: list[dict], detection: Any) -> list:
+        return parse_revenue_entries(rows, detection)
+
+    def run_quality_checks(self, entries: list, detection: Any) -> Any:
+        return assess_revenue_data_quality(entries, detection)
+
+    def run_tests(self, entries: list) -> Any:
+        # Contract tests run only when the evidence level allows.
+        self.evidence = assess_contract_evidence(self.detection)
+        return run_revenue_test_battery(entries, self.config, self.evidence)
+
+    def compute_score(self, test_results: list, entry_count: int) -> Any:
+        return calculate_revenue_composite_score(test_results, entry_count)
+
+    def build_result(
+        self,
+        composite: Any,
+        test_output: Any,
+        data_quality: Any,
+        detection: Any,
+        entries: list,
+        enrichment: Any,
+    ) -> Any:
+        return RevenueTestingResult(
+            composite_score=composite,
+            test_results=test_output,
+            data_quality=data_quality,
+            column_detection=detection,
+            contract_evidence=self.evidence,
+        )
+
+
 @with_parse_memo
 def run_revenue_testing(
     rows: list[dict],
@@ -2487,56 +2554,9 @@ def run_revenue_testing(
     Returns:
         RevenueTestingResult with composite score, test results, data quality.
     """
-    if config is None:
-        config = RevenueTestingConfig()
-
-    # 1. Detect columns
-    detection = detect_revenue_columns(column_names)
-
-    # Apply manual overrides
-    if column_mapping:
-        for attr in (
-            "date_column",
-            "amount_column",
-            "account_name_column",
-            "account_number_column",
-            "description_column",
-            "entry_type_column",
-            "reference_column",
-            "posted_by_column",
-            "contract_id_column",
-            "performance_obligation_id_column",
-            "recognition_method_column",
-            "contract_modification_column",
-            "allocation_basis_column",
-            "obligation_satisfaction_date_column",
-        ):
-            if attr in column_mapping:
-                setattr(detection, attr, column_mapping[attr])
-        detection.overall_confidence = 1.0
-
-    # 2. Parse entries
-    entries = parse_revenue_entries(rows, detection)
-
-    # 3. Assess data quality
-    data_quality = assess_revenue_data_quality(entries, detection)
-
-    # 4. Assess contract evidence level
-    evidence = assess_contract_evidence(detection)
-
-    # 5. Run test battery (includes contract tests when evidence is available)
-    test_results = run_revenue_test_battery(entries, config, evidence)
-
-    # 6. Calculate composite score
-    composite = calculate_revenue_composite_score(test_results, len(entries))
-
-    return RevenueTestingResult(
-        composite_score=composite,
-        test_results=test_results,
-        data_quality=data_quality,
-        column_detection=detection,
-        contract_evidence=evidence,
-    )
+    engine = RevenueTestingEngine(config)
+    result: RevenueTestingResult = engine.run_pipeline(rows, column_names, column_mapping)
+    return result
 
 
 # =============================================================================

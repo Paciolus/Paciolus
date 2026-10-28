@@ -23,6 +23,38 @@
 | `asset_concentration` | `generators/asset_concentration.py` · `AssetConcentrationGenerator` | `audit/rules/concentration.py` · `detect_concentration_risk()` | RPT-01, RPT-21 | `CONCENTRATION_THRESHOLD_MEDIUM = 0.25` (25%, medium severity) and `CONCENTRATION_THRESHOLD_HIGH = 0.50` (50%, high severity). Minimum category total: `CONCENTRATION_MIN_CATEGORY_TOTAL = 1000.0`. | COVERED | General category concentration detector applied to asset category. |
 | `liability_concentration` | `generators/liability_concentration.py` · `LiabilityConcentrationGenerator` | `audit/rules/concentration.py` · `detect_concentration_risk()` | RPT-01, RPT-21 | `CONCENTRATION_THRESHOLD_MEDIUM = 0.25` (25%, medium severity) and `CONCENTRATION_THRESHOLD_HIGH = 0.50` (50%, high severity). Minimum category total: `CONCENTRATION_MIN_CATEGORY_TOTAL = 1000.0`. | COVERED | General category concentration detector applied to liability category. |
 
+## Per-Tool Generator Coverage — all eighteen tools
+
+> **Sprint 823 item 3 (2026-10-27).** The table above is the trial-balance set. This one has a row
+> for every tool in `tools_registry.marketing_audit_tools()`, keyed by its slug, and its
+> **Generators** column must equal `len(TOOL_GENERATOR_REGISTRY[slug])` in `registry.py`.
+> `test_coverage_map.py` enforces both, so a tool cannot join the catalog — or a generator be added
+> or dropped — without this table changing. The six config-shaped tools (Sprint 689b–g) take engine
+> dataclasses rather than rows; their generators run through a `ToolHarness` (clean baseline +
+> engine adapter, `generators/config_tool_base.py`) and are asserted **clean on the baseline and
+> detected after injection**.
+
+| Tool | Generator registry | Generators | Engine entry point | Detection test | Coverage status | Notes |
+|---|---|---|---|---|---|---|
+| `trial_balance` | `registry.py` · `ANOMALY_REGISTRY` | 13 | `audit_engine.audit_trial_balance_streaming` | `test_anomaly_detection.py::test_anomaly_is_detected` | COVERED | Per-anomaly detail in the table above. |
+| `multi_period` | `generators/multi_period_generators.py` · `MULTI_PERIOD_REGISTRY` | 6 | `multi_period_comparison.compare_trial_balances` | `test_tool_anomaly_detection.py::test_multi_period_anomaly_detected` | COVERED | Not driven end-to-end by either discovery round (823 / 829). |
+| `bank_reconciliation` | `generators/bank_rec_generators.py` · `BANK_REC_REGISTRY` | 4 | `bank_reconciliation.reconcile_bank_statement` | `test_tool_anomaly_detection.py::test_bank_rec_anomaly_detected` | COVERED | |
+| `three_way_match` | `generators/twm_generators.py` · `TWM_REGISTRY` | 4 | `three_way_match_engine.run_three_way_match` | `test_tool_anomaly_detection.py::test_twm_anomaly_detected` | COVERED | |
+| `journal_entry_testing` | `generators/je_generators.py` · `JE_REGISTRY` | 12 | `je_testing_engine.run_je_testing` | `test_tool_anomaly_detection.py::test_je_anomaly_detected` (+ `_large_pop`) | COVERED | The only tool whose large-population generators are parametrized. |
+| `ap_testing` | `generators/ap_generators.py` · `AP_REGISTRY` | 13 | `ap_testing_engine.run_ap_testing` | `test_tool_anomaly_detection.py::test_ap_anomaly_detected` | PARTIAL | 2 `requires_large_population` generators are registered but never parametrized. |
+| `revenue_testing` | `generators/revenue_generators.py` · `REVENUE_REGISTRY` | 16 | `revenue_testing_engine.run_revenue_testing` | `test_tool_anomaly_detection.py::test_revenue_anomaly_detected` | PARTIAL | 3 large-population generators never parametrized. |
+| `ar_aging` | `generators/ar_generators.py` · `AR_REGISTRY` | 11 | `ar_aging_engine.run_ar_aging` | `test_tool_anomaly_detection.py::test_ar_anomaly_detected` | PARTIAL | 4 large-population generators never parametrized. |
+| `payroll_testing` | `generators/payroll_generators.py` · `PAYROLL_REGISTRY` | 11 | `payroll_testing_engine.run_payroll_testing` | `test_tool_anomaly_detection.py::test_payroll_anomaly_detected` | PARTIAL | 3 large-population generators never parametrized. |
+| `fixed_asset_testing` | `generators/fa_generators.py` · `FA_REGISTRY` | 9 | `fixed_asset_testing_engine.run_fixed_asset_testing` | `test_tool_anomaly_detection.py::test_fa_anomaly_detected` | PARTIAL | Generators predate Sprint 823 (the "seven have none" count was six). 2 large-population generators never parametrized. No generator targets FA-T11 depreciation recalculation; A1/A2/A3/A6 are pinned in `test_sprint_827_engine_findings.py` instead. |
+| `inventory_testing` | `generators/inv_generators.py` · `INV_REGISTRY` | 9 | `inventory_testing_engine.run_inventory_testing` | `test_tool_anomaly_detection.py::test_inv_anomaly_detected` | PARTIAL | 2 large-population generators never parametrized. |
+| `statistical_sampling` | `generators/sampling_generators.py` · `SAMPLING_REGISTRY` | 5 | `sampling_engine.design_sample` | `test_tool_anomaly_detection.py::test_sampling_anomaly_detected` | PARTIAL | Design only; evaluation (where S1 lived) is covered by `test_sampling_engine.py`, not by a generator. |
+| `sod_checker` | `generators/sod_generators.py` · `SOD_REGISTRY` | 5 | `sod_engine.analyze_segregation_of_duties` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | AP-02, JE-01, ADM-01, D1 long-format rows, D2 unmatched permissions. Custom `extra_rules` not exercised. |
+| `intercompany_elimination` | `generators/intercompany_generators.py` · `INTERCOMPANY_REGISTRY` | 4 | `intercompany_elimination_engine.run_intercompany_elimination` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | No-reciprocal, amount and direction mismatches; I1 elimination direction. Two entities only. |
+| `w2_reconciliation` | `generators/w2_generators.py` · `W2_REGISTRY` | 5 | `w2_reconciliation_engine.reconcile_w2` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | Wage base, HSA, 401(k) limit, Box 2 vs payroll, 941 vs payroll. Limits are read from `statutory_limits_for_year`, so the generators survive Sprint 793b figure changes. Catch-up tiers not exercised. |
+| `form_1099` | `generators/form_1099_generators.py` · `FORM_1099_REGISTRY` | 5 | `form_1099_engine.prepare_1099s` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | Missing/invalid TIN, processor-reported exclusion, F1/F6 royalty threshold, F4 attorney fees to a corporation. Tax year 2025 table only; the 2026 $2,000 row is not exercised here. |
+| `book_to_tax` | `generators/book_to_tax_generators.py` · `BOOK_TO_TAX_REGISTRY` | 5 | `book_to_tax_engine.calculate_book_to_tax` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | A calculator, not a detector: generators are known-answer checks (M-3 threshold, DTL on a temporary difference, permanent add/subtract, B5 miscoded adjustment refused). State tax and DTA rollforward not exercised. |
+| `cash_flow_projector` | `generators/cash_flow_generators.py` · `CASH_FLOW_REGISTRY` | 4 | `cash_flow_projector_engine.project_cash_flow` | `test_tool_anomaly_detection.py::test_config_tool_anomaly_detected` | COVERED | Goes negative, minimum-safe-cash breach, AR collection priority, AP deferral — base scenario only. Quarterly flows and the C2–C6 open items not exercised. |
+
 ## Blind Spots — Documented Future Work
 
 The following anomaly categories are neither detected by production code nor represented in the synthetic framework. They require new detector logic and are out of scope for the current remediation cycle.

@@ -30,6 +30,7 @@ from schemas.admin_customer_schemas import (
     ImpersonationStopRequest,
     PlanOverrideRequest,
     RefundRequest,
+    RevokeSessionsRequest,
     TrialExtensionRequest,
 )
 from security_middleware import get_client_ip
@@ -113,6 +114,31 @@ def get_customer_detail(
 # ---------------------------------------------------------------------------
 
 
+def _require_target_user(db: Session, org_id: int, target_user_id: int) -> User:
+    """Resolve the customer route ID and refuse it unless it is ``target_user_id``.
+
+    The route ID is an org ID, or a user ID for a solo customer (no org). An
+    org ID that is stale or never existed used to fall back silently to the
+    user with that ID — a different customer. Sprint 840 (S3) closed this for
+    impersonation; Sprint 848 (security review L5) applies it to every admin
+    action that resolves a customer this way.
+    """
+    from organization_model import Organization
+
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    resolved_id = org.owner_user_id if org else org_id
+    target_user = db.query(User).filter(User.id == resolved_id).first()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+    if target_user.id != target_user_id:
+        raise HTTPException(
+            status_code=409,
+            detail="Customer ID does not resolve to the requested user. Reload the customer and try again.",
+        )
+    return target_user
+
+
 @router.post("/customers/{org_id}/plan-override", response_model=AdminActionResponse)
 @limiter.limit(RATE_LIMIT_WRITE)
 def plan_override(
@@ -124,6 +150,8 @@ def plan_override(
 ) -> dict[str, Any]:
     """Override a customer's plan."""
     from billing.admin_customers import admin_plan_override
+
+    _require_target_user(db, org_id, body.target_user_id)
 
     try:
         result = admin_plan_override(
@@ -153,6 +181,8 @@ def extend_trial(
     """Extend a customer's trial period."""
     from billing.admin_customers import admin_extend_trial
 
+    _require_target_user(db, org_id, body.target_user_id)
+
     try:
         result = admin_extend_trial(
             db,
@@ -179,6 +209,8 @@ def issue_credit(
 ) -> dict[str, Any]:
     """Issue a credit to a customer's Stripe balance."""
     from billing.admin_customers import admin_issue_credit
+
+    _require_target_user(db, org_id, body.target_user_id)
 
     try:
         result = admin_issue_credit(
@@ -209,6 +241,8 @@ def issue_refund(
 ) -> dict[str, Any]:
     """Issue a partial or full refund."""
     from billing.admin_customers import admin_issue_refund
+
+    _require_target_user(db, org_id, body.target_user_id)
 
     try:
         result = admin_issue_refund(
@@ -241,6 +275,8 @@ def force_cancel(
     """Force cancel a customer's subscription."""
     from billing.admin_customers import admin_force_cancel
 
+    _require_target_user(db, org_id, body.target_user_id)
+
     try:
         result = admin_force_cancel(
             db,
@@ -261,11 +297,14 @@ def force_cancel(
 def revoke_sessions(
     request: Request,
     org_id: int,
+    body: RevokeSessionsRequest,
     admin: Annotated[User, Depends(require_superadmin)],
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Revoke all active sessions for a customer."""
     from billing.admin_customers import admin_revoke_sessions
+
+    _require_target_user(db, org_id, body.target_user_id)
 
     result = admin_revoke_sessions(
         db,
@@ -323,23 +362,10 @@ def impersonate_customer(
     from billing.admin_customers import _create_audit_entry
     from organization_model import Organization
 
+    # Sprint 840 (S3): refuse unless the resolved user is the one the admin
+    # said they meant.
+    target_user = _require_target_user(db, org_id, body.target_user_id)
     org = db.query(Organization).filter(Organization.id == org_id).first()
-    if org:
-        target_user = db.query(User).filter(User.id == org.owner_user_id).first()
-    else:
-        target_user = db.query(User).filter(User.id == org_id).first()
-
-    if not target_user:
-        raise HTTPException(status_code=404, detail="Customer not found.")
-
-    # Sprint 840 (S3): an org ID that does not exist used to fall back silently
-    # to the user with that ID — a different customer. Refuse unless the
-    # resolved user is the one the admin said they meant.
-    if target_user.id != body.target_user_id:
-        raise HTTPException(
-            status_code=409,
-            detail="Customer ID does not resolve to the requested user. Reload the customer and try again.",
-        )
     if getattr(target_user, "is_superadmin", False):
         raise HTTPException(status_code=403, detail="Superadmin accounts cannot be impersonated.")
 

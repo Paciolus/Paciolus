@@ -18,7 +18,7 @@ from typing import Any, Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import LedgerRule, create_leader_dots
+from pdf import LedgerRule, create_leader_dots
 from shared.drill_down import (
     build_drill_down_table,
     format_currency,

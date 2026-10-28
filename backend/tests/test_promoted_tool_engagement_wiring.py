@@ -353,7 +353,8 @@ class TestEveryPromotedToolIsCovered:
 
         # Helpers that take engagement_id and record on the caller's behalf.
         # test_recording_helpers_actually_record keeps this honest.
-        DELEGATES = ("run_single_file_testing", "execute_file_tool")
+        # Sprint 819 item 6: the six promoted JSON tools record via run_json_tool.
+        DELEGATES = ("run_single_file_testing", "execute_file_tool", "run_json_tool")
 
         offenders: list[str] = []
         for path in sorted((backend / "routes").glob("*.py")):
@@ -392,6 +393,7 @@ class TestEveryPromotedToolIsCovered:
         for rel, func in (
             ("shared/testing_route.py", "run_single_file_testing"),
             ("services/audit/file_tool_scaffold.py", "execute_file_tool"),
+            ("shared/testing_route.py", "run_json_tool"),
         ):
             src = (backend / rel).read_text(encoding="utf-8")
             assert f"def {func}(" in src, f"{func} no longer lives in {rel}"

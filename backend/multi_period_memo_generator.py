@@ -17,18 +17,15 @@ Sections:
 8. Conclusion (risk-tier-based professional assessment)
 """
 
-import io
 from typing import Any, Optional
 
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     LedgerRule,
     create_leader_dots,
-    generate_reference_number,
 )
 from security_utils import log_secure_operation
 from shared.follow_up_procedures import get_follow_up_procedure
@@ -36,17 +33,15 @@ from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     RISK_SCALE_LEGEND,
     RISK_TIER_DISPLAY,
+    TESTING_MEMO_MARGINS,
+    MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
     build_workpaper_signoff,
-    create_memo_styles,
+    render_memo,
+    source_line,
 )
-from shared.report_chrome import (
-    ReportMetadata,
-    build_cover_page,
-    current_page_footer,
-    find_logo,
-)
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -185,20 +180,9 @@ def _build_significant_movements_table(
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (1, 0), (4, -1), "RIGHT"),
-                ("ALIGN", (5, 0), (5, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
+            ledger_table_style(
+                font_size=8, extra=[("ALIGN", (1, 0), (4, -1), "RIGHT"), ("ALIGN", (5, 0), (5, -1), "CENTER")]
+            )
         )
     )
     story.append(table)
@@ -557,23 +541,7 @@ def _build_ratio_trends_table(
         data.append([ratio_name, prior_val, current_val, change_val, flag])
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (1, 0), (3, -1), "RIGHT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
+    table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (1, 0), (3, -1), "RIGHT")])))
     story.append(table)
 
     # Narrative paragraph about ratio trends
@@ -669,20 +637,9 @@ def _build_sign_change_detail(
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (1, 0), (2, -1), "RIGHT"),
-                ("ALIGN", (3, 0), (3, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
+            ledger_table_style(
+                font_size=8, extra=[("ALIGN", (1, 0), (2, -1), "RIGHT"), ("ALIGN", (3, 0), (3, -1), "CENTER")]
+            )
         )
     )
     story.append(table)
@@ -751,23 +708,7 @@ def _build_dormant_accounts_detail(
             data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (0, 0), (0, -1), "CENTER"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
+    table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (0, 0), (0, -1), "CENTER")])))
     story.append(table)
 
     if len(dormant_accounts) > 20:
@@ -840,22 +781,7 @@ def _build_new_closed_account_detail(
                 data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
 
         table = Table(data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
+        table.setStyle(TableStyle(ledger_table_style(font_size=8)))
         story.append(table)
         story.append(Spacer(1, 4))
 
@@ -894,22 +820,7 @@ def _build_new_closed_account_detail(
                 data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
 
         table = Table(data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
+        table.setStyle(TableStyle(ledger_table_style(font_size=8)))
         story.append(table)
         story.append(Spacer(1, 4))
 
@@ -985,23 +896,7 @@ def _build_lead_sheet_table(
         )
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
-    table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
+    table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (2, 0), (-1, -1), "RIGHT")])))
     story.append(table)
 
 
@@ -1077,332 +972,314 @@ def generate_multi_period_memo(
     """
     log_secure_operation("multi_period_memo_generate", f"Generating multi-period memo: {filename}")
 
-    styles = create_memo_styles()
-    buffer = io.BytesIO()
-    reference = generate_reference_number().replace("PAC-", "APC-")
+    def _body(memo: MemoContext) -> None:
+        story, styles, doc_width = memo.story, memo.styles, memo.doc_width
+        prior_label = comparison_result.get("prior_label", "Prior")
+        current_label = comparison_result.get("current_label", "Current")
+        budget_label = comparison_result.get("budget_label")
+        total_accounts = comparison_result.get("total_accounts", 0)
+        movements_by_type = comparison_result.get("movements_by_type", {})
+        movements_by_significance = comparison_result.get("movements_by_significance", {})
+        significant_movements = comparison_result.get("significant_movements", [])
+        all_movements = comparison_result.get("all_movements", significant_movements)
+        lead_sheet_summaries = comparison_result.get("lead_sheet_summaries", [])
+        dormant_count = comparison_result.get("dormant_account_count", 0)
+        dormant_accounts = comparison_result.get("dormant_accounts", [])
+        new_accounts = comparison_result.get("new_accounts", [])
+        closed_accounts = comparison_result.get("closed_accounts", [])
+        composite_data = comparison_result.get("composite", {})
 
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=1.0 * inch,
-        bottomMargin=0.8 * inch,
-    )
+        material_count = movements_by_significance.get("material", 0)
+        significant_count = movements_by_significance.get("significant", 0)
+        minor_count = movements_by_significance.get("minor", 0)
+        sign_change_count = movements_by_type.get("sign_change", 0)
+        new_count = movements_by_type.get("new_account", 0)
+        closed_count = movements_by_type.get("closed_account", 0)
 
-    story: list[object] = []
-    prior_label = comparison_result.get("prior_label", "Prior")
-    current_label = comparison_result.get("current_label", "Current")
-    budget_label = comparison_result.get("budget_label")
-    total_accounts = comparison_result.get("total_accounts", 0)
-    movements_by_type = comparison_result.get("movements_by_type", {})
-    movements_by_significance = comparison_result.get("movements_by_significance", {})
-    significant_movements = comparison_result.get("significant_movements", [])
-    all_movements = comparison_result.get("all_movements", significant_movements)
-    lead_sheet_summaries = comparison_result.get("lead_sheet_summaries", [])
-    dormant_count = comparison_result.get("dormant_account_count", 0)
-    dormant_accounts = comparison_result.get("dormant_accounts", [])
-    new_accounts = comparison_result.get("new_accounts", [])
-    closed_accounts = comparison_result.get("closed_accounts", [])
-    composite_data = comparison_result.get("composite", {})
+        # ================================================================
+        # I. SCOPE
+        # ================================================================
+        story.append(Paragraph("I. Scope", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
 
-    material_count = movements_by_significance.get("material", 0)
-    significant_count = movements_by_significance.get("significant", 0)
-    minor_count = movements_by_significance.get("minor", 0)
-    sign_change_count = movements_by_type.get("sign_change", 0)
-    new_count = movements_by_type.get("new_account", 0)
-    closed_count = movements_by_type.get("closed_account", 0)
+        period_desc = period_tested or f"{prior_label} vs. {current_label}"
+        if budget_label:
+            period_desc += f" vs. {budget_label}"
 
-    # 1. COVER PAGE
-    logo_path = find_logo()
-    metadata = ReportMetadata(
-        title="Analytical Procedures Memo",
-        client_name=client_name or "",
-        engagement_period=period_tested or "",
-        source_document=filename,
-        source_document_title=source_document_title or "",
-        source_context_note=source_context_note or "",
-        reference=reference,
-        fiscal_year_end=fiscal_year_end or "",
-    )
-    build_cover_page(story, styles, metadata, doc.width, logo_path)
+        # Source document transparency
+        source_scope_lines = []
+        source = source_line(source_document_title, filename)
+        if source:
+            source_scope_lines.append(source)
 
-    # ================================================================
-    # I. SCOPE
-    # ================================================================
-    story.append(Paragraph("I. Scope", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    period_desc = period_tested or f"{prior_label} vs. {current_label}"
-    if budget_label:
-        period_desc += f" vs. {budget_label}"
-
-    # Source document transparency
-    source_scope_lines = []
-    if source_document_title and filename:
-        source_scope_lines.append(create_leader_dots("Source", f"{source_document_title} ({filename})"))
-    elif source_document_title:
-        source_scope_lines.append(create_leader_dots("Source", source_document_title))
-    elif filename:
-        source_scope_lines.append(create_leader_dots("Source", filename))
-
-    scope_lines = source_scope_lines + [
-        create_leader_dots("Periods Compared", period_desc),
-        create_leader_dots("Total Accounts Analyzed", f"{total_accounts:,}"),
-        create_leader_dots("Material Movements", str(material_count)),
-        create_leader_dots("Significant Movements", str(significant_count)),
-        create_leader_dots("Minor Movements", str(minor_count)),
-    ]
-    if sign_change_count > 0:
-        scope_lines.append(create_leader_dots("Sign Changes", str(sign_change_count)))
-    if new_count > 0 or closed_count > 0:
-        scope_lines.append(
-            create_leader_dots(
-                "New/Closed Accounts", f"{new_count + closed_count} ({new_count} new, {closed_count} closed)"
-            )
-        )
-    if dormant_count > 0:
-        scope_lines.append(create_leader_dots("Dormant Accounts", str(dormant_count)))
-
-    for line in scope_lines:
-        story.append(Paragraph(line, styles["MemoLeader"]))
-    story.append(Spacer(1, 8))
-
-    build_scope_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="multi_period_comparison",
-        framework=resolved_framework,
-        domain_label="analytical procedures and trend analysis",
-    )
-
-    # ================================================================
-    # II. MOVEMENT SUMMARY
-    # ================================================================
-    story.append(Paragraph("II. Movement Summary", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    type_labels = {
-        "new_account": "New Accounts",
-        "closed_account": "Closed Accounts",
-        "sign_change": "Sign Changes",
-        "increase": "Increases",
-        "decrease": "Decreases",
-        "unchanged": "Unchanged",
-    }
-    for type_key, type_label in type_labels.items():
-        count = movements_by_type.get(type_key, 0)
-        if count > 0:
-            story.append(
-                Paragraph(
-                    create_leader_dots(type_label, str(count)),
-                    styles["MemoLeader"],
+        scope_lines = source_scope_lines + [
+            create_leader_dots("Periods Compared", period_desc),
+            create_leader_dots("Total Accounts Analyzed", f"{total_accounts:,}"),
+            create_leader_dots("Material Movements", str(material_count)),
+            create_leader_dots("Significant Movements", str(significant_count)),
+            create_leader_dots("Minor Movements", str(minor_count)),
+        ]
+        if sign_change_count > 0:
+            scope_lines.append(create_leader_dots("Sign Changes", str(sign_change_count)))
+        if new_count > 0 or closed_count > 0:
+            scope_lines.append(
+                create_leader_dots(
+                    "New/Closed Accounts", f"{new_count + closed_count} ({new_count} new, {closed_count} closed)"
                 )
             )
-    story.append(Spacer(1, 8))
+        if dormant_count > 0:
+            scope_lines.append(create_leader_dots("Dormant Accounts", str(dormant_count)))
 
-    # ================================================================
-    # III. RESULTS SUMMARY
-    # ================================================================
-    story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
+        for line in scope_lines:
+            story.append(Paragraph(line, styles["MemoLeader"]))
+        story.append(Spacer(1, 8))
 
-    # Compute diagnostic score if not pre-computed
-    if composite_data:
-        risk_score = composite_data.get("score", 0)
-        risk_tier = composite_data.get("risk_tier", "low")
-    else:
-        # Derive risk inputs from available data
-        cash_increase_pct = 0.0
-        cogs_growth_vs_revenue = False
-        single_account_revenue_pct = 0.0
-        high_growth_count = 0
-
-        for m in significant_movements:
-            pct = m.get("change_percent")
-            if pct is not None and abs(pct) > 25:
-                high_growth_count += 1
-            name = m.get("account_name", "").lower()
-            if "cash" in name and pct is not None:
-                cash_increase_pct = max(cash_increase_pct, pct / 100.0)
-
-        # Check COGS vs revenue growth from all_movements
-        prior_rev = sum(
-            abs(m.get("prior_balance", 0))
-            for m in all_movements
-            if _match_keyword(m.get("account_name", ""), _REVENUE_KEYWORDS)
-        )
-        curr_rev = sum(
-            abs(m.get("current_balance", 0))
-            for m in all_movements
-            if _match_keyword(m.get("account_name", ""), _REVENUE_KEYWORDS)
-        )
-        prior_cogs = sum(
-            abs(m.get("prior_balance", 0))
-            for m in all_movements
-            if _match_keyword(m.get("account_name", ""), _COGS_KEYWORDS)
-        )
-        curr_cogs = sum(
-            abs(m.get("current_balance", 0))
-            for m in all_movements
-            if _match_keyword(m.get("account_name", ""), _COGS_KEYWORDS)
+        build_scope_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="multi_period_comparison",
+            framework=resolved_framework,
+            domain_label="analytical procedures and trend analysis",
         )
 
-        if prior_rev > 0 and prior_cogs > 0:
-            rev_growth = (curr_rev - prior_rev) / prior_rev
-            cogs_growth = (curr_cogs - prior_cogs) / prior_cogs
-            cogs_growth_vs_revenue = cogs_growth > rev_growth
+        # ================================================================
+        # II. MOVEMENT SUMMARY
+        # ================================================================
+        story.append(Paragraph("II. Movement Summary", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
 
-        # Single-account revenue concentration
-        if curr_rev > 0:
-            rev_accounts = [
+        type_labels = {
+            "new_account": "New Accounts",
+            "closed_account": "Closed Accounts",
+            "sign_change": "Sign Changes",
+            "increase": "Increases",
+            "decrease": "Decreases",
+            "unchanged": "Unchanged",
+        }
+        for type_key, type_label in type_labels.items():
+            count = movements_by_type.get(type_key, 0)
+            if count > 0:
+                story.append(
+                    Paragraph(
+                        create_leader_dots(type_label, str(count)),
+                        styles["MemoLeader"],
+                    )
+                )
+        story.append(Spacer(1, 8))
+
+        # ================================================================
+        # III. RESULTS SUMMARY
+        # ================================================================
+        story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        # Compute diagnostic score if not pre-computed
+        if composite_data:
+            risk_score = composite_data.get("score", 0)
+            risk_tier = composite_data.get("risk_tier", "low")
+        else:
+            # Derive risk inputs from available data
+            cash_increase_pct = 0.0
+            cogs_growth_vs_revenue = False
+            single_account_revenue_pct = 0.0
+            high_growth_count = 0
+
+            for m in significant_movements:
+                pct = m.get("change_percent")
+                if pct is not None and abs(pct) > 25:
+                    high_growth_count += 1
+                name = m.get("account_name", "").lower()
+                if "cash" in name and pct is not None:
+                    cash_increase_pct = max(cash_increase_pct, pct / 100.0)
+
+            # Check COGS vs revenue growth from all_movements
+            prior_rev = sum(
+                abs(m.get("prior_balance", 0))
+                for m in all_movements
+                if _match_keyword(m.get("account_name", ""), _REVENUE_KEYWORDS)
+            )
+            curr_rev = sum(
                 abs(m.get("current_balance", 0))
                 for m in all_movements
                 if _match_keyword(m.get("account_name", ""), _REVENUE_KEYWORDS)
-            ]
-            if rev_accounts:
-                single_account_revenue_pct = max(rev_accounts) / curr_rev
-
-        risk_score = compute_apc_diagnostic_score(
-            material_movement_count=material_count,
-            sign_change_count=sign_change_count,
-            cash_increase_pct=cash_increase_pct,
-            cogs_growth_vs_revenue=cogs_growth_vs_revenue,
-            single_account_revenue_pct=single_account_revenue_pct,
-            high_growth_accounts=high_growth_count,
-            dormant_count=dormant_count,
-            new_closed_count=new_count + closed_count,
-        )
-        risk_tier = score_to_risk_tier(risk_score).value
-
-    base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
-    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
-
-    story.append(
-        Paragraph(create_leader_dots("Composite Diagnostic Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"])
-    )
-    story.append(Paragraph(create_leader_dots("Diagnostic Tier", tier_label), styles["MemoLeader"]))
-    story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph(create_leader_dots("Material Movements", str(material_count)), styles["MemoLeader"]))
-    story.append(Paragraph(create_leader_dots("Significant Movements", str(significant_count)), styles["MemoLeader"]))
-    story.append(Paragraph(create_leader_dots("Sign Changes", str(sign_change_count)), styles["MemoLeader"]))
-    story.append(
-        Paragraph(
-            create_leader_dots(
-                "New/Closed Accounts", f"{new_count + closed_count} ({new_count} new, {closed_count} closed)"
-            ),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(Paragraph(create_leader_dots("Dormant Accounts", str(dormant_count)), styles["MemoLeader"]))
-    story.append(Spacer(1, 8))
-
-    # ================================================================
-    # IV. SIGNIFICANT ACCOUNT MOVEMENTS
-    # ================================================================
-    story.append(Paragraph("IV. Significant Account Movements", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-    _build_significant_movements_table(story, styles, significant_movements)
-    story.append(Spacer(1, 6))
-
-    # Suggested procedures for material movements
-    _build_suggested_procedures(story, styles, significant_movements)
-
-    # Cash contextualization
-    _build_cash_context(story, styles, significant_movements)
-
-    # Sign Change Detail
-    _build_sign_change_detail(story, styles, all_movements)
-
-    # Dormant Account Detail
-    _build_dormant_accounts_detail(story, styles, dormant_accounts)
-
-    # New and Closed Account Detail
-    _build_new_closed_account_detail(story, styles, new_accounts, closed_accounts)
-
-    # Ratio Trends (computed from full TB population)
-    _build_ratio_trends_table(story, styles, all_movements, prior_label, current_label)
-
-    # ================================================================
-    # V. LEAD SHEET SUMMARY
-    # ================================================================
-    section_num = "V"
-    if lead_sheet_summaries:
-        stripped_summaries = []
-        for ls in lead_sheet_summaries:
-            stripped_summaries.append(
-                {
-                    "lead_sheet": ls.get("lead_sheet", ""),
-                    "lead_sheet_name": ls.get("lead_sheet_name", ""),
-                    "account_count": ls.get("account_count", 0),
-                    "prior_total": ls.get("prior_total", 0),
-                    "current_total": ls.get("current_total", 0),
-                    "net_change": ls.get("net_change", 0),
-                }
+            )
+            prior_cogs = sum(
+                abs(m.get("prior_balance", 0))
+                for m in all_movements
+                if _match_keyword(m.get("account_name", ""), _COGS_KEYWORDS)
+            )
+            curr_cogs = sum(
+                abs(m.get("current_balance", 0))
+                for m in all_movements
+                if _match_keyword(m.get("account_name", ""), _COGS_KEYWORDS)
             )
 
-        story.append(Paragraph(f"{section_num}. Lead Sheet Summary", styles["MemoSection"]))
-        story.append(LedgerRule(doc.width))
-        _build_lead_sheet_table(story, styles, stripped_summaries)
+            if prior_rev > 0 and prior_cogs > 0:
+                rev_growth = (curr_rev - prior_rev) / prior_rev
+                cogs_growth = (curr_cogs - prior_cogs) / prior_cogs
+                cogs_growth_vs_revenue = cogs_growth > rev_growth
+
+            # Single-account revenue concentration
+            if curr_rev > 0:
+                rev_accounts = [
+                    abs(m.get("current_balance", 0))
+                    for m in all_movements
+                    if _match_keyword(m.get("account_name", ""), _REVENUE_KEYWORDS)
+                ]
+                if rev_accounts:
+                    single_account_revenue_pct = max(rev_accounts) / curr_rev
+
+            risk_score = compute_apc_diagnostic_score(
+                material_movement_count=material_count,
+                sign_change_count=sign_change_count,
+                cash_increase_pct=cash_increase_pct,
+                cogs_growth_vs_revenue=cogs_growth_vs_revenue,
+                single_account_revenue_pct=single_account_revenue_pct,
+                high_growth_accounts=high_growth_count,
+                dormant_count=dormant_count,
+                new_closed_count=new_count + closed_count,
+            )
+            risk_tier = score_to_risk_tier(risk_score).value
+
+        base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
+        tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
+
+        story.append(
+            Paragraph(create_leader_dots("Composite Diagnostic Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"])
+        )
+        story.append(Paragraph(create_leader_dots("Diagnostic Tier", tier_label), styles["MemoLeader"]))
+        story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(create_leader_dots("Material Movements", str(material_count)), styles["MemoLeader"]))
+        story.append(
+            Paragraph(create_leader_dots("Significant Movements", str(significant_count)), styles["MemoLeader"])
+        )
+        story.append(Paragraph(create_leader_dots("Sign Changes", str(sign_change_count)), styles["MemoLeader"]))
+        story.append(
+            Paragraph(
+                create_leader_dots(
+                    "New/Closed Accounts", f"{new_count + closed_count} ({new_count} new, {closed_count} closed)"
+                ),
+                styles["MemoLeader"],
+            )
+        )
+        story.append(Paragraph(create_leader_dots("Dormant Accounts", str(dormant_count)), styles["MemoLeader"]))
         story.append(Spacer(1, 8))
-        section_num = "VI"
 
-    # ================================================================
-    # METHODOLOGY & AUTHORITATIVE REFERENCES
-    # ================================================================
-    build_methodology_statement(
-        story,
-        styles,
-        doc.width,
-        tool_domain="multi_period_comparison",
-        framework=resolved_framework,
-        domain_label="analytical procedures and trend analysis",
+        # ================================================================
+        # IV. SIGNIFICANT ACCOUNT MOVEMENTS
+        # ================================================================
+        story.append(Paragraph("IV. Significant Account Movements", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+        _build_significant_movements_table(story, styles, significant_movements)
+        story.append(Spacer(1, 6))
+
+        # Suggested procedures for material movements
+        _build_suggested_procedures(story, styles, significant_movements)
+
+        # Cash contextualization
+        _build_cash_context(story, styles, significant_movements)
+
+        # Sign Change Detail
+        _build_sign_change_detail(story, styles, all_movements)
+
+        # Dormant Account Detail
+        _build_dormant_accounts_detail(story, styles, dormant_accounts)
+
+        # New and Closed Account Detail
+        _build_new_closed_account_detail(story, styles, new_accounts, closed_accounts)
+
+        # Ratio Trends (computed from full TB population)
+        _build_ratio_trends_table(story, styles, all_movements, prior_label, current_label)
+
+        # ================================================================
+        # V. LEAD SHEET SUMMARY
+        # ================================================================
+        section_num = "V"
+        if lead_sheet_summaries:
+            stripped_summaries = []
+            for ls in lead_sheet_summaries:
+                stripped_summaries.append(
+                    {
+                        "lead_sheet": ls.get("lead_sheet", ""),
+                        "lead_sheet_name": ls.get("lead_sheet_name", ""),
+                        "account_count": ls.get("account_count", 0),
+                        "prior_total": ls.get("prior_total", 0),
+                        "current_total": ls.get("current_total", 0),
+                        "net_change": ls.get("net_change", 0),
+                    }
+                )
+
+            story.append(Paragraph(f"{section_num}. Lead Sheet Summary", styles["MemoSection"]))
+            story.append(LedgerRule(doc_width))
+            _build_lead_sheet_table(story, styles, stripped_summaries)
+            story.append(Spacer(1, 8))
+            section_num = "VI"
+
+        # ================================================================
+        # METHODOLOGY & AUTHORITATIVE REFERENCES
+        # ================================================================
+        build_methodology_statement(
+            story,
+            styles,
+            doc_width,
+            tool_domain="multi_period_comparison",
+            framework=resolved_framework,
+            domain_label="analytical procedures and trend analysis",
+        )
+        build_authoritative_reference_block(
+            story,
+            styles,
+            doc_width,
+            tool_domain="multi_period_comparison",
+            framework=resolved_framework,
+            domain_label="analytical procedures and trend analysis",
+            section_label=f"{section_num}.",
+        )
+        # Increment past the references section
+        section_num = {"V": "VI", "VI": "VII"}.get(section_num, section_num)
+
+        # ================================================================
+        # CONCLUSION
+        # ================================================================
+        story.append(Paragraph(f"{section_num}. Conclusion", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+
+        assessment = _build_risk_conclusion(risk_tier, risk_score)
+        story.append(Paragraph(assessment, styles["MemoBody"]))
+        story.append(Spacer(1, 12))
+
+        # WORKPAPER SIGN-OFF
+        build_workpaper_signoff(
+            story, styles, doc_width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
+        )
+
+        # INTELLIGENCE STAMP
+        build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
+
+        # DISCLAIMER
+        build_disclaimer(
+            story,
+            styles,
+            domain="analytical procedures and trend analysis",
+            isa_reference="ISA 520 (Analytical Procedures) and PCAOB AS 2305 (Substantive Analytical Procedures)",
+        )
+
+    pdf_bytes = render_memo(
+        "Analytical Procedures Memo",
+        "APC",
+        _body,
+        cover={
+            "client_name": client_name or "",
+            "engagement_period": period_tested or "",
+            "source_document": filename,
+            "source_document_title": source_document_title or "",
+            "source_context_note": source_context_note or "",
+            "fiscal_year_end": fiscal_year_end or "",
+        },
+        margins=TESTING_MEMO_MARGINS,
     )
-    build_authoritative_reference_block(
-        story,
-        styles,
-        doc.width,
-        tool_domain="multi_period_comparison",
-        framework=resolved_framework,
-        domain_label="analytical procedures and trend analysis",
-        section_label=f"{section_num}.",
-    )
-    # Increment past the references section
-    section_num = {"V": "VI", "VI": "VII"}.get(section_num, section_num)
-
-    # ================================================================
-    # CONCLUSION
-    # ================================================================
-    story.append(Paragraph(f"{section_num}. Conclusion", styles["MemoSection"]))
-    story.append(LedgerRule(doc.width))
-
-    assessment = _build_risk_conclusion(risk_tier, risk_score)
-    story.append(Paragraph(assessment, styles["MemoBody"]))
-    story.append(Spacer(1, 12))
-
-    # WORKPAPER SIGN-OFF
-    build_workpaper_signoff(
-        story, styles, doc.width, prepared_by, reviewed_by, workpaper_date, include_signoff=include_signoff
-    )
-
-    # INTELLIGENCE STAMP
-    build_intelligence_stamp(story, styles, client_name=client_name, period_tested=period_tested)
-
-    # DISCLAIMER
-    build_disclaimer(
-        story,
-        styles,
-        domain="analytical procedures and trend analysis",
-        isa_reference="ISA 520 (Analytical Procedures) and PCAOB AS 2305 (Substantive Analytical Procedures)",
-    )
-
-    # Build PDF (page footer on all pages)
-    page_footer = current_page_footer()
-    doc.build(story, onFirstPage=page_footer, onLaterPages=page_footer)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
 
     log_secure_operation("multi_period_memo_complete", f"Multi-period memo generated: {len(pdf_bytes)} bytes")
     return pdf_bytes

@@ -320,7 +320,8 @@ class TestSharedTemplateMemoRegression:
         """memo_template.py should include cover page."""
         source = Path(__file__).parent.parent / "shared" / "memo_template.py"
         content = source.read_text(encoding="utf-8")
-        assert "build_cover_page" in content, "memo_template.py must include cover page"
+        # Sprint 813: the cover is built by shared.memo_base.render_memo(cover=...)
+        assert "build_cover_page" in content or "render_memo(" in content, "memo_template.py must include cover page"
 
 
 # =============================================================================
@@ -358,7 +359,7 @@ class TestPreflightMemoRegression:
         """Preflight memo source should include scope and disclaimer."""
         source = Path(__file__).parent.parent / "preflight_memo_generator.py"
         content = source.read_text(encoding="utf-8")
-        assert "build_cover_page" in content or "report_chrome" in content, "preflight memo must use shared cover page"
+        assert "build_cover_page" in content or "render_memo(" in content, "preflight memo must use shared cover page"
         assert "build_disclaimer" in content or "disclaimer" in content.lower(), (
             "preflight memo must include disclaimer"
         )
@@ -414,7 +415,7 @@ class TestThreeWayMatchMemoRegression:
         """TWM memo source should include scope, methodology, and references."""
         source = Path(__file__).parent.parent / "three_way_match_memo_generator.py"
         content = source.read_text(encoding="utf-8")
-        assert "build_cover_page" in content or "report_chrome" in content
+        assert "build_cover_page" in content or "render_memo(" in content
         assert "build_disclaimer" in content or "disclaimer" in content.lower()
 
 
@@ -457,7 +458,7 @@ class TestMultiPeriodMemoRegression:
         """Multi-period memo source should include cover page and disclaimer."""
         source = Path(__file__).parent.parent / "multi_period_memo_generator.py"
         content = source.read_text(encoding="utf-8")
-        assert "build_cover_page" in content or "report_chrome" in content
+        assert "build_cover_page" in content or "render_memo(" in content
         assert "build_disclaimer" in content or "disclaimer" in content.lower()
 
 

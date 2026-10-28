@@ -53,12 +53,23 @@ export interface BaseCompositeScore<TFinding = string> {
   score_basis?: string[]
 }
 
-/** Shared shape for data quality metrics (6/7 tools; AR has different row fields). */
+/** Shared shape for data quality metrics (all 7 testing tools). */
 export interface BaseDataQuality {
   completeness_score: number
   field_fill_rates: Record<string, number>
   detected_issues: string[]
+}
+
+/** Data quality for the 6 single-file tools, which count parsed rows (AR counts TB accounts + sub-ledger entries instead). */
+export interface RowDataQuality extends BaseDataQuality {
   total_rows: number
+}
+
+/** Shared shape for column detection results (each tool's `*ColumnDetection` extends this). */
+export interface BaseColumnDetection {
+  overall_confidence: number
+  all_columns: string[]
+  detection_notes: string[]
 }
 
 // ─── Standardized Color Maps ───────────────────────────────────────────────────

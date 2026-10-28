@@ -7,16 +7,21 @@ Encapsulates the boilerplate shared by 6 single-file testing endpoints:
 
 Used by: AP, Payroll, JE (main), Revenue, Fixed Asset, Inventory routes.
 NOT used by: Three-Way Match (3-file), AR Aging (dual-file + config).
+
+Also ``run_json_tool`` (Sprint 819 item 6): the enforce -> quota -> run ->
+record sequence the six promoted JSON-body tools (SoD, intercompany, W-2,
+Form 1099, book-to-tax, cash-flow projector) each repeated.
 """
 
 import asyncio
 import logging
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
 from fastapi import BackgroundTasks, HTTPException, UploadFile
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from models import User, UserTier
@@ -62,6 +67,68 @@ def enforce_tool_access(current_user: User, tool_name: str, db: object = None) -
             logger.warning(
                 "SOFT entitlement block: tool=%s, user=%d, tier=%s", tool_name, current_user.id, current_user.tier.value
             )
+
+
+_R = TypeVar("_R")
+
+# What a promoted tool maps to a sanitized 400 when its engine fails unexpectedly.
+_JSON_TOOL_UNEXPECTED_ERRORS: tuple[type[Exception], ...] = (ValueError, ValidationError, ArithmeticError)
+
+
+def run_json_tool(
+    *,
+    db: Session,
+    current_user: User,
+    tool_name: str,
+    engagement_id: Optional[int],
+    compute: Callable[[], _R],
+    input_errors: tuple[type[Exception], ...] = (),
+    unexpected_errors: tuple[type[Exception], ...] = _JSON_TOOL_UNEXPECTED_ERRORS,
+    error_key: str = "",
+    route_logger: Optional[logging.Logger] = None,
+    failure_log: str = "",
+    reraise_errors: tuple[type[Exception], ...] = (),
+) -> _R:
+    """Gate, run and record one JSON-body tool run (Sprint 819 item 6).
+
+    1. ``enforce_tool_access`` then ``check_upload_limit`` (tier + quota).
+    2. ``compute()`` — builds the engine config from the request and runs it.
+    3. On failure, a FAILED ToolRun is recorded against ``engagement_id`` and:
+       - ``input_errors`` (the engine's own input-error type) -> 400, ``str(e)``;
+       - ``unexpected_errors`` -> logged with ``failure_log`` on ``route_logger``,
+         then 400 with ``sanitize_error(e, "audit", error_key)``;
+       - ``reraise_errors`` -> re-raised unchanged (SoD: its 400 comes from
+         request validation, and KeyError/TypeError propagate as before).
+       Anything else — including the ``HTTPException`` a request-decimal parse
+       raises — propagates without recording, as it always has.
+    4. On success, a COMPLETED ToolRun is recorded **synchronously**, before the
+       response is sent (PR #183 review: a background task runs after the body
+       is sent, so the Sprint 791 hooks' immediate refresh missed the row).
+       ``composite_score`` and ``flagged_accounts`` are None by design: none of
+       these engines produces a composite score, and their findings are not
+       GL-account-level, so ``shared/account_extractors.py`` has no extractor.
+
+    Each ``except`` is checked in the order above, so an engine input error that
+    subclasses ``ValueError`` still gets its own message.
+    """
+    enforce_tool_access(current_user, tool_name, db)
+    check_upload_limit(current_user, db)
+
+    try:
+        result = compute()
+    except input_errors as e:
+        maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
+        raise HTTPException(status_code=400, detail=str(e))
+    except unexpected_errors as e:
+        (route_logger or logger).exception(failure_log)
+        maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
+        raise HTTPException(status_code=400, detail=sanitize_error(e, "audit", error_key))
+    except reraise_errors:
+        maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
+        raise
+
+    maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, True, None, None, consumes_upload=True)
+    return result
 
 
 async def run_single_file_testing(

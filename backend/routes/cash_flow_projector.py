@@ -15,8 +15,8 @@ from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, ValidationError
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
@@ -28,13 +28,11 @@ from cash_flow_projector_engine import (
     project_cash_flow,
 )
 from database import get_db
-from shared.entitlement_checks import check_upload_limit
-from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
-from shared.testing_route import enforce_tool_access
-from shared.tool_run_recorder import maybe_record_tool_run
+from shared.testing_route import enforce_tool_access, run_json_tool
 
 logger = logging.getLogger(__name__)
 
@@ -104,39 +102,20 @@ def run_projection(
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    # Sprint 689g: gate promoted tool at tier + upload-limit level.
-    enforce_tool_access(current_user, "cash_flow_projector", db)
-    check_upload_limit(current_user, db)
-
-    try:
-        config = _build_config(payload)
-        result = project_cash_flow(config)
-    except CashFlowInputError as e:
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
-        raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError, ArithmeticError) as e:
-        logger.exception("Cash flow projection computation failed")
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "cash_flow_projector", False)
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "audit", "cash_flow_projector_error"),
-        )
-
-    # Sprint 787b: record the run on the engagement workpaper trail. Both
-    # composite_score and flagged_accounts are None by design, not omission:
-    # this engine produces no composite score, and shared/account_extractors.py
-    # has no extractor for it because its output is not GL-account-level.
-    # PR #183 review: recorded synchronously, not via background_tasks.
-    # Starlette sends the response body (responses.py:167) *before* awaiting the
-    # background task (:170), so the client already has the result while the
-    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
-    # as the POST resolves, which would GET the workpaper list before the row
-    # existed, replace the context state with the stale list, and never refresh
-    # again — the new entry invisible until a manual reload. The write is one
-    # INSERT plus a commit after an analysis that already ran in-process, so the
-    # latency it buys back is not worth the race.
-    maybe_record_tool_run(
-        db, payload.engagement_id, current_user.id, "cash_flow_projector", True, None, None, consumes_upload=True
+    # Sprint 689g: gate promoted tool at tier + upload-limit level;
+    # Sprint 787b: run recorded on the engagement workpaper trail (success
+    # synchronously, before the response). Sprint 819: the sequence lives in
+    # shared/testing_route.py::run_json_tool.
+    result = run_json_tool(
+        db=db,
+        current_user=current_user,
+        tool_name="cash_flow_projector",
+        engagement_id=payload.engagement_id,
+        compute=lambda: project_cash_flow(_build_config(payload)),
+        input_errors=(CashFlowInputError,),
+        error_key="cash_flow_projector_error",
+        route_logger=logger,
+        failure_log="Cash flow projection computation failed",
     )
     return result.to_dict()
 
@@ -148,7 +127,7 @@ def export_projection_csv(
     payload: CashFlowProjectionRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689g: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "cash_flow_projector", db)
 
@@ -192,8 +171,4 @@ def export_projection_csv(
             )
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=cash_flow_projection.csv"},
-    )
+    return attachment_response(buffer.getvalue(), "cash_flow_projection.csv", MEDIA_CSV, quote_filename=False)

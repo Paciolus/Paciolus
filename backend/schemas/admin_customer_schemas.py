@@ -113,27 +113,37 @@ class PlanOverrideRequest(BaseModel):
     new_plan: str = Field(pattern="^(solo|professional|enterprise)$")
     reason: str = Field(min_length=1, max_length=500)
     effective_immediately: bool = True
+    # Sprint 848 (security review L5): see ImpersonationRequest.
+    target_user_id: int = Field(..., ge=1)
 
 
 class TrialExtensionRequest(BaseModel):
     days: int = Field(ge=1, le=90)
     reason: str = Field(min_length=1, max_length=500)
+    # Sprint 848 (security review L5): see ImpersonationRequest.
+    target_user_id: int = Field(..., ge=1)
 
 
 class CreditRequest(BaseModel):
     amount_cents: int = Field(ge=1, le=1_000_000)
     reason: str = Field(min_length=1, max_length=500)
+    # Sprint 848 (security review L5): see ImpersonationRequest.
+    target_user_id: int = Field(..., ge=1)
 
 
 class RefundRequest(BaseModel):
     payment_intent_id: str = Field(min_length=1, max_length=255)
     amount_cents: int = Field(ge=1, le=1_000_000)
     reason: str = Field(min_length=1, max_length=500)
+    # Sprint 848 (security review L5): see ImpersonationRequest.
+    target_user_id: int = Field(..., ge=1)
 
 
 class ForceCancelRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
     immediate: bool = False
+    # Sprint 848 (security review L5): see ImpersonationRequest.
+    target_user_id: int = Field(..., ge=1)
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +168,11 @@ class ImpersonationRequest(BaseModel):
     # Sprint 840 (S3): the customer route ID is an org ID, or a user ID for a
     # solo customer, so it alone can name two different people. The caller
     # states which user it means and the server refuses a mismatch.
+    target_user_id: int = Field(..., ge=1)
+
+
+class RevokeSessionsRequest(BaseModel):
+    # Sprint 848 (security review L5): see ImpersonationRequest.
     target_user_id: int = Field(..., ge=1)
 
 

@@ -109,12 +109,16 @@ def format_classical_date(dt: datetime | None = None) -> str:
     return dt.strftime(f"{day}{suffix} %B %Y")
 
 
-def generate_reference_number() -> str:
-    """Generate institutional reference number: PAC-YYYY-MMDD-NNN"""
+def generate_reference_number(prefix: str = "PAC") -> str:
+    """Generate institutional reference number: ``<prefix>-YYYY-MMDD-NNN``.
+
+    Each memo passes its own prefix (``"APT"``, ``"WP-FE"``, ...); the default
+    is the platform-wide ``PAC``.
+    """
     now = datetime.now(UTC)
     # Simple sequential based on time (in production, use a proper sequence)
     seq = (now.hour * 3600 + now.minute * 60 + now.second) % 1000
-    return f"PAC-{now.year}-{now.month:02d}{now.day:02d}-{seq:03d}"
+    return f"{prefix}-{now.year}-{now.month:02d}{now.day:02d}-{seq:03d}"
 
 
 def create_leader_dots(label: str, value: str, total_chars: int = 55) -> str:

@@ -163,6 +163,92 @@ class TestCreateClient:
             assert "id" in data
 
 
+@pytest.fixture
+def free_user(db_session):
+    """A FREE-tier user (max_clients=3) for the client-limit tests."""
+    user = User(
+        email="clients_free@example.com",
+        name="Free Tier User",
+        hashed_password="$2b$12$fakehashvalue",
+        tier=UserTier.FREE,
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(user)
+    db_session.flush()
+    return user
+
+
+@pytest.fixture
+def override_auth_free(free_user, db_session):
+    app.dependency_overrides[require_current_user] = lambda: free_user
+    app.dependency_overrides[get_db] = lambda: db_session
+    yield
+    app.dependency_overrides.clear()
+
+
+def _seed_clients(db_session, user, n):
+    for i in range(n):
+        db_session.add(Client(user_id=user.id, name=f"Seed {i}", industry=Industry.OTHER, fiscal_year_end="12-31"))
+    db_session.flush()
+
+
+_NEW_CLIENT = {"name": "Limit Probe", "industry": "technology", "fiscal_year_end": "12-31"}
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestCreateClientLimit:
+    """Sprint 817: POST /clients enforces the tier client limit.
+
+    Pins the HTTP contract of the limit so the route can delegate to
+    ``shared.entitlement_checks.check_client_limit`` (one implementation)
+    without any change in what a caller sees.
+    """
+
+    @pytest.mark.asyncio
+    async def test_under_limit_creates(self, override_auth_free, free_user, db_session):
+        _seed_clients(db_session, free_user, 2)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/clients", json=_NEW_CLIENT)
+        assert response.status_code == 201
+
+    @pytest.mark.asyncio
+    async def test_at_limit_returns_exact_403(self, override_auth_free, free_user, db_session):
+        _seed_clients(db_session, free_user, 3)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/clients", json=_NEW_CLIENT)
+        assert response.status_code == 403
+        assert response.json()["detail"] == {
+            "code": "TIER_LIMIT_EXCEEDED",
+            "message": "Client limit reached (3/3). Upgrade your plan to add more clients.",
+            "resource": "clients",
+            "current_tier": "free",
+            "upgrade_url": "/pricing",
+        }
+        assert db_session.query(Client).filter(Client.user_id == free_user.id).count() == 3
+
+    @pytest.mark.asyncio
+    async def test_soft_mode_at_limit_creates(self, override_auth_free, free_user, db_session, monkeypatch):
+        import config
+        import shared.entitlement_checks as ec
+
+        # Both enforcement-mode readers (the pre-817 inline check read the
+        # config constant; the shared check reads _get_enforcement_mode).
+        monkeypatch.setattr(config, "ENTITLEMENT_ENFORCEMENT", "soft")
+        monkeypatch.setattr(ec, "_get_enforcement_mode", lambda: "soft")
+        _seed_clients(db_session, free_user, 3)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/clients", json=_NEW_CLIENT)
+        assert response.status_code == 201
+
+    @pytest.mark.asyncio
+    async def test_unlimited_tier_ignores_count(self, override_auth, mock_user, db_session):
+        _seed_clients(db_session, mock_user, 5)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/clients", json=_NEW_CLIENT)
+        assert response.status_code == 201
+
+
 # =============================================================================
 # GET /clients/{id}
 # =============================================================================

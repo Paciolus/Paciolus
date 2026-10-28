@@ -17,7 +17,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from account_risk_heatmap_engine import (
@@ -32,6 +32,7 @@ from account_risk_heatmap_engine import (
     heatmap_to_csv,
 )
 from auth import User, require_verified_user
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -156,13 +157,9 @@ def export_heatmap_csv(
     request: Request,
     payload: HeatmapRequest,
     current_user: User = Depends(require_verified_user),
-) -> StreamingResponse:
+) -> Response:
     """CSV export of the heatmap."""
     signals = _build_all_signals(payload)
     result = compute_account_heatmap(signals)
     csv_text = heatmap_to_csv(result)
-    return StreamingResponse(
-        iter([csv_text]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=account_risk_heatmap.csv"},
-    )
+    return attachment_response(csv_text, "account_risk_heatmap.csv", MEDIA_CSV, quote_filename=False)

@@ -84,6 +84,7 @@ describe('useInternalAdmin', () => {
         new_plan: 'professional',
         reason: 'manual',
         effective_immediately: true,
+        target_user_id: 7,
       })
       expect(res).toEqual({ applied: true })
     })
@@ -91,7 +92,7 @@ describe('useInternalAdmin', () => {
     expect(mockApiPost).toHaveBeenCalledWith(
       '/internal/admin/customers/1/plan-override',
       'admin-tok',
-      { new_plan: 'professional', reason: 'manual', effective_immediately: true },
+      { new_plan: 'professional', reason: 'manual', effective_immediately: true, target_user_id: 7 },
     )
   })
 
@@ -100,7 +101,7 @@ describe('useInternalAdmin', () => {
     const { result } = renderHook(() => useInternalAdmin())
 
     await expect(
-      result.current.planOverride(1, { new_plan: 'x', reason: '', effective_immediately: false }),
+      result.current.planOverride(1, { new_plan: 'x', reason: '', effective_immediately: false, target_user_id: 7 }),
     ).rejects.toThrow('boom')
   })
 
@@ -134,6 +135,19 @@ describe('useInternalAdmin', () => {
     mockApiPost.mockResolvedValue({ ok: false, error: 'already offline' })
     const { result } = renderHook(() => useInternalAdmin())
 
-    await expect(result.current.revokeSessions(42)).rejects.toThrow('already offline')
+    await expect(result.current.revokeSessions(42, 7)).rejects.toThrow('already offline')
+  })
+
+  // Sprint 848 (security review L5): the server refuses an action whose route
+  // ID resolves to a different customer, so every action names its target.
+  it('revokeSessions: names the target user', async () => {
+    mockApiPost.mockResolvedValue({ ok: true, data: { success: true, message: 'ok' } })
+    const { result } = renderHook(() => useInternalAdmin())
+
+    await act(async () => {
+      await result.current.revokeSessions(42, 7)
+    })
+
+    expect(mockApiPost).toHaveBeenCalledWith('/internal/admin/customers/42/revoke-sessions', 'admin-tok', { target_user_id: 7 })
   })
 })

@@ -204,6 +204,16 @@ def test_excel_and_slash_dates_are_tested_not_skipped(acquired):
     assert _fa_recalc([_asset(1, 100_000.0, under, acquired, 10, "Straight-Line")])["entries_flagged"] == 1
 
 
+@pytest.mark.parametrize("acquired", ["01-Jan-2021", "1-JAN-2021", "01 Jan 2021", "Jan 1, 2021"])
+def test_day_month_name_dates_are_tested_not_skipped(acquired):
+    """A3 remainder: ``01-Jan-2019`` was outside the shared parser, so FA-T11
+    skipped the asset and a planted under-depreciation went unflagged. Sprint
+    829 (D-2) added ``%d-%b-%Y`` and friends to the shared ``parse_date`` for
+    every caller; this pins that the fixed-asset path relies on it."""
+    under = round(100_000 * _years("2021-01-01") / 10 * 0.6, 2)
+    assert _fa_recalc([_asset(1, 100_000.0, under, acquired, 10, "Straight-Line")])["entries_flagged"] == 1
+
+
 def test_contra_negative_accumulated_depreciation_compares_magnitudes():
     """A6: a register carrying accumulated depreciation as (5,000.00) flagged every row."""
     accum = round(100_000 * _years("2021-01-01") / 10, 2)

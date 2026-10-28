@@ -17,7 +17,7 @@ from typing import Any, Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
+from pdf import ClassicalColors, LedgerRule, create_leader_dots
 from shared.drill_down import format_currency
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo

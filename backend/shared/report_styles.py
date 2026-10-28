@@ -13,10 +13,12 @@ Heading Hierarchy (Sprint 5):
 - No letter-spaced all-caps headings. All headings use readable title case.
 """
 
+from collections.abc import Iterable
+
 from reportlab.lib.units import inch
 
 # Re-export ClassicalColors for convenience (single import path)
-from pdf_generator import ClassicalColors
+from pdf import ClassicalColors
 
 # =============================================================================
 # Font families
@@ -66,20 +68,25 @@ MARGIN_BOTTOM = 0.8
 # =============================================================================
 
 
-def ledger_table_style() -> list[tuple]:
+def ledger_table_style(*, font_size: float = SIZE_TABLE, extra: Iterable[tuple] = ()) -> list[tuple]:
     """Return the standard ledger table styling commands.
 
     Usage:
         table.setStyle(TableStyle(ledger_table_style()))
+        table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (1, 0), (-1, -1), "RIGHT")])))
 
-    This is the repeating pattern used across ~20 tables in memo generators:
+    This is the repeating pattern used across the memo generators' tables:
     bold header row, obsidian-deep text, 1px header underline, 0.25px row
     separators, top-aligned, compact padding, flush left first column.
+
+    ``extra`` commands are appended after the ledger block, so they win
+    over it for any cell attribute they both set (ReportLab applies
+    TableStyle commands in order).
     """
     return [
         ("FONTNAME", (0, 0), (-1, 0), FONT_TITLE),
         ("FONTNAME", (0, 1), (-1, -1), FONT_BODY),
-        ("FONTSIZE", (0, 0), (-1, -1), SIZE_TABLE),
+        ("FONTSIZE", (0, 0), (-1, -1), font_size),
         ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
         ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
         ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
@@ -87,4 +94,5 @@ def ledger_table_style() -> list[tuple]:
         ("TOPPADDING", (0, 0), (-1, -1), 3),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ("LEFTPADDING", (0, 0), (0, -1), 0),
+        *extra,
     ]

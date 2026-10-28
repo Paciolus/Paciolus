@@ -20,7 +20,7 @@ from typing import Optional
 import pandas as pd
 
 from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_columns
-from shared.parsing_helpers import safe_decimal
+from shared.parsing_helpers import parse_date, safe_decimal
 
 # ISO 4217 currency codes (common subset for validation)
 ISO_4217_CODES: set[str] = {
@@ -563,15 +563,16 @@ def parse_rate_table(rows: list[dict]) -> list[ExchangeRate]:
 
         # Parse date
         raw_date = str(normalized_row.get("effective_date", "")).strip()
-        try:
-            if "/" in raw_date:
-                parsed_date = datetime.strptime(raw_date, "%m/%d/%Y").date()
-            elif "-" in raw_date:
-                parsed_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
-            else:
-                errors.append(f"Row {i}: Invalid date format '{raw_date}' (use YYYY-MM-DD or MM/DD/YYYY)")
-                continue
-        except ValueError:
+        # Exactly one form per separator, as the error message says — narrower
+        # than the shared default on purpose (Sprint 819 item 4).
+        if "/" in raw_date:
+            parsed_date = parse_date(raw_date, formats=("%m/%d/%Y",))
+        elif "-" in raw_date:
+            parsed_date = parse_date(raw_date, formats=("%Y-%m-%d",))
+        else:
+            errors.append(f"Row {i}: Invalid date format '{raw_date}' (use YYYY-MM-DD or MM/DD/YYYY)")
+            continue
+        if parsed_date is None:
             errors.append(f"Row {i}: Invalid date '{raw_date}'")
             continue
 
@@ -819,6 +820,70 @@ def detect_currencies_in_tb(
 # =============================================================================
 
 
+def _detect_account_columns(
+    df: pd.DataFrame,
+    account_number_column: Optional[str],
+    account_name_column: Optional[str],
+) -> tuple[Optional[str], Optional[str]]:
+    """Fill in whichever account columns (used to label flags) were not given."""
+    if account_number_column is None:
+        for col in df.columns:
+            if re.search(r"account.*(?:no|num|code|id)", col, re.IGNORECASE):
+                account_number_column = col
+                break
+    if account_name_column is None:
+        for col in df.columns:
+            if re.search(r"account.*name|description", col, re.IGNORECASE):
+                account_name_column = col
+                break
+    return account_number_column, account_name_column
+
+
+def _resolve_currency_rates(
+    currencies: list[str],
+    rate_table: CurrencyRateTable,
+    target_date: Optional[date],
+) -> tuple[dict[str, tuple[Optional[Decimal], Optional[str]]], dict[str, str]]:
+    """Look up each currency's rate to the presentation currency once.
+
+    Returns ``(currency -> (rate, issue), rates_applied)``; ``rates_applied``
+    maps ``"EUR/USD"`` to the rate used, for the result summary.
+    """
+    presentation_currency = rate_table.presentation_currency
+    rate_lookup = _build_rate_lookup(rate_table.rates)
+    # Sprint 699: cohort-based staleness check — when no target_date is
+    # supplied, we still want to catch "stale rate alongside a fresh one"
+    # by comparing each matched rate to the table's newest entry.
+    newest_cohort_date = rate_table.newest_rate_date()
+    staleness_threshold = rate_table.staleness_threshold_days
+
+    currency_rates: dict[str, tuple[Optional[Decimal], Optional[str]]] = {}
+    rates_applied: dict[str, str] = {}
+    for curr in currencies:
+        if curr == presentation_currency:
+            currency_rates[curr] = (Decimal("1"), None)
+            continue
+        rate, issue = find_rate(
+            rate_lookup,
+            curr,
+            presentation_currency,
+            target_date,
+            newest_cohort_date=newest_cohort_date,
+            staleness_threshold_days=staleness_threshold,
+        )
+        # Sprint 699: defense-in-depth at use time. ExchangeRate
+        # __post_init__ enforces rate > 0, but a future attribute
+        # mutation or an unvalidated construction path could still
+        # leak a bad rate into rate_lookup. Reject it here so the
+        # engine never produces silent 0 or negative conversions.
+        if rate is not None and rate <= 0:
+            rate, issue = None, "invalid_rate"
+        currency_rates[curr] = (rate, issue)
+        if rate is not None:
+            rates_applied[f"{curr}/{presentation_currency}"] = str(rate)
+    return currency_rates, rates_applied
+
+
 def convert_trial_balance(
     tb_rows: list[dict],
     rate_table: CurrencyRateTable,
@@ -873,17 +938,7 @@ def convert_trial_balance(
             converted_rows=tb_rows,
         )
 
-    # Detect account columns for flagging
-    if account_number_column is None:
-        for col in df.columns:
-            if re.search(r"account.*(?:no|num|code|id)", col, re.IGNORECASE):
-                account_number_column = col
-                break
-    if account_name_column is None:
-        for col in df.columns:
-            if re.search(r"account.*name|description", col, re.IGNORECASE):
-                account_name_column = col
-                break
+    account_number_column, account_name_column = _detect_account_columns(df, account_number_column, account_name_column)
 
     # Normalize currency column
     df["_currency_normalized"] = df[currency_column].fillna("").astype(str).str.strip().str.upper()
@@ -892,82 +947,51 @@ def convert_trial_balance(
         df["_currency_normalized"].loc[df["_currency_normalized"].str.len() == 3].unique().tolist()
     )
 
-    # Build rate lookup
-    rate_lookup = _build_rate_lookup(rate_table.rates)
+    # One lookup per currency, not per row.
+    currency_rates, rates_applied = _resolve_currency_rates(currencies_found, rate_table, target_date)
 
-    # Sprint 699: cohort-based staleness check — when no target_date is
-    # supplied, we still want to catch "stale rate alongside a fresh one"
-    # by comparing each matched rate to the table's newest entry.
-    newest_cohort_date = rate_table.newest_rate_date()
-    staleness_threshold = rate_table.staleness_threshold_days
+    # Sprint 819 item 10: read each column once instead of a per-cell ``df.at``
+    # in the row loop. ``to_numpy()`` yields the same element objects ``df.at``
+    # returned (numpy scalars for numeric columns), so values and their string
+    # forms are unchanged.
+    n_rows = len(df)
+    row_currencies = df["_currency_normalized"].to_numpy()
+    raw_amounts = df[amount_column].to_numpy() if amount_column in df.columns else [None] * n_rows
+    account_numbers = (
+        df[account_number_column].to_numpy() if account_number_column and account_number_column in df.columns else None
+    )
+    account_names = (
+        df[account_name_column].to_numpy() if account_name_column and account_name_column in df.columns else None
+    )
 
-    # Vectorized conversion: build rate and issue columns
+    def _flag(idx: int, amount: Decimal, currency: str, issue: str, severity: str) -> ConversionFlag:
+        return ConversionFlag(
+            account_number=str(account_numbers[idx]) if account_numbers is not None else str(idx),
+            account_name=str(account_names[idx]) if account_names is not None else "",
+            original_amount=amount,
+            original_currency=currency,
+            issue=issue,
+            severity=severity,
+        )
+
     converted_amounts: list[Optional[Decimal]] = []
     flags: list[ConversionFlag] = []
-    rates_applied: dict[str, str] = {}
-
-    # Pre-compute rates for each unique currency pair
-    currency_rates: dict[str, tuple[Optional[Decimal], Optional[str]]] = {}
-    for curr in currencies_found:
-        if curr == presentation_currency:
-            currency_rates[curr] = (Decimal("1"), None)
-        else:
-            rate, issue = find_rate(
-                rate_lookup,
-                curr,
-                presentation_currency,
-                target_date,
-                newest_cohort_date=newest_cohort_date,
-                staleness_threshold_days=staleness_threshold,
-            )
-            # Sprint 699: defense-in-depth at use time. ExchangeRate
-            # __post_init__ enforces rate > 0, but a future attribute
-            # mutation or an unvalidated construction path could still
-            # leak a bad rate into rate_lookup. Reject it here so the
-            # engine never produces silent 0 or negative conversions.
-            if rate is not None and rate <= 0:
-                rate, issue = None, "invalid_rate"
-            currency_rates[curr] = (rate, issue)
-            if rate is not None:
-                rates_applied[f"{curr}/{presentation_currency}"] = str(rate)
-
-    # Process rows
     converted_count = 0
     unconverted_count = 0
 
-    for idx in range(len(df)):
-        row_currency = df.at[idx, "_currency_normalized"]
-        raw_amount = df.at[idx, amount_column] if amount_column in df.columns else None
+    for idx in range(n_rows):
+        row_currency = row_currencies[idx]
 
         # Parse amount. Sprint 816: through safe_decimal — ``Decimal(str(x))``
         # turned an empty cell (float NaN) into Decimal("NaN"), which raised
         # InvalidOperation in the severity pass whenever that row was also
         # unconvertible, and turned "$1,234.56" / "(1,234.56)" into a silent 0.
-        amount = safe_decimal(raw_amount)
+        amount = safe_decimal(raw_amounts[idx])
 
         if not row_currency or len(row_currency) != 3:
             # Missing currency code
             if amount != 0:
-                acct_num = (
-                    str(df.at[idx, account_number_column])
-                    if account_number_column and account_number_column in df.columns
-                    else str(idx)
-                )
-                acct_name = (
-                    str(df.at[idx, account_name_column])
-                    if account_name_column and account_name_column in df.columns
-                    else ""
-                )
-                flags.append(
-                    ConversionFlag(
-                        account_number=acct_num,
-                        account_name=acct_name,
-                        original_amount=amount,
-                        original_currency=row_currency or "(none)",
-                        issue="missing_currency_code",
-                        severity="medium",
-                    )
-                )
+                flags.append(_flag(idx, amount, row_currency or "(none)", "missing_currency_code", "medium"))
                 unconverted_count += 1
             converted_amounts.append(amount)  # Pass through as-is
             continue
@@ -976,31 +1000,13 @@ def convert_trial_balance(
         if rate_info is None or rate_info[0] is None:
             # No rate available — either the pair wasn't in the table
             # ("missing_rate") or the matched rate failed use-time validation
-            # ("invalid_rate") — Sprint 699 defense-in-depth.
-            acct_num = (
-                str(df.at[idx, account_number_column])
-                if account_number_column and account_number_column in df.columns
-                else str(idx)
-            )
-            acct_name = (
-                str(df.at[idx, account_name_column])
-                if account_name_column and account_name_column in df.columns
-                else ""
-            )
-            # Carry through the specific issue from find_rate so downstream
-            # memos / reports can distinguish "data wasn't there" from "data
-            # was there but invalid" — different remediation for the auditor.
+            # ("invalid_rate") — Sprint 699 defense-in-depth. Carry the specific
+            # issue through so downstream memos / reports can distinguish "data
+            # wasn't there" from "data was there but invalid" — different
+            # remediation for the auditor.
             carried_issue = rate_info[1] if rate_info and rate_info[1] else "missing_rate"
-            flags.append(
-                ConversionFlag(
-                    account_number=acct_num,
-                    account_name=acct_name,
-                    original_amount=amount,
-                    original_currency=row_currency,
-                    issue=carried_issue,
-                    severity="high" if carried_issue == "invalid_rate" else "medium",
-                )
-            )
+            severity = "high" if carried_issue == "invalid_rate" else "medium"
+            flags.append(_flag(idx, amount, row_currency, carried_issue, severity))
             unconverted_count += 1
             converted_amounts.append(None)
             continue
@@ -1012,26 +1018,7 @@ def convert_trial_balance(
         converted_count += 1
 
         if issue == "stale_rate":
-            acct_num = (
-                str(df.at[idx, account_number_column])
-                if account_number_column and account_number_column in df.columns
-                else str(idx)
-            )
-            acct_name = (
-                str(df.at[idx, account_name_column])
-                if account_name_column and account_name_column in df.columns
-                else ""
-            )
-            flags.append(
-                ConversionFlag(
-                    account_number=acct_num,
-                    account_name=acct_name,
-                    original_amount=amount,
-                    original_currency=row_currency,
-                    issue="stale_rate",
-                    severity="low",
-                )
-            )
+            flags.append(_flag(idx, amount, row_currency, "stale_rate", "low"))
 
     # Add converted amounts to DataFrame
     converted_col_name = f"converted_amount_{presentation_currency.lower()}"

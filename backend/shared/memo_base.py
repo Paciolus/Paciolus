@@ -9,6 +9,9 @@ Each memo generator imports these functions and provides only
 domain-specific content (title, test descriptions, conclusion text).
 """
 
+import functools
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, Optional
 from xml.sax.saxutils import escape as xml_escape
 
@@ -17,7 +20,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
-from pdf_generator import (
+from pdf import (
     ClassicalColors,
     DoubleRule,
     LedgerRule,
@@ -165,7 +168,19 @@ def format_risk_tier_label(composite: dict) -> tuple[str, Any]:
 
 
 def create_memo_styles() -> dict:
-    """Create the standard memo style set used by all testing memos."""
+    """Return the standard memo style set used by all memos.
+
+    Sprint 813: built once per process and cached — every memo render used
+    to rebuild ~25 ``ParagraphStyle`` objects and a sample stylesheet. Each
+    call returns a fresh dict, so a caller adding a key cannot leak it into
+    the next memo; the styles themselves are shared and must be treated as
+    read-only (derive with ``ParagraphStyle(..., parent=styles[name])``).
+    """
+    return dict(_memo_styles())
+
+
+@functools.cache
+def _memo_styles() -> dict:
     styles = getSampleStyleSheet()
 
     memo_styles = [
@@ -294,6 +309,32 @@ def build_memo_header(
     story.append(Spacer(1, 12))
 
 
+def source_line(
+    source_document_title: Optional[str],
+    filename: Optional[str],
+    *,
+    filename_label: str = "Source",
+    always: bool = False,
+) -> Optional[str]:
+    """Leader-dot "Source" line for a memo's scope block (Sprint 813).
+
+    * title and filename → ``Source ... <title> (<filename>)``
+    * title only         → ``Source ... <title>``
+    * filename only      → ``<filename_label> ... <filename>``
+
+    With neither, returns ``None`` — unless ``always`` is set, in which case
+    the filename line is emitted regardless (the diagnostic memos label it
+    "Source File" and always print it).
+    """
+    if source_document_title and filename:
+        return create_leader_dots("Source", f"{source_document_title} ({filename})")
+    if source_document_title:
+        return create_leader_dots("Source", source_document_title)
+    if filename or always:
+        return create_leader_dots(filename_label, filename or "")
+    return None
+
+
 def build_scope_section(
     story: list,
     styles: dict,
@@ -326,12 +367,9 @@ def build_scope_section(
         scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))
 
     # Source document transparency (Sprint 6)
-    if source_document_title and source_document:
-        scope_lines.insert(0, create_leader_dots("Source", f"{source_document_title} ({source_document})"))
-    elif source_document_title:
-        scope_lines.insert(0, create_leader_dots("Source", source_document_title))
-    elif source_document:
-        scope_lines.insert(0, create_leader_dots("Source", source_document))
+    source = source_line(source_document_title, source_document)
+    if source:
+        scope_lines.insert(0, source)
 
     for line in scope_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
@@ -611,23 +649,7 @@ def build_results_summary_section(
         )
 
     results_table = Table(results_data, colWidths=[2.8 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch], repeatRows=1)
-    results_table.setStyle(
-        TableStyle(
-            [
-                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                ("LEFTPADDING", (0, 0), (0, -1), 0),
-            ]
-        )
-    )
+    results_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (1, 0), (-1, -1), "RIGHT")])))
     story.append(results_table)
     story.append(Spacer(1, 8))
 
@@ -811,7 +833,7 @@ def build_limitations_section(
 
     Fix 10: Upgrade disclaimer language.
     """
-    from pdf_generator import LedgerRule
+    from pdf import LedgerRule
 
     story.append(Spacer(1, 16))
     story.append(Paragraph("Limitations", styles.get("MemoSection", styles.get("SectionHeader", styles["MemoBody"]))))
@@ -847,3 +869,133 @@ def build_limitations_section(
         "data is retained by Paciolus after the analysis session concludes."
     )
     story.append(Paragraph(zero_storage_text, styles.get("MemoBodySmall", styles.get("MemoBody"))))
+
+
+# =============================================================================
+# Memo skeleton (Sprint 813)
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class MemoMargins:
+    """Page margins in points. Memos drift between two sets; each keeps its
+    own so moving it onto ``render_memo`` does not move its output."""
+
+    left: float = 0.75 * inch
+    right: float = 0.75 * inch
+    top: float = 0.75 * inch
+    bottom: float = 0.75 * inch
+
+
+#: 0.75in all round — the diagnostic and engagement memos.
+MEMO_MARGINS = MemoMargins()
+#: 1.0in top / 0.8in bottom — ``generate_testing_memo`` and the reconciliation memos.
+TESTING_MEMO_MARGINS = MemoMargins(top=1.0 * inch, bottom=0.8 * inch)
+
+
+@dataclass
+class MemoContext:
+    """What ``render_memo`` hands a memo's body builder."""
+
+    story: list
+    styles: dict
+    doc_width: float
+    reference: str
+    branding: Any
+
+
+def render_memo(
+    title: str,
+    ref_prefix: str,
+    body_builder: Callable[[MemoContext], None],
+    *,
+    cover: Optional[dict[str, Any]] = None,
+    running_header: Optional[str] = None,
+    margins: MemoMargins = MEMO_MARGINS,
+    branding: Any = None,
+    page_footer: Any = None,
+) -> bytes:
+    """Render a memo PDF: page setup, reference number, cover, page chrome.
+
+    The memo supplies only its body. ``render_memo`` owns what every memo
+    used to hand-build — and, in 11 of them, got wrong (Sprint 813 items 1-2):
+
+    * the reference number ``<ref_prefix>-YYYY-MMDD-NNN``;
+    * the cover page, when ``cover`` is given — the ``ReportMetadata`` fields
+      other than ``title``/``reference`` — with the firm's logo when branded;
+    * the page callback on **every** page: page number, Paciolus disclaimer
+      and the Enterprise header/footer from ``branding`` (default: the
+      route-scoped ``PDFBrandingContext``);
+    * with ``running_header``, the gold title/reference rule on pages 2+.
+
+    ``page_footer`` overrides the page callback; only the engagement
+    dashboard passes it, to keep the unbranded footer it has always had.
+    """
+    import io
+
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate
+
+    from pdf import generate_reference_number
+    from shared.report_chrome import (
+        ReportMetadata,
+        build_cover_page,
+        draw_page_header,
+        find_logo,
+        make_branded_page_footer,
+    )
+
+    if branding is None:
+        from shared.pdf_branding import current_pdf_branding
+
+        branding = current_pdf_branding()
+
+    def _effective(name: str) -> Any:
+        return getattr(branding, name, lambda: None)()
+
+    buffer = io.BytesIO()
+    reference = generate_reference_number(ref_prefix)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=margins.left,
+        rightMargin=margins.right,
+        topMargin=margins.top,
+        bottomMargin=margins.bottom,
+    )
+    memo = MemoContext(
+        story=[],
+        styles=create_memo_styles(),
+        doc_width=doc.width,
+        reference=reference,
+        branding=branding,
+    )
+
+    if cover is not None:
+        metadata = ReportMetadata(title=title, reference=reference, **cover)
+        build_cover_page(
+            memo.story,
+            memo.styles,
+            metadata,
+            doc.width,
+            find_logo(),
+            custom_logo_bytes=_effective("effective_logo_bytes"),
+        )
+
+    body_builder(memo)
+
+    first_page = page_footer or make_branded_page_footer(
+        header_text=_effective("effective_header_text"),
+        footer_text=_effective("effective_footer_text"),
+    )
+    later_pages = first_page
+    if running_header:
+
+        def later_pages(canvas: Any, doc: Any) -> None:
+            draw_page_header(canvas, doc, title=running_header, reference=reference)
+            first_page(canvas, doc)
+
+    doc.build(memo.story, onFirstPage=first_page, onLaterPages=later_pages)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

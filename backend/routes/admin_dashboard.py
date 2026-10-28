@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from database import get_db
 from models import ActivityLog, User
 from organization_model import Organization, OrganizationMember
 from shared.entitlement_checks import check_admin_dashboard_access
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.organization_schemas import (
     AdminOverviewResponse,
@@ -215,7 +216,7 @@ def export_activity_csv(
     user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
     days: int = Query(default=90, ge=1, le=90),
-) -> StreamingResponse:
+) -> Response:
     """Export team activity as CSV."""
     org = _get_admin_org(db, user)
 
@@ -248,8 +249,4 @@ def export_activity_csv(
         )
 
     output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=team-activity.csv"},
-    )
+    return attachment_response(output.getvalue(), "team-activity.csv", MEDIA_CSV, quote_filename=False)

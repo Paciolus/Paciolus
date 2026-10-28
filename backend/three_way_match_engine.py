@@ -1371,55 +1371,49 @@ def _closest_line(po: PurchaseOrder, candidates: list[Any]) -> Any:
     return min(candidates, key=lambda doc: _line_distance(po, doc))
 
 
-@with_parse_memo
-def run_three_way_match(
+def _index_by_reference(docs: list[Any], attr: str) -> dict[str, list[Any]]:
+    """Group documents by a normalised (stripped, upper-cased) reference field."""
+    index: dict[str, list[Any]] = {}
+    for doc in docs:
+        ref = getattr(doc, attr)
+        if ref:
+            index.setdefault(ref.strip().upper(), []).append(doc)
+    return index
+
+
+@dataclass
+class _MatchState:
+    """Which documents (by row_number) a match has already consumed, plus the result."""
+
+    result: ThreeWayMatchResult
+    po_ids: set[int] = field(default_factory=set)
+    inv_ids: set[int] = field(default_factory=set)
+    rec_ids: set[int] = field(default_factory=set)
+
+    def record(self, match: ThreeWayMatch, is_full: bool, variances: list[MatchVariance]) -> None:
+        if is_full:
+            self.result.full_matches.append(match)
+        else:
+            self.result.partial_matches.append(match)
+        self.result.variances.extend(variances)
+
+
+def _match_exact_po(
     pos: list[PurchaseOrder],
     invoices: list[Invoice],
     receipts: list[Receipt],
-    config: Optional[ThreeWayMatchConfig] = None,
-) -> ThreeWayMatchResult:
-    """Run the three-way matching algorithm.
+    config: ThreeWayMatchConfig,
+    state: _MatchState,
+) -> None:
+    """Phase 1: link documents that carry the PO's number."""
+    po_by_number: dict[str, list[PurchaseOrder]] = _index_by_reference(pos, "po_number")
+    inv_by_po_ref: dict[str, list[Invoice]] = _index_by_reference(invoices, "po_reference")
+    rec_by_po_ref: dict[str, list[Receipt]] = _index_by_reference(receipts, "po_reference")
+    rec_by_inv_ref: dict[str, list[Receipt]] = _index_by_reference(receipts, "invoice_reference")
 
-    Phase 1: Exact PO number linkage
-    Phase 2: Fuzzy fallback (vendor + amount + date)
-
-    Returns complete match results with variances and summary.
-    """
-    if config is None:
-        config = ThreeWayMatchConfig()
-
-    result = ThreeWayMatchResult(config=config)
-
-    # Track which documents have been matched
-    matched_po_ids: set[int] = set()  # row_number indices
-    matched_inv_ids: set[int] = set()
-    matched_rec_ids: set[int] = set()
-
-    # Build lookup tables
-    po_by_number: dict[str, list[PurchaseOrder]] = {}
-    for po in pos:
-        if po.po_number:
-            po_by_number.setdefault(po.po_number.strip().upper(), []).append(po)
-
-    inv_by_po_ref: dict[str, list[Invoice]] = {}
-    for inv in invoices:
-        if inv.po_reference:
-            inv_by_po_ref.setdefault(inv.po_reference.strip().upper(), []).append(inv)
-
-    rec_by_po_ref: dict[str, list[Receipt]] = {}
-    for rec in receipts:
-        if rec.po_reference:
-            rec_by_po_ref.setdefault(rec.po_reference.strip().upper(), []).append(rec)
-
-    rec_by_inv_ref: dict[str, list[Receipt]] = {}
-    for rec in receipts:
-        if rec.invoice_reference:
-            rec_by_inv_ref.setdefault(rec.invoice_reference.strip().upper(), []).append(rec)
-
-    # ---- PHASE 1: Exact PO Number Linkage ----
     for po_num, po_list in po_by_number.items():
         for po in po_list:
-            if po.row_number in matched_po_ids:
+            if po.row_number in state.po_ids:
                 continue
 
             # Find invoice(s) with this PO reference.
@@ -1428,11 +1422,11 @@ def run_three_way_match(
             # different order produced price and quantity "variances" on a
             # correctly billed PO. Each PO line now takes its closest line.
             linked_invoice = _closest_line(
-                po, [inv for inv in inv_by_po_ref.get(po_num, []) if inv.row_number not in matched_inv_ids]
+                po, [inv for inv in inv_by_po_ref.get(po_num, []) if inv.row_number not in state.inv_ids]
             )
 
             # Find receipt(s) with this PO reference
-            open_receipts = [rec for rec in rec_by_po_ref.get(po_num, []) if rec.row_number not in matched_rec_ids]
+            open_receipts = [rec for rec in rec_by_po_ref.get(po_num, []) if rec.row_number not in state.rec_ids]
             linked_receipt = _closest_line(po, open_receipts)
             consumed_receipts = [linked_receipt] if linked_receipt is not None else []
             # Sprint 829: a PO delivered in instalments has several receipts for
@@ -1449,127 +1443,151 @@ def run_three_way_match(
             if not linked_receipt and linked_invoice and linked_invoice.invoice_number:
                 inv_key = linked_invoice.invoice_number.strip().upper()
                 for rec in rec_by_inv_ref.get(inv_key, []):
-                    if rec.row_number not in matched_rec_ids:
+                    if rec.row_number not in state.rec_ids:
                         linked_receipt = rec
                         break
 
-            if linked_invoice or linked_receipt:
-                variances = _compute_variances(po, linked_invoice, linked_receipt, config)
-                is_full = linked_invoice is not None and linked_receipt is not None
-                match = ThreeWayMatch(
-                    po=po,
-                    invoice=linked_invoice,
-                    receipt=linked_receipt,
-                    match_type=MatchType.EXACT_PO.value,
-                    match_confidence=0.95,
-                    variances=variances,
-                )
-
-                matched_po_ids.add(po.row_number)
-                if linked_invoice:
-                    matched_inv_ids.add(linked_invoice.row_number)
-                for rec in consumed_receipts or ([linked_receipt] if linked_receipt else []):
-                    matched_rec_ids.add(rec.row_number)
-
-                if is_full:
-                    result.full_matches.append(match)
-                else:
-                    result.partial_matches.append(match)
-                result.variances.extend(variances)
-
-    # ---- PHASE 2: Fuzzy Fallback ----
-    if config.enable_fuzzy_matching:
-        unmatched_pos_list = [po for po in pos if po.row_number not in matched_po_ids]
-        unmatched_inv_list = [inv for inv in invoices if inv.row_number not in matched_inv_ids]
-        unmatched_rec_list = [rec for rec in receipts if rec.row_number not in matched_rec_ids]
-
-        for po in unmatched_pos_list:
-            if po.row_number in matched_po_ids:
+            if not (linked_invoice or linked_receipt):
                 continue
 
-            best_inv, best_inv_score = None, 0.0
-            for inv in unmatched_inv_list:
-                if inv.row_number in matched_inv_ids:
-                    continue
-                # Compute composite score: vendor 40% + amount 30% + date 30%.
-                # Sprint 815: a candidate below the vendor threshold can never be
-                # selected (see the guard below), so skip its amount/date work.
-                vendor_score = _vendor_similarity_at_least(po.vendor, inv.vendor, config.fuzzy_vendor_threshold)
-                if vendor_score is None:
-                    continue
-                amt_diff = abs(po.total_amount - inv.total_amount)
-                amount_score = (
-                    1.0
-                    if amt_diff <= Decimal(str(config.amount_tolerance))
-                    else (
-                        float(max(Decimal("0"), Decimal("1") - amt_diff / max(abs(po.total_amount), Decimal("0.01"))))
-                    )
-                )
-                # Date score: order_date vs invoice_date proximity
-                date_score = 0.5  # default if no dates
-                if po.order_date and inv.invoice_date:
-                    po_date = parse_date(po.order_date)
-                    inv_date = parse_date(inv.invoice_date)
-                    if po_date and inv_date:
-                        days = abs((inv_date - po_date).days)
-                        date_score = max(0.0, 1.0 - days / max(config.date_window_days, 1))
+            variances = _compute_variances(po, linked_invoice, linked_receipt, config)
+            match = ThreeWayMatch(
+                po=po,
+                invoice=linked_invoice,
+                receipt=linked_receipt,
+                match_type=MatchType.EXACT_PO.value,
+                match_confidence=0.95,
+                variances=variances,
+            )
 
-                composite = vendor_score * 0.40 + amount_score * 0.30 + date_score * 0.30
-                if composite > best_inv_score and vendor_score >= config.fuzzy_vendor_threshold:
-                    best_inv = inv
-                    best_inv_score = composite
+            state.po_ids.add(po.row_number)
+            if linked_invoice:
+                state.inv_ids.add(linked_invoice.row_number)
+            for rec in consumed_receipts or ([linked_receipt] if linked_receipt else []):
+                state.rec_ids.add(rec.row_number)
 
-            best_rec, best_rec_score = None, 0.0
-            for rec in unmatched_rec_list:
-                if rec.row_number in matched_rec_ids:
-                    continue
-                vendor_score = _vendor_similarity_at_least(po.vendor, rec.vendor, config.fuzzy_vendor_threshold)
-                if vendor_score is None:
-                    continue
-                qty_score = (
-                    1.0
-                    if abs(po.quantity - rec.quantity_received) <= config.quantity_tolerance
-                    else (max(0.0, 1.0 - abs(po.quantity - rec.quantity_received) / max(abs(po.quantity), 0.01)))
-                )
-                composite = vendor_score * 0.50 + qty_score * 0.50
-                if composite > best_rec_score:
-                    best_rec = rec
-                    best_rec_score = composite
+            state.record(match, linked_invoice is not None and linked_receipt is not None, variances)
 
-            # Apply composite threshold
-            if best_inv and best_inv_score >= config.fuzzy_composite_threshold:
-                variances = _compute_variances(
-                    po,
-                    best_inv,
-                    best_rec if best_rec and best_rec_score >= config.fuzzy_composite_threshold else None,
-                    config,
-                )
-                is_full = (
-                    best_inv is not None and best_rec is not None and best_rec_score >= config.fuzzy_composite_threshold
-                )
-                match = ThreeWayMatch(
-                    po=po,
-                    invoice=best_inv,
-                    receipt=best_rec if is_full else None,
-                    match_type=MatchType.FUZZY.value if is_full else MatchType.PARTIAL.value,
-                    match_confidence=best_inv_score,
-                    variances=variances,
-                )
 
-                matched_po_ids.add(po.row_number)
-                matched_inv_ids.add(best_inv.row_number)
-                if is_full and best_rec:
-                    matched_rec_ids.add(best_rec.row_number)
+def _best_fuzzy_invoice(
+    po: PurchaseOrder,
+    candidates: list[Invoice],
+    config: ThreeWayMatchConfig,
+    taken: set[int],
+) -> tuple[Optional[Invoice], float]:
+    """Highest-scoring open invoice for ``po``: vendor 40% + amount 30% + date 30%."""
+    best_inv, best_inv_score = None, 0.0
+    for inv in candidates:
+        if inv.row_number in taken:
+            continue
+        # Sprint 815: a candidate below the vendor threshold can never be
+        # selected (see the guard below), so skip its amount/date work.
+        vendor_score = _vendor_similarity_at_least(po.vendor, inv.vendor, config.fuzzy_vendor_threshold)
+        if vendor_score is None:
+            continue
+        amt_diff = abs(po.total_amount - inv.total_amount)
+        amount_score = (
+            1.0
+            if amt_diff <= Decimal(str(config.amount_tolerance))
+            else (float(max(Decimal("0"), Decimal("1") - amt_diff / max(abs(po.total_amount), Decimal("0.01")))))
+        )
+        # Date score: order_date vs invoice_date proximity
+        date_score = 0.5  # default if no dates
+        if po.order_date and inv.invoice_date:
+            po_date = parse_date(po.order_date)
+            inv_date = parse_date(inv.invoice_date)
+            if po_date and inv_date:
+                days = abs((inv_date - po_date).days)
+                date_score = max(0.0, 1.0 - days / max(config.date_window_days, 1))
 
-                if is_full:
-                    result.full_matches.append(match)
-                else:
-                    result.partial_matches.append(match)
-                result.variances.extend(variances)
+        composite = vendor_score * 0.40 + amount_score * 0.30 + date_score * 0.30
+        if composite > best_inv_score and vendor_score >= config.fuzzy_vendor_threshold:
+            best_inv = inv
+            best_inv_score = composite
+    return best_inv, best_inv_score
 
-    # ---- Collect unmatched documents ----
+
+def _best_fuzzy_receipt(
+    po: PurchaseOrder,
+    candidates: list[Receipt],
+    config: ThreeWayMatchConfig,
+    taken: set[int],
+) -> tuple[Optional[Receipt], float]:
+    """Highest-scoring open receipt for ``po``: vendor 50% + quantity 50%."""
+    best_rec, best_rec_score = None, 0.0
+    for rec in candidates:
+        if rec.row_number in taken:
+            continue
+        vendor_score = _vendor_similarity_at_least(po.vendor, rec.vendor, config.fuzzy_vendor_threshold)
+        if vendor_score is None:
+            continue
+        qty_score = (
+            1.0
+            if abs(po.quantity - rec.quantity_received) <= config.quantity_tolerance
+            else (max(0.0, 1.0 - abs(po.quantity - rec.quantity_received) / max(abs(po.quantity), 0.01)))
+        )
+        composite = vendor_score * 0.50 + qty_score * 0.50
+        if composite > best_rec_score:
+            best_rec = rec
+            best_rec_score = composite
+    return best_rec, best_rec_score
+
+
+def _match_fuzzy(
+    pos: list[PurchaseOrder],
+    invoices: list[Invoice],
+    receipts: list[Receipt],
+    config: ThreeWayMatchConfig,
+    state: _MatchState,
+) -> None:
+    """Phase 2: pair still-open documents by vendor, amount, date and quantity."""
+    unmatched_pos_list = [po for po in pos if po.row_number not in state.po_ids]
+    unmatched_inv_list = [inv for inv in invoices if inv.row_number not in state.inv_ids]
+    unmatched_rec_list = [rec for rec in receipts if rec.row_number not in state.rec_ids]
+
+    for po in unmatched_pos_list:
+        if po.row_number in state.po_ids:
+            continue
+
+        best_inv, best_inv_score = _best_fuzzy_invoice(po, unmatched_inv_list, config, state.inv_ids)
+        best_rec, best_rec_score = _best_fuzzy_receipt(po, unmatched_rec_list, config, state.rec_ids)
+
+        # Apply composite threshold
+        if not (best_inv and best_inv_score >= config.fuzzy_composite_threshold):
+            continue
+        variances = _compute_variances(
+            po,
+            best_inv,
+            best_rec if best_rec and best_rec_score >= config.fuzzy_composite_threshold else None,
+            config,
+        )
+        is_full = best_inv is not None and best_rec is not None and best_rec_score >= config.fuzzy_composite_threshold
+        match = ThreeWayMatch(
+            po=po,
+            invoice=best_inv,
+            receipt=best_rec if is_full else None,
+            match_type=MatchType.FUZZY.value if is_full else MatchType.PARTIAL.value,
+            match_confidence=best_inv_score,
+            variances=variances,
+        )
+
+        state.po_ids.add(po.row_number)
+        state.inv_ids.add(best_inv.row_number)
+        if is_full and best_rec:
+            state.rec_ids.add(best_rec.row_number)
+
+        state.record(match, is_full, variances)
+
+
+def _collect_unmatched(
+    pos: list[PurchaseOrder],
+    invoices: list[Invoice],
+    receipts: list[Receipt],
+    state: _MatchState,
+) -> None:
+    result = state.result
     for po in pos:
-        if po.row_number not in matched_po_ids:
+        if po.row_number not in state.po_ids:
             result.unmatched_pos.append(
                 UnmatchedDocument(
                     document=po.to_dict(),
@@ -1579,7 +1597,7 @@ def run_three_way_match(
             )
 
     for inv in invoices:
-        if inv.row_number not in matched_inv_ids:
+        if inv.row_number not in state.inv_ids:
             result.unmatched_invoices.append(
                 UnmatchedDocument(
                     document=inv.to_dict(),
@@ -1589,7 +1607,7 @@ def run_three_way_match(
             )
 
     for rec in receipts:
-        if rec.row_number not in matched_rec_ids:
+        if rec.row_number not in state.rec_ids:
             result.unmatched_receipts.append(
                 UnmatchedDocument(
                     document=rec.to_dict(),
@@ -1598,7 +1616,13 @@ def run_three_way_match(
                 )
             )
 
-    # ---- Summary ----
+
+def _build_match_summary(
+    pos: list[PurchaseOrder],
+    invoices: list[Invoice],
+    receipts: list[Receipt],
+    result: ThreeWayMatchResult,
+) -> ThreeWayMatchSummary:
     # Match-rate denominator uses max across all three document populations
     # (PO, Invoice, Receipt).  Previously this was ``max(pos, invoices, 1)``,
     # which inflated match rates when the receipt file carried more rows
@@ -1648,6 +1672,34 @@ def run_three_way_match(
         summary.risk_assessment = MatchRiskLevel.MEDIUM.value
     else:
         summary.risk_assessment = MatchRiskLevel.HIGH.value
+    return summary
 
-    result.summary = summary
-    return result
+
+@with_parse_memo
+def run_three_way_match(
+    pos: list[PurchaseOrder],
+    invoices: list[Invoice],
+    receipts: list[Receipt],
+    config: Optional[ThreeWayMatchConfig] = None,
+) -> ThreeWayMatchResult:
+    """Run the three-way matching algorithm.
+
+    Phase 1: Exact PO number linkage
+    Phase 2: Fuzzy fallback (vendor + amount + date)
+
+    Returns complete match results with variances and summary.
+
+    Sprint 819 item 10: the phases are separate functions sharing one
+    ``_MatchState`` (documents consumed so far + the result being built); the
+    order of work, and so every match, is unchanged.
+    """
+    if config is None:
+        config = ThreeWayMatchConfig()
+
+    state = _MatchState(result=ThreeWayMatchResult(config=config))
+    _match_exact_po(pos, invoices, receipts, config, state)
+    if config.enable_fuzzy_matching:
+        _match_fuzzy(pos, invoices, receipts, config, state)
+    _collect_unmatched(pos, invoices, receipts, state)
+    state.result.summary = _build_match_summary(pos, invoices, receipts, state.result)
+    return state.result

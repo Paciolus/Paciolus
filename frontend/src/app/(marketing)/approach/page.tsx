@@ -1,15 +1,9 @@
-'use client'
-
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-
-const fadeUp = {
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-}
+import * as motion from '@/components/ui/motionClient'
+import { marketingFadeUp } from '@/lib/motion'
 
 const stagger = {
-  animate: {
+  visible: {
     transition: {
       staggerChildren: 0.12,
     },
@@ -147,14 +141,14 @@ export default function ApproachPage() {
       <motion.section
         className="relative pb-20 px-6"
         variants={stagger}
-        initial="initial"
-        whileInView="animate"
+        initial="hidden"
+        whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-0 items-center">
             {flowSteps.map((step, idx) => (
-              <motion.div key={step.label} variants={fadeUp} transition={{ duration: 0.5, ease: 'easeOut' as const }} className="flex flex-col items-center relative">
+              <motion.div key={step.label} variants={marketingFadeUp} transition={{ duration: 0.5, ease: 'easeOut' as const }} className="flex flex-col items-center relative">
                 {/* Arrow between steps (desktop only) */}
                 {idx > 0 && (
                   <div className="hidden md:block absolute -left-4 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
@@ -182,7 +176,7 @@ export default function ApproachPage() {
 
           {/* Timing indicator */}
           <motion.div
-            variants={fadeUp}
+            variants={marketingFadeUp}
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="mt-6 text-center"
           >
@@ -200,13 +194,13 @@ export default function ApproachPage() {
       <motion.section
         className="relative pb-20 px-6"
         variants={stagger}
-        initial="initial"
-        whileInView="animate"
+        initial="hidden"
+        whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
         <div className="max-w-4xl mx-auto">
           <motion.h2
-            variants={fadeUp}
+            variants={marketingFadeUp}
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
@@ -217,7 +211,7 @@ export default function ApproachPage() {
             {howItWorksSteps.map((step, idx) => (
               <motion.div
                 key={idx}
-                variants={fadeUp}
+                variants={marketingFadeUp}
                 transition={{ duration: 0.5, ease: 'easeOut' as const }}
                 className={`bg-obsidian-800 border rounded-lg p-5 flex items-start gap-4 ${
                   idx === howItWorksSteps.length - 1
@@ -281,13 +275,13 @@ export default function ApproachPage() {
       <motion.section
         className="relative pb-20 px-6"
         variants={stagger}
-        initial="initial"
-        whileInView="animate"
+        initial="hidden"
+        whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
         <div className="max-w-4xl mx-auto">
           <motion.h2
-            variants={fadeUp}
+            variants={marketingFadeUp}
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
@@ -297,7 +291,7 @@ export default function ApproachPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {/* What We Store */}
             <motion.div
-              variants={fadeUp}
+              variants={marketingFadeUp}
               transition={{ duration: 0.5, ease: 'easeOut' as const }}
               className="bg-obsidian-800 border-l-4 border-sage-500 border-t border-r border-b border-t-obsidian-600 border-r-obsidian-600 border-b-obsidian-600 rounded-r-lg p-6"
             >
@@ -321,7 +315,7 @@ export default function ApproachPage() {
 
             {/* What We NEVER Store */}
             <motion.div
-              variants={fadeUp}
+              variants={marketingFadeUp}
               transition={{ duration: 0.5, ease: 'easeOut' as const }}
               className="bg-obsidian-800 border-l-4 border-clay-500 border-t border-r border-b border-t-obsidian-600 border-r-obsidian-600 border-b-obsidian-600 rounded-r-lg p-6"
             >
@@ -350,13 +344,13 @@ export default function ApproachPage() {
       <motion.section
         className="relative pb-20 px-6"
         variants={stagger}
-        initial="initial"
-        whileInView="animate"
+        initial="hidden"
+        whileInView="visible"
         viewport={{ once: true, margin: '-80px' }}
       >
         <div className="max-w-4xl mx-auto">
           <motion.h2
-            variants={fadeUp}
+            variants={marketingFadeUp}
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
@@ -367,7 +361,7 @@ export default function ApproachPage() {
             {securityAdvantages.map((advantage) => (
               <motion.div
                 key={advantage}
-                variants={fadeUp}
+                variants={marketingFadeUp}
                 transition={{ duration: 0.5, ease: 'easeOut' as const }}
                 className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-5 flex items-start gap-4 hover:border-sage-500/30 transition-colors"
               >

@@ -22,28 +22,26 @@ GUARDRAIL 3: This template does NOT mimic ISA 265 structure.
 ZERO-STORAGE: Reads engagement metadata and follow-up item narratives only.
 """
 
-from io import BytesIO
 from typing import Optional
 
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import PageBreak, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import PageBreak, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from engagement_model import Engagement, ToolName, ToolRun
 from follow_up_items_model import FollowUpItem
 from models import Client
-from pdf_generator import ClassicalColors, LedgerRule, generate_reference_number
+from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, create_memo_styles
+from shared.memo_base import RISK_TIER_BASIS_NOTE_ENGAGEMENT, RISK_TIER_DISPLAY, MemoContext, render_memo
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
     find_logo,
-    make_branded_page_footer,
 )
+from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_methodology_statement,
@@ -111,7 +109,7 @@ AUTHORITATIVE_REFERENCES = [
 
 def _generate_reference() -> str:
     """Generate a unique ANS reference number."""
-    return generate_reference_number().replace("PAC-", "ANS-")
+    return generate_reference_number("ANS")
 
 
 def _compute_engagement_risk(
@@ -234,6 +232,7 @@ class AnomalySummaryGenerator:
         follow_up_items: list,
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
         custom_logo_bytes: Optional[bytes] = None,
+        reference: Optional[str] = None,
     ) -> list:
         story: list = []
 
@@ -258,7 +257,7 @@ class AnomalySummaryGenerator:
         period_end = engagement.period_end.strftime("%b %d, %Y") if engagement.period_end else "N/A"
         period_desc = f"{period_start} \u2013 {period_end}"
 
-        reference = _generate_reference()
+        reference = reference or _generate_reference()
 
         logo_path = find_logo()
         metadata = ReportMetadata(
@@ -303,7 +302,9 @@ class AnomalySummaryGenerator:
 
         # Tools with runs but no anomalies
         tools_with_findings = {s for s in items_by_tool}
-        clean_result_tools = [t for t in executed_tools if t.value not in tools_with_findings]
+        # Sprint 813: catalog order, not set order — iterating the set printed this
+        # list in a different order from one process to the next.
+        clean_result_tools = [t for t in catalog_tools if t in executed_tools and t.value not in tools_with_findings]
 
         risk_tier_key, risk_score = _compute_engagement_risk(
             severity_counts["high"],
@@ -370,23 +371,7 @@ class AnomalySummaryGenerator:
 
             if len(scope_data) > 1:
                 scope_table = Table(scope_data, colWidths=[3.0 * inch, 0.8 * inch, 2.5 * inch])
-                scope_table.setStyle(
-                    TableStyle(
-                        [
-                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                            ("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                            ("LEFTPADDING", (0, 0), (0, -1), 0),
-                        ]
-                    )
-                )
+                scope_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (1, 0), (1, -1), "CENTER")])))
                 story.append(Spacer(1, 4))
                 story.append(scope_table)
 
@@ -408,20 +393,12 @@ class AnomalySummaryGenerator:
             not_exec_table = Table(not_exec_data, colWidths=[3.0 * inch, 1.0 * inch, 2.3 * inch])
             not_exec_table.setStyle(
                 TableStyle(
-                    [
-                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 9),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                        ("TEXTCOLOR", (1, 1), (1, -1), ClassicalColors.OBSIDIAN_500),
-                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                        ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("TOPPADDING", (0, 0), (-1, -1), 3),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                        ("LEFTPADDING", (0, 0), (0, -1), 0),
-                    ]
+                    ledger_table_style(
+                        extra=[
+                            ("TEXTCOLOR", (1, 1), (1, -1), ClassicalColors.OBSIDIAN_500),
+                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
+                        ]
+                    )
                 )
             )
             story.append(not_exec_table)
@@ -501,23 +478,7 @@ class AnomalySummaryGenerator:
                     anomaly_data,
                     colWidths=[1.0 * inch, 0.4 * inch, 1.0 * inch, 4.0 * inch],
                 )
-                anomaly_table.setStyle(
-                    TableStyle(
-                        [
-                            ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                            ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                            ("FONTSIZE", (0, 0), (-1, -1), 9),
-                            ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                            ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-                            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                            ("TOPPADDING", (0, 0), (-1, -1), 3),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                            ("LEFTPADDING", (0, 0), (0, -1), 0),
-                        ]
-                    )
-                )
+                anomaly_table.setStyle(TableStyle(ledger_table_style(extra=[("ALIGN", (1, 0), (1, -1), "CENTER")])))
                 story.append(anomaly_table)
                 story.append(Spacer(1, 10))
 
@@ -568,22 +529,7 @@ class AnomalySummaryGenerator:
             )
 
         ref_table = Table(ref_data, colWidths=[0.8 * inch, 1.4 * inch, 4.2 * inch])
-        ref_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 3),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
-            )
-        )
+        ref_table.setStyle(TableStyle(ledger_table_style()))
         story.append(ref_table)
         story.append(Spacer(1, 8))
 
@@ -680,22 +626,7 @@ class AnomalySummaryGenerator:
                         response_data,
                         colWidths=[1.8 * inch, 4.6 * inch],
                     )
-                    response_table.setStyle(
-                        TableStyle(
-                            [
-                                ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                                ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                                ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                                ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                                ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-                                ("LEFTPADDING", (0, 0), (0, -1), 0),
-                            ]
-                        )
-                    )
+                    response_table.setStyle(TableStyle(ledger_table_style()))
                     story.append(response_table)
                     story.append(Spacer(1, 12))
         else:
@@ -842,34 +773,21 @@ def render_anomaly_summary_pdf(
 
     branding = current_pdf_branding()
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=letter,
-        leftMargin=0.75 * inch,
-        rightMargin=0.75 * inch,
-        topMargin=0.75 * inch,
-        bottomMargin=0.75 * inch,
-    )
-    doc_width = letter[0] - 1.5 * inch
+    # Sprint 813: the disclaimer banner precedes the cover, so the story
+    # builds its own cover; render_memo owns page setup and page chrome.
+    def _body(memo: MemoContext) -> None:
+        memo.story.extend(
+            AnomalySummaryGenerator._build_story(
+                memo.styles,
+                memo.doc_width,
+                client_name,
+                engagement,
+                tool_runs,
+                follow_up_items,
+                resolved_framework=resolved_framework,
+                custom_logo_bytes=memo.branding.effective_logo_bytes(),
+                reference=memo.reference,
+            )
+        )
 
-    styles = create_memo_styles()
-    story = AnomalySummaryGenerator._build_story(
-        styles,
-        doc_width,
-        client_name,
-        engagement,
-        tool_runs,
-        follow_up_items,
-        resolved_framework=resolved_framework,
-        custom_logo_bytes=branding.effective_logo_bytes(),
-    )
-
-    footer_cb = make_branded_page_footer(
-        header_text=branding.effective_header_text(),
-        footer_text=branding.effective_footer_text(),
-    )
-    doc.build(story, onFirstPage=footer_cb, onLaterPages=footer_cb)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
+    return render_memo("Anomaly Summary Report", "ANS", _body, branding=branding)

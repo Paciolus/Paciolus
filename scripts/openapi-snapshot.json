@@ -8913,11 +8913,17 @@
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
           }
         },
         "required": [
           "amount_cents",
-          "reason"
+          "reason",
+          "target_user_id"
         ],
         "title": "CreditRequest",
         "type": "object"
@@ -13070,10 +13076,16 @@
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
           }
         },
         "required": [
-          "reason"
+          "reason",
+          "target_user_id"
         ],
         "title": "ForceCancelRequest",
         "type": "object"
@@ -18694,11 +18706,17 @@
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
           }
         },
         "required": [
           "new_plan",
-          "reason"
+          "reason",
+          "target_user_id"
         ],
         "title": "PlanOverrideRequest",
         "type": "object"
@@ -20927,12 +20945,18 @@
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
           }
         },
         "required": [
           "payment_intent_id",
           "amount_cents",
-          "reason"
+          "reason",
+          "target_user_id"
         ],
         "title": "RefundRequest",
         "type": "object"
@@ -21802,6 +21826,20 @@
           "test_results"
         ],
         "title": "RevenueTestingResponse",
+        "type": "object"
+      },
+      "RevokeSessionsRequest": {
+        "properties": {
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_user_id"
+        ],
+        "title": "RevokeSessionsRequest",
         "type": "object"
       },
       "RiskSummaryAnomalyTypesResponse": {
@@ -25957,11 +25995,17 @@
             "minLength": 1,
             "title": "Reason",
             "type": "string"
+          },
+          "target_user_id": {
+            "minimum": 1.0,
+            "title": "Target User Id",
+            "type": "integer"
           }
         },
         "required": [
           "days",
-          "reason"
+          "reason",
+          "target_user_id"
         ],
         "title": "TrialExtensionRequest",
         "type": "object"
@@ -37772,6 +37816,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeSessionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {

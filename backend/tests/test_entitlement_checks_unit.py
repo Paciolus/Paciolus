@@ -5,7 +5,7 @@ Tests all entitlement dependency functions:
 - _raise_or_log           — soft vs hard enforcement mode
 - check_upload_limit      — DB-backed monthly ActivityLog count + subscription path
 - check_client_limit      — DB-backed active Client count
-- check_tool_access       — factory: tier-based tool access gate
+- enforce_tool_access     — tier-based tool access gate (shared.testing_route)
 - check_format_access     — factory: tier-based format access gate
 - check_workspace_access  — tier gate (Solo+ only)
 - check_export_access     — tier gate (Solo+ only)
@@ -239,93 +239,58 @@ class TestCheckClientLimit:
 
 
 # ---------------------------------------------------------------------------
-# check_tool_access (factory)
+# enforce_tool_access (Sprint 817: the one tool-access implementation; the
+# unused check_tool_access dependency factory that duplicated it was removed)
 # ---------------------------------------------------------------------------
 
 
-class TestCheckToolAccess:
-    def test_professional_tier_can_access_any_tool(self, make_user):
-        """PROFESSIONAL tier has empty tools_allowed → all tools permitted."""
-        from shared.entitlement_checks import check_tool_access
+class TestEnforceToolAccess:
+    @pytest.mark.parametrize(
+        "tier,tool",
+        [
+            (UserTier.PROFESSIONAL, "fixed_asset_testing"),  # empty tools_allowed -> all tools
+            (UserTier.FREE, "trial_balance"),  # in _BASIC_TOOLS
+            (UserTier.FREE, "flux_analysis"),  # in _BASIC_TOOLS
+            (UserTier.SOLO, "journal_entry_testing"),
+            (UserTier.SOLO, "inventory_testing"),
+        ],
+    )
+    def test_allowed(self, make_user, db_session, tier, tool):
+        from shared.testing_route import enforce_tool_access
 
-        user = make_user(tier=UserTier.PROFESSIONAL)
-        dep = check_tool_access("fixed_asset_testing")
-        result = dep(user=user)
-        assert result is user
+        user = make_user(tier=tier, email=f"eta_{tier.value}_{tool}@example.com")
+        assert enforce_tool_access(user, tool, db_session) is None
 
-    def test_free_tier_can_access_trial_balance(self, make_user):
-        """FREE tier can access trial_balance (in _BASIC_TOOLS)."""
-        from shared.entitlement_checks import check_tool_access
+    @pytest.mark.parametrize("tool", ["fixed_asset_testing", "journal_entry_testing"])
+    def test_free_tier_blocked_raises_403(self, make_user, db_session, tool):
+        from shared.testing_route import enforce_tool_access
 
-        user = make_user(tier=UserTier.FREE)
-        dep = check_tool_access("trial_balance")
-        result = dep(user=user)
-        assert result is user
-
-    def test_free_tier_can_access_flux_analysis(self, make_user):
-        """FREE tier can access flux_analysis (in _BASIC_TOOLS)."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.FREE)
-        dep = check_tool_access("flux_analysis")
-        result = dep(user=user)
-        assert result is user
-
-    def test_free_tier_blocked_from_fixed_asset_testing(self, make_user):
-        """FREE tier cannot access fixed_asset_testing — raises 403."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.FREE)
-        dep = check_tool_access("fixed_asset_testing")
-
+        user = make_user(tier=UserTier.FREE, email=f"eta_block_{tool}@example.com")
         with pytest.raises(HTTPException) as exc_info:
-            dep(user=user)
+            enforce_tool_access(user, tool, db_session)
 
         assert exc_info.value.status_code == 403
-        assert exc_info.value.detail["code"] == "TIER_LIMIT_EXCEEDED"
-        assert exc_info.value.detail["resource"] == "tool_access"
+        assert exc_info.value.detail == {
+            "code": "TIER_LIMIT_EXCEEDED",
+            "message": f"Tool '{tool}' is not available on your current plan.",
+            "resource": "tool_access",
+            "current_tier": "free",
+            "upgrade_url": "/pricing",
+        }
 
-    def test_free_tier_blocked_from_journal_entry_testing(self, make_user):
-        """FREE tier cannot access journal_entry_testing (in _SOLO_TOOLS but not _BASIC_TOOLS)."""
-        from shared.entitlement_checks import check_tool_access
+    def test_without_db_falls_back_to_tier_table(self, make_user):
+        from shared.testing_route import enforce_tool_access
 
-        user = make_user(tier=UserTier.FREE)
-        dep = check_tool_access("journal_entry_testing")
+        user = make_user(tier=UserTier.FREE, email="eta_nodb@example.com")
+        with pytest.raises(HTTPException):
+            enforce_tool_access(user, "fixed_asset_testing")
 
-        with pytest.raises(HTTPException) as exc_info:
-            dep(user=user)
+    def test_soft_mode_blocked_tool_does_not_raise(self, make_user, db_session):
+        from shared.testing_route import enforce_tool_access
 
-        assert exc_info.value.status_code == 403
-
-    def test_solo_tier_can_access_journal_entry_testing(self, make_user):
-        """SOLO tier can access journal_entry_testing (in _SOLO_TOOLS)."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.SOLO)
-        dep = check_tool_access("journal_entry_testing")
-        result = dep(user=user)
-        assert result is user
-
-    def test_solo_tier_can_access_inventory_testing(self, make_user):
-        """SOLO tier has all tools (empty tools_allowed) — inventory_testing passes."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.SOLO)
-        dep = check_tool_access("inventory_testing")
-        result = dep(user=user)
-        assert result is user
-
-    def test_soft_mode_blocked_tool_does_not_raise(self, make_user):
-        """Soft enforcement: blocked tool access is logged but not raised."""
-        from shared.entitlement_checks import check_tool_access
-
-        user = make_user(tier=UserTier.FREE)
-        dep = check_tool_access("fixed_asset_testing")
-
-        with patch("shared.entitlement_checks._get_enforcement_mode", return_value="soft"):
-            result = dep(user=user)
-
-        assert result is user
+        user = make_user(tier=UserTier.FREE, email="eta_soft@example.com")
+        with patch("config.ENTITLEMENT_ENFORCEMENT", "soft"):
+            assert enforce_tool_access(user, "fixed_asset_testing", db_session) is None
 
 
 # ---------------------------------------------------------------------------

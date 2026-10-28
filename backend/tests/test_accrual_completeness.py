@@ -918,3 +918,40 @@ class TestMemoGeneration:
         pdf = generate_accrual_completeness_memo(report, "test.csv")
         assert isinstance(pdf, bytes)
         assert pdf[:4] == b"%PDF"
+
+
+class TestPrepaidAccountsNotInScope:
+    """Sprint 817: the engine scopes to liability-classified accounts only.
+
+    ``PREPAID_KEYWORDS`` was declared in Sprint 513 and never referenced; it
+    was deleted as dead code. Prepaid balances are assets and are filtered out
+    before keyword classification runs. This pins that output so the deletion
+    is provably output-neutral.
+    """
+
+    @staticmethod
+    def report() -> dict:
+        balances = {
+            "Prepaid Insurance": {"debit": 12_000.0, "credit": 0.0},
+            "Prepaid Rent": {"debit": 0.0, "credit": 3_000.0},  # mis-categorised as a liability
+            "Accrued Wages": {"debit": 0.0, "credit": 8_000.0},
+            "Deferred Revenue": {"debit": 0.0, "credit": 4_000.0},
+        }
+        classified = {
+            "Prepaid Insurance": "asset",
+            "Prepaid Rent": "liability",
+            "Accrued Wages": "liability",
+            "Deferred Revenue": "liability",
+        }
+        return compute_accrual_completeness(
+            balances, classified, prior_operating_expenses=120_000.0, total_revenue=200_000.0
+        ).to_dict()
+
+    def test_prepaid_accounts_are_never_classified(self):
+        report = self.report()
+        assert [a["account_name"] for a in report["accrual_accounts"]] == ["Accrued Wages"]
+        assert report["total_accrued_balance"] == 8_000.0
+        assert _classify_liability_type("Prepaid Rent") == (None, None)
+        dumped = repr(report)
+        assert "Prepaid Insurance" not in dumped
+        assert "Prepaid Rent" not in dumped

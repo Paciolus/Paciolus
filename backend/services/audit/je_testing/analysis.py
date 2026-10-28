@@ -65,7 +65,6 @@ from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
 # ENUMS (imported from shared — Sprint 90)
 # =============================================================================
 from shared.testing_enums import (
-    SEVERITY_WEIGHTS,  # noqa: E402
     RiskTier,
     Severity,
     TestTier,
@@ -940,6 +939,7 @@ def detect_multi_currency(entries: list[JournalEntry]) -> Optional[MultiCurrency
 
 # Rounding patterns for T4 — imported from shared (Sprint 90)
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_3TIER as ROUND_AMOUNT_PATTERNS  # noqa: E402
+from shared.round_amounts import keep_most_severe, match_round_amount  # noqa: E402
 
 
 def test_unbalanced_entries(
@@ -1113,32 +1113,31 @@ def test_round_amounts(
         if float(amt) < config.round_amount_threshold:
             continue
 
-        for divisor, name, severity in ROUND_AMOUNT_PATTERNS:
-            d = Decimal(str(divisor))
-            if amt >= d and amt % d == 0:
-                flagged.append(
-                    FlaggedEntry(
-                        entry=e,
-                        test_name="Round Dollar Amounts",
-                        test_key="round_amounts",
-                        test_tier=TestTier.STRUCTURAL,
-                        severity=severity,
-                        issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
-                        confidence=0.70,
-                        details={"amount": amt, "pattern": name, "divisor": divisor},
-                    )
-                )
-                break  # Only flag the largest pattern match
+        match = match_round_amount(amt, ROUND_AMOUNT_PATTERNS)  # largest pattern only
+        if match is None:
+            continue
+        divisor, name, severity = match
+        flagged.append(
+            FlaggedEntry(
+                entry=e,
+                test_name="Round Dollar Amounts",
+                test_key="round_amounts",
+                test_tier=TestTier.STRUCTURAL,
+                severity=severity,
+                issue=f"Round amount: ${amt:,.0f} (divisible by ${divisor:,.0f})",
+                confidence=0.70,
+                details={"amount": amt, "pattern": name, "divisor": divisor},
+            )
+        )
 
-    # Sprint 829: count every round amount, then keep the largest for display.
-    # Sprint 831 (PR #225 review): most severe first, then largest, so a large
-    # LOW match can never push a HIGH one out of the kept list (the severity
-    # floors read only the kept flags).
-    # The loop used to stop at the cap in file order, so a $500K round entry
-    # after fifty $10K ones was never seen and the count stopped at 50.
-    flagged.sort(key=lambda f: (SEVERITY_WEIGHTS[f.severity], f.entry.abs_amount), reverse=True)
-    total_flagged = len(flagged)
-    flagged = flagged[: config.round_amount_max_flags]
+    # Sprint 829/831: count every round amount, keep the most severe then the
+    # largest (shared helper since Sprint 819 item 3).
+    flagged, total_flagged = keep_most_severe(
+        flagged,
+        severity_of=lambda f: f.severity,
+        amount_of=lambda f: f.entry.abs_amount,
+        cap=config.round_amount_max_flags,
+    )
 
     flag_rate = total_flagged / max(len(entries), 1)
     return TestResult(
@@ -3128,42 +3127,32 @@ class JETestingEngine(AuditEngineBase):
     def detect_columns(self, column_names: list[str]) -> Any:
         return detect_gl_columns(column_names)
 
-    def apply_column_overrides(self, detection: Any, column_mapping: dict) -> Any:
-        if "date_column" in column_mapping:
-            detection.date_column = column_mapping["date_column"]
-        if "account_column" in column_mapping:
-            detection.account_column = column_mapping["account_column"]
-        if "debit_column" in column_mapping:
-            detection.debit_column = column_mapping["debit_column"]
-            detection.has_separate_debit_credit = True
-        if "credit_column" in column_mapping:
-            detection.credit_column = column_mapping["credit_column"]
-            detection.has_separate_debit_credit = True
+    OVERRIDABLE_COLUMNS = (
+        "date_column",
+        "account_column",
+        "debit_column",
+        "credit_column",
+        "amount_column",
+        "description_column",
+        "reference_column",
+        "posted_by_column",
+        "entry_id_column",
+        "currency_column",
+        "source_column",
+        "entry_date_column",
+        "posting_date_column",
+    )
+
+    def after_column_overrides(self, detection: Any, column_mapping: dict) -> None:
+        # A mapped single amount column wins over mapped debit/credit columns.
         if "amount_column" in column_mapping:
-            detection.amount_column = column_mapping["amount_column"]
             detection.has_separate_debit_credit = False
-        if "description_column" in column_mapping:
-            detection.description_column = column_mapping["description_column"]
-        if "reference_column" in column_mapping:
-            detection.reference_column = column_mapping["reference_column"]
-        if "posted_by_column" in column_mapping:
-            detection.posted_by_column = column_mapping["posted_by_column"]
-        if "entry_id_column" in column_mapping:
-            detection.entry_id_column = column_mapping["entry_id_column"]
-        if "currency_column" in column_mapping:
-            detection.currency_column = column_mapping["currency_column"]
-        if "source_column" in column_mapping:
-            detection.source_column = column_mapping["source_column"]
-        if "entry_date_column" in column_mapping:
-            detection.entry_date_column = column_mapping["entry_date_column"]
-        if "posting_date_column" in column_mapping:
-            detection.posting_date_column = column_mapping["posting_date_column"]
+        elif "debit_column" in column_mapping or "credit_column" in column_mapping:
+            detection.has_separate_debit_credit = True
         # Sprint 816: auto-detection sets this when it finds both dates; a hand
         # mapping of both left it False in the reported column detection.
         if detection.entry_date_column and detection.posting_date_column:
             detection.has_dual_dates = True
-        detection.overall_confidence = 1.0
-        return detection
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
         return parse_gl_entries(rows, detection)

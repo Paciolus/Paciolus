@@ -13,8 +13,8 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, ValidationError
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
@@ -26,13 +26,11 @@ from intercompany_elimination_engine import (
     IntercompanyInputError,
     run_intercompany_elimination,
 )
-from shared.entitlement_checks import check_upload_limit
-from shared.error_messages import sanitize_error
+from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
-from shared.testing_route import enforce_tool_access
-from shared.tool_run_recorder import maybe_record_tool_run
+from shared.testing_route import enforce_tool_access, run_json_tool
 
 logger = logging.getLogger(__name__)
 
@@ -89,38 +87,20 @@ def run_consolidation(
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    # Sprint 689c: gate promoted tool at tier + upload-limit level.
-    enforce_tool_access(current_user, "intercompany_elimination", db)
-    check_upload_limit(current_user, db)
-
-    try:
-        result = run_intercompany_elimination(_build_config(payload))
-    except IntercompanyInputError as e:
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "intercompany_elimination", False)
-        raise HTTPException(status_code=400, detail=str(e))
-    except (ValueError, ValidationError, ArithmeticError) as e:
-        logger.exception("Intercompany elimination failed")
-        maybe_record_tool_run(db, payload.engagement_id, current_user.id, "intercompany_elimination", False)
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, "audit", "intercompany_error"),
-        )
-
-    # Sprint 787b: record the run on the engagement workpaper trail. Both
-    # composite_score and flagged_accounts are None by design, not omission:
-    # this engine produces no composite score, and shared/account_extractors.py
-    # has no extractor for it because its output is not GL-account-level.
-    # PR #183 review: recorded synchronously, not via background_tasks.
-    # Starlette sends the response body (responses.py:167) *before* awaiting the
-    # background task (:170), so the client already has the result while the
-    # insert is still pending. Sprint 791's hooks call refreshToolRuns() as soon
-    # as the POST resolves, which would GET the workpaper list before the row
-    # existed, replace the context state with the stale list, and never refresh
-    # again — the new entry invisible until a manual reload. The write is one
-    # INSERT plus a commit after an analysis that already ran in-process, so the
-    # latency it buys back is not worth the race.
-    maybe_record_tool_run(
-        db, payload.engagement_id, current_user.id, "intercompany_elimination", True, None, None, consumes_upload=True
+    # Sprint 689c: gate promoted tool at tier + upload-limit level;
+    # Sprint 787b: run recorded on the engagement workpaper trail (success
+    # synchronously, before the response). Sprint 819: the sequence lives in
+    # shared/testing_route.py::run_json_tool.
+    result = run_json_tool(
+        db=db,
+        current_user=current_user,
+        tool_name="intercompany_elimination",
+        engagement_id=payload.engagement_id,
+        compute=lambda: run_intercompany_elimination(_build_config(payload)),
+        input_errors=(IntercompanyInputError,),
+        error_key="intercompany_error",
+        route_logger=logger,
+        failure_log="Intercompany elimination failed",
     )
     return result.to_dict()
 
@@ -132,7 +112,7 @@ def export_consolidation_csv(
     payload: IntercompanyEliminationRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> StreamingResponse:
+) -> Response:
     # Sprint 689c: gate promoted tool (export mirrors analyze-route gating).
     enforce_tool_access(current_user, "intercompany_elimination", db)
 
@@ -228,8 +208,4 @@ def export_consolidation_csv(
         )
 
     buffer.seek(0)
-    return StreamingResponse(
-        iter([buffer.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=intercompany_consolidation.csv"},
-    )
+    return attachment_response(buffer.getvalue(), "intercompany_consolidation.csv", MEDIA_CSV, quote_filename=False)

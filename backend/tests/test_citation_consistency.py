@@ -7,7 +7,7 @@ agent sweep (Hallucination Audit C-4 + Accounting Methodology Audit Rank-1).
 
 Surfaces scanned:
 - `frontend/src/app/(marketing)/**/*.tsx`
-- `frontend/src/app/(marketing)/trust/page.tsx`
+- `frontend/src/app/(marketing)/trust/page.tsx` + `frontend/src/content/trust.ts` + `frontend/src/components/trust/**`
 - `frontend/src/content/standards-specimen.ts`
 - `frontend/src/components/marketing/**/*.tsx`
 - `docs/07-user-facing/USER_GUIDE.md`
@@ -51,6 +51,10 @@ SCANNED_GLOBS: tuple[str, ...] = (
     # comes from; every code it names must be registered.
     "frontend/src/content/methodology-sources.ts",
     "frontend/src/components/marketing/**/*.tsx",
+    # Sprint 820: the Trust page's control inventory (standard references per
+    # control) moved out of trust/page.tsx into these two places.
+    "frontend/src/content/trust.ts",
+    "frontend/src/components/trust/**/*.tsx",
     "docs/07-user-facing/USER_GUIDE.md",
     "CLAUDE.md",
     # Sprint 813 (item 7): the backend PDF producers. Every memo and report a
