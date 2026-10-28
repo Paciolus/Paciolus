@@ -217,11 +217,13 @@ def _check_backend() -> list[dict]:
     # from requirements.txt. Fall back to SYSTEM_PYTHON only if venv is missing.
     python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON
     cmd = [str(python_bin), "-m", "pip", "list", "--outdated", "--format=json"]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
+    )
 
     outdated = []
     try:
-        packages = json.loads(result.stdout)
+        packages = json.loads(result.stdout or "")
         for pkg in packages:
             name = pkg.get("name", "").lower()
             current = pkg.get("version", "0")
@@ -246,12 +248,13 @@ def _check_frontend() -> list[dict]:
     cmd = ["npm", "outdated", "--json"]
     result = subprocess.run(
         cmd, cwd=str(FRONTEND_ROOT), capture_output=True, text=True,
+        encoding="utf-8", errors="replace",
         timeout=120, shell=True,
     )
 
     outdated = []
     try:
-        packages = json.loads(result.stdout) if result.stdout.strip() else {}
+        packages = json.loads(result.stdout) if (result.stdout or "").strip() else {}
         for name, info in packages.items():
             current = info.get("current", "0.0.0")
             wanted = info.get("wanted", current)

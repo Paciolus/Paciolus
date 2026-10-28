@@ -17,8 +17,10 @@ from scripts.overnight.config import (
     ANTHROPIC_API_KEY,
     CLAUDE_MODEL,
     KNOWN_BUGS,
-    REPORTS_DIR,
+    PREFLIGHT_PATH,
     REPORT_PATH,
+    REPORTS_DIR,
+    RUN_MANIFEST_PATH,
     TODAY,
 )
 
@@ -31,7 +33,15 @@ AGENTS = [
     "coverage_sentinel",
 ]
 
-STATUS_EMOJI = {"green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534"}
+STATUS_EMOJI = {
+    "green": "\U0001f7e2", "yellow": "\U0001f7e1", "red": "\U0001f534",
+    # Sprint 854: an agent that ran but checked nothing (0 tests) is neither a
+    # pass nor a failure. A white circle, never green.
+    "unverified": "⚪",
+}
+# Worst first. `unverified` outranks `yellow`: "nothing was checked" is a
+# stronger reason to look than "something is slightly off".
+_STATUS_RANK = ["red", "unverified", "yellow", "green"]
 
 
 def _head_sha() -> str | None:
@@ -100,7 +110,69 @@ def _load_agent_data(agent_name: str) -> dict | None:
         return None
 
 
-def _overall_status(agent_data: dict[str, dict | None]) -> str:
+def _load_json(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _agent_run_check(
+    agent_data: dict[str, dict | None],
+    manifest: dict | None,
+    sentinel_mtimes: dict[str, float | None],
+) -> list[dict]:
+    """Sprint 854: every agent that did not complete this run, and why.
+
+    Only 43 of 109 dormant-period nights produced a qa_warden sentinel, and
+    nobody noticed: a missing agent was one RED section among six, under a
+    process that exited 0. This turns each one into a named line at the top
+    of the brief. Three ways an agent can fail to have run:
+
+    - **crashed** — the orchestrator recorded a non-zero exit, timeout or
+      exception (even if a sentinel exists, it may be partial);
+    - **did not run** — no sentinel for today at all;
+    - **stale** — a sentinel exists but predates this run's start, so it is
+      left over from an earlier run today, not this one.
+    """
+    problems: list[dict] = []
+    run_agents = (manifest or {}).get("agents", {})
+    run_started = None
+    if manifest and manifest.get("started_at"):
+        try:
+            run_started = datetime.datetime.fromisoformat(manifest["started_at"]).timestamp()
+        except ValueError:
+            run_started = None
+
+    for name in AGENTS:
+        rec = run_agents.get(name)
+        if rec and rec.get("outcome") not in ("ok", "dry_run", None):
+            exit_part = f"exit {rec['exit_code']}" if rec.get("exit_code") is not None else rec["outcome"]
+            detail = rec.get("detail") or ""
+            problems.append({
+                "agent": name, "problem": "crashed",
+                "detail": f"{exit_part}" + (f": {detail}" if detail else ""),
+            })
+        elif agent_data.get(name) is None:
+            why = "not started by the orchestrator" if manifest and rec is None else "no sentinel written"
+            problems.append({"agent": name, "problem": "did not run", "detail": why})
+        elif run_started is not None:
+            mtime = sentinel_mtimes.get(name)
+            if mtime is not None and mtime < run_started:
+                problems.append({
+                    "agent": name, "problem": "stale",
+                    "detail": "sentinel predates this run — left over from an earlier run",
+                })
+    return problems
+
+
+def _overall_status(
+    agent_data: dict[str, dict | None],
+    preflight: dict | None = None,
+    run_problems: list[dict] | None = None,
+) -> str:
     """Determine overall system status from agent statuses."""
     statuses = []
     for name, data in agent_data.items():
@@ -108,12 +180,69 @@ def _overall_status(agent_data: dict[str, dict | None]) -> str:
             statuses.append("red")  # Missing agent = problem
         else:
             statuses.append(data.get("status", "yellow"))
+    # Sprint 854: an environment that does not match the pins, or an agent
+    # that did not complete, is RED regardless of what the sentinels say.
+    if preflight and preflight.get("status") == "red":
+        statuses.append("red")
+    if run_problems:
+        statuses.append("red")
 
-    if "red" in statuses:
-        return "red"
-    if "yellow" in statuses:
-        return "yellow"
-    return "green"
+    for status in _STATUS_RANK:
+        if status in statuses:
+            return status
+    # An unknown status string must not be read as a pass.
+    return "yellow" if statuses else "red"
+
+
+def _tested_as_of(manifest: dict | None, agent_data: dict[str, dict | None]) -> tuple[str | None, str | None, str]:
+    """(sha, timestamp, source) for the tree the suites ran against.
+
+    Sprint 854. The 10-28 brief's `a9dfeb69` was HEAD at 04:00, when the brief
+    was compiled; the suites ran at 02:00-03:00. Prefer the SHA the
+    orchestrator recorded at run start, then the one QA Warden stamped as it
+    began, and only then — saying so — HEAD at compile time.
+    """
+    if manifest and manifest.get("head_sha"):
+        return manifest["head_sha"], manifest.get("started_at"), "orchestrator run start"
+    for name in ("qa_warden", "coverage_sentinel", "report_auditor"):
+        d = agent_data.get(name) or {}
+        if d.get("tested_sha"):
+            return d["tested_sha"], d.get("tested_at"), f"{name} start"
+    return None, None, "not recorded"
+
+
+def _hhmm(iso: str | None) -> str:
+    if not iso:
+        return "unknown time"
+    try:
+        return datetime.datetime.fromisoformat(iso).strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return iso
+
+
+def _preflight_block(preflight: dict | None) -> str:
+    if preflight is None:
+        return (
+            "> **Environment pre-flight: not recorded.** This run did not sync or verify the venv, "
+            "so a RED below may be an environment fault rather than a code one."
+        )
+    if preflight.get("status") == "red":
+        return (
+            f"> **ENVIRONMENT PRE-FLIGHT FAILED.** {preflight.get('summary', '')} "
+            f"Test results below ran in an environment that does not match `requirements.txt` — "
+            f"fix the environment before reading them as code failures."
+        )
+    return f"> {preflight.get('summary', 'Environment pre-flight passed.')}"
+
+
+def _run_check_block(problems: list[dict]) -> str:
+    total = len(AGENTS)
+    if not problems:
+        return f"> **Did every agent run?** Yes — {total}/{total} completed this run."
+    lines = [f"> **AGENTS THAT DID NOT COMPLETE: {len(problems)} of {total}.** Their sections below are not results."]
+    for p in problems:
+        lines.append(f"> - `{p['agent']}` — **{p['problem']}** ({p['detail']})")
+    return "\n".join(lines)
 
 
 def _generate_executive_summary(agent_data: dict[str, dict | None], overall: str) -> str:
@@ -181,8 +310,16 @@ def _format_qa_section(data: dict | None) -> str:
     lines = [
         f"## \U0001f9ea QA Warden — {e} {data.get('status', 'unknown').upper()}",
         f"**Backend:** {be.get('passed', 0)} passed, {be.get('failed', 0)} failed ({be.get('duration_s', 0)}s)  ",
-        f"**Frontend:** {fe.get('passed', 0)} passed, {fe.get('failed', 0)} failed ({fe.get('duration_s', 0)}s)  ",
+        (
+            f"**Frontend:** \U0001f534 DID NOT RUN — {fe['did_not_run']}  "
+            if fe.get("did_not_run") else
+            f"**Frontend:** {fe.get('passed', 0)} passed, {fe.get('failed', 0)} failed ({fe.get('duration_s', 0)}s)  "
+        ),
     ]
+    if be.get("collection_error"):
+        lines.append("**Backend collection FAILED** — the suite did not run; see the run log.  ")
+    if data.get("tested_sha"):
+        lines.append(f"**Tested:** `{data['tested_sha'][:8]}` at {_hhmm(data.get('tested_at'))}  ")
 
     new_failures = be.get("new_failures", [])
     if new_failures:
@@ -430,31 +567,56 @@ def run() -> dict:
     for name in AGENTS:
         agent_data[name] = _load_agent_data(name)
 
+    # Sprint 854: the orchestrator's record of this run, and the env pre-flight.
+    manifest = _load_json(RUN_MANIFEST_PATH)
+    preflight = _load_json(PREFLIGHT_PATH)
+    sentinel_mtimes = {}
+    for name in AGENTS:
+        p = REPORTS_DIR / f".{name}_{TODAY}.json"
+        sentinel_mtimes[name] = p.stat().st_mtime if p.exists() else None
+    run_problems = _agent_run_check(agent_data, manifest, sentinel_mtimes)
+
     agents_run = sum(1 for d in agent_data.values() if d is not None)
-    overall = _overall_status(agent_data)
+    overall = _overall_status(agent_data, preflight, run_problems)
     overall_emoji = STATUS_EMOJI.get(overall, "\U0001f534")
 
-    # Executive summary
-    exec_summary = _generate_executive_summary(agent_data, overall)
+    # Executive summary. The pre-flight leads, so an environment fault is the
+    # first thing said rather than being narrated as a test failure.
+    exec_summary = _generate_executive_summary(
+        {"env_preflight": preflight, **agent_data}, overall,
+    )
 
     # Compute tomorrow's date
     tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
-    # Sprint 810 (T-4): record the commit this verdict is about, and state
-    # plainly whether it still describes the tree. At compile time the tested
-    # SHA *is* HEAD; the value of recording it is that a later reader — or the
-    # report auditor — can tell that it no longer is.
-    tested_sha = _head_sha()
-    supersession = _supersession_notice(tested_sha, _head_sha())
+    # Sprint 810 (T-4) + Sprint 854: record the commit this verdict is about —
+    # as of when the suites ran, not when this brief was compiled — and state
+    # plainly whether it still describes the tree.
+    compiled_at = datetime.datetime.now()
+    current_sha = _head_sha()
+    tested_sha, tested_at, tested_source = _tested_as_of(manifest, agent_data)
+    if tested_sha is None and current_sha is not None:
+        tested_line = (
+            f"`{current_sha}` — **HEAD at brief compile time ({compiled_at:%H:%M})**, not when the "
+            f"suites ran: this run did not record the commit it tested, so the verdict may be stale."
+        )
+        supersession = _supersession_notice(None, current_sha)
+    else:
+        tested_line = f"`{tested_sha or 'unknown'}` as of {_hhmm(tested_at)} ({tested_source})"
+        supersession = _supersession_notice(tested_sha, current_sha)
 
     # Build the report
     total_agents = len(AGENTS)
     report = f"""# \U0001f305 Paciolus Overnight Brief — {TODAY}
 **Overall Status:** {overall_emoji} {overall.upper()}
-**Report generated:** {datetime.datetime.now().strftime('%I:%M %p')} | **Agents run:** {agents_run}/{total_agents}
-**Tested commit:** `{tested_sha or "unknown"}`
+**Report generated:** {compiled_at.strftime('%Y-%m-%d %H:%M')} | **Agents run:** {agents_run}/{total_agents}
+**Tested commit:** {tested_line}
 
 {supersession}
+
+{_preflight_block(preflight)}
+
+{_run_check_block(run_problems)}
 
 {exec_summary}
 
@@ -496,6 +658,9 @@ def run() -> dict:
         # Sprint 810 (T-4): so a consumer of this payload — the report auditor
         # above all — can tell whether the verdict still describes the tree.
         "tested_sha": tested_sha,
+        "tested_at": tested_at,
+        "preflight_status": (preflight or {}).get("status"),
+        "run_problems": run_problems,
         "agents_run": agents_run,
         "report_path": str(REPORT_PATH),
     }
