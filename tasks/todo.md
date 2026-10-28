@@ -2238,8 +2238,10 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 778: Build the off-provider backup, then prove recovery works
-**Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict), **778b
-PENDING** (the backup itself, the Neon rewrite and the restore drills — all need credentials).
+**Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict). **778b code COMPLETE (PR #292; test DSNs are assembled at runtime so the CI secret scan stays clean)
+2026-10-28; verification PENDING CEO secrets:** `NEON_BACKUP_DATABASE_URL`, `R2_BACKUPS_ENDPOINT`,
+`R2_BACKUPS_BUCKET`, `R2_BACKUPS_ACCESS_KEY_ID`, `R2_BACKUPS_SECRET_ACCESS_KEY`, `NEON_API_KEY`,
+`NEON_PROJECT_ID` (where each comes from: `docs/runbooks/backup-restore.md` §2).
 **Priority:** P1 — both halves in scope: build the backup that does not exist **and** verify that recovery works.
 
 
@@ -2339,7 +2341,49 @@ import-ordering (identical count before the change) and outside CI's lint scope,
 Neon's real PITR retention, the restore drills, and rewriting both workflows against Neon. All need
 the Neon connection string (**CEO ask D-1**) and R2 token confirmation.
 
-**Commit SHA:** `f0d7d6ec` (778a; PR #187). 778b remains pending.
+#### 778b — the backup, the drill, and both DR workflows on Neon + R2: code COMPLETE, verification PENDING
+
+- [x] **Scope 1 — `pg_dump` → R2 cron** (GitHub Actions, the free §4.4 option): `backup-pg-dump.yml`
+  daily 07:15 UTC → `scripts/pg_backup.py backup`. Client is the official `postgres:<major>` image,
+  the major read from the server at run time (`SHOW server_version_num`), so the client never lags
+  Neon. Refuses Neon `-pooler` hosts. Row counts and schema fingerprint are taken **in the snapshot
+  `pg_dump --snapshot` dumps**, so the manifest (per-table counts, schema sha256, alembic revision,
+  size, sha256) describes exactly the dumped bytes. Manifest written last = commit marker. Retention
+  30 daily + 12 monthly (parameters/inputs), counted in backup-days so a stalled cron never ages
+  out its last copies; the run's own backup can never be selected for deletion.
+- [x] **Scope 2 — Neon PITR window read live** from the Neon API (`history_retention_seconds`);
+  `verify_backup_integrity.py --only neon_pitr_window`, floor `PITR_MIN_DAYS` (default 1 day).
+  `DEPLOYMENT_ARCHITECTURE.md` §10.1's 7/30-day figure is marked superseded, not trusted.
+- [ ] **Scope 3 — one real restore drill per mechanism, with evidence.** Built, not yet run: the R2
+  drill (`backup-restore-drill.yml`, monthly via DR Test + manual) restores into a same-major
+  service container and compares table list, exact row counts, schema fingerprint and alembic
+  revision (also checked against the repo's migration history). The Neon PITR drill is a manual
+  runbook step (§3) — automation does not create branches on production. Both need the secrets.
+- [x] **Scope 4 — both DR workflows rewritten against Neon + R2.** `dr-test-monthly.yml` = integrity
+  + restore drill + combined verdict; `backup-integrity-check.yml` now **weekly** (a monthly check
+  lets a month of missing dumps pass) with one deduplicated `dr-failure` issue per title.
+  `verify_backup_integrity.py` checks R2 freshness + sha256, Neon PITR window, Neon branch state.
+  No `api.render.com` reference remains; the 4 Render-era secrets are retired.
+- [x] **Scope 5 — kept from 778a.** Exit 0 PASS / 1 FAIL / **2 UNVERIFIED**; every workflow's job
+  status is its verdict, UNVERIFIED is red and names the missing secrets ("UNVERIFIED — missing
+  secret X, Y"), a skipped or silent job is never PASS, verdict jobs run under `always()`.
+- Runbook: `docs/runbooks/backup-restore.md` (schedule, secrets + where to get each value, drill by
+  hand, emergency restore via PITR or R2).
+
+**Found on the way, not fixed (out of scope):** `boto3` is in **no** requirements file, so
+`shared/export_share_storage.py` hits its `ImportError` fallback in production — `GET /health/r2`
+returns `{"r2":"not_configured"}` live on 2026-10-28. Sprint 611's R2 export-share storage has
+therefore never been active; share bytes are still in the Neon row. Needs its own sprint (add
+`boto3` to `backend/requirements.txt`, then confirm `/health/r2` says `reachable`).
+
+**Verification:** 78 new tests in `backend/tests/test_backup_scripts.py` pass (retention selection,
+manifest + schema fingerprint, restore comparison, drill sha256/pg_restore failure paths, R2 and Neon
+checks with fakes, UNVERIFIED naming + exit 2, the DR combine step run under bash for 6 verdict
+combinations, workflow parse/pins/secret-set/no `set -x`); actionlint clean on all four workflows;
+ruff clean. **Not yet run against production** — PENDING the 7 CEO secrets, then a manual run of
+*Backup — pg_dump to R2* followed by *DR Test (Monthly)*; record both run URLs here.
+
+**Commit SHA:** `f0d7d6ec` (778a; PR #187). 778b: see commit `Sprint 778: off-provider backup, restore drill and DR workflows on Neon + R2`.
 
 ---
 

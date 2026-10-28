@@ -188,10 +188,17 @@ Secrets and variables → Actions).
 
 | Secret | Workflow | Description |
 |---|---|---|
-| `RENDER_API_KEY` | `dr-test-monthly.yml`, `backup-integrity-check.yml` | Render personal API token |
-| `RENDER_POSTGRES_ID` | `dr-test-monthly.yml`, `backup-integrity-check.yml` | PostgreSQL service ID (from Render dashboard URL) |
-| `DATABASE_URL_READONLY` | `dr-test-monthly.yml` | Optional read-only DB connection string for liveness probe |
-| `RESTORE_TEST_BACKUP_URL` | `dr-test-monthly.yml` (restore-validation job) | URL to downloadable backup artifact for restore testing. Updated when a new backup is exported from Render. The backup file should be uploaded to a secure, access-controlled location (e.g., a private S3 bucket or Render object storage) and the URL placed here. |
+| `NEON_BACKUP_DATABASE_URL` | `backup-pg-dump.yml` | Neon **direct** (non-`-pooler`) connection string for `pg_dump` |
+| `R2_BACKUPS_ENDPOINT` | `backup-pg-dump.yml`, `backup-restore-drill.yml`, `backup-integrity-check.yml`, `dr-test-monthly.yml` | R2 S3 endpoint (same value as on Render) |
+| `R2_BACKUPS_BUCKET` | same | `paciolus-backups` |
+| `R2_BACKUPS_ACCESS_KEY_ID` | same | R2 Object R&W token scoped to `paciolus-backups` |
+| `R2_BACKUPS_SECRET_ACCESS_KEY` | same | Matching secret |
+| `NEON_API_KEY` | `backup-integrity-check.yml`, `dr-test-monthly.yml` | Neon API key — reads the live PITR window and branch state |
+| `NEON_PROJECT_ID` | same | Neon project ID |
+
+Sprint 778b retired `RENDER_API_KEY`, `RENDER_POSTGRES_ID`, `DATABASE_URL_READONLY` and
+`RESTORE_TEST_BACKUP_URL` (they addressed the Render Postgres deleted 2026-04-22). Where each
+value comes from: `docs/runbooks/backup-restore.md` §2.
 
 ---
 

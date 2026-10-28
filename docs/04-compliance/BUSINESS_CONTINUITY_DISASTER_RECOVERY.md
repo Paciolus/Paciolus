@@ -496,6 +496,11 @@ After any recovery operation, verify:
 
 ### 7.3 Monthly Backup Integrity Check (Automated)
 
+> **Superseded by Sprint 778b.** The check below targeted the Render Postgres API; production
+> is on Neon and the Render instance was deleted 2026-04-22. The check now runs **weekly**
+> against the R2 `pg_dump` backups and the Neon API (live PITR window), and the monthly DR test
+> adds a real restore drill. Current procedure and secrets: `docs/runbooks/backup-restore.md`.
+
 **Implemented:** Sprint 457 (2026-02-27)
 
 An automated check runs on the 1st of each month via GitHub Actions (`.github/workflows/backup-integrity-check.yml`). It verifies:

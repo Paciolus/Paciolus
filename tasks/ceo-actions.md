@@ -197,7 +197,15 @@ Legal counsel sign-off is required on Terms and Privacy before launch.
 - [ ] *(I do this)* Verify the **actual** Neon PITR retention window on the current plan, rather than the figure recorded in `DEPLOYMENT_ARCHITECTURE.md:724`
 - [ ] *(I do this)* One real restore drill **per mechanism** — R2 dump and Neon PITR — with schema parity and row counts recorded as evidence. An untested backup is not a backup.
 - [ ] *(I do this; needs `RENDER_API_KEY`)* Rewrite `verify_backup_integrity.py` and `dr-test-monthly.yml` against Neon + R2. Both currently query the Render Postgres API for a database deleted on 2026-04-22, and the monthly DR test reports workflow **success** while its own internal verdict is FAIL.
-- [ ] **Heads up:** `backup-integrity-check` will fail on the 1st of each month and file a `dr-failure` issue until the rewrite lands. The signal is substantively true — backups genuinely are unverified — but its stated reason ("RENDER_API_KEY is not set") is misleading.
+- [ ] **Add 7 GitHub Actions secrets (Sprint 778b code is built; nothing can run until these exist).** GitHub → Settings → Secrets and variables → Actions. Exact names, and where each value comes from (full detail: `docs/runbooks/backup-restore.md` §2):
+  - `NEON_BACKUP_DATABASE_URL` — Neon Console → Connect → **Connection pooling OFF** → copy. The host must **not** contain `-pooler` (PgBouncer breaks `pg_dump`; the job refuses it).
+  - `R2_BACKUPS_ENDPOINT` — copy from Render `paciolus-api` → Environment (`https://8fd7f43a3458f2ec09d400e0b7a7a5e8.r2.cloudflarestorage.com`).
+  - `R2_BACKUPS_BUCKET` — `paciolus-backups`.
+  - `R2_BACKUPS_ACCESS_KEY_ID` / `R2_BACKUPS_SECRET_ACCESS_KEY` — copy from Render, or mint a new Object R&W token scoped to `paciolus-backups` (Cloudflare → R2 → Manage R2 API Tokens).
+  - `NEON_API_KEY` — Neon Console → Account settings → API keys → Create.
+  - `NEON_PROJECT_ID` — Neon Console → project → Settings → General.
+  - Then: Actions → *Backup — pg_dump to R2 (Daily)* → Run workflow; then *DR Test (Monthly)* → Run workflow. Until then every backup/DR workflow is red with "UNVERIFIED — missing secret …" — by design.
+- [ ] **Heads up:** `backup-integrity-check` (now weekly) and `DR Test (Monthly)` stay red, with one open `dr-failure` issue naming the missing secrets, until the 7 secrets above exist. *(Sprint 778b replaced the misleading "RENDER_API_KEY is not set" reason.)*
 
 ### 4.5 Go-live smoke test
 
