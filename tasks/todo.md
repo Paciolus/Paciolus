@@ -478,13 +478,15 @@ import → 99 collection errors in Coverage Sentinel. QA Warden crashed separate
 **Commit SHA:** TBD.
 
 ### Sprint 857: State-doc drift check (narrowed)
-**Status:** PENDING. **Priority:** P3 (Phase 5; freeze-exempt). **Complexity:** 2/10. **Source:** Q5 tiebreak, Critic's narrowing.
+**Status:** COMPLETE 2026-10-28. **Priority:** P3 (Phase 5; freeze-exempt). **Complexity:** 2/10. **Source:** Q5 tiebreak, Critic's narrowing.
 
 Two deterministic checks only, run in CI. No prose matching of "pending merge" — that would false-alarm and get muted.
 
-- [ ] `SESSION_STATE.md`'s named `main` SHA must be an ancestor of HEAD.
-- [ ] No sprint number may appear in two `### Sprint N:` titles or two PR titles with different subjects (the 846 collision).
-- [ ] Manual post-merge checklist line added to `tasks/PROTOCOL.md` for the rest (status → COMPLETE, SHA recorded).
+- [x] `SESSION_STATE.md`'s named `main` SHA must be an ancestor of HEAD. (`scripts/check_state_docs.py`; one line `**Main SHA:** \`<sha>\`` documented at the top of `SESSION_STATE.md`; runs in the required Lint Baseline Gate job with `fetch-depth: 0`.)
+- [x] No sprint number may appear in two `### Sprint N:` titles with different subjects. 11 historical collisions (1–4, 527, 677, 699–703) allowlisted; sub-sprint ids distinct. PR titles not checked (needs a token in CI).
+- [x] Manual post-merge checklist line added to `tasks/PROTOCOL.md` for the rest (status → COMPLETE, SHA recorded).
+
+**Verification:** `python scripts/check_state_docs.py` passes; `pytest tests/test_state_docs_check.py` 16 passed (82 with test_design_token_lint.py); ruff clean.
 
 **Commit SHA:** TBD.
 

@@ -529,6 +529,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+        with:
+          # Full history: the state-doc check asks git whether SESSION_STATE.md's
+          # main SHA is an ancestor of HEAD, which a depth-1 clone cannot answer.
+          fetch-depth: 0
+
+      # Sprint 857 — runs inside this already-required job so it blocks merge
+      # without a branch-protection change. Pure stdlib + git.
+      - name: Check state docs (main SHA ancestry, unique sprint ids)
+        run: python scripts/check_state_docs.py
 
       - name: Check ruff baseline
         env:
