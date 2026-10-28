@@ -24,13 +24,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from engagement_model import Engagement
@@ -44,6 +38,7 @@ from shared.report_chrome import (
     find_logo,
     make_branded_page_footer,
 )
+from shared.safe_paragraph import Paragraph
 from uncorrected_misstatements_model import (
     MisstatementClassification,
     MisstatementDisposition,

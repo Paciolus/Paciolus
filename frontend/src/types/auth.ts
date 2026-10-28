@@ -27,6 +27,8 @@ export interface User {
 export interface ProfileUpdate {
   name?: string;
   email?: string;
+  /** Required by the API when the email changes (Sprint 847). */
+  current_password?: string;
 }
 
 /**

@@ -9,14 +9,10 @@ rich detail data that already exists in engine result dataclasses.
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 # Maximum rows to render per drill-down table
 MAX_DRILL_ROWS = 20

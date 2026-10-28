@@ -9,10 +9,11 @@ followed by the balance verification badge and cross-reference index.
 from typing import Any
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 # Cross-reference legend for balance-sheet lead-sheet refs
 _BS_LEGEND_MAP = {

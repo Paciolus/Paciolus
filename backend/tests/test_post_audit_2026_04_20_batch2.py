@@ -31,6 +31,18 @@ import pytest
 from models import UserTier
 from tests.helpers.route_inventory import all_routes
 
+
+def _tiny_png() -> bytes:
+    """A real 4x4 PNG. Since Sprint 852 the logo route reads the header with Pillow."""
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (4, 4)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
 # =============================================================================
 # Sprint 677a: Concentration overflow SUSPICION REJECTED
 # =============================================================================
@@ -167,8 +179,7 @@ class TestLogoUploadDBIntegrity:
         app.dependency_overrides[require_current_user] = lambda: user
         app.dependency_overrides[get_db] = lambda: db_session
         try:
-            # Construct a minimal valid PNG payload (magic bytes + padding)
-            png_payload = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+            png_payload = _tiny_png()
 
             # Patch the entitlement check and storage helper.
             # upload_bytes returns False to simulate S3 unconfigured.
@@ -239,7 +250,7 @@ class TestLogoUploadDBIntegrity:
         app.dependency_overrides[require_current_user] = lambda: user
         app.dependency_overrides[get_db] = lambda: db_session
         try:
-            png_payload = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+            png_payload = _tiny_png()
 
             with (
                 patch("routes.branding.check_custom_branding_access"),

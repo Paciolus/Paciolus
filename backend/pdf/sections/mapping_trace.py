@@ -8,10 +8,11 @@ and an overall summary badge showing how many lines are tied.
 from typing import Any
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 
 def render_mapping_trace(story: list, styles: dict, statements: Any) -> None:

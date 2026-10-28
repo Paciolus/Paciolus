@@ -118,6 +118,10 @@ class User(Base):
     # Sprint 199: Password change tracking for token invalidation
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # Sprint 847: "revoke all sessions" and an email change also kill live
+    # access tokens — require_current_user rejects tokens issued before this.
+    sessions_revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # Sprint 261: DB-backed account lockout (replaces in-memory _lockout_tracker)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

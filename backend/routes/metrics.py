@@ -42,6 +42,11 @@ def get_metrics(request: Request) -> PlainTextResponse:
     from config import ENV_MODE
 
     if ENV_MODE == "production":
+        # Sprint 851: this gate trusts request.client.host. Never set
+        # FORWARDED_ALLOW_IPS='*' (or gunicorn --forwarded-allow-ips='*'):
+        # uvicorn would then rewrite client.host from the leftmost
+        # X-Forwarded-For entry, and "X-Forwarded-For: 127.0.0.1" from anyone
+        # on the internet would pass this check.
         peer_ip = request.client.host if request.client else ""
         if peer_ip not in _METRICS_ALLOWED_PEERS:
             raise HTTPException(status_code=404, detail="Not found")

@@ -7,9 +7,11 @@ Logo upload (S3), header/footer text.
 Route group prefix: /branding
 """
 
+import io
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -26,6 +28,36 @@ router = APIRouter(prefix="/branding", tags=["branding"])
 
 MAX_LOGO_SIZE = 500 * 1024  # 500KB
 ALLOWED_CONTENT_TYPES = {"image/png", "image/jpeg", "image/jpg"}
+# Sprint 852 (security review L9): a 500 KB PNG can declare a huge canvas, which
+# every PDF render would then decode. Dimensions are read from the header only.
+MAX_LOGO_SIDE_PX = 4000
+MAX_LOGO_PIXELS = 25_000_000
+
+
+def _validate_logo_dimensions(contents: bytes) -> None:
+    """Reject logos over MAX_LOGO_SIDE_PX per side or MAX_LOGO_PIXELS in total.
+
+    ``Image.open`` is lazy: it parses the header (format and size) and does not
+    decode pixel data. Pillow itself raises ``DecompressionBombError`` at open
+    time for canvases over twice its own pixel limit, so that is a rejection too.
+    """
+    too_large = HTTPException(
+        status_code=400,
+        detail=f"Logo must be at most {MAX_LOGO_SIDE_PX}x{MAX_LOGO_SIDE_PX} pixels.",
+    )
+    try:
+        with Image.open(io.BytesIO(contents)) as img:
+            image_format = img.format
+            width, height = img.size
+    except Image.DecompressionBombError:
+        raise too_large
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise HTTPException(status_code=400, detail="File content does not match a valid PNG or JPEG image.")
+    # MPO is how Pillow reports a multi-picture JPEG (common from phone cameras).
+    if image_format not in ("PNG", "JPEG", "MPO"):
+        raise HTTPException(status_code=400, detail="Only PNG and JPG images are allowed.")
+    if width > MAX_LOGO_SIDE_PX or height > MAX_LOGO_SIDE_PX or width * height > MAX_LOGO_PIXELS:
+        raise too_large
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +157,7 @@ async def upload_logo(
             status_code=400,
             detail="File content does not match a valid PNG or JPEG image.",
         )
+    _validate_logo_dimensions(contents)
 
     # Store in S3 (or local for development)
     s3_key = f"branding/{org_id}/logo"

@@ -17,13 +17,7 @@ from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -46,6 +40,7 @@ from shared.report_chrome import (
     draw_page_footer,
     find_logo,
 )
+from shared.safe_paragraph import Paragraph
 
 
 def generate_engagement_dashboard_memo(

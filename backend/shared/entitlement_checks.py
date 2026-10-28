@@ -65,14 +65,28 @@ def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
     AUDIT-06 FIX 2: Subscription-status-aware entitlement resolution.
 
     Rules:
-    - If user.tier is FREE -> free-tier entitlements (no subscription check needed)
+    - If user.tier is FREE and the user is in no organization -> free-tier
+      entitlements (no subscription check needed)
     - If user has an active or trialing subscription -> tier-based entitlements
     - If user's subscription is PAST_DUE, CANCELED, or UNPAID -> free-tier entitlements
-    - If user.tier is paid but no subscription row exists -> tier-based entitlements
+    - If the user has no subscription row and is a non-owner member of an
+      organization -> the organization's (owner's) live subscription decides:
+      ACTIVE/TRIALING -> its tier, anything else (or none) -> free tier
+    - If user.tier is paid but no subscription row exists (and the user is not
+      a non-owner org member) -> tier-based entitlements
       (in production, paid-tier users always have subscriptions via checkout flow)
     - If db is not a valid Session (e.g., unresolved Depends in direct calls) -> tier-based
+
+    Sprint 849 (security review M5): a member's ``user.tier`` is copied from
+    the owner's plan when they join and was then trusted indefinitely,
+    because members never have a Subscription row of their own. An owner who
+    moved Enterprise -> Solo (or was force-canceled by an admin) left every
+    member on Enterprise. For members, ``user.tier`` is now only a display
+    cache; the owner's subscription is read on every check.
     """
-    if user.tier == UserTier.FREE:
+    # An int check, not truthiness: a mock user's auto-attribute is not an org.
+    is_org_member = isinstance(getattr(user, "organization_id", None), int)
+    if user.tier == UserTier.FREE and not is_org_member:
         return get_entitlements(UserTier.FREE)
 
     # Gracefully handle non-Session db (e.g., unresolved Depends from unit tests)
@@ -83,6 +97,14 @@ def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
 
     sub = _user_subscription(db, user.id)
 
+    if sub is None and is_org_member:
+        member_entitlements = _org_member_entitlements(db, user)
+        if member_entitlements is not None:
+            return member_entitlements
+
+    if user.tier == UserTier.FREE:
+        return get_entitlements(UserTier.FREE)
+
     if sub is None:
         # No subscription row — trust the tier (checkout flow always creates one in production)
         return get_entitlements(UserTier(user.tier.value))
@@ -92,6 +114,22 @@ def get_effective_entitlements(user: User, db: object) -> TierEntitlements:
 
     # PAST_DUE, CANCELED, or any other non-active status -> free tier
     return get_entitlements(UserTier.FREE)
+
+
+def _org_member_entitlements(db: Session, user: User) -> TierEntitlements | None:
+    """Entitlements a non-owner org member inherits from the org's subscription.
+
+    Sprint 849 (security review M5). Returns None when the user is not a
+    non-owner member (a dangling ``organization_id``, or the user owns the
+    org) so the caller falls through to the user's own rules: an owner's
+    entitlements still come from their own subscription row.
+    """
+    from organization_model import Organization
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org is None or org.owner_user_id == user.id:
+        return None
+    return _resolve_subscription_for_org(db, org)[1]
 
 
 def _get_enforcement_mode() -> str:
@@ -575,11 +613,20 @@ def _resolve_org_subscription(db: Session, org_id: int) -> tuple:
     Returns (Subscription | None, TierEntitlements).
     """
     from organization_model import Organization
-    from subscription_model import Subscription, SubscriptionStatus
 
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         return None, get_entitlements(UserTier.FREE)
+    return _resolve_subscription_for_org(db, org)
+
+
+def _resolve_subscription_for_org(db: Session, org: object) -> tuple:
+    """``_resolve_org_subscription`` for an already-loaded Organization row.
+
+    Sprint 849: split out so member entitlement resolution, which has already
+    loaded the org to compare its owner, does not query it twice.
+    """
+    from subscription_model import Subscription, SubscriptionStatus
 
     sub = None
     if org.subscription_id:

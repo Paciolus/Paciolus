@@ -25,13 +25,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy.orm import Session
 
 from analytical_expectations_model import (
@@ -51,6 +45,7 @@ from shared.report_chrome import (
     find_logo,
     make_branded_page_footer,
 )
+from shared.safe_paragraph import Paragraph
 
 DISCLAIMER_TEXT = (
     "DATA ANALYTICS REPORT — NOT AN AUDIT COMMUNICATION. "

@@ -734,17 +734,17 @@ class TestCreateDevUserScript:
 
     def test_script_refuses_non_development_env_mode(self, monkeypatch, tmp_path):
         """Exits non-zero when ENV_MODE is not 'development' and the danger
-        flag is not set.  Uses ENV_MODE=staging to exercise the script's own
+        flag is not set.  Uses ENV_MODE=test to exercise the script's own
         refusal path without triggering the unrelated production-mode config
         guardrails (which would fail earlier at config-import time — a
         different, equally safe failure mode but not what this test targets).
         """
-        # Use ENV_MODE=staging: not 'development', but not 'production'
+        # Use ENV_MODE=test: not 'development', but not 'production'
         # either so config.py's prod guards don't short-circuit the test.
         sqlite_path = tmp_path / "dev_user_test.db"
         env = {
             **os.environ,
-            "ENV_MODE": "staging",
+            "ENV_MODE": "test",
             "DEV_USER_PASSWORD": "DoesNotMatter1!",
             "DATABASE_URL": f"sqlite:///{sqlite_path}",
         }
@@ -765,12 +765,12 @@ class TestCreateDevUserScript:
         assert "development" in combined or "refusing" in combined, combined
 
     def test_script_accepts_danger_flag_in_non_dev(self, monkeypatch, tmp_path):
-        """With --i-know-this-is-dangerous the script runs in staging mode
+        """With --i-know-this-is-dangerous the script runs in test mode
         and creates the user.  Smoke-tests the danger-flag code path."""
         sqlite_path = tmp_path / "dev_user_danger.db"
         env = {
             **os.environ,
-            "ENV_MODE": "staging",
+            "ENV_MODE": "test",
             "DEV_USER_PASSWORD": "DangerousRun1!",
             "DATABASE_URL": f"sqlite:///{sqlite_path}",
         }

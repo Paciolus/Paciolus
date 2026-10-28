@@ -36,7 +36,7 @@ from email_service import (
     generate_verification_token,
     is_email_service_configured,
 )
-from models import EmailVerificationToken, User
+from models import EmailVerificationToken, PasswordResetToken, RefreshToken, User
 from security_middleware import generate_csrf_token
 from security_utils import log_secure_operation
 from services.auth.identity import IdentityIssuance
@@ -200,8 +200,22 @@ def complete_email_verification(db: Session, token: str) -> User:
     # Sprint 203: pending email swap on verification.
     email_changed = bool(user.pending_email)
     if user.pending_email:
+        now = datetime.now(UTC)
         user.email = user.pending_email
         user.pending_email = None
+        # Sprint 847 (security review M4/L4): the account's recovery address
+        # just changed — end every existing session (refresh and access
+        # tokens) and every outstanding password-reset link, in the same
+        # transaction as the swap.
+        user.sessions_revoked_at = now
+        db.query(RefreshToken).filter(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked_at == None,  # noqa: E711
+        ).update({"revoked_at": now}, synchronize_session=False)
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at == None,  # noqa: E711
+        ).update({"used_at": now}, synchronize_session=False)
 
     user.is_verified = True
     user.email_verified_at = datetime.now(UTC)

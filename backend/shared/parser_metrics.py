@@ -5,6 +5,7 @@ Sprint 435: Dedicated CollectorRegistry for parser metrics.
 Sprint F (Phase LIX): Billing checkout counter.
 Phase LX: Billing lifecycle counters for post-launch decision metrics.
 Sprint 516: HTTP RED metrics (Request rate, Error rate, Duration).
+Sprint 850: PDF sandbox abort counter.
 Instrumentation helpers for parse_uploaded_file_by_format().
 
 Metrics:
@@ -12,6 +13,7 @@ Metrics:
 - paciolus_parse_errors_total: Counter by format/stage/error_code
 - paciolus_parse_duration_seconds: Histogram by format/stage
 - paciolus_active_parses: Gauge by format
+- paciolus_pdf_parse_aborted_total: Counter by reason (memory/killed/timeout)
 - paciolus_pricing_v2_checkouts_total: Counter by tier/interval
 - paciolus_billing_events_total: Counter by event_type/tier
 - paciolus_active_trials: Gauge (current trial count)
@@ -54,6 +56,16 @@ active_parses = Gauge(
     "paciolus_active_parses",
     "Currently active parse operations",
     ["format"],
+    registry=PARSER_REGISTRY,
+)
+
+# Sprint 850: PDF parses the sandbox child gave up on. reason is one of
+# "memory" (hit RLIMIT_AS), "killed" (child exited without a result) or
+# "timeout" (parent deadline passed and the child was killed).
+pdf_parse_aborted_total = Counter(
+    "paciolus_pdf_parse_aborted_total",
+    "PDF parses aborted by the sandbox (memory cap, child killed, or timeout)",
+    ["reason"],
     registry=PARSER_REGISTRY,
 )
 

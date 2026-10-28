@@ -5,7 +5,11 @@ Fixtures generated programmatically using reportlab (already in requirements.txt
 """
 
 import io
+import multiprocessing
+import os
+import sys
 import time
+import zlib
 from unittest.mock import patch
 
 import pandas as pd
@@ -17,10 +21,13 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from shared.parser_metrics import pdf_parse_aborted_total
+from shared.pdf_extraction import PdfRejectedError, extract_tables_in_process
 from shared.pdf_parser import (
     CONFIDENCE_THRESHOLD,
     MAX_PDF_PAGES,
-    PER_PAGE_TIMEOUT_SECONDS,
+    PDF_PARSE_TIMEOUT_SECONDS,
+    PDF_TOO_COMPLEX_DETAIL,
     PREVIEW_PAGE_LIMIT,
     _build_remediation_hints,
     _compute_quality_metrics,
@@ -350,45 +357,177 @@ class TestPdfMultiPage:
         assert result.metadata.page_count >= 3
 
     def test_page_count_limit_rejection(self):
-        """Mock a PDF with too many pages."""
+        """Mock a PDF with too many pages.
+
+        Sprint 850: the mock only exists in this process, so this drives the
+        in-process core the sandbox child runs.
+        """
         import pdfplumber
 
         pdf_bytes = _make_clean_table_pdf()
         with patch.object(pdfplumber, "open") as mock_open:
             mock_pdf = mock_open.return_value.__enter__.return_value
             mock_pdf.pages = [None] * (MAX_PDF_PAGES + 1)
-            with pytest.raises(HTTPException) as exc_info:
-                extract_pdf_tables(pdf_bytes, "huge.pdf")
+            with pytest.raises(PdfRejectedError) as exc_info:
+                extract_tables_in_process(pdf_bytes, "huge.pdf")
             assert exc_info.value.status_code == 400
             assert "exceeding" in str(exc_info.value.detail)
 
-
-# ─────────────────────────────────────────────────────────────────────
-# TestPdfTimeout
-# ─────────────────────────────────────────────────────────────────────
-
-
-class TestPdfTimeout:
-    """Test per-page timeout guard."""
-
-    def test_dropped_pages_counted(self):
-        """Mock time.time to simulate slow page extraction."""
+    def test_page_count_rejection_reaches_client_as_400(self):
+        """A rejection raised in the child comes back as the same HTTP 400."""
         pdf_bytes = _make_clean_table_pdf()
+        with patch("shared.pdf_parser._run_in_sandbox", return_value=("rejected", 400, "too many pages")):
+            with pytest.raises(HTTPException) as exc_info:
+                extract_pdf_tables(pdf_bytes, "huge.pdf")
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "too many pages"
 
-        call_count = 0
-        real_time = time.time
 
-        def mock_time():
-            nonlocal call_count
-            call_count += 1
-            # First call (start_time) returns 0; second call returns > timeout
-            if call_count % 2 == 0:
-                return real_time() + PER_PAGE_TIMEOUT_SECONDS + 1
-            return real_time()
+# ─────────────────────────────────────────────────────────────────────
+# TestPdfSandbox (Sprint 850, security review M6)
+# ─────────────────────────────────────────────────────────────────────
 
-        with patch("shared.pdf_parser.time.time", side_effect=mock_time):
-            result = extract_pdf_tables(pdf_bytes, "slow.pdf")
-            assert result.metadata.dropped_rows >= 0  # May or may not drop depending on timing
+_MIB = 1 << 20
+
+
+def _deflate_zeros(n_mib: int) -> bytes:
+    """A valid zlib stream that inflates to ``n_mib`` MiB of zero bytes.
+
+    Built from one full-flushed 1 MiB block repeated, so a 2 GiB bomb costs
+    ~2 MB and no 2 GiB buffer ever exists in the test process.
+    """
+    chunk = b"\x00" * _MIB
+    c = zlib.compressobj(9)
+    head = c.compress(chunk) + c.flush(zlib.Z_FULL_FLUSH)  # zlib header + block
+    block = c.compress(chunk) + c.flush(zlib.Z_FULL_FLUSH)  # same block, no header
+    assert head[2:] == block
+    # Final empty static block, then Adler-32 of n zero bytes: a = 1, b = n mod 65521.
+    adler = ((n_mib * _MIB) % 65521) << 16 | 1
+    return head + block * (n_mib - 1) + b"\x03\x00" + adler.to_bytes(4, "big")
+
+
+def _make_deflate_bomb_pdf(n_mib: int) -> bytes:
+    """One-page PDF whose content stream is a FlateDecode run of zeros."""
+    stream = _deflate_zeros(n_mib)
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>",
+        b"<< /Length %d /Filter /FlateDecode >>\nstream\n" % len(stream) + stream + b"\nendstream",
+    ]
+    out = io.BytesIO()
+    out.write(b"%PDF-1.4\n")
+    offsets = []
+    for number, body in enumerate(objects, 1):
+        offsets.append(out.tell())
+        out.write(b"%d 0 obj\n" % number + body + b"\nendobj\n")
+    xref_at = out.tell()
+    out.write(b"xref\n0 %d\n0000000000 65535 f \n" % (len(objects) + 1))
+    for offset in offsets:
+        out.write(b"%010d 00000 n \n" % offset)
+    out.write(b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref_at))
+    return out.getvalue()
+
+
+def _aborted(reason: str) -> float:
+    return pdf_parse_aborted_total.labels(reason=reason)._value.get()
+
+
+class TestPdfSandbox:
+    """PDF parsing runs in a resource-limited child process."""
+
+    def test_bomb_helper_is_a_valid_stream(self):
+        data = zlib.decompress(_deflate_zeros(3))
+        assert len(data) == 3 * _MIB
+        assert data.count(0) == len(data)
+
+    def test_normal_pdf_parses_in_child_process(self):
+        """The parse happens in the child: breaking the core here changes nothing."""
+        pdf_bytes = _make_clean_table_pdf()
+        with patch(
+            "shared.pdf_extraction.extract_tables_in_process",
+            side_effect=AssertionError("parsed in the API process"),
+        ):
+            result = extract_pdf_tables(pdf_bytes, "clean.pdf")
+        assert result.column_names == ["Account", "Debit", "Credit", "Balance"]
+        assert len(result.rows) == 6
+        assert multiprocessing.active_children() == []
+
+    def test_deflate_bomb_times_out_with_422(self, monkeypatch):
+        """32 MiB of inflated zeros keeps pdfminer busy for well over a minute.
+
+        Kept to 32 MiB so it is harmless even on Windows, where there is no
+        RLIMIT_AS and only the deadline bounds the child.
+        """
+        monkeypatch.setattr("shared.pdf_parser.PDF_PARSE_TIMEOUT_SECONDS", 3.0)
+        pdf_bytes = _make_deflate_bomb_pdf(32)
+        assert len(pdf_bytes) < 64 * 1024
+        before = _aborted("timeout")
+
+        start = time.monotonic()
+        with pytest.raises(HTTPException) as exc_info:
+            parse_pdf(pdf_bytes, "bomb.pdf")
+        elapsed = time.monotonic() - start
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == (
+            "This PDF is too complex to parse. Export the trial balance as Excel or CSV instead."
+        )
+        assert exc_info.value.detail == PDF_TOO_COMPLEX_DETAIL
+        assert elapsed < 3.0 + 10.0  # deadline plus terminate/kill grace
+        assert _aborted("timeout") == before + 1
+        assert multiprocessing.active_children() == []
+
+    @pytest.mark.skipif(sys.platform == "win32", reason="RLIMIT_AS is not available on Windows")
+    def test_deflate_bomb_hits_memory_cap_with_422(self):
+        """2 GiB of inflated zeros: the child's 1 GiB RLIMIT_AS stops zlib."""
+        pdf_bytes = _make_deflate_bomb_pdf(2048)
+        assert len(pdf_bytes) < 4 * _MIB
+        before = _aborted("memory")
+
+        start = time.monotonic()
+        with pytest.raises(HTTPException) as exc_info:
+            extract_pdf_tables(pdf_bytes, "bomb.pdf")
+        elapsed = time.monotonic() - start
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == PDF_TOO_COMPLEX_DETAIL
+        assert elapsed < PDF_PARSE_TIMEOUT_SECONDS
+        assert _aborted("memory") == before + 1
+        assert multiprocessing.active_children() == []
+
+    def test_child_dying_without_result_is_422(self, monkeypatch):
+        """Stand-in for an OOM-killer SIGKILL: the child exits without sending.
+
+        ``os._exit`` rejects the worker's arguments, so the child dies with a
+        TypeError before it can send anything.
+        """
+        monkeypatch.setattr("shared.pdf_parser._sandbox_target", os._exit)
+        before = _aborted("killed")
+
+        with pytest.raises(HTTPException) as exc_info:
+            extract_pdf_tables(_make_clean_table_pdf(), "clean.pdf")
+
+        assert exc_info.value.status_code == 422
+        assert exc_info.value.detail == PDF_TOO_COMPLEX_DETAIL
+        assert _aborted("killed") == before + 1
+        assert multiprocessing.active_children() == []
+
+    def test_memory_error_inside_a_page_aborts_the_parse(self):
+        """pdfplumber wraps a MemoryError; it must not be dropped as a bad page."""
+        from pdfplumber.utils.exceptions import PdfminerException
+
+        pdf_bytes = _make_clean_table_pdf()
+        with patch("pdfplumber.page.Page.extract_table", side_effect=PdfminerException(MemoryError())):
+            with pytest.raises(MemoryError):
+                extract_tables_in_process(pdf_bytes, "clean.pdf")
+
+    def test_non_pdf_is_rejected_before_spawning(self):
+        with patch("shared.pdf_parser._run_in_sandbox") as mock_run:
+            with pytest.raises(HTTPException) as exc_info:
+                extract_pdf_tables(b"not a pdf", "fake.pdf")
+        assert exc_info.value.status_code == 400
+        mock_run.assert_not_called()
 
 
 # ─────────────────────────────────────────────────────────────────────

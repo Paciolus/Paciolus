@@ -348,6 +348,7 @@ def impersonate_customer(
         target_email=target_user.email,
         admin_user_id=admin.id,
         tier=target_user.tier.value if target_user.tier else "free",
+        password_changed_at=target_user.password_changed_at,
     )
 
     _create_audit_entry(

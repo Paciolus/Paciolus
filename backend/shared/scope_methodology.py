@@ -20,15 +20,11 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule
 from shared.framework_resolution import ResolvedFramework
+from shared.safe_paragraph import Paragraph
 
 # =============================================================================
 # Non-committal language guardrails

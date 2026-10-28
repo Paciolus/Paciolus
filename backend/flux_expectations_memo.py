@@ -18,7 +18,7 @@ from typing import Optional
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -36,6 +36,7 @@ from shared.report_chrome import (
     current_page_footer,
     find_logo,
 )
+from shared.safe_paragraph import Paragraph, escape_markup
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -206,7 +207,7 @@ def generate_flux_expectations_memo(
     # ── Header ──
     story.append(Paragraph("ISA 520 Analytical Procedures \u2014 Expectation Documentation", styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+        story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
     story.append(
         Paragraph(
             f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",

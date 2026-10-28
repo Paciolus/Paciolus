@@ -26586,6 +26586,18 @@
           "name": "John Smith"
         },
         "properties": {
+          "current_password": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Password"
+          },
           "email": {
             "anyOf": [
               {

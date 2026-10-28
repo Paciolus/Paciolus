@@ -10,6 +10,8 @@ Covers:
 import secrets
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from models import RefreshToken
 
 # =============================================================================
@@ -116,8 +118,8 @@ class TestJtiClaim:
 class TestCleanupExpiredRefreshTokens:
     """Tests for cleanup_expired_refresh_tokens."""
 
-    def test_deletes_revoked_tokens(self, db_session, make_user):
-        """Revoked tokens are deleted by cleanup."""
+    def test_keeps_revoked_tokens_until_they_expire(self, db_session, make_user):
+        """Sprint 847 (M3): a revoked, unexpired token survives cleanup so reuse detection still works."""
         from auth import cleanup_expired_refresh_tokens, create_refresh_token, revoke_refresh_token
 
         user = make_user(email="cleanup_revoked@example.com")
@@ -125,11 +127,50 @@ class TestCleanupExpiredRefreshTokens:
         revoke_refresh_token(db_session, raw)
 
         count = cleanup_expired_refresh_tokens(db_session)
-        assert count == 1
+        assert count == 0
 
-        # Verify token is gone from DB
         remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).count()
-        assert remaining == 0
+        assert remaining == 1
+
+    def test_deletes_revoked_tokens_once_expired(self, db_session, make_user):
+        """A revoked token is deleted once it has also expired."""
+        from auth import cleanup_expired_refresh_tokens, hash_token
+
+        user = make_user(email="cleanup_revoked_expired@example.com")
+        db_session.add(
+            RefreshToken(
+                user_id=user.id,
+                token_hash=hash_token(secrets.token_urlsafe(48)),
+                expires_at=datetime.now(UTC) - timedelta(minutes=1),
+                revoked_at=datetime.now(UTC) - timedelta(days=1),
+            )
+        )
+        db_session.commit()
+
+        assert cleanup_expired_refresh_tokens(db_session) == 1
+
+    def test_reuse_detected_after_cleanup_runs(self, db_session, make_user):
+        """Sprint 847 (M3): rotate, run cleanup, replay the old token -> the whole family is revoked."""
+        from fastapi import HTTPException
+
+        from auth import cleanup_expired_refresh_tokens, create_refresh_token, rotate_refresh_token
+
+        user = make_user(email="cleanup_reuse@example.com")
+        stolen_raw, _ = create_refresh_token(db_session, user.id)
+        rotate_refresh_token(db_session, stolen_raw)  # legitimate client rotates
+
+        cleanup_expired_refresh_tokens(db_session)
+
+        with pytest.raises(HTTPException) as exc:
+            rotate_refresh_token(db_session, stolen_raw)  # attacker replays the old token
+        assert "All sessions terminated" in exc.value.detail
+
+        active = (
+            db_session.query(RefreshToken)
+            .filter(RefreshToken.user_id == user.id, RefreshToken.revoked_at == None)  # noqa: E711
+            .count()
+        )
+        assert active == 0
 
     def test_deletes_expired_tokens(self, db_session, make_user):
         """Expired tokens are deleted by cleanup."""
@@ -189,11 +230,11 @@ class TestCleanupExpiredRefreshTokens:
         db_session.commit()
 
         count = cleanup_expired_refresh_tokens(db_session)
-        assert count == 2  # revoked + expired
+        assert count == 1  # only the expired one; the revoked one is kept for reuse detection
 
         remaining = db_session.query(RefreshToken).filter(RefreshToken.user_id == user.id).all()
-        assert len(remaining) == 1
-        assert remaining[0].id == active_token.id
+        assert len(remaining) == 2
+        assert active_token.id in {t.id for t in remaining}
 
     def test_returns_zero_when_no_stale(self, db_session, make_user):
         """Returns 0 when there are no stale tokens."""
@@ -214,6 +255,10 @@ class TestCleanupExpiredRefreshTokens:
 
         raw_b, _ = create_refresh_token(db_session, user_b.id)
         revoke_refresh_token(db_session, raw_b)
+
+        for token in db_session.query(RefreshToken).all():
+            token.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+        db_session.commit()
 
         count = cleanup_expired_refresh_tokens(db_session)
         assert count == 2

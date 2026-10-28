@@ -19,11 +19,7 @@ from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer
 
 from pdf_generator import LedgerRule, generate_reference_number
 from security_utils import log_secure_operation
@@ -47,6 +43,7 @@ from shared.report_chrome import (
     find_logo,
     make_branded_page_footer,
 )
+from shared.safe_paragraph import Paragraph
 from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,

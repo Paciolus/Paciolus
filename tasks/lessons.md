@@ -2960,3 +2960,23 @@ installed SDK offline (`construct_from`, `construct_event` with a locally-comput
 - Convert SDK objects to plain data at the boundary, once (`to_plain_dict`), rather than
   scattering assumptions about the object model through the handlers.
 - Read the changelog of the *previous* major too when the current pin was bumped without review.
+
+## Count the call sites before choosing where a fix lives (2026-10-27)
+
+Sprint 846 (ReportLab markup injection). The security review's fix said "escape every user string
+before `Paragraph`, and add an AST guard on `Paragraph(<variable>)`". Counting first showed 1,036
+calls in 36 modules, ~700 non-literal and 285 f-strings mixing template markup with values: the
+plan was unreviewable. The fix moved to the one place every call passes through — a sanitizing
+`Paragraph` subclass plus an import-boundary guard — and full escaping only where data is known to
+be user-supplied.
+
+**The transferable parts:**
+
+- Before writing a per-call-site fix, inventory the call sites (an AST script takes minutes). If
+  there are hundreds, find the boundary they share and guard *that* boundary.
+- An allow-list sanitizer must be derived from what the templates actually use — the inventory
+  caught that ReportLab's `hexval()` emits `0xRRGGBB`, not `#RRGGBB`.
+- Prove "no behaviour change" by measurement, not inspection: a throwaway pytest plugin rendered
+  every paragraph raw and sanitized across 1,606 PDF tests and diffed the visible text. The unit
+  tests also caught an ordering bug (`</font>` matched the simple-tag rule first) that would have
+  silently escaped every coloured span.

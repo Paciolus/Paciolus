@@ -13,7 +13,9 @@ Sprint 593: Passcode protection, single-use mode, security headers,
 Route group prefix: /export-sharing
 """
 
+import csv
 import hashlib
+import io
 import logging
 import re
 import secrets
@@ -30,9 +32,10 @@ from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
 from models import User
-from security_middleware import get_client_ip
+from security_middleware import get_client_ip, hash_ip_address
 from shared import export_share_storage
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
+from shared.filenames import SafeCsvWriter
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.passcode_security import (
     PASSCODE_MAX_LENGTH,
@@ -148,6 +151,27 @@ def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> Non
             status_code=400,
             detail=f"Export content does not match declared {export_format.upper()} format.",
         )
+
+
+def _rewrite_csv_share(export_bytes: bytes) -> bytes:
+    """Re-write a client-supplied CSV share through ``SafeCsvWriter``.
+
+    Sprint 852 (security review L8): share bytes come from the client, so a
+    CSV share could carry ``=HYPERLINK(...)``-style cells that a recipient's
+    spreadsheet would execute. Re-writing every cell through the server's
+    formula escaping neutralizes that. Escaping is idempotent (an escaped cell
+    starts with ``'``), so exports Paciolus generated round-trip unchanged
+    apart from normalized quoting and CRLF row endings. A UTF-8 BOM is kept.
+    """
+    has_bom = export_bytes.startswith(b"\xef\xbb\xbf")
+    try:
+        text = export_bytes.decode("utf-8-sig")
+        rows = list(csv.reader(io.StringIO(text, newline="")))
+    except (UnicodeDecodeError, csv.Error):
+        raise HTTPException(status_code=400, detail="Export content is not a valid UTF-8 CSV file.")
+    out = io.StringIO(newline="")
+    SafeCsvWriter(out).writerows(rows)
+    return out.getvalue().encode("utf-8-sig" if has_bom else "utf-8")
 
 
 def _resolve_share_or_404(token: str, db: Session) -> ExportShare:
@@ -297,10 +321,11 @@ def _verify_passcode_or_raise(
 
             record_ip_failure(client_ip)
         logger.info(
-            "Share passcode mismatch: share_id=%s, attempts=%s, ip=%s",
+            "Share passcode mismatch: share_id=%s, attempts=%s, ip_hash=%s",
             share.id,
             share.passcode_failed_attempts,
-            client_ip or "unknown",
+            # Sprint 852 (security review L7): never log the raw client IP.
+            hash_ip_address(client_ip) if client_ip else "unknown",
         )
         raise HTTPException(status_code=403, detail="Invalid passcode.")
 
@@ -339,6 +364,13 @@ def create_share(
 
     # Validate content matches declared format (provenance check)
     _validate_export_magic_bytes(export_bytes, body.export_format)
+
+    # Sprint 852 (security review L8): shared exports are client-supplied bytes.
+    # CSV shares are re-written with server-side formula escaping. PDF and XLSX
+    # shares are still stored as the client sent them (magic bytes checked
+    # only); the long-term fix is generating shared exports on the server.
+    if body.export_format == "csv":
+        export_bytes = _rewrite_csv_share(export_bytes)
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()

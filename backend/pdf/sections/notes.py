@@ -6,10 +6,11 @@ complete before the document is finalized or distributed.
 """
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors
+from shared.safe_paragraph import Paragraph
 
 _FOOTNOTE_STUBS = [
     (

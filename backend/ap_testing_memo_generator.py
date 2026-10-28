@@ -8,7 +8,7 @@ Domain: ISA 240 / ISA 500 / PCAOB AS 2401.
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer
+from reportlab.platypus import Spacer
 
 from pdf_generator import LedgerRule, create_leader_dots
 from shared.drill_down import (
@@ -19,6 +19,7 @@ from shared.drill_down import (
 from shared.follow_up_procedures import get_follow_up_procedure
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.parsing_helpers import safe_decimal
+from shared.safe_paragraph import Paragraph
 
 AP_TEST_DESCRIPTIONS = {
     "exact_duplicate_payments": "Identifies payments with identical vendor, invoice number, amount, and payment date.",

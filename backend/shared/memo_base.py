@@ -15,12 +15,7 @@ from xml.sax.saxutils import escape as xml_escape
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -31,6 +26,7 @@ from pdf_generator import (
     format_classical_date,
 )
 from shared.report_styles import ledger_table_style
+from shared.safe_paragraph import Paragraph
 
 # =============================================================================
 # Standard table style (Sprint 527 — consolidated from 3 diagnostic memos)
@@ -88,7 +84,9 @@ def wrap_table_strings(data: list[list], styles: dict, *, skip_header: bool = Tr
         wrapped_row = []
         for cell in row:
             if isinstance(cell, str):
-                wrapped_row.append(Paragraph(cell, cell_style))
+                # Sprint 846: table cells carry account names and descriptions from
+                # uploaded files — escape fully so they render as text, never markup.
+                wrapped_row.append(Paragraph(xml_escape(cell), cell_style))
             else:
                 wrapped_row.append(cell)
         wrapped.append(wrapped_row)
@@ -285,7 +283,7 @@ def build_memo_header(
     """Build the standard memo header (title, client, date, reference)."""
     story.append(Paragraph(title, styles["MemoTitle"]))
     if client_name:
-        story.append(Paragraph(client_name, styles["MemoSubtitle"]))
+        story.append(Paragraph(xml_escape(client_name), styles["MemoSubtitle"]))
     story.append(
         Paragraph(
             f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
@@ -466,7 +464,9 @@ def build_saved_settings_disclosure(
     defaults = defaults or {}
 
     heading = (
-        "Thresholds set for this run and from saved settings" if run_overrides else "Thresholds that differed from the Paciolus defaults"
+        "Thresholds set for this run and from saved settings"
+        if run_overrides
+        else "Thresholds that differed from the Paciolus defaults"
     )
     story.append(Paragraph(f"<b>{heading}</b>", styles["MemoBody"]))
     if run_overrides:

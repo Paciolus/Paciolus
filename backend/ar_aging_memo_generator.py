@@ -10,7 +10,7 @@ Uses custom scope builder for dual-input mode (TB + optional sub-ledger).
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer
+from reportlab.platypus import Spacer
 
 from pdf_generator import LedgerRule, create_leader_dots
 from shared.drill_down import (
@@ -19,6 +19,7 @@ from shared.drill_down import (
     safe_str_value,
 )
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
+from shared.safe_paragraph import Paragraph
 
 AR_AGING_TEST_DESCRIPTIONS = {
     "ar_sign_anomalies": "Flags AR accounts with credit balances, indicating potential overpayments, misclassifications, or contra-AR entries.",

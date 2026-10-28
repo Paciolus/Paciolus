@@ -13,7 +13,9 @@ NOTE: AUDIT-08 fixed the arg-order mismatch — route now calls
 check_custom_branding_access(user, db) matching the function signature.
 """
 
+import struct
 import sys
+import zlib
 from pathlib import Path
 from unittest.mock import patch
 
@@ -282,3 +284,69 @@ class TestDeleteLogo:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.delete("/branding/logo")
                 assert response.status_code == 403
+
+
+# =============================================================================
+# Sprint 852 (security review L9): logo dimensions
+# =============================================================================
+
+
+def _png_header(width: int, height: int) -> bytes:
+    """A PNG whose IHDR declares ``width`` x ``height`` with no real pixel data.
+
+    The file is a few dozen bytes, so it passes the 500 KB size check; only a
+    header read of the declared dimensions can reject it.
+    """
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)  # 8-bit RGB
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(b"")) + chunk(b"IEND", b"")
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestUploadLogoDimensions:
+    """POST /branding/logo rejects oversized canvases before storing them."""
+
+    async def _upload(self, contents: bytes):
+        with (
+            patch("routes.branding.check_custom_branding_access"),
+            patch("shared.storage_client.upload_bytes", return_value=True) as upload,
+        ):
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/branding/logo", files={"file": ("logo.png", contents, "image/png")})
+        return response, upload
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("width", "height"), [(20000, 20000), (4001, 10), (10, 4001)])
+    async def test_oversized_logo_rejected(self, override_enterprise, width, height):
+        response, upload = await self._upload(_png_header(width, height))
+        assert response.status_code == 400, response.text
+        assert "4000x4000" in response.json()["detail"]
+        upload.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("width", "height"), [(200, 80), (4000, 4000)])
+    async def test_logo_within_limits_accepted(self, override_enterprise, width, height):
+        response, upload = await self._upload(_png_header(width, height))
+        assert response.status_code == 200, response.text
+        upload.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_real_jpeg_accepted(self, override_enterprise):
+        import io
+
+        from PIL import Image
+
+        buf = io.BytesIO()
+        Image.new("RGB", (300, 120)).save(buf, format="JPEG")
+        response, upload = await self._upload(buf.getvalue())
+        assert response.status_code == 200, response.text
+        upload.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_truncated_png_rejected(self, override_enterprise):
+        response, upload = await self._upload(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+        assert response.status_code == 400
+        upload.assert_not_called()

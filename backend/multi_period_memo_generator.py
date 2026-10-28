@@ -22,13 +22,7 @@ from typing import Any, Optional
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 
 from pdf_generator import (
     ClassicalColors,
@@ -53,6 +47,7 @@ from shared.report_chrome import (
     current_page_footer,
     find_logo,
 )
+from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,

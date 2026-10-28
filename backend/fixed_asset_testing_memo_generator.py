@@ -13,13 +13,14 @@ category summary (IMP-04), lease indicator (BUG-04), PP&E ampersand fix (BUG-01)
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf_generator import ClassicalColors, LedgerRule, create_leader_dots
 from shared.drill_down import format_currency
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.report_styles import ledger_table_style
+from shared.safe_paragraph import Paragraph
 
 FA_TEST_DESCRIPTIONS = {
     "fully_depreciated": "Flags assets where accumulated depreciation equals or exceeds cost (NBV zero or negative), indicating potential ghost assets or items requiring disposal review.",
