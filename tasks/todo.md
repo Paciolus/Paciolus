@@ -461,19 +461,42 @@ import → 99 collection errors in Coverage Sentinel. QA Warden crashed separate
 ### Sprint 856: First run, public-page accessibility, and one look in a browser
 **Status:** PENDING. **Priority:** P1 (Phase 1 — before the first Sprint 781 CPA session). **Source:** 2026-10-28 council (Designer, Accounting Expert, Executor).
 
-- [ ] **WelcomeModal step 1** (`components/shared/WelcomeModal.tsx:32`) still says "Upload a Trial Balance", and #235
+- [x] **WelcomeModal step 1** (`components/shared/WelcomeModal.tsx:32`) still says "Upload a Trial Balance", and #235
       does not change it — 14 of 18 tools take no TB. Point it at the tool picker. (Steps 2–3 copy is in #235; verify after merge.)
-- [ ] WelcomeModal: Escape closes it, focus trap, initial focus — match the five other modals. Fix the header comment
-      "Shows once per user" (completion is in localStorage — once per device).
-- [ ] Skip-to-content link in `MarketingNav` (public pages declare `#main-content` but nothing links to it; only
-      `UnifiedToolbar.tsx:82` has one).
-- [ ] **Browser pass:** home, pricing, workspace and two tool result tables at 375px and 1440px. Record findings; fix
+      *Done: "Choose a Tool" → `/tools`. Three-way merge with `origin/sprint-843-positioning` is conflict-free (file + test).
+      Still open: step 3's "Get Started" CTA also routes to `/tools/trial-balance` — left for #235, which owns step 3.*
+- [x] WelcomeModal: Escape closes it, focus trap, initial focus — match the five other modals. Fix the header comment
+      "Shows once per user" (completion is in localStorage — once per device). *Done via shared `useFocusTrap`.*
+- [x] Skip-to-content link in `MarketingNav` (public pages declare `#main-content` but nothing links to it; only
+      `UnifiedToolbar.tsx:82` has one). *Done. 6 of 10 marketing pages (about, approach, contact, privacy, terms, trust)
+      and the `(marketing)/error.tsx` boundary had no `#main-content` — added; a Jest invariant now walks the route group.
+      Not covered: `/login`, `/register` (no MarketingNav, no skip link).*
+- [x] **Browser pass:** home, pricing, workspace and two tool result tables at 375px and 1440px. Record findings; fix
       anything a CPA would hit (no source-only review has ever looked at these rendered — `tasks/todo.md:267`).
+      *Done 2026-10-28 (Playwright, `next dev --webpack` + local backend/SQLite, Professional test user): home, pricing,
+      about, trust, terms, contact, tools, login, dashboard, portfolio, TB Diagnostics and AP Testing results. No page has
+      horizontal overflow at either width. **Fixed:** (a) home hero H1 was unreachable above the fold at 375px
+      (`max-h-[900px]` + `justify-center` pushed it above y=0) → `lg:max-h-[900px]`; (b) TB results printed
+      `$1,412,330.8` and the ratio footer printed `Assets: $1420425.07` (`toLocaleString` on numbers / on the API's
+      Decimal *strings*) → `formatCurrency` in `AnomalyCard` + `KeyMetricsSection`; (c) TB anomaly account names
+      truncated to ~12 chars at 375px → wrap; (d) pre-flight Column Detection cards overlapped label and % at 375px →
+      single column below `sm`; (e) pricing seat calculator label touched the amount. **Open (larger / copy):**
+      [ ] re-uploading the same TB within 5 min shows the raw API text "re-submit with force_resubmit=true" and offers no
+      button (`routes/audit_pipeline.py:128`); [ ] TB "Material Risks (9)" lists 5 "coverage observation, not an anomaly"
+      rows with clay warning icons and a "Material" label; [ ] "TOP FINDINGS" on AP results, "fraud indicators" in the AP
+      subtitle, "SEE THE FINDINGS" in the home hero scrubber — guardrail wording; [ ] `/tools` header says "24 tools across
+      3 categories" vs 18 everywhere else; [ ] `/engagements` redirected to `/portfolio` for a fresh Professional user —
+      confirm intended; [ ] hydration-mismatch console warning on authed pages (dev).*
 - [ ] **793b tax banner.** Non-dismissible disclaimer banner (existing pattern, clay/oatmeal tokens): "Statutory figures
       current through tax year 2025 — verify before relying". Same line in each tool's PDF and Excel exports — the export
       is what a CPA files. **First verify per tool** which tools are year-keyed to 2025: W-2 already refuses unknown years
       (`w2_reconciliation_engine.py:21,75-80`); check 1099, Book-to-Tax and Depreciation before printing the claim.
       **Hard date:** if no practitioner has confirmed the 2026 figures by **2026-12-15**, the banner becomes a disable.
+
+**Verification (items 1–4):** `npx tsc --noEmit` clean; `npm run lint` clean; full Jest 209 suites / 2,083 tests green
+(+4 WelcomeModal: step-1 copy, Escape, initial focus, Tab trap; +2 MarketingNav: skip link first, `#main-content`
+invariant; +1 KeyMetricsSection: Decimal-string totals). `npm run build` NOT run in the worktree (Turbopack cannot build
+through the node_modules junction) — run from the main checkout before merge. Screenshots in session scratch only.
 
 **Commit SHA:** TBD.
 

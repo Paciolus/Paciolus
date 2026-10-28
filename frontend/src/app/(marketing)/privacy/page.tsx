@@ -3,7 +3,7 @@ import { Reveal } from '@/components/ui/Reveal'
 
 export default function PrivacyPolicy() {
   return (
-    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
+    <main id="main-content" className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 px-6">
         <Reveal>
@@ -1084,6 +1084,6 @@ export default function PrivacyPolicy() {
         </div>
       </section>
 
-    </div>
+    </main>
   )
 }

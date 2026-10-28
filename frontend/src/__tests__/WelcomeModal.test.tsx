@@ -1,9 +1,10 @@
 /**
  * WelcomeModal tests — Sprint 583
  *
- * Tests: first-run display, step navigation, skip, completion persistence.
+ * Tests: first-run display, step navigation, skip, completion persistence,
+ * and (Sprint 856) Escape-to-close, initial focus, Tab focus trap.
  */
-import { fireEvent } from '@testing-library/react'
+import { act, fireEvent } from '@testing-library/react'
 import { WelcomeModal } from '@/components/shared/WelcomeModal'
 import { render, screen, waitFor } from '@/test-utils'
 
@@ -34,7 +35,7 @@ describe('WelcomeModal', () => {
 
   it('renders when forceShow is true', () => {
     render(<WelcomeModal forceShow />)
-    expect(screen.getByText('Upload a Trial Balance')).toBeInTheDocument()
+    expect(screen.getByText('Choose a Tool')).toBeInTheDocument()
     expect(screen.getByText('Welcome to Paciolus')).toBeInTheDocument()
   })
 
@@ -47,7 +48,7 @@ describe('WelcomeModal', () => {
     render(<WelcomeModal forceShow />)
 
     // Step 1
-    expect(screen.getByText('Upload a Trial Balance')).toBeInTheDocument()
+    expect(screen.getByText('Choose a Tool')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Next'))
 
     // Step 2
@@ -75,7 +76,7 @@ describe('WelcomeModal', () => {
     render(<WelcomeModal forceShow />)
     fireEvent.click(screen.getByText('Skip'))
 
-    expect(screen.queryByText('Upload a Trial Balance')).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose a Tool')).not.toBeInTheDocument()
     expect(localStorage.getItem('paciolus_onboarding_complete')).toBe('true')
   })
 
@@ -84,7 +85,7 @@ describe('WelcomeModal', () => {
     render(<WelcomeModal />)
 
     jest.advanceTimersByTime(1000)
-    expect(screen.queryByText('Upload a Trial Balance')).not.toBeInTheDocument()
+    expect(screen.queryByText('Choose a Tool')).not.toBeInTheDocument()
   })
 
   it('has accessible dialog attributes', () => {
@@ -92,5 +93,44 @@ describe('WelcomeModal', () => {
     const dialog = screen.getByRole('dialog')
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog).toHaveAttribute('aria-labelledby', 'welcome-title')
+  })
+
+  it('step 1 points at the tool picker, not the trial balance upload', () => {
+    render(<WelcomeModal forceShow />)
+    expect(screen.queryByText(/upload a trial balance/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/pick the tool that matches the file you have/i)).toBeInTheDocument()
+  })
+
+  it('Escape closes the modal and records completion', () => {
+    render(<WelcomeModal forceShow />)
+    act(() => { jest.advanceTimersByTime(100) })
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(localStorage.getItem('paciolus_onboarding_complete')).toBe('true')
+  })
+
+  it('moves focus into the dialog on open', () => {
+    render(<WelcomeModal forceShow />)
+    act(() => { jest.advanceTimersByTime(100) })
+
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement)
+    expect(screen.getByText('Skip')).toHaveFocus()
+  })
+
+  it('traps Tab and Shift+Tab inside the dialog', () => {
+    render(<WelcomeModal forceShow />)
+    act(() => { jest.advanceTimersByTime(100) })
+    const skip = screen.getByText('Skip')
+    const next = screen.getByText('Next')
+
+    // Shift+Tab from the first control wraps to the last
+    skip.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(next).toHaveFocus()
+
+    // Tab from the last control wraps to the first
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(skip).toHaveFocus()
   })
 })

@@ -3,6 +3,7 @@
 import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { SectionHeader, CollapsibleSection, EmptyStateCard, ChartIcon } from '@/components/shared'
+import { formatCurrency } from '@/utils/formatting'
 import { staggerContainerTight } from '@/lib/motion'
 import { MetricCard } from './MetricCard'
 
@@ -381,20 +382,20 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
           <div className="flex flex-wrap gap-4 justify-center text-content-tertiary">
             <span className="inline-flex items-baseline gap-1">
               <span className="font-sans text-xs">Assets:</span>
-              <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_assets.toLocaleString()}</span>
+              <span className="text-content-secondary type-num-xs">{formatCurrency(Number(analytics.category_totals.total_assets))}</span>
             </span>
             <span className="inline-flex items-baseline gap-1">
               <span className="font-sans text-xs">Liabilities:</span>
-              <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_liabilities.toLocaleString()}</span>
+              <span className="text-content-secondary type-num-xs">{formatCurrency(Number(analytics.category_totals.total_liabilities))}</span>
             </span>
             <span className="inline-flex items-baseline gap-1">
               <span className="font-sans text-xs">Equity:</span>
-              <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_equity.toLocaleString()}</span>
+              <span className="text-content-secondary type-num-xs">{formatCurrency(Number(analytics.category_totals.total_equity))}</span>
             </span>
             {analytics.category_totals.total_revenue > 0 && (
               <span className="inline-flex items-baseline gap-1">
                 <span className="font-sans text-xs">Revenue:</span>
-                <span className="text-content-secondary type-num-xs">${analytics.category_totals.total_revenue.toLocaleString()}</span>
+                <span className="text-content-secondary type-num-xs">{formatCurrency(Number(analytics.category_totals.total_revenue))}</span>
               </span>
             )}
           </div>

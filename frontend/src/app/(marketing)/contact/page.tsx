@@ -208,7 +208,7 @@ function ContactForm() {
 
 export default function ContactPage() {
   return (
-    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
+    <main id="main-content" className="relative z-10 min-h-screen bg-gradient-obsidian">
       <motion.section
         className="relative pt-32 pb-24 px-6"
         initial={{ opacity: 0, y: 20 }}
@@ -266,6 +266,6 @@ export default function ContactPage() {
         </div>
       </motion.section>
 
-    </div>
+    </main>
   )
 }

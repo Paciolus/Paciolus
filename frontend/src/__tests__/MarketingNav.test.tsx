@@ -1,8 +1,10 @@
 /**
  * MarketingNav component tests
  *
- * Tests: rendering nav, logo, links, CTA button.
+ * Tests: rendering nav, logo, links, CTA button, skip link (Sprint 856).
  */
+import fs from 'fs'
+import path from 'path'
 import { MarketingNav } from '@/components/marketing/MarketingNav'
 import { render, screen } from '@/test-utils'
 
@@ -68,4 +70,28 @@ describe('MarketingNav', () => {
     const signInLinks = screen.getAllByText(/Sign In/)
     expect(signInLinks.length).toBeGreaterThan(0)
   })
+
+  it('renders a skip-to-content link as the first focusable element', () => {
+    const { container } = render(<MarketingNav />)
+    const skip = screen.getByRole('link', { name: 'Skip to main content' })
+    expect(skip).toHaveAttribute('href', '#main-content')
+    expect(container.querySelector('a[href], button')).toBe(skip)
+  })
+
+  it('every marketing page and the error boundary declare the #main-content target', () => {
+    const groupDir = path.join(__dirname, '..', 'app', '(marketing)')
+    const files: string[] = []
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) walk(full)
+        else if (entry.name === 'page.tsx' || entry.name === 'error.tsx') files.push(full)
+      }
+    }
+    walk(groupDir)
+    expect(files.length).toBeGreaterThanOrEqual(10)
+    const missing = files.filter(f => !fs.readFileSync(f, 'utf-8').includes('id="main-content"'))
+    expect(missing).toEqual([])
+  })
 })
+
