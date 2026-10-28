@@ -19,23 +19,34 @@ from scripts.overnight.config import (
     BASELINE_FILE,
     BUG_KEYWORDS,
     KNOWN_BUGS,
+    PYTHON_BIN,
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
+    run_stamp,
 )
+
+MERIDIAN_TIMEOUT_S = 600
 
 
 def _run_meridian_tests() -> tuple[int, int, list[str], str]:
     """Run pytest filtered to Meridian tests. Returns (passed, failed, failures, raw_output)."""
+    # Sprint 854: run in the synced venv like QA Warden (Sprint 712), not the
+    # system interpreter, which matches neither the pins nor production.
+    python_bin = PYTHON_BIN if PYTHON_BIN.exists() else SYSTEM_PYTHON
     cmd = [
-        str(SYSTEM_PYTHON), "-m", "pytest",
+        str(python_bin), "-m", "pytest",
         "tests/", "-k", "meridian or Meridian",
         "--tb=short", "-q",
     ]
-    result = subprocess.run(
-        cmd, cwd=str(BACKEND_ROOT), capture_output=True, text=True, timeout=600,
-    )
-    output = result.stdout + "\n" + result.stderr
+    try:
+        result = subprocess.run(
+            cmd, check=False, cwd=str(BACKEND_ROOT), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=MERIDIAN_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return 0, 0, [], f"Meridian pytest exceeded its {MERIDIAN_TIMEOUT_S}s budget and was killed."
+    output = (result.stdout or "") + "\n" + (result.stderr or "")
 
     passed = failed = 0
     failures: list[str] = []
@@ -148,9 +159,25 @@ def _save_to_baseline(bug_tracker: dict) -> None:
     BASELINE_FILE.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
 
 
+def _classify(passed: int, failed: int, open_count: int) -> str:
+    """Overall status. Sprint 854: 0 passed / 0 failed is UNVERIFIED, never GREEN.
+
+    The 2026-10-28 brief showed "Meridian Tests: 0/0 passing" under a GREEN
+    badge — the smoke run checked nothing, and the badge said all was well.
+    """
+    if failed > 0:
+        return "red"
+    if passed == 0:
+        return "unverified"
+    if open_count > 3:
+        return "yellow"
+    return "green"
+
+
 def run() -> dict:
     """Execute Report Auditor and return structured results."""
     t0 = time.time()
+    stamp = run_stamp()
 
     passed, failed, failures, raw_output = _run_meridian_tests()
 
@@ -182,24 +209,26 @@ def run() -> dict:
 
     _save_to_baseline(bug_tracker)
 
-    # Determine overall status
-    if failed > 0:
-        overall = "red"
-    elif open_count > 3:
-        overall = "yellow"
-    else:
-        overall = "green"
+    overall = _classify(passed, failed, open_count)
+
+    summary = (
+        f"Meridian tests: {passed} passed, {failed} failed. "
+        f"{open_count}/{len(KNOWN_BUGS)} known bugs confirmed open."
+    )
+    if overall == "unverified":
+        summary = (
+            "UNVERIFIED: the Meridian smoke filter ran 0 tests, so no report was checked. "
+            + summary
+        )
 
     result = {
         "agent": "report_auditor",
         "status": overall,
+        **stamp,
         "meridian_tests": {"passed": passed, "failed": failed, "failures": failures},
         "bug_tracker": bug_tracker,
         "open_bug_count": open_count,
-        "summary": (
-            f"Meridian tests: {passed} passed, {failed} failed. "
-            f"{open_count}/{len(KNOWN_BUGS)} known bugs confirmed open."
-        ),
+        "summary": summary,
     }
 
     out_path = REPORTS_DIR / f".report_auditor_{TODAY}.json"
