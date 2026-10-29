@@ -871,7 +871,7 @@ def _generate_sampling_memo(
                     Paragraph(
                         "<i>Overstatements and understatements are evaluated separately, each with its "
                         "own upper error limit, and are not netted against each other (AICPA Audit "
-                        "Sampling Guide). Basic precision applies to both. The conclusion is a fail if "
+                        "Sampling Guide). Basic precision applies to both. The result is UEL > TM if "
                         "either limit exceeds tolerable misstatement.</i>",
                         styles["MemoBodySmall"],
                     )
@@ -1870,7 +1870,7 @@ def _build_uel_derivation(
     if has_under:
         story.append(
             Paragraph(
-                "<i>The conclusion is a fail if either direction's upper error limit exceeds "
+                "<i>The result is UEL > TM if either direction's upper error limit exceeds "
                 "tolerable misstatement. The two directions are not netted (AICPA Audit "
                 "Sampling Guide).</i>",
                 styles["MemoBodySmall"],
