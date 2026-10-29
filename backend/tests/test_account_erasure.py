@@ -145,8 +145,9 @@ class TestRefusals:
         admin = make_user(email="erase_admin@example.com")
         admin.is_superadmin = True
         db_session.commit()
-        with pytest.raises(ErasureBlocked):
+        with pytest.raises(ErasureBlocked) as exc:
             check_erasable(db_session, admin)
+        assert exc.value.code == "ERASURE_SUPERADMIN"
 
     def test_owner_of_an_org_with_members_is_refused(self, db_session, make_user):
         from organization_model import Organization, OrganizationMember, OrgRole
@@ -159,8 +160,9 @@ class TestRefusals:
         db_session.add(OrganizationMember(organization_id=org.id, user_id=owner.id, role=OrgRole.OWNER))
         db_session.add(OrganizationMember(organization_id=org.id, user_id=member.id, role=OrgRole.MEMBER))
         db_session.commit()
-        with pytest.raises(ErasureBlocked, match="other members"):
+        with pytest.raises(ErasureBlocked, match="other members") as exc:
             check_erasable(db_session, owner)
+        assert exc.value.code == "ERASURE_ORG_HAS_MEMBERS"
 
     def test_sole_owner_takes_the_org_with_them(self, db_session, make_user):
         from organization_model import Organization, OrganizationMember, OrgRole
@@ -219,6 +221,21 @@ class TestRoutes:
                 headers=self._headers(populated["user"]),
             )
         assert r.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_refusal_carries_a_code_the_ui_can_explain(self, db_session, populated):
+        """PR #254 review: the transport shows no raw backend text, so a refusal
+        must carry a stable code for the UI to map to an explanation."""
+        populated["user"].is_superadmin = True
+        db_session.commit()
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.post(
+                "/auth/account/delete",
+                json={"password": PASSWORD, "confirm": "DELETE"},
+                headers=self._headers(populated["user"]),
+            )
+        assert r.status_code == 409
+        assert r.json()["detail"]["code"] == "ERASURE_SUPERADMIN"
 
     @pytest.mark.asyncio
     async def test_delete_then_token_is_dead(self, db_session, populated):
@@ -289,8 +306,9 @@ class TestPartialProviderCleanup:
             return len(calls) < 2  # first succeeds, second fails
 
         monkeypatch.setattr(export_share_storage, "delete", flaky)
-        with pytest.raises(ErasureProviderError, match="1 shared link"):
+        with pytest.raises(ErasureProviderError, match="1 shared link") as exc:
             erase_account(db_session, populated["user"])
+        assert exc.value.code == "ERASURE_PARTIAL_CLEANUP"
         assert _count(db_session, "export_shares", user_id=user_id) == 2
         assert _count(db_session, "users", id=user_id) == 1
 
@@ -307,5 +325,6 @@ class TestPartialProviderCleanup:
         monkeypatch.setattr(mod, "_cancel_stripe", boom)
         with pytest.raises(
             ErasureProviderError, match="shared link.*were removed; your subscription and account were not changed"
-        ):
+        ) as exc:
             erase_account(db_session, populated["user"])
+        assert exc.value.code == "ERASURE_PARTIAL_CLEANUP"
