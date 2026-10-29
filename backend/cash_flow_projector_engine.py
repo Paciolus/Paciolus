@@ -423,11 +423,14 @@ def _run_scenario(
     # carry forward instead of accumulating, and the net change and balance are
     # built from those displayed cents. The opening balance is rounded once.
     balance = _quantise(config.opening_balance)
-    goes_negative = False
-    first_negative_day: int | None = None
+    # Sprint 855 (C6, PR #254 review): the warnings start from the opening
+    # position. Checking closing balances only let day-0 receipts hide an
+    # account that is already overdrawn (or below minimum safe cash) today.
+    goes_negative = balance < ZERO
+    first_negative_day: int | None = 0 if goes_negative else None
     lowest_balance = balance
     lowest_balance_day = 0
-    breach_min_safe_cash = False
+    breach_min_safe_cash = config.min_safe_cash is not None and balance < config.min_safe_cash
 
     cumulative_in = ZERO
     cumulative_out = ZERO
