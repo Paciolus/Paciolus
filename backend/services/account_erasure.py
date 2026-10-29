@@ -58,12 +58,30 @@ from model_registry import import_all_models
 logger = logging.getLogger(__name__)
 
 
-class ErasureBlocked(Exception):
+class _CodedErasureError(Exception):
+    """An erasure failure with a stable ``code`` the frontend maps to safe text.
+
+    PR #254 review: the transport never shows raw backend strings (its
+    allowlist cannot match messages carrying counts), so the route sends
+    ``{"code", "message"}`` and the UI explains the case from the code.
+    """
+
+    def __init__(self, message: str, code: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+class ErasureBlocked(_CodedErasureError):
     """The account cannot be erased self-service; the message says why."""
 
 
-class ErasureProviderError(Exception):
-    """Stripe or R2 refused; nothing was deleted."""
+class ErasureProviderError(_CodedErasureError):
+    """Stripe or R2 refused. ``ERASURE_PARTIAL_CLEANUP`` when shared links were
+    already removed (R2 deletes cannot be rolled back); otherwise nothing was
+    deleted (``ERASURE_PROVIDER_FAILED``)."""
+
+    def __init__(self, message: str, code: str = "ERASURE_PROVIDER_FAILED") -> None:
+        super().__init__(message, code)
 
 
 def _t(name: str) -> Table:
@@ -111,7 +129,7 @@ def check_erasable(db: Session, user: Any) -> None:
     """Raise ``ErasureBlocked`` if this account cannot be erased self-service."""
     import_all_models()
     if getattr(user, "is_superadmin", False):
-        raise ErasureBlocked("Superadmin accounts cannot be deleted from the app.")
+        raise ErasureBlocked("Superadmin accounts cannot be deleted from the app.", "ERASURE_SUPERADMIN")
 
     orgs = _t("organizations")
     members = _t("organization_members")
@@ -123,7 +141,8 @@ def check_erasable(db: Session, user: Any) -> None:
         if others is not None:
             raise ErasureBlocked(
                 "You own an organization that still has other members. Transfer ownership or remove "
-                "the members first, then delete your account."
+                "the members first, then delete your account.",
+                "ERASURE_ORG_HAS_MEMBERS",
             )
 
     scope = _owned_scope(db, user.id)
@@ -136,7 +155,8 @@ def check_erasable(db: Session, user: Any) -> None:
         if foreign is not None:
             raise ErasureBlocked(
                 "You have entries in engagements owned by someone else. Email privacy@paciolus.com and "
-                "we will handle the deletion with the engagement owner."
+                "we will handle the deletion with the engagement owner.",
+                "ERASURE_FOREIGN_ENTRIES",
             )
     eng = _t("engagements")
     foreign_eng = db.execute(
@@ -145,7 +165,8 @@ def check_erasable(db: Session, user: Any) -> None:
     if foreign_eng is not None:
         raise ErasureBlocked(
             "You created engagements for clients owned by someone else. Email privacy@paciolus.com and "
-            "we will handle the deletion with the client owner."
+            "we will handle the deletion with the client owner.",
+            "ERASURE_FOREIGN_ENGAGEMENTS",
         )
 
 
@@ -192,7 +213,8 @@ def _delete_share_objects(db: Session, user_id: int, org_ids: list[int]) -> int:
             done = f" {removed} shared link(s) were removed first." if removed else ""
             raise ErasureProviderError(
                 f"We could not remove a shared report from storage.{done} Your account and other data were "
-                "not deleted; please try again."
+                "not deleted; please try again.",
+                "ERASURE_PARTIAL_CLEANUP" if removed else "ERASURE_PROVIDER_FAILED",
             )
         db.execute(delete(shares).where(shares.c.id == share_id))
         db.commit()
@@ -224,7 +246,8 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
         if shares_removed:
             raise ErasureProviderError(
                 f"{exc} Your {shares_removed} shared link(s) were removed; your subscription and account were "
-                "not changed. Please try again."
+                "not changed. Please try again.",
+                "ERASURE_PARTIAL_CLEANUP",
             ) from exc
         raise ErasureProviderError(f"{exc} Nothing was deleted; please try again.") from exc
 
