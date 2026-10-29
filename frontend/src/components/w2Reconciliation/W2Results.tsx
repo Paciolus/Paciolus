@@ -48,7 +48,7 @@ export function W2Results({ result }: Props) {
   const catchUpNotRun = checksNotRun.some(
     (n) => n.reason === 'limit_not_supplied' || n.reason === 'age_not_supplied',
   )
-  // Sprint 846 (W8): payroll employees, not W-2 drafts — with no drafts the
+  // Sprint 855 (W8): payroll employees, not W-2 drafts — with no drafts the
   // draft count was 0 and read as an empty company.
   const payrollCount = result.summary.employee_count
   const employeeCount = typeof payrollCount === 'number' ? payrollCount : (w3_totals?.employee_count ?? 0)

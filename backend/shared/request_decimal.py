@@ -37,7 +37,7 @@ def parse_request_decimal(field_name: str, raw: str) -> Decimal:
 def parse_request_amount(field_name: str, raw: str) -> Decimal:
     """Parse a trial-balance amount cell, accepting accounting formats.
 
-    Sprint 846 (I5): ``(1,000.00)``, ``$(1,000.00)``, ``1,000.00`` and ``1000-``
+    Sprint 855 (I5): ``(1,000.00)``, ``$(1,000.00)``, ``1,000.00`` and ``1000-``
     are how exported trial balances write amounts, and the upload page forwards
     the parentheses. Normalisation is the shared ``safe_decimal`` the file-based
     engines already use; unlike that helper, an unparseable cell is a 400 here

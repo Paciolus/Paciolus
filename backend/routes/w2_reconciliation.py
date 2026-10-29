@@ -76,7 +76,7 @@ class EmployeeW2DraftRequest(BaseModel):
 
 
 class Form941QuarterRequest(BaseModel):
-    # Sprint 846 (W4): an omitted figure is "not supplied" and is not compared.
+    # Sprint 855 (W4): an omitted figure is "not supplied" and is not compared.
     # It used to default to "0", so a 941 file without a Medicare column drew a
     # HIGH mismatch for a figure the return never stated.
     quarter: int = Field(..., ge=1, le=4)
@@ -348,7 +348,7 @@ def export_reconciliation_csv(
     writer.writerow(["W-3 Totals"])
     w3 = result.w3_totals
     if w3 is None:
-        # Sprint 846 (W8): no drafts, no W-3 — not a row of zeros.
+        # Sprint 855 (W8): no drafts, no W-3 — not a row of zeros.
         writer.writerow([result.summary["w3_status"]])
     else:
         writer.writerow(["Employee Count", w3.employee_count])

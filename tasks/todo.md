@@ -450,11 +450,41 @@ import → 99 collection errors in Coverage Sentinel. QA Warden crashed separate
 
 **Commit SHA:** TBD.
 
-### Sprint 855: Tool-correctness loose ends from 826/827 (was PR #254's "Sprint 846")
-**Status:** PENDING merge — PR #254, DIRTY. **Priority:** P2 (Phase 1).
+### Sprint 855: Tool-correctness loose ends from Sprints 826/827 (was PR #254's duplicate "Sprint 846")
+**Status:** COMPLETE (2026-10-26), PENDING merge — PR #254. Built 2026-10-26 as a second "Sprint 846" (846 is the merged
+memo-markup sprint `826ef50f`); renumbered 855 on 2026-10-29 — commit messages, code comments, `test_sprint_855_*.py`.
+**Priority:** P2 (Phase 1).
+**Scope:** every open 826/827 item that needs no practitioner figure, CEO policy call or locale decision
+(register: `reports/sprint-823-discovery-2026-10-23.md`). Reproduce each before fixing.
+Out of scope, unchanged: F5 + figures (793b), B1 (NOL scope), B2 (combined-rate method), D2 tiering of
+degenerate custom rules, A6 FA-03 contra call, P-3 locale, I4 investment/payable pairing.
 
-- [ ] Retitle PR #254 and its commits' references to Sprint 855 (846 is taken by the merged memo-markup sprint `826ef50f`).
-- [ ] Rebase onto `main` after #237 merges; full backend suite; merge.
+- [x] **A4** — `parse_date` gains opt-in `day_first`; `infer_day_first` decides per column (day-first only
+      when some value can only be day-first and none only month-first). FA-07 and FA-T11 read through it.
+- [x] **A5** — FA-T11 computes expected depreciation by actual days *and* under half-year (fiscal year ends on
+      the reference date's month/day), flags against the nearer, and reports which matched. The comment that
+      claimed the 5% tolerance absorbed the convention was false and is gone. Mid-quarter/mid-month: not modelled.
+- [x] **A8** — useful-life headers naming months (months/mos/mths) are divided by 12, mapped headers included.
+- [x] **C2** — AP a scenario leaves unpaid is paid evenly over the 30 days after its bucket window
+      (`AP_DEFERRAL_DAYS`), disclosed per scenario as `ap_deferral_rule` (shown on the scenario card).
+- [x] **C3** — each displayed component is the change in its rounded running total, so every row foots.
+- [x] **C5** — a negative aging bucket is a 400 (a credit has no payment date to schedule); it used to be
+      netted in the total but ignored by the projection. **C6** — an overdrawn opening balance is projected.
+- [x] **W4** — the 941 sum is compared with the W-3 as well as payroll YTD (`compared_with`); 941 fields are
+      optional, and a figure not supplied every quarter is skipped with a `checks_not_run` notice (also ends the
+      false HIGH when a 941 CSV had no Medicare column). **W8** — no drafts → `w3_totals: null` + `w3_status`.
+      **W9** — missing/duplicate 941 quarters listed; the annual tie-out is then not run, and says so.
+- [x] **I5** — debit/credit accept `(1,000.00)`, `$(1,000.00)`, `1000-` via `shared/request_decimal.parse_request_amount`
+      (unparseable is still a 400, never a silent zero); a negative debit becomes a credit (and vice versa), which
+      fixes the worksheet column totals (net matching was already right).
+
+**Existing tests changed (each asserted the defect):** `test_negative_opening_balance_rejected` (C6),
+`test_941_totals_diverging_flags_high_severity` (supplied Q1 only — the W9 defect).
+**Verification:** frontend build + 2,078 Jest pass; full backend suite 10,006 passed, 0 failed (2026-10-26).
+
+- [x] Renumber PR #254's commits, comments and test files from 846 to 855.
+- [x] Rebase onto the 843 → 844 → 845 stack (2026-10-29, after the 843 banned-phrase gate).
+- [ ] Retitle PR #254; merge after #237; full backend suite on the merged result.
 
 **Commit SHA:** TBD.
 
@@ -702,36 +732,6 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 
 ---
 
-### Sprint 846: Tool-correctness loose ends from Sprints 826/827
-**Status:** COMPLETE (2026-10-26). Branched on the unmerged 845 stack.
-**Scope:** every open 826/827 item that needs no practitioner figure, CEO policy call or locale decision
-(register: `reports/sprint-823-discovery-2026-10-23.md`). Reproduce each before fixing.
-Out of scope, unchanged: F5 + figures (793b), B1 (NOL scope), B2 (combined-rate method), D2 tiering of
-degenerate custom rules, A6 FA-03 contra call, P-3 locale, I4 investment/payable pairing.
-
-- [x] **A4** — `parse_date` gains opt-in `day_first`; `infer_day_first` decides per column (day-first only
-      when some value can only be day-first and none only month-first). FA-07 and FA-T11 read through it.
-- [x] **A5** — FA-T11 computes expected depreciation by actual days *and* under half-year (fiscal year ends on
-      the reference date's month/day), flags against the nearer, and reports which matched. The comment that
-      claimed the 5% tolerance absorbed the convention was false and is gone. Mid-quarter/mid-month: not modelled.
-- [x] **A8** — useful-life headers naming months (months/mos/mths) are divided by 12, mapped headers included.
-- [x] **C2** — AP a scenario leaves unpaid is paid evenly over the 30 days after its bucket window
-      (`AP_DEFERRAL_DAYS`), disclosed per scenario as `ap_deferral_rule` (shown on the scenario card).
-- [x] **C3** — each displayed component is the change in its rounded running total, so every row foots.
-- [x] **C5** — a negative aging bucket is a 400 (a credit has no payment date to schedule); it used to be
-      netted in the total but ignored by the projection. **C6** — an overdrawn opening balance is projected.
-- [x] **W4** — the 941 sum is compared with the W-3 as well as payroll YTD (`compared_with`); 941 fields are
-      optional, and a figure not supplied every quarter is skipped with a `checks_not_run` notice (also ends the
-      false HIGH when a 941 CSV had no Medicare column). **W8** — no drafts → `w3_totals: null` + `w3_status`.
-      **W9** — missing/duplicate 941 quarters listed; the annual tie-out is then not run, and says so.
-- [x] **I5** — debit/credit accept `(1,000.00)`, `$(1,000.00)`, `1000-` via `shared/request_decimal.parse_request_amount`
-      (unparseable is still a 400, never a silent zero); a negative debit becomes a credit (and vice versa), which
-      fixes the worksheet column totals (net matching was already right).
-
-**Existing tests changed (each asserted the defect):** `test_negative_opening_balance_rejected` (C6),
-`test_941_totals_diverging_flags_high_severity` (supplied Q1 only — the W9 defect).
-**Verification:** frontend build + 2,078 Jest pass; full backend suite 10,006 passed, 0 failed (2026-10-26).
-
 ### Sprint 834: Storage wording says what is stored; bulk upload no longer sold
 **Status:** PARTIAL — Trust/Approach lists and USER_GUIDE §22 corrected 2026-10-24 (PR #225). **Superseded by Sprints 841 and 844**, which fix every remaining storage sentence, the Terms and Privacy included (CEO 2026-10-24: correct wrong facts now; counsel reviews the finished legal pages at website-final).
 **Priority:** P1 — a trust page that overstates what is never stored is a legal exposure.
@@ -892,7 +892,7 @@ valuation allowance) needs a scope call.
       base (a correctly capped draft no longer draws HIGH); with no draft it stays as the reminder.
       One test changed: it asserted the false alarm. **W7** — the Additional Medicare notice is
       counted as `informational_notices`, not as a discrepancy. **W10** — negative tolerance refused.
-- [ ] F5, F9, B1, B2, B5, B6. (W4 W-3 vs 941, W8, W9 done in Sprint 846.)
+- [ ] F5, F9, B1, B2, B5, B6. (W4 W-3 vs 941, W8, W9 done in Sprint 855.)
 
 **Commit SHA:** 8f7046ac (PR #206); 38df065f (PR #213); 643f7d42 (PR #214); 9d774226 (PR #215).
 
@@ -944,7 +944,7 @@ every IC revenue/expense pair.
       a user with a single HIGH conflict scores 3 and tiers "moderate"; whether one HIGH conflict
       should make a user high-risk is a scoring decision, not a bug fix. *(Decided 2026-10-24 and done
       in Sprint 833: one HIGH conflict tiers the user high.)*
-- [ ] Open (A4, A5, A8, C2, C3, C5, C6 and I5 done in Sprint 846): D2 (tiering; degenerate custom rules),
+- [ ] Open (A4, A5, A8, C2, C3, C5, C6 and I5 done in Sprint 855): D2 (tiering; degenerate custom rules),
       I4's investment/payable pairing,
       P-3 (non-USD / EU number formats — needs a locale decision).
 

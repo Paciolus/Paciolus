@@ -1,5 +1,5 @@
 """
-Sprint 846 — W-2 reconciliation findings W4 (W-3 vs the 941s), W8 (a W-3 with
+Sprint 855 — W-2 reconciliation findings W4 (W-3 vs the 941s), W8 (a W-3 with
 no drafts) and W9 (duplicate or missing 941 quarters) from the Sprint 823
 discovery (reports/sprint-823-discovery-2026-10-23.md).
 """

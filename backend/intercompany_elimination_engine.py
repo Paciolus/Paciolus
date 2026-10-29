@@ -72,7 +72,7 @@ class EntityAccount:
             self.debit = Decimal(str(self.debit))
         if isinstance(self.credit, (int, float)):
             self.credit = Decimal(str(self.credit))
-        # Sprint 846 (I5): a negative debit is a credit and vice versa. The net
+        # Sprint 855 (I5): a negative debit is a credit and vice versa. The net
         # (debit - credit) is unchanged, but the worksheet sums each column
         # separately, so a negative amount left in place understated both totals.
         if self.debit < 0:

@@ -64,7 +64,7 @@ export interface ScenarioResult {
   breach_min_safe_cash: boolean
   collection_priorities: CollectionPriority[]
   ap_deferral_candidates: Record<string, unknown>[]
-  /** Sprint 846: how AP left unpaid on schedule is paid later; null when nothing is deferred. */
+  /** Sprint 855: how AP left unpaid on schedule is paid later; null when nothing is deferred. */
   ap_deferral_rule?: string | null
 }
 

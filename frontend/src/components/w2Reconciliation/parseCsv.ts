@@ -217,7 +217,7 @@ export function parseForm941Csv(text: string): Form941QuarterRequest[] {
     if (!Number.isFinite(quarter) || quarter < 1 || quarter > 4) {
       throw new W2CsvParseError(`Form 941 row ${i + 2}: quarter must be 1, 2, 3, or 4.`)
     }
-    // Sprint 846 (W4): a column the file does not have is left out, not sent
+    // Sprint 855 (W4): a column the file does not have is left out, not sent
     // as zero — the engine compares only the figures every quarter states.
     const row: Form941QuarterRequest = { quarter }
     if (fedWagesCol !== -1) row.total_federal_wages = normalizeAmount(fields[fedWagesCol] ?? '')

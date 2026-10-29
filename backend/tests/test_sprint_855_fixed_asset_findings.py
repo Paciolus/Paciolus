@@ -1,4 +1,4 @@
-"""Sprint 846 — fixed-asset loose ends from the Sprint 823 register (A4, A5, A8).
+"""Sprint 855 — fixed-asset loose ends from the Sprint 823 register (A4, A5, A8).
 
 Dates are built relative to a period end one year back, so nothing here ages.
 """

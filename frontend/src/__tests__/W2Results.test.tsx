@@ -56,7 +56,7 @@ describe('W2Results — checks not run', () => {
   })
 })
 
-describe('W2Results — Sprint 846 W-3 and Form 941 tie-out', () => {
+describe('W2Results — Sprint 855 W-3 and Form 941 tie-out', () => {
   it('says there is no W-3 instead of showing zero totals', () => {
     render(<W2Results result={{ ...baseResult, w3_totals: null, summary: { employee_count: 3 } }} />)
     expect(screen.getByText(/No draft W-2s supplied/)).toBeInTheDocument()

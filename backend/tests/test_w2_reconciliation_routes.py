@@ -492,7 +492,7 @@ class TestSprint838CsvFormulaInjection:
 
 
 # ---------------------------------------------------------------------------
-# Sprint 846 — W-3 vs 941 (W4), no-draft W-3 (W8), 941 quarter coverage (W9)
+# Sprint 855 — W-3 vs 941 (W4), no-draft W-3 (W8), 941 quarter coverage (W9)
 # ---------------------------------------------------------------------------
 
 

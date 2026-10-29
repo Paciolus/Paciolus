@@ -166,7 +166,7 @@ def _payload_with_payable(debit: str, credit: str) -> dict:
 
 @pytest.mark.usefixtures("bypass_csrf")
 class TestIntercompanyAmountFormats:
-    """Sprint 846 (I5): accounting-format amounts parse; garbage is still a 400.
+    """Sprint 855 (I5): accounting-format amounts parse; garbage is still a 400.
 
     The upload page strips ``,`` and ``$`` but passes parentheses through, so a
     trial balance exported with ``(1,000.00)`` negatives used to fail the whole run.
