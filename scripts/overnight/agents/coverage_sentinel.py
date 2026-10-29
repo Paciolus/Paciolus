@@ -31,6 +31,7 @@ from scripts.overnight.config import (
     REPORTS_DIR,
     SYSTEM_PYTHON,
     TODAY,
+    run_stamp,
 )
 
 # ── Tuning knobs ───────────────────────────────────────────────────────────
@@ -116,6 +117,8 @@ def _run_pytest_with_coverage() -> tuple[dict | None, str]:
             cwd=str(BACKEND_ROOT),
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=PYTEST_TIMEOUT_S,
         )
     except subprocess.TimeoutExpired:
@@ -229,12 +232,14 @@ def _classify_status(current_pct: float, delta_pp: float | None) -> tuple[str, l
 def run() -> dict:
     """Execute Coverage Sentinel and return structured results."""
     t0 = time.time()
+    stamp = run_stamp()
 
     cov_data, err = _run_pytest_with_coverage()
     if cov_data is None:
         result = {
             "agent": "coverage_sentinel",
             "status": "red",
+            **stamp,
             "error": err or "pytest --cov produced no coverage.json",
             "summary": "Coverage run failed — see reports/nightly/.run_log for details.",
         }
@@ -290,6 +295,7 @@ def run() -> dict:
     result = {
         "agent": "coverage_sentinel",
         "status": status,
+        **stamp,
         "percent_covered": round(current_pct, 2),
         "covered_lines": covered_lines,
         "num_statements": num_statements,
