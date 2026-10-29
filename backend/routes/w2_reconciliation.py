@@ -25,7 +25,7 @@ from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
-from tax_figures_status import W2_TAX_FIGURES_BANNER
+from tax_figures_status import W2_TAX_FIGURES_BANNER, enforce_tax_figures_confirmed
 from w2_reconciliation_engine import (
     STATUTORY_LIMITS_BY_YEAR,
     EmployeePayroll,
@@ -253,6 +253,7 @@ def run_reconciliation(
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
     # shared/testing_route.py::run_json_tool.
+    enforce_tax_figures_confirmed("w2_reconciliation")  # Sprint 856: council hard date
     result = run_json_tool(
         db=db,
         current_user=current_user,
@@ -276,6 +277,7 @@ def export_reconciliation_csv(
     db: Session = Depends(get_db),
 ) -> Response:
     # Sprint 689d: gate promoted tool (export mirrors analyze-route gating).
+    enforce_tax_figures_confirmed("w2_reconciliation")  # Sprint 856: council hard date
     enforce_tool_access(current_user, "w2_reconciliation", db)
 
     try:

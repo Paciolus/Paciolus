@@ -33,7 +33,9 @@ council's decision date passes without a recorded practitioner confirmation.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
+
+from fastapi import HTTPException
 
 # Council decision, 2026-10-28 (Sprint 856 item 5): if no practitioner has
 # confirmed the 2026 figures by this date, the tax tools are to be disabled
@@ -83,3 +85,32 @@ def tools_overdue_for_confirmation(today: date) -> list[str]:
     if today <= PRACTITIONER_CONFIRMATION_DEADLINE:
         return []
     return sorted(tool for tool, confirmation in PRACTITIONER_CONFIRMATIONS.items() if confirmation is None)
+
+
+def _today() -> date:
+    """The current UTC date (a seam so tests can move the clock)."""
+    return datetime.now(UTC).date()
+
+
+def enforce_tax_figures_confirmed(tool_name: str) -> None:
+    """Disable a covered tool once the council deadline passes unconfirmed.
+
+    Called at the top of each covered tool's analysis and export routes, so the
+    council decision (Sprint 856 item 5) takes effect in the running deployment
+    on the day after the deadline — not only in the next CI run. Raises 403
+    ``TAX_FIGURES_UNCONFIRMED``; a no-op on or before the deadline, for tools
+    with a recorded confirmation, and for tools this module does not cover.
+    """
+    if tool_name not in tools_overdue_for_confirmation(_today()):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail={
+            "code": "TAX_FIGURES_UNCONFIRMED",
+            "message": (
+                "This tool is disabled: its built-in statutory figures were not confirmed by a "
+                f"practitioner by {PRACTITIONER_CONFIRMATION_DEADLINE.isoformat()}."
+            ),
+            "resource": "tool_access",
+        },
+    )
