@@ -4,7 +4,7 @@ import { Reveal } from '@/components/ui/Reveal'
 export default function TermsPage() {
   return (
     <div className="relative z-10 min-h-screen bg-gradient-obsidian">
-      <main className="max-w-4xl mx-auto px-6 py-16">
+      <main id="main-content" className="max-w-4xl mx-auto px-6 py-16">
         {/* Hero */}
         <Reveal className="mb-12">
           <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4">

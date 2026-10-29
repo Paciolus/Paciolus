@@ -152,3 +152,64 @@ class TestSprint837ThresholdTransparency:
             assert "IRS Instructions for Forms 1099-MISC" in text
         finally:
             app.dependency_overrides.clear()
+
+
+class TestSprint856TaxFiguresBanner:
+    """Sprint 856 (793b): the export is what gets filed, so its first line is
+    the same tax-figures banner the page shows."""
+
+    @pytest.mark.asyncio
+    async def test_csv_first_line_is_tax_figures_banner(self, professional_user, db_session):
+        import csv as _csv
+        import io as _io
+
+        from tax_figures_status import FORM_1099_TAX_FIGURES_BANNER
+
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/form-1099/export.csv", json=_valid_payload())
+            assert response.status_code == 200, response.text
+            rows = list(_csv.reader(_io.StringIO(response.text)))
+            assert rows[0] == [FORM_1099_TAX_FIGURES_BANNER]
+            assert rows[1] == []
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("path", ["/audit/form-1099", "/audit/form-1099/export.csv"])
+    async def test_disabled_after_deadline_without_confirmation(self, professional_user, db_session, monkeypatch, path):
+        from datetime import timedelta
+
+        import tax_figures_status as tfs
+
+        monkeypatch.setattr(tfs, "_today", lambda: tfs.PRACTITIONER_CONFIRMATION_DEADLINE + timedelta(days=1))
+        monkeypatch.setitem(tfs.PRACTITIONER_CONFIRMATIONS, "form_1099", None)
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(path, json=_valid_payload())
+            assert response.status_code == 403, response.text
+            assert response.json()["detail"]["code"] == "TAX_FIGURES_UNCONFIRMED"
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_runs_after_deadline_once_confirmed(self, professional_user, db_session, monkeypatch):
+        from datetime import date, timedelta
+
+        import tax_figures_status as tfs
+
+        monkeypatch.setattr(tfs, "_today", lambda: tfs.PRACTITIONER_CONFIRMATION_DEADLINE + timedelta(days=1))
+        monkeypatch.setitem(
+            tfs.PRACTITIONER_CONFIRMATIONS,
+            "form_1099",
+            tfs.PractitionerConfirmation(confirmed_by="Example CPA", confirmed_on=date(2026, 12, 1), tax_year=2026),
+        )
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/form-1099", json=_valid_payload())
+            assert response.status_code == 200, response.text
+        finally:
+            app.dependency_overrides.clear()

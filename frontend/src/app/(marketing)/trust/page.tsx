@@ -18,7 +18,7 @@ import { downloadableArtifacts, weNeverStore, weStore } from '@/content/trust'
  */
 export default function TrustAndSecurity() {
   return (
-    <div className="relative z-10 min-h-screen bg-gradient-obsidian">
+    <main id="main-content" className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* ── Hero + Trust Metrics Bar ───────────────────────── */}
       <motion.section
         className="relative pt-32 pb-16 px-6"
@@ -284,6 +284,6 @@ export default function TrustAndSecurity() {
           </motion.div>
         </div>
       </section>
-    </div>
+    </main>
   )
 }

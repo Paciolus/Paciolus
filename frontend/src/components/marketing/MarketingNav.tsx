@@ -20,6 +20,7 @@ import { ProfileDropdown } from '@/components/auth'
  * - Underline-slide hover on desktop links
  * - Smooth mobile drawer with staggered links
  * - Auth-aware: ProfileDropdown when logged in, Sign In + Get Started when not
+ * - Skip-to-content link (Sprint 856) targeting each page's #main-content
  */
 
 interface NavLink {
@@ -69,6 +70,14 @@ export function MarketingNav() {
           : 'bg-obsidian-900/40 backdrop-blur-md border-b border-transparent'
       }`}
     >
+      {/* Sprint 856: every (marketing) page and its error boundary declares
+          id="main-content" — keep that invariant when adding a page. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:bg-sage-600 focus:text-oatmeal-50 focus:rounded-lg focus:text-sm focus:font-sans focus:font-medium"
+      >
+        Skip to main content
+      </a>
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}

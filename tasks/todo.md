@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-28] (this PR): 2026-10-28 action plan — 8-agent assessment → draft → council review and majority vote (7 questions, 21 of 23 amendments adopted); new START HERE block at the top of Active Phase, Sprints 854–858 filed, 843 merge gate and 778b checkout gate recorded, the "Stripe parked until pricing validated" line superseded, and the 2026-10-24 START HERE demoted. Live deploy verified at `1435b0e4`. No code changed (tasks/todo.md)
 - [2026-10-27] (this PR): `/export/pdf` returned 500 when `risk_summary` or `column_detection` was sent as `null` (`.get(k, {})` yields `None` for a present-but-null key); now `or {}`. Found by the Sprint 819 snapshot work. Same pattern remains in 5 memo generators, left alone to avoid conflicting with PR #285 (pdf/sections/diagnostic.py, tests/test_export_diagnostics_routes.py)
 - [2026-10-27] (this PR): `@testing-library/jest-dom` 6.9.1→7.0.1 (Dependabot #248) and `lint-staged` 16.4.0→17.6.0 (#252), both unblocked by upgrading the dev machine to Node 22.23.4 / npm 10.9.9 — the arborist `edgesOut` crash no longer reproduces, and lint-staged 17 needs Node ≥ 22.22.1. `npm audit fix` cleared 2 high (`brace-expansion` 1.1.14→1.1.21, `zod` 4.3.6→4.6.7); in-range patches for `@typescript-eslint/*` 8.72.1, `postcss` 8.5.32, `framer-motion` 12.43.0. Lockfile audited, not trusted: 0 added, 24 removed — all lint-staged 16's own terminal-UI deps (`listr2`, `log-update`, …), no peer-derived entries lost. Verified: build (all pages `ƒ`), 208 suites / 2,072 tests, `tsc`, eslint, 0 audit findings (frontend/package.json, frontend/package-lock.json)
 - [2026-10-24] (this PR): claims-review backlog — full findings saved to `reports/claims-review-2026-10-24.md`; Sprints 840–845 filed with a next-session start block; merge SHAs recorded for 836–839; Sprint 834 marked superseded; `ceo-actions.md` and `SESSION_STATE.md` refreshed (tasks/todo.md, tasks/ceo-actions.md, SESSION_STATE.md, reports/)
@@ -99,9 +100,80 @@
 ---
 
 ## Active Phase
-> **▶ Next session: start at "NEXT SESSION — START HERE" below (Sprints 840–845, from the 2026-10-24 claims review —
-> [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md)).** The worklist that follows is older context.
-> **▶ Also queued: security review 2026-10-27 → Sprints 846–853** (block directly after START HERE; 846–848 recommended before 843).
+> **▶ START HERE — ACTION PLAN 2026-10-28 (council-ratified, authoritative order).** Built from the 2026-10-28 8-agent
+> assessment (Scout 3 · Guardian 5 · Future-State 5 · Critic 6.5 · Executor 7 · Designer 7 · Auditor ~7 · Accounting
+> Expert 7.5; mean ~6/10 — engineering strong, commercial side unstarted), then reviewed by all eight agents with open
+> questions settled by majority vote (IntegratorLead breaks ties). All eight voted APPROVE WITH AMENDMENTS; 21 of 23
+> amendments adopted. New sprints 854–858 are written out in full further down this section, directly above the
+> 2026-10-24 START HERE block. Owner: **C** = Claude, **CEO** = the CEO.
+>
+> **Council votes**
+>
+> | # | Question | Result | Vote |
+> |---|----------|--------|------|
+> | Q1 | Launch scope | **Solo purchasable; Professional/Enterprise "Contact us" until Sprint 853** | 8–0 |
+> | Q2 | Freeze scope | **Freeze until Sprint 781 reports, or 30 days after Phase 3 completes — whichever first** | 6–2 (Accounting, Executor: lift at Phase 3) |
+> | Q3 | Backup vs Stripe | **778b must pass before the first live checkout** (matches the 2026-10-19 DECISION) | 5–3 (Executor, Designer, Future-State: parallel) |
+> | Q4 | Counsel timing | **Send Terms/Privacy/DPA to counsel as soon as 843–845 merge** — *council recommendation; reverses the 2026-10-24 CEO direction, so it is the CEO's call* | 8–0 |
+> | Q5 | State-doc drift check | **Tie 4–4 → IntegratorLead: build the narrowed Sprint 857** (two deterministic checks only, ~1h, freeze-exempt). The stale state that triggered the question was itself found this session; the narrowing answers the "brittle prose parser" objection | 4–4 |
+> | Q6 | Stale tax figures (793b) | **Visible banner now; becomes a disable on 2026-12-15 if no practitioner has confirmed** | 8–0 |
+> | Q7 | Tool positioning | **Decide after Sprint 781 reports** | 7–1 (Future-State: reposition now) |
+>
+> **Rejected amendments:** fold 18→5 repositioning into Sprint 843 (Future-State; contradicts Q7) · park Sprint 857
+> (Scout, Executor; resolved by the Q5 tiebreak).
+>
+> **CEO track — starts today, in parallel with everything below**
+> - [ ] **Sprint 781 (demand validation), hard-dated:** read the `waitlist_signups` count **on day 1**; **3 unguided
+>       CPA sessions on their own TB by 2026-11-07** (5–10 total); ask the price question in the first conversation.
+>       Success metrics: conversations held, **and ≥1 Solo checkout paid by someone outside the CEO's personal network
+>       within 30 days of Stripe going live.**
+> - [ ] Add the **`RENDER_API_KEY` repo secret** (arms the uptime deploy-drift probe; prerequisite for 778b's DR workflows).
+> - [ ] Confirm the **R2 `paciolus-backups` token** still works and provide the **Neon connection string** for the cron (778b).
+> - [ ] Decide **refund policy**, **legal entity** (LLC vs Inc.) and **repository visibility**.
+> - [ ] **Phase 4.3 custom domain** — `api.paciolus.com` 404s and it is the Stripe webhook target (do before 4.1).
+> - [ ] **Confirm or decline Q4** (counsel now vs. once the website is finalised).
+> - [ ] **H12:** verify the ISA 315 "Appendix 1 matrix" citation, or accept the default (relabel as a Paciolus convention).
+>
+> **Phase 0 — State and alarms (day 1, C)**
+> - [x] Live Render deploy SHA == `main` — verified 2026-10-28: `dep-dbh0plavcj2c73e057bg` is `1435b0e4`, status live.
+> - [ ] Refresh `SESSION_STATE.md` to point at this plan (it still names `5f82d818` and "Sprints 840 → 845").
+> - [ ] **Sprint 854** — nightly environment parity (below).
+>
+> **Phase 1 — Make what a buyer reads true (days 1–2, C)**
+> - [ ] Sprint 843's **banned-phrase test across every memo generator gates the #235 merge** (not a follow-up).
+> - [ ] Rebase and merge **#235 (843) → #236 (844) → #237 (845)**. #235 is DIRTY.
+> - [ ] Renumber PR **#254** from the duplicate "Sprint 846" to **Sprint 855**; rebase onto main after #237 and merge.
+> - [ ] Close Dependabot **#249** in favour of **#269** (Sprint 786, framer-motion 14.7.1); rebase #269 (DIRTY).
+> - [ ] **Sprint 856** — first-run, public-page accessibility and the browser pass (below).
+> - [ ] **793b tax banner** — see Sprint 856 item 5.
+>
+> **Phase 2 — Survive losing the database (days 2–3, C + CEO console)**
+> - [ ] **Sprint 778b** (778a is already COMPLETE): `pg_dump` → R2 cron, verify Neon PITR window, one recorded restore
+>       drill per mechanism, DR workflows rewritten against Neon + R2. **Gates the first live checkout (Q3).**
+>
+> **Phase 3 — Take money, Solo first (CEO-led; C builds 858)**
+> - [ ] **Sprint 858** — Solo-only checkout gating (below).
+> - [ ] **Phase 4.1 / Sprint 447** — Stripe live at **Pricing v3** (test mode is v2: rebuild, don't copy); webhook on the
+>       working host; add a **pytest that fails on any v2 price ID** (extends `scripts/stripe_price_parity_preflight.py`);
+>       **one real-money Solo checkout verified in a browser**, then refunded. Blocked on 778b, 858, 4.3.
+>
+> **Phase 4 — Firm tier (after Phase 3, or sooner if a firm signals intent)**
+> - [ ] **Sprint 853** (existing) — one shared access helper replaces the three copy-pasted org checks; unlocks
+>       Professional/Enterprise checkout.
+>
+> **Phase 5 — Process hygiene (C, ~1h, hotfix track except 857)**
+> - [ ] Mark Sprints 848 and 813 COMPLETE (both merged in `1435b0e4`; todo still says "pending CI + merge"), then archive.
+> - [ ] Archive SUPERSEDED Sprints 738, 760, 761; collapse the stacked banner notes in this section.
+> - [ ] Fix `.claude/agents/designer.md` (asks for Inter / navy / slate — contradicts Oat & Obsidian).
+> - [ ] Update the CLAUDE.md phase table and test counts (stops at Sprint 515 / "6,188 + 1,345").
+> - [ ] **Sprint 857** — state-doc drift check (below).
+>
+> **Freeze.** No new refactor, dedup, perf or feature sprints until **Sprint 781 reports or 30 days after Phase 3
+> completes, whichever comes first.** Parked: 814, 815, 821, 822, 823, B-6…B-9, reportlab 5 major, tool repositioning
+> (Q7). **Exempt:** Sprint 857, security defects, and **any defect or confusion a CPA hits during a Sprint 781
+> session** — fix those immediately. **Tracked risk (parked, not forgotten):** `slowapi==0.1.10` is unmaintained (last
+> release Oct 2022) and sits on the rate-limit path that caused the last production outage — plan a replacement after the freeze.
+>
 > **WORKLIST — 2026-10-20 (authoritative order).** Consolidated in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543), which re-verified the 2026-10-19 launch-readiness assessment against current source and found ten items neither that doc nor the 2026-10-20 worklist covered.
 >
 > | Track | Scope | Sprints | Owner |
@@ -114,7 +186,7 @@
 > | 5 | Legal to counsel, waitlist count, CPA validation, custom domain | 781 + Phase 4.2/4.3 | **CEO — starts today, parallel** |
 > | 6 | Backlog debt | **785**, **786**, 741, 738, 762 | Claude |
 >
-> **Parked deliberately:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
+> **Parked deliberately:** B-6…B-9 until Sprint 781 reports · ~~the live Stripe build until pricing is validated~~ (superseded 2026-10-28: Stripe live runs in parallel with Sprint 781, Solo only, after 778b — see START HERE) · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
 >
 > **Open asks on the CEO** (each blocks a track): Neon read-only connection string (waitlist count + Sprint 738 schema read) · `RENDER_API_KEY` repo secret (deploy-drift probe + DR workflows) · confirmation the R2 `paciolus-backups` token still works · registered address / agent / EU-rep + DPO decisions (the critical path to launch) · rebase-or-redo call on the 7 stranded sprint branches.
 > **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). Full verdict tradeoff map in conversation transcript.
@@ -356,7 +428,103 @@
 > **Before accepting an inherited blocker, check what the work actually reads.**
 > Sprints 812–831 archived to `tasks/archive/sprints-812-831-details.md`.
 > Sprints 790–835 archived to `tasks/archive/sprints-790-835-details.md`.
-> **▶ NEXT SESSION — START HERE (written 2026-10-24).** The CEO asked for a legal-and-security claims review
+> **▶ ACTION PLAN 2026-10-28 — Sprints 854–858.** Order and votes are in the START HERE block at the top of this
+> section. One PR per sprint; each fix lands with a test that fails before it.
+
+### Sprint 854: Nightly environment parity
+**Status:** PENDING. **Priority:** P1 (Phase 0). **Source:** 2026-10-28 council (Guardian, Critic).
+
+The 2026-10-28 nightly went RED with no defect in the code. `backend/venv` still has fastapi 0.136.1, but Sprint 786
+moved `requirements.txt` to `fastapi==0.162.0`, so `tests/helpers/route_inventory.py:22` (`RouteContext`) fails to
+import → 99 collection errors in Coverage Sentinel. QA Warden crashed separately on the Jest side.
+
+- [ ] Orchestrator **syncs the venv from `requirements.txt` before every run** (`pip install -r`), not a one-off rebuild —
+      a hand rebuild rots again (Sprint 786 already flagged this venv as matching neither the pins nor production).
+- [ ] Pre-flight: fail the nightly RED with a named reason if installed versions still differ from the `==` pins after the sync.
+- [ ] `scripts/overnight/agents/qa_warden.py:185` — `json.loads(stdout)` with `None` → report "did not run", not a TypeError.
+- [ ] **Did-it-run check:** an agent whose sentinel is missing or crashed fails the brief visibly (only 43 of 109
+      dormant-period nights produced a qa_warden sentinel and nobody noticed).
+- [ ] The daily brief states the SHA and timestamp it tested, as-of its run time (the 10-28 brief's `a9dfeb69` was
+      HEAD at 04:00 — the defect is unstated staleness, not a wrong SHA).
+- [ ] Report Auditor on 0/0 tests reports **UNVERIFIED**, not GREEN.
+
+**Commit SHA:** TBD.
+
+### Sprint 855: Tool-correctness loose ends from 826/827 (was PR #254's "Sprint 846")
+**Status:** PENDING merge — PR #254, DIRTY. **Priority:** P2 (Phase 1).
+
+- [ ] Retitle PR #254 and its commits' references to Sprint 855 (846 is taken by the merged memo-markup sprint `826ef50f`).
+- [ ] Rebase onto `main` after #237 merges; full backend suite; merge.
+
+**Commit SHA:** TBD.
+
+### Sprint 856: First run, public-page accessibility, and one look in a browser
+**Status:** PENDING. **Priority:** P1 (Phase 1 — before the first Sprint 781 CPA session). **Source:** 2026-10-28 council (Designer, Accounting Expert, Executor).
+
+- [x] **WelcomeModal step 1** (`components/shared/WelcomeModal.tsx:32`) still says "Upload a Trial Balance", and #235
+      does not change it — 14 of 18 tools take no TB. Point it at the tool picker. (Steps 2–3 copy is in #235; verify after merge.)
+      *Done: "Choose a Tool" → `/tools`. Three-way merge with `origin/sprint-843-positioning` is conflict-free (file + test).
+      Still open: step 3's "Get Started" CTA also routes to `/tools/trial-balance` — left for #235, which owns step 3.*
+- [x] WelcomeModal: Escape closes it, focus trap, initial focus — match the five other modals. Fix the header comment
+      "Shows once per user" (completion is in localStorage — once per device). *Done via shared `useFocusTrap`.*
+- [x] Skip-to-content link in `MarketingNav` (public pages declare `#main-content` but nothing links to it; only
+      `UnifiedToolbar.tsx:82` has one). *Done. 6 of 10 marketing pages (about, approach, contact, privacy, terms, trust)
+      and the `(marketing)/error.tsx` boundary had no `#main-content` — added; a Jest invariant now walks the route group.
+      Not covered: `/login`, `/register` (no MarketingNav, no skip link).*
+- [x] **Browser pass:** home, pricing, workspace and two tool result tables at 375px and 1440px. Record findings; fix
+      anything a CPA would hit (no source-only review has ever looked at these rendered — `tasks/todo.md:267`).
+      *Done 2026-10-28 (Playwright, `next dev --webpack` + local backend/SQLite, Professional test user): home, pricing,
+      about, trust, terms, contact, tools, login, dashboard, portfolio, TB Diagnostics and AP Testing results. No page has
+      horizontal overflow at either width. **Fixed:** (a) home hero H1 was unreachable above the fold at 375px
+      (`max-h-[900px]` + `justify-center` pushed it above y=0) → `lg:max-h-[900px]`; (b) TB results printed
+      `$1,412,330.8` and the ratio footer printed `Assets: $1420425.07` (`toLocaleString` on numbers / on the API's
+      Decimal *strings*) → `formatCurrency` in `AnomalyCard` + `KeyMetricsSection`; (c) TB anomaly account names
+      truncated to ~12 chars at 375px → wrap; (d) pre-flight Column Detection cards overlapped label and % at 375px →
+      single column below `sm`; (e) pricing seat calculator label touched the amount. **Open (larger / copy):**
+      [ ] re-uploading the same TB within 5 min shows the raw API text "re-submit with force_resubmit=true" and offers no
+      button (`routes/audit_pipeline.py:128`); [ ] TB "Material Risks (9)" lists 5 "coverage observation, not an anomaly"
+      rows with clay warning icons and a "Material" label; [ ] "TOP FINDINGS" on AP results, "fraud indicators" in the AP
+      subtitle, "SEE THE FINDINGS" in the home hero scrubber — guardrail wording; [ ] `/tools` header says "24 tools across
+      3 categories" vs 18 everywhere else; [ ] `/engagements` redirected to `/portfolio` for a fresh Professional user —
+      confirm intended; [ ] hydration-mismatch console warning on authed pages (dev).*
+- [x] **793b tax banner.** Non-dismissible disclaimer banner (existing pattern, clay/oatmeal tokens): "Statutory figures
+      current through tax year 2025 — verify before relying". Same line in each tool's PDF and Excel exports — the export
+      is what a CPA files. **First verify per tool** which tools are year-keyed to 2025: W-2 already refuses unknown years
+      (`w2_reconciliation_engine.py:21,75-80`); check 1099, Book-to-Tax and Depreciation before printing the claim.
+      **Hard date:** if no practitioner has confirmed the 2026 figures by **2026-12-15**, the banner becomes a disable.
+      **Done:** verified only W-2 (2025 table, other years refused) and 1099 (2025 + secondary-source 2026 tables) apply year-keyed figures — Book-to-Tax, Depreciation and Loan apply none — so each of those two gets its own accurate banner (`backend/tax_figures_status.py` ↔ `frontend/src/content/tax-figures.ts`) on the page and as the first line of its CSV export (their only export; no PDF/Excel exists), and `tests/test_tax_figures_status.py` fails after 2026-12-15 unless a practitioner confirmation is recorded per tool.
+
+**Verification (items 1–4):** `npx tsc --noEmit` clean; `npm run lint` clean; full Jest 209 suites / 2,083 tests green
+(+4 WelcomeModal: step-1 copy, Escape, initial focus, Tab trap; +2 MarketingNav: skip link first, `#main-content`
+invariant; +1 KeyMetricsSection: Decimal-string totals). `npm run build` NOT run in the worktree (Turbopack cannot build
+through the node_modules junction) — run from the main checkout before merge. Screenshots in session scratch only.
+
+**Commit SHA:** TBD.
+
+### Sprint 857: State-doc drift check (narrowed)
+**Status:** PENDING. **Priority:** P3 (Phase 5; freeze-exempt). **Complexity:** 2/10. **Source:** Q5 tiebreak, Critic's narrowing.
+
+Two deterministic checks only, run in CI. No prose matching of "pending merge" — that would false-alarm and get muted.
+
+- [ ] `SESSION_STATE.md`'s named `main` SHA must be an ancestor of HEAD.
+- [ ] No sprint number may appear in two `### Sprint N:` titles or two PR titles with different subjects (the 846 collision).
+- [ ] Manual post-merge checklist line added to `tasks/PROTOCOL.md` for the rest (status → COMPLETE, SHA recorded).
+
+**Commit SHA:** TBD.
+
+### Sprint 858: Solo-only checkout gating
+**Status:** PENDING. **Priority:** P1 (Phase 3 — must ship before Sprint 447 goes live). **Source:** Q1 (8–0), Executor amendment.
+
+The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in the code enforces that yet.
+
+- [ ] Pricing page, `UpgradeGate` CTAs and the upgrade flow show **"Contact us"** for Professional and Enterprise.
+- [ ] Backend **rejects** checkout-session creation for Professional/Enterprise price IDs behind a single flag that
+      Sprint 853 flips (test: request a Pro session → 4xx).
+- [ ] Copy check: no marketing surface promises self-serve Professional/Enterprise purchase while the flag is off.
+
+**Commit SHA:** TBD.
+
+> **2026-10-24 START HERE — superseded as the session start by the 2026-10-28 action plan at the top of this section; its CEO-decision defaults below still apply.** The CEO asked for a legal-and-security claims review
 > and approved fixing everything it found. **Full findings with file:line for every item:**
 > [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md) (CEO-readable version:
 > https://claude.ai/artifact/MFTYHezjA4zakoiKwgnNb2). Work **Sprints 840 → 845 in order**, one PR each (or 840 alone
@@ -500,6 +668,10 @@ unknown engagement — and pass after); `test_internal_admin.py` requests now na
 - [ ] Stale test counts (L1, with a consistency test), hero animation copy (L3, L7), "7 standards" (L4), "Audit
       Intelligence" naming per CEO decision (L5: about/approach meta, `main.py:243`, `email_service.py:577`,
       `memo_base.py:795`), memo title ISA 520 (L10).
+- [ ] **Merge gate (2026-10-28 plan):** a banned-phrase test across **every** memo generator ("we conclude", "appears
+      sound", "satisfactory", a "Conclusion" heading, …), generalising `test_multi_period_memo.py:875-890`, lands in
+      #235 **before** it merges. Re-locate H10 by symbol: bank-rec is now near `bank_reconciliation_memo_generator.py:945`
+      (the claims review cites `:985`), TWM near `three_way_match_memo_generator.py:109`.
 
 **Commit SHA:** TBD.
 
@@ -2240,6 +2412,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ### Sprint 778: Build the off-provider backup, then prove recovery works
 **Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict), **778b
 PENDING** (the backup itself, the Neon rewrite and the restore drills — all need credentials).
+**2026-10-28 plan:** 778b **gates the first live Stripe checkout** (council Q3, 5–3).
 **Priority:** P1 — both halves in scope: build the backup that does not exist **and** verify that recovery works.
 
 

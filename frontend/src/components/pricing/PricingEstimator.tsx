@@ -153,21 +153,21 @@ function SeatCalculator({ interval }: { interval: BillingInterval }) {
               </div>
             ) : breakdown && (
               <div className="space-y-2.5 font-sans text-sm">
-                <div className="flex justify-between text-oatmeal-400">
+                <div className="flex justify-between gap-3 text-oatmeal-400">
                   <span>Base plan ({config.baseSeats} seats included)</span>
                   <span className="font-mono tabular-nums text-oatmeal-200">
                     ${breakdown.baseCost.toLocaleString()}{periodLabel}
                   </span>
                 </div>
                 {breakdown.additionalSeats > 0 && (
-                  <div className="flex justify-between text-oatmeal-400">
+                  <div className="flex justify-between gap-3 text-oatmeal-400">
                     <span>+{breakdown.additionalSeats} additional seat{breakdown.additionalSeats !== 1 ? 's' : ''} @ ${seatRate}{periodLabel}</span>
                     <span className="font-mono tabular-nums text-oatmeal-200">
                       ${breakdown.seatCost.toLocaleString()}{periodLabel}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2.5 border-t border-sage-500/30 text-oatmeal-100 font-medium">
+                <div className="flex justify-between gap-3 pt-2.5 border-t border-sage-500/30 text-oatmeal-100 font-medium">
                   <span>Total</span>
                   <span className="font-mono tabular-nums text-lg text-sage-300">
                     ${breakdown.totalCost.toLocaleString()}{periodLabel}

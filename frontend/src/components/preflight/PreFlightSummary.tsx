@@ -102,7 +102,7 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
       {report.columns.length > 0 && (
         <div className="theme-card p-5">
           <h4 className="font-serif text-sm text-content-primary mb-3">Column Detection</h4>
-          <div className={`grid gap-3 ${report.columns.length <= 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          <div className={`grid gap-3 ${report.columns.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
             {report.columns.map((col: PreFlightColumnQuality, idx: number) => {
               const isCore = ['account', 'debit', 'credit'].includes(col.role)
               const roleLabel = col.role === 'unmapped' ? 'Not Used' : col.role.replace(/_/g, ' ')
@@ -114,14 +114,14 @@ export function PreFlightSummary({ report, onProceed, onExportPDF, onExportCSV }
                   <span className={`font-mono text-base ${isCore ? statusColor(col.status) : 'text-content-tertiary'}`}>
                     {isCore ? statusIcon(col.status) : '·'}
                   </span>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 text-left">
                     <p className="font-sans text-xs text-content-secondary capitalize">{roleLabel}</p>
                     <p className="font-mono text-xs text-content-primary truncate">
                       {col.detected_name || 'Not found'}
                     </p>
                   </div>
                   {isCore && (
-                    <span className="font-mono text-xs text-content-tertiary">
+                    <span className="shrink-0 font-mono text-xs text-content-tertiary">
                       {(col.confidence * 100).toFixed(0)}%
                     </span>
                   )}

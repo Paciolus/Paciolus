@@ -35,6 +35,19 @@ describe('KeyMetricsSection', () => {
       expect(screen.getByText(/Liabilities:/)).toBeInTheDocument()
       expect(screen.getByText(/Equity:/)).toBeInTheDocument()
     })
+
+    it('formats category totals as currency even when the API sends Decimal strings (Sprint 856)', () => {
+      // ratio_engine.CategoryTotals.to_dict() serialises Decimals as strings;
+      // String.prototype.toLocaleString() left them as "$1420425.07".
+      const totals = {
+        ...sampleAnalytics.category_totals,
+        total_assets: '1420425.07',
+        total_liabilities: '791218.9',
+      } as unknown as typeof sampleAnalytics.category_totals
+      render(<KeyMetricsSection analytics={{ ...sampleAnalytics, category_totals: totals }} />)
+      expect(screen.getByText('$1,420,425.07')).toBeInTheDocument()
+      expect(screen.getByText('$791,218.90')).toBeInTheDocument()
+    })
   })
 
   describe('excluded accounts', () => {
