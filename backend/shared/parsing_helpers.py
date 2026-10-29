@@ -228,7 +228,7 @@ def parse_date(date_str: object, formats: Optional[Sequence[str]] = None, day_fi
 
     Ambiguous numeric dates (``01/12/2020``) read month-first unless
     ``day_first`` is set — callers that know a column is DD/MM (see
-    :func:`infer_day_first`) opt in; the default is unchanged (Sprint 846 A4).
+    :func:`infer_day_first`) opt in; the default is unchanged (Sprint 855 A4).
     With ``formats`` as well, the day-first forms among ``formats`` are tried
     first; nothing outside ``formats`` is ever tried.
     """
@@ -256,7 +256,7 @@ def parse_date(date_str: object, formats: Optional[Sequence[str]] = None, day_fi
     return memoized_parse("date:" + "|".join(fmts), date_str, lambda s: _parse_date_uncached(s, fmts))
 
 
-# Sprint 846 (A4): the numeric forms whose day/month order is ambiguous, in the
+# Sprint 855 (A4): the numeric forms whose day/month order is ambiguous, in the
 # order a day-first column needs them tried. Anything that does not match falls
 # through to the default list, where the remaining forms are unambiguous.
 _DAY_FIRST_FORMATS = (

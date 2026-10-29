@@ -9,7 +9,7 @@ HSAs and retirement plans, and 941 totals that do not agree to the payroll
 year-to-date totals or to the W-3.
 
 The four-quarter 941 sum is compared with payroll YTD and, when draft W-2s are
-supplied, with the W-3 totals of those drafts (Sprint 846, W4). Both annual
+supplied, with the W-3 totals of those drafts (Sprint 855, W4). Both annual
 comparisons run only when exactly one 941 is supplied for each of Q1-Q4, and
 only for the 941 fields every quarter supplies; otherwise the result's
 ``checks_not_run`` says what was missing (W9). With no draft W-2s there is no
@@ -364,7 +364,7 @@ class Form941Quarter:
     """A single Form 941 quarterly filing (employer side of the check)."""
 
     quarter: int  # 1-4
-    # Sprint 846 (W4): ``None`` means "not supplied" and the field is left out
+    # Sprint 855 (W4): ``None`` means "not supplied" and the field is left out
     # of the comparison. A missing CSV column used to arrive as zero and draw a
     # HIGH mismatch for a figure the 941 never stated.
     total_federal_wages: Decimal | None = None  # 941 line 2
@@ -526,7 +526,7 @@ class Form941Mismatch:
     actual: Decimal  # 941 side
     difference: Decimal
     message: str
-    # Sprint 846 (W4): what the 941 sum was compared with — "payroll_ytd" or "w3".
+    # Sprint 855 (W4): what the 941 sum was compared with — "payroll_ytd" or "w3".
     compared_with: str = "payroll_ytd"
 
     def to_dict(self) -> dict[str, Any]:
@@ -571,7 +571,7 @@ class W2ReconciliationResult:
     tax_year: int
     employee_discrepancies: list[Discrepancy]
     form_941_mismatches: list[Form941Mismatch]
-    # Sprint 846 (W8): None when no draft W-2s were supplied — there is no W-3.
+    # Sprint 855 (W8): None when no draft W-2s were supplied — there is no W-3.
     w3_totals: W3Totals | None
     summary: dict[str, Any]
     # Sprint 811 (A-7): which statutory set actually produced these findings.
@@ -1197,7 +1197,7 @@ _FORM_941_FIELDS: tuple[tuple[str, str, DiscrepancyKind, str], ...] = (
 
 
 def _form_941_quarter_coverage(quarters: list[Form941Quarter]) -> tuple[list[int], list[int]]:
-    """Sprint 846 (W9): (missing quarters, duplicated quarters). No 941s at all is not a finding."""
+    """Sprint 855 (W9): (missing quarters, duplicated quarters). No 941s at all is not a finding."""
     if not quarters:
         return [], []
     counts: dict[int, int] = defaultdict(int)
@@ -1216,7 +1216,7 @@ def _check_form_941(
 ) -> tuple[list[Form941Mismatch], list[dict[str, Any]]]:
     """
     Compare the four-quarter 941 sum with payroll YTD and, when there is a W-3,
-    with the W-3 (Sprint 846, W4). Returns the mismatches and any
+    with the W-3 (Sprint 855, W4). Returns the mismatches and any
     ``checks_not_run`` notices.
 
     Both comparisons are annual, so they run only with exactly one 941 per
@@ -1366,7 +1366,7 @@ def reconcile_w2(config: W2ReconciliationConfig) -> W2ReconciliationResult:
         )
 
     # --- W-3 totals (sum of every W-2) ---
-    # Sprint 846 (W8): with no drafts there is no W-3. Six zero totals and an
+    # Sprint 855 (W8): with no drafts there is no W-3. Six zero totals and an
     # employee count of 0 read as a real, empty W-3.
     w3: W3Totals | None = None
     if config.w2_drafts:

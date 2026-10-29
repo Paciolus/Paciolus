@@ -29,7 +29,7 @@ ZERO = Decimal("0")
 FORECAST_DAYS = 90  # Fixed horizon — sprint spec: 30 / 60 / 90 day windows
 HORIZON_BUCKETS: tuple[int, ...] = (30, 60, 90)
 
-# Sprint 846 (C2): AP a scenario leaves unpaid on schedule is deferred, not
+# Sprint 855 (C2): AP a scenario leaves unpaid on schedule is deferred, not
 # forgiven. The unpaid share is paid evenly over this many days immediately
 # after the bucket's scheduled payment window.
 AP_DEFERRAL_DAYS = 30
@@ -334,7 +334,7 @@ def _ap_outflow_schedule(ap: AgingBuckets, assumptions: ScenarioAssumptions) -> 
       * ``61–90`` AP pays linearly across days 0–7 (more urgent).
       * ``over 90`` AP pays linearly across days 0–5.
 
-    The scenario's payment rate sets the share paid in that window. Sprint 846
+    The scenario's payment rate sets the share paid in that window. Sprint 855
     (C2): the rest is paid over the ``AP_DEFERRAL_DAYS`` that follow, rather
     than never — dropping it overstated ending cash by every deferred dollar.
     """
@@ -418,7 +418,7 @@ def _run_scenario(
     rec_schedule = _recurring_schedule(config.recurring_flows, config.start_date)
 
     daily: list[DailyPoint] = []
-    # Sprint 846 (C3): every displayed figure foots. Each component is shown as
+    # Sprint 855 (C3): every displayed figure foots. Each component is shown as
     # the change in its rounded running total, so per-day rounding residuals
     # carry forward instead of accumulating, and the net change and balance are
     # built from those displayed cents. The opening balance is rounded once.
@@ -560,7 +560,7 @@ def _ap_deferral_candidates(ap: AgingBuckets, scenario: ScenarioName) -> list[di
                     "outstanding": str(_quantise(total)),
                     "defer_amount": str(_quantise(deferred)),
                     "defer_rate": str(Decimal("1.0") - rate),
-                    # Sprint 846 (C2): the days on which the projection pays the deferred share.
+                    # Sprint 855 (C2): the days on which the projection pays the deferred share.
                     "paid_between_days": [
                         min(deferred_start, FORECAST_DAYS - 1),
                         min(deferred_start + AP_DEFERRAL_DAYS, FORECAST_DAYS) - 1,
@@ -578,11 +578,11 @@ def _ap_deferral_candidates(ap: AgingBuckets, scenario: ScenarioName) -> list[di
 
 def project_cash_flow(config: CashFlowConfig) -> CashFlowForecast:
     """Run the 30 / 60 / 90-day forecast across all three scenarios."""
-    # Sprint 846 (C6): an overdrawn opening balance is accepted — that is when a
+    # Sprint 855 (C6): an overdrawn opening balance is accepted — that is when a
     # cash forecast matters most. The projection starts below zero and
     # ``goes_negative`` reports it.
     #
-    # Sprint 846 (C5): aging buckets must not be negative. A negative bucket was
+    # Sprint 855 (C5): aging buckets must not be negative. A negative bucket was
     # netted into ``ar_total``/``ap_total`` but skipped by the projection, so the
     # stated total and the projected cash disagreed. A bucket that nets to a
     # credit (unapplied cash, a vendor credit) carries no payment date this

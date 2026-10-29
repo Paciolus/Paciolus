@@ -293,7 +293,7 @@ class TestForm941:
         assert result.form_941_mismatches == []
 
     def test_941_totals_diverging_flags_high_severity(self):
-        # Sprint 846 (W9): this used to supply Q1 alone, which only "diverged"
+        # Sprint 855 (W9): this used to supply Q1 alone, which only "diverged"
         # because three returns were missing. Now four quarters, Q1 understated.
         emp = _clean_employee()
         q = Decimal("15000")

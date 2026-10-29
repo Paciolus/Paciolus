@@ -117,8 +117,8 @@ class TestMinSafeCashBreach:
 
 
 class TestInputValidation:
-    # Sprint 846 (C6): this test asserted that an overdrawn opening balance was
-    # refused. It is now projected (test_sprint_846_cash_flow.py); the input
+    # Sprint 855 (C6): this test asserted that an overdrawn opening balance was
+    # refused. It is now projected (test_sprint_855_cash_flow.py); the input
     # refusal that remains is a negative aging bucket (C5).
     def test_negative_aging_bucket_rejected(self):
         try:

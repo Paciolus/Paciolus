@@ -41,7 +41,7 @@ export interface W2DraftRequest {
 }
 
 /**
- * Sprint 846 (W4): an omitted figure is "not supplied" and is not compared —
+ * Sprint 855 (W4): an omitted figure is "not supplied" and is not compared —
  * a 941 file without a column must not send zeros for it.
  */
 export interface Form941QuarterRequest {
@@ -73,7 +73,7 @@ export interface W2Discrepancy {
 
 export interface Form941Mismatch {
   quarter: number | null
-  /** Sprint 846 (W4): what the four-quarter 941 sum was compared with. */
+  /** Sprint 855 (W4): what the four-quarter 941 sum was compared with. */
   compared_with?: 'payroll_ytd' | 'w3'
   kind: string
   severity: DiscrepancySeverity
@@ -99,7 +99,7 @@ export interface W3Totals {
  * employees it would apply to. The message names the authority (e.g.
  * IRC §223(b)(3), IRC §414(v)) whose figure was missing.
  *
- * Sprint 846 (W4/W9): also the Form 941 annual tie-out, when a quarter is
+ * Sprint 855 (W4/W9): also the Form 941 annual tie-out, when a quarter is
  * missing or duplicated, or a 941 figure was not supplied for every quarter.
  */
 export interface W2CheckNotRun {
@@ -117,7 +117,7 @@ export interface W2ReconciliationResponse {
   tax_year: number
   employee_discrepancies: W2Discrepancy[]
   form_941_mismatches: Form941Mismatch[]
-  /** Sprint 846 (W8): null when no draft W-2s were supplied — there is no W-3. */
+  /** Sprint 855 (W8): null when no draft W-2s were supplied — there is no W-3. */
   w3_totals: W3Totals | null
   summary: Record<string, unknown>
   statutory_basis?: number | null

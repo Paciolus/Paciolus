@@ -277,7 +277,7 @@ class TestSerialisation:
 
 
 class TestNegativeAmounts:
-    """Sprint 846 (I5): a negative debit is a credit, and a negative credit is a debit.
+    """Sprint 855 (I5): a negative debit is a credit, and a negative credit is a debit.
 
     The net balance was always right (``debit - credit``), so matching worked. The
     worksheet sums the debit and credit columns separately, though, so a payable

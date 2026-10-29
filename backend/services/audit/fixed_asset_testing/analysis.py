@@ -172,11 +172,11 @@ FA_USEFUL_LIFE_PATTERNS = [
     (r"^life$", 0.65, True),
     (r"useful.?life", 0.80, False),
     (r"life.?years", 0.65, False),
-    # Sprint 846 (A8): month-denominated lives; parse_fa_entries converts them.
+    # Sprint 855 (A8): month-denominated lives; parse_fa_entries converts them.
     (r"life\b.*\b(months?|mos|mths?)\b", 0.85, False),
 ]
 
-# Sprint 846 (A8): a useful-life header that names months. 60 in a
+# Sprint 855 (A8): a useful-life header that names months. 60 in a
 # "Useful Life (Months)" column was read as 60 years.
 _LIFE_IN_MONTHS = re.compile(r"\b(months?|mos|mths?)\b", re.IGNORECASE)
 
@@ -368,7 +368,7 @@ class FixedAssetEntry:
     category: Optional[str] = None
     net_book_value: Optional[Decimal] = None
     row_number: int = 0
-    # Sprint 846 (A4): the register's date column is DD/MM (inferred per column
+    # Sprint 855 (A4): the register's date column is DD/MM (inferred per column
     # in parse_fa_entries). Not serialised — it changes how the date is read.
     acquisition_date_day_first: bool = False
 
@@ -552,7 +552,7 @@ def parse_fa_entries(
 ) -> list[FixedAssetEntry]:
     """Parse raw rows into FixedAssetEntry objects using detected columns."""
     entries: list[FixedAssetEntry] = []
-    # Sprint 846 (A4): DD/MM registers read month-first gave every day <= 12
+    # Sprint 855 (A4): DD/MM registers read month-first gave every day <= 12
     # date the wrong month. Decide the order once for the whole column.
     day_first = bool(detection.acquisition_date_column) and infer_day_first(
         row.get(detection.acquisition_date_column) for row in rows
@@ -1445,7 +1445,7 @@ def test_depreciation_recalculation(
     Both are capped at the depreciable base.
 
     ``t`` is measured under two first-year conventions and the closer one
-    is used (Sprint 846, A5): actual days from acquisition, and the
+    is used (Sprint 855, A5): actual days from acquisition, and the
     half-year convention (depreciation from the midpoint of the fiscal year
     of acquisition, fiscal years ending on the reference date's month and
     day). The tolerance absorbs rounding only — mid-quarter and mid-month
@@ -1459,7 +1459,7 @@ def test_depreciation_recalculation(
     from datetime import datetime as _dt
 
     # 5% tolerance — per sprint plan; tighter than typical estimate-based
-    # recalcs (10-15%). Sprint 846 (A5): it does *not* absorb a first-year
+    # recalcs (10-15%). Sprint 855 (A5): it does *not* absorb a first-year
     # convention — half a year on a five-year asset bought late in the year is
     # a 30%+ difference two years on — so the half-year convention is
     # modelled explicitly below instead of being claimed here.
@@ -1481,7 +1481,7 @@ def test_depreciation_recalculation(
         # Sprint 827 (A3): the shared parser. Three hand-listed formats silently
         # skipped every row whose date came from an Excel date cell
         # ("2019-01-01 00:00:00") or was written 2019/01/01 — the test then
-        # reported itself as run with nothing flagged. Sprint 846 (A4): read
+        # reported itself as run with nothing flagged. Sprint 855 (A4): read
         # day-first when the register's date column is DD/MM.
         acq_date = _acquisition_date(e)
         if acq_date is None:
@@ -1683,7 +1683,7 @@ class FixedAssetTestingEngine(AuditEngineBase):
         return detect_fa_columns(column_names)
 
     def parse_data(self, rows: list[dict], detection: Any) -> list:
-        # Sprint 846 (A8): runs after the manual overrides, so a mapped months column is noted too.
+        # Sprint 855 (A8): runs after the manual overrides, so a mapped months column is noted too.
         if life_column_is_months(detection.useful_life_column):
             detection.detection_notes.append(
                 f"Useful life column '{detection.useful_life_column}' is in months; converted to years."

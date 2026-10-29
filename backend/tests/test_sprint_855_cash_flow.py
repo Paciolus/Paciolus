@@ -1,4 +1,4 @@
-"""Sprint 846 — cash flow projector loose ends from the Sprint 823 register (C2, C3, C5, C6)."""
+"""Sprint 855 — cash flow projector loose ends from the Sprint 823 register (C2, C3, C5, C6)."""
 
 from datetime import date, timedelta
 from decimal import Decimal
