@@ -28,6 +28,7 @@ class AdminActionType(str, PyEnum):
     IMPERSONATION_START = "impersonation_start"
     IMPERSONATION_END = "impersonation_end"
     SESSION_REVOKE = "session_revoke"
+    ACCOUNT_ERASED = "account_erased"  # Sprint 844
 
 
 class AdminAuditLog(Base):

@@ -161,7 +161,7 @@ export default function StatisticalSamplingPage() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">ISA 530 / PCAOB AS 2315</span>
+            <span className="text-theme-success-text text-sm font-sans font-medium">References ISA 530 · AS 2315</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Statistical Sampling

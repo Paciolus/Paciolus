@@ -22,9 +22,9 @@ const cardReveal = {
 
 /* ---------- Data ---------- */
 const whatItIs = [
-  'An analytical tool designed for substantive audit procedures',
+  'An analytical tool designed to support auditors’ analytical work',
   'A tool that surfaces analytical exceptions requiring professional evaluation',
-  'A workpaper-ready export system (PDF, Excel, CSV)',
+  'Exports (PDF, Excel, CSV) formatted for your working papers, after your review',
   'Built so uploaded files are processed in memory and not kept after analysis',
 ]
 
@@ -37,8 +37,8 @@ const whatItIsNot = [
 
 const professionalsCards = [
   {
-    title: 'Built with ISA and PCAOB Standards in Mind',
-    description: 'Every workflow reflects how audit teams document substantive analytical procedures.',
+    title: 'Designed Around How Auditors Work',
+    description: 'Designed to support auditors’ analytical work, with references to the standards each test draws on.',
     icon: (
       <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
@@ -55,8 +55,8 @@ const professionalsCards = [
     ),
   },
   {
-    title: 'Workpaper Ready',
-    description: 'PDF memos with signoff lines, Excel exports with full underlying data, and CSV output for downstream analysis.',
+    title: 'Formatted for Your Workpapers',
+    description: 'PDF memos (with optional sign-off lines you complete), Excel exports with the underlying data, and CSV output — for your review before filing.',
     icon: (
       <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -114,7 +114,7 @@ export default function AboutPage() {
         transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' as const }}
       >
         <Blockquote attribution="Paciolus — founding motivation">
-          &ldquo;The moment when you need a defensible answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
+          &ldquo;The moment when you need a well-documented answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
         </Blockquote>
       </motion.section>
 
@@ -271,7 +271,7 @@ export default function AboutPage() {
               },
               {
                 title: 'Standards-Cited Memos',
-                description: 'Every PDF memo cites the governing ISA, PCAOB, IFRS, or ASC standard. Ready to file directly into your working papers.',
+                description: 'Every PDF memo cites the standards its tests draw on, and marks thresholds that are Paciolus conventions. Formatted for your working papers after your review.',
               },
               {
                 title: 'Immediate Results',

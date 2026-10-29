@@ -25,6 +25,7 @@ import {
 } from '@/components/settings/testingConfigFields'
 import { TestingConfigSection } from '@/components/settings/TestingConfigSection'
 import { useSettings } from '@/hooks/useSettings'
+import { testCountFor } from '@/content/tool-ledger'
 import type {
   MaterialityFormula,
   MaterialityFormulaType,
@@ -296,7 +297,7 @@ export default function PracticeSettingsPage() {
           {/* JE Testing Thresholds */}
           <TestingConfigSection
             title="Journal Entry Testing"
-            description="Configure sensitivity thresholds for the 13-test JE testing battery. Presets provide quick configuration for common engagement profiles."
+            description={`Configure sensitivity thresholds for the ${testCountFor('journal_entry_testing')}-test JE testing battery. Presets provide quick configuration for common engagement profiles.`}
             delay={0.15}
             presetLabels={JE_PRESET_LABELS}
             presetDescriptions={JE_PRESET_DESCRIPTIONS}
@@ -313,7 +314,7 @@ export default function PracticeSettingsPage() {
           {/* AP Testing Thresholds */}
           <TestingConfigSection
             title="AP Payment Testing"
-            description="Configure sensitivity thresholds for the 13-test AP payment testing battery. Presets provide quick configuration for common engagement profiles."
+            description={`Configure sensitivity thresholds for the ${testCountFor('ap_testing')}-test AP payment testing battery. Presets provide quick configuration for common engagement profiles.`}
             delay={0.2}
             presetLabels={AP_PRESET_LABELS}
             presetDescriptions={AP_PRESET_DESCRIPTIONS}
@@ -330,7 +331,7 @@ export default function PracticeSettingsPage() {
           {/* Payroll Testing Thresholds */}
           <TestingConfigSection
             title="Payroll &amp; Employee Testing"
-            description="Configure sensitivity thresholds for the 11-test payroll testing battery. Presets provide quick configuration for common engagement profiles."
+            description={`Configure sensitivity thresholds for the ${testCountFor('payroll_testing')}-test payroll testing battery. Presets provide quick configuration for common engagement profiles.`}
             delay={0.25}
             presetLabels={PAYROLL_PRESET_LABELS}
             presetDescriptions={PAYROLL_PRESET_DESCRIPTIONS}

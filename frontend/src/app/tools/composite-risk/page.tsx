@@ -4,7 +4,7 @@
  * Composite Risk Scoring (Sprint 688)
  *
  * ISA 315 (Revised 2019): Auditor-input workflow for inherent/control/fraud
- * risk per account/assertion. Combines auditor inputs via the RMM matrix and
+ * risk per account/assertion. Combines auditor inputs via a Paciolus 4×4 convention and
  * optionally integrates automated diagnostic data (TB anomaly score, tool
  * scores, going concern indicators).
  *
@@ -107,7 +107,7 @@ export default function CompositeRiskPage() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-theme-success-bg border border-theme-success-border mb-4">
               <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
               <span className="text-theme-success-text text-xs font-sans font-medium">
-                ISA 315 (Revised 2019) — Risks of Material Misstatement
+                References ISA 315 (Revised 2019)
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-serif font-bold text-content-primary">
@@ -115,7 +115,7 @@ export default function CompositeRiskPage() {
             </h1>
             <p className="text-sm font-sans text-content-secondary mt-1.5 max-w-3xl">
               Record auditor-assessed inherent and control risk per account/assertion pair.
-              The composite profile combines your judgments via the ISA 315 RMM matrix and
+              The composite profile combines your judgments with a Paciolus 4×4 convention (ISA 315 requires separate inherent and control risk assessments but prescribes no matrix) and
               optionally integrates automated diagnostic data. Auditor inputs drive the
               overall risk tier — this tool structures your judgments, it does not replace them.
             </p>

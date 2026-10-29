@@ -151,13 +151,24 @@ def _resolve_user_id(db: Session, event_data: dict) -> int | None:
     raw_user_id = metadata.get("paciolus_user_id")
     if raw_user_id is not None:
         try:
-            return int(raw_user_id)
+            candidate = int(raw_user_id)
         except (ValueError, TypeError):
+            candidate = None
             logger.warning(
                 "Invalid paciolus_user_id in webhook metadata: %r",
                 raw_user_id,
             )
             # Fall through to customer ID lookup
+        if candidate is not None:
+            # Sprint 844 / PR #237 review: an erased account's subscription
+            # metadata still names its user ID, and Stripe's cancellation
+            # webhook can arrive after the erasure. Treat a user that no longer
+            # exists as unresolvable, so every handler acknowledges the event
+            # instead of failing a foreign key and making Stripe retry.
+            if db.query(User.id).filter(User.id == candidate).first() is None:
+                logger.info("Webhook names a user that no longer exists (erased account); ignoring")
+                return None
+            return candidate
 
     # Try customer ID lookup
     customer_id = event_data.get("customer")

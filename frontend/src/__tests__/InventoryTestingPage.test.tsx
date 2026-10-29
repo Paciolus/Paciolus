@@ -53,7 +53,7 @@ runStandardToolPageScenarios({
   getToolHookMock: () => useInventoryTesting as jest.Mock,
   heroText: 'Inventory Testing',
   uploadPromptPattern: /Upload Inventory Register/,
-  loadingTextPattern: /Running 9-test inventory battery/,
+  loadingTextPattern: /Running 10-test inventory battery/,
   successTestIds: ['inv-score-card', 'inv-test-grid', 'inv-flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },

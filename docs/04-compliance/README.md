@@ -9,8 +9,8 @@
 
 | Document | Version | Effective Date | Owner | Classification | Next Review |
 |----------|---------|----------------|-------|----------------|-------------|
-| [Terms of Service](TERMS_OF_SERVICE.md) | 2.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
-| [Privacy Policy](PRIVACY_POLICY.md) | 2.1 | 2026-02-26 | privacy@paciolus.com | Public | 2026-08-26 |
+| [Terms of Service](TERMS_OF_SERVICE.md) (pointer to paciolus.com/terms) | — | 2026-10-24 | legal@paciolus.com | Legal Agreement | 2026-08-26 |
+| [Privacy Policy](PRIVACY_POLICY.md) (pointer to paciolus.com/privacy) | — | 2026-10-24 | privacy@paciolus.com | Public | 2026-08-26 |
 | [Security Policy](SECURITY_POLICY.md) | 2.6 | 2026-02-26 | Chief Information Security Officer | Public | 2026-05-26 |
 | [Zero-Storage Architecture](ZERO_STORAGE_ARCHITECTURE.md) | 2.1 | 2026-02-26 | Chief Technology Officer | Public | 2026-05-26 |
 | [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) | 1.0 | 2026-02-26 | legal@paciolus.com | Legal Agreement | 2026-08-26 |

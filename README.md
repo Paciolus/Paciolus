@@ -6,7 +6,7 @@ Paciolus is an 18-tool AI-powered audit intelligence suite for financial profess
 
 ## Key Features
 
-- **18 Audit Tools** — Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation and Cash Flow Projector. Canonical list: [`backend/tools_registry.py`](./backend/tools_registry.py)
+- **18 Audit Tools** — Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, 1099 Vendor Threshold Review, Book-to-Tax Reconciliation and Cash Flow Projector. Canonical list: [`backend/tools_registry.py`](./backend/tools_registry.py)
 - **Zero-Storage Architecture** — Your uploaded financial data is never stored. Only aggregate, non-attributable usage metadata is retained
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches
