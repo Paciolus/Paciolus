@@ -625,10 +625,15 @@ The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in
 - [x] L1 test counts derived (`testCountFor()` on six tool pages and practice settings, demo, hero); L3/L7 hero
       animation copy; L4 → "6 Standard-Setters Cited" (pinned to the registry); L5 naming (`main.py`, email footer,
       memo footer; about/approach meta in 841); L10 memo title "(ref. ISA 520)". M12 (CPA advertising) is counsel's.
-- [ ] **Merge gate (2026-10-28 plan):** a banned-phrase test across **every** memo generator ("we conclude", "appears
+- [x] **Merge gate (2026-10-28 plan):** a banned-phrase test across **every** memo generator ("we conclude", "appears
       sound", "satisfactory", a "Conclusion" heading, …), generalising `test_multi_period_memo.py:875-890`, lands in
       #235 **before** it merges. Re-locate H10 by symbol: bank-rec is now near `bank_reconciliation_memo_generator.py:945`
       (the claims review cites `:985`), TWM near `three_way_match_memo_generator.py:109`.
+      **Done 2026-10-29:** `tests/test_memo_banned_phrases.py` scans (1) the rendered text of all 48 memo snapshots
+      (held to live output by `test_memo_render_equivalence.py`) and (2) every non-docstring string literal in every
+      discovered `*memo*.py` generator plus `shared/memo_base.py` / `memo_template.py`. It caught one survivor of M2:
+      sampling's two-sided notes said "The conclusion is a fail if …" → "The result is UEL > TM if …". H10 confirmed:
+      no bank-rec / TWM "satisfactory" remains.
 
 **Commit SHA:** TBD.
 
