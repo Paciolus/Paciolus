@@ -33,8 +33,8 @@ Render MCP). `/health/ready` healthy (database + rate-limit storage).
 
 ## Verification
 
-**Backend tests:** 10,006 passed / 0 failed in the 2026-10-27 nightly; 10,297 collected on `main` 2026-10-28.
-**Frontend tests:** 2,078 passed / 0 failed (2026-10-27 nightly).
+**Backend tests:** 10,297 collected on `main` 2026-10-28; 0 failed in the 2026-10-27 nightly.
+**Frontend tests:** 0 failed in the 2026-10-27 nightly (count in `CLAUDE.md`, Completed Phases).
 
 ## Environment notes
 
