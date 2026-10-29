@@ -1,25 +1,29 @@
-# Backup Integrity Monthly Check — Sprint 457 (S1.5 / CC4.2)
+# Backup Integrity Check — Sprint 457 (S1.5 / CC4.2); rewritten for Neon + R2 in Sprint 778b.
 #
-# Runs on the 1st of every month at 06:00 UTC.
-# Evidence is uploaded as a GitHub Actions artifact (retained 1 year).
-# On failure: creates a GitHub issue with label "dr-failure" for CISO review.
+# Weekly (was monthly): the daily pg_dump job can fail, or be auto-disabled by
+# GitHub after 60 days without repo activity, and a monthly check would let a
+# month of missing backups pass unnoticed. This catches it within a week.
 #
-# Required GitHub Secrets:
-#   RENDER_API_KEY        — Render personal API token (read-only scope)
-#   RENDER_POSTGRES_ID    — PostgreSQL service ID (e.g. "postgres-abc123")
+# Checks (scripts/verify_backup_integrity.py):
+#   r2_latest_backup     newest pg_dump in R2 is complete, < 26h old, sha256 matches manifest
+#   neon_pitr_window     Neon's LIVE history-retention window >= PITR_MIN_DAYS (default 1)
+#   neon_default_branch  production branch state is `ready`
 #
-# Optional GitHub Secrets:
-#   DATABASE_URL_READONLY — Read-only PostgreSQL connection string for DB liveness probe
-#                           (use a dedicated read-only user; do NOT use the main app user)
+# Required secrets (docs/runbooks/backup-restore.md §2):
+#   R2_BACKUPS_ENDPOINT, R2_BACKUPS_BUCKET, R2_BACKUPS_ACCESS_KEY_ID,
+#   R2_BACKUPS_SECRET_ACCESS_KEY, NEON_API_KEY, NEON_PROJECT_ID
+#
+# Exit status = verdict. PASS green; FAIL red; a missing secret is
+# "UNVERIFIED — missing secret X" and also red. A non-PASS verdict opens a
+# `dr-failure` issue, or comments on the one already open.
 
-name: Backup Integrity Check (Monthly)
+name: Backup Integrity Check (Weekly)
 
 on:
   schedule:
-    - cron: "0 6 1 * *"  # 1st of each month, 06:00 UTC
-  workflow_dispatch:       # Manual trigger for first run and ad-hoc checks
+    - cron: "0 6 * * 1"  # Mondays, 06:00 UTC
+  workflow_dispatch:
 
-# Sprint 496: Least-privilege workflow permissions
 permissions:
   contents: read
   issues: write
@@ -28,11 +32,7 @@ jobs:
   backup-integrity:
     name: Backup Integrity Check
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      issues: write   # needed for creating failure issues
-
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
@@ -42,78 +42,81 @@ jobs:
         with:
           python-version: "3.12"
 
+      - run: pip install -q -r scripts/requirements-backup.txt
+
       - name: Run backup integrity check
         id: check
         env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
+          R2_BACKUPS_ENDPOINT: ${{ secrets.R2_BACKUPS_ENDPOINT }}
+          R2_BACKUPS_BUCKET: ${{ secrets.R2_BACKUPS_BUCKET }}
+          R2_BACKUPS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUPS_ACCESS_KEY_ID }}
+          R2_BACKUPS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUPS_SECRET_ACCESS_KEY }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: |
-          python scripts/verify_backup_integrity.py --save
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-        continue-on-error: true
-
-      - name: Determine outcome
-        id: outcome
-        run: |
-          # Re-run without --save to capture stdout for the issue body
-          python scripts/verify_backup_integrity.py > backup-integrity-report.txt 2>/dev/null || true
+          python scripts/verify_backup_integrity.py --save --report backup-integrity-report.txt || true
+          if ! grep -q '^verdict=' "$GITHUB_OUTPUT"; then
+            echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
+          fi
           echo "timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')" >> "$GITHUB_OUTPUT"
           echo "month=$(date -u '+%Y%m')" >> "$GITHUB_OUTPUT"
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
 
       - name: Upload evidence artifact
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
-          name: backup-integrity-${{ steps.outcome.outputs.month }}
+          name: backup-integrity-${{ github.run_id }}
           path: |
-            docs/08-internal/soc2-evidence/s1/backup-integrity-${{ steps.outcome.outputs.month }}.txt
+            docs/08-internal/soc2-evidence/s1/backup-integrity-${{ steps.check.outputs.month }}.txt
             backup-integrity-report.txt
-          retention-days: 365  # 1-year retention for SOC 2 evidence
+          retention-days: 365
+          if-no-files-found: warn
 
-      - name: Create GitHub issue on failure
-        if: steps.check.outcome == 'failure'
+      - name: Open or update the dr-failure issue
+        if: steps.check.outputs.verdict != 'PASS'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # pin: v9.0.0
+        env:
+          VERDICT: ${{ steps.check.outputs.verdict }}
+          MISSING: ${{ steps.check.outputs.missing }}
+          TS: ${{ steps.check.outputs.timestamp }}
         with:
           script: |
             const fs = require('fs');
-            let report = '';
-            try {
-              report = fs.readFileSync('backup-integrity-report.txt', 'utf8').slice(0, 3000);
-            } catch {
-              report = '(report file not available)';
+            let report = '(report file not available)';
+            try { report = fs.readFileSync('backup-integrity-report.txt', 'utf8').slice(0, 6000); } catch {}
+            const verdict = process.env.VERDICT;
+            const missing = process.env.MISSING;
+            const title = `[DR ${verdict}] Backup integrity check` + (missing ? ` — missing secret ${missing.replace(/,/g, ', ')}` : '');
+            const body = `**Verdict:** ${verdict}\n**Timestamp:** ${process.env.TS}\n**Controls:** S1.5 / CC4.2\n\n` +
+              "```\n" + report + "\n```\n\n" +
+              `**Runbook:** \`docs/runbooks/backup-restore.md\`\n**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            // One open issue per distinct title: a weekly UNVERIFIED should not file 52 issues.
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'dr-failure', per_page: 100,
+            });
+            const existing = open.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['dr-failure'],
+              });
             }
 
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `[DR FAILURE] Backup integrity check failed — ${{ steps.outcome.outputs.timestamp }}`,
-              body: `## Backup Integrity Check Failed\n\n` +
-                    `**Timestamp:** ${{ steps.outcome.outputs.timestamp }}\n` +
-                    `**Controls:** S1.5 / CC4.2\n` +
-                    `**Severity:** HIGH — immediate CISO review required\n\n` +
-                    `### Report Output\n\n\`\`\`\n${report}\n\`\`\`\n\n` +
-                    `### Required Actions\n\n` +
-                    `1. Review Render dashboard for PostgreSQL instance health\n` +
-                    `2. Verify backup history in Render dashboard\n` +
-                    `3. Check Render status page for any ongoing incidents\n` +
-                    `4. If backup is confirmed missing/stale: escalate per IRP P1 procedure\n` +
-                    `5. Resolve this issue and add post-mortem notes before closing\n\n` +
-                    `**Runbook:** \`docs/08-internal/backup-integrity-procedure.md\`\n` +
-                    `**IRP:** \`docs/04-compliance/INCIDENT_RESPONSE_PLAN.md\``,
-              labels: ['dr-failure'],
-            });
-
-      - name: Summary
+      - name: Verdict
+        env:
+          VERDICT: ${{ steps.check.outputs.verdict }}
+          MISSING: ${{ steps.check.outputs.missing }}
         run: |
-          if [ "${{ steps.check.outcome }}" = "success" ]; then
-            echo "✅ Backup integrity check PASSED at ${{ steps.outcome.outputs.timestamp }}"
-            echo "Evidence filed: docs/08-internal/soc2-evidence/s1/backup-integrity-${{ steps.outcome.outputs.month }}.txt"
-          else
-            echo "❌ Backup integrity check FAILED at ${{ steps.outcome.outputs.timestamp }}"
-            echo "GitHub issue created for CISO review."
-            exit 1
+          if [ "$VERDICT" = "PASS" ]; then
+            echo "Backup integrity check PASSED"
+            exit 0
           fi
+          if [ "$VERDICT" = "UNVERIFIED" ]; then
+            echo "::error::UNVERIFIED — missing secret ${MISSING//,/, }. Backups were not checked."
+          else
+            echo "::error::Backup integrity check FAILED — see the report artifact and the dr-failure issue."
+          fi
+          exit 1

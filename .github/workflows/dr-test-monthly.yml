@@ -1,229 +1,157 @@
+# DR Test (Monthly) — Sprint 465; rewritten for Neon + R2 in Sprint 778b.
+#
+# Two recovery mechanisms, both checked every month:
+#   1. integrity     — scripts/verify_backup_integrity.py: newest R2 pg_dump is
+#                      complete, < 26h old, and hashes to its manifest; Neon's
+#                      live PITR window (read from the Neon API, not the docs)
+#                      meets the floor; the production branch is ready.
+#   2. restore-drill — backup-restore-drill.yml: restore the newest dump into a
+#                      throwaway Postgres and compare tables, row counts,
+#                      schema fingerprint and alembic revision to the manifest.
+#
+# The previous version queried the Render Postgres API for an instance deleted
+# 2026-04-22. Sprint 778a's honest-verdict rules are kept exactly:
+#   - the job's exit status IS the verdict (PASS green; FAIL and UNVERIFIED red);
+#   - three outcomes, and a missing secret is UNVERIFIED with the secret named,
+#     never an opaque error or a database-outage-sounding FAIL;
+#   - a skipped or crashed check counts as UNVERIFIED/FAIL, never PASS;
+#   - a non-PASS verdict files a `dr-failure` issue with the verdict in the title.
+#
+# Secrets: R2_BACKUPS_ENDPOINT, R2_BACKUPS_BUCKET, R2_BACKUPS_ACCESS_KEY_ID,
+#          R2_BACKUPS_SECRET_ACCESS_KEY, NEON_API_KEY, NEON_PROJECT_ID
+# Runbook: docs/runbooks/backup-restore.md
+
 name: DR Test (Monthly)
 
 on:
   schedule:
-    - cron: '0 6 1 * *'  # 1st of each month, 6am UTC
-  workflow_dispatch:  # Manual trigger
+    - cron: '0 6 1 * *'  # 1st of each month, 06:00 UTC
+  workflow_dispatch:
 
 permissions:
   contents: read
   issues: write
 
-env:
-  RENDER_API_BASE: https://api.render.com/v1
-
 jobs:
-  dr-test:
+  integrity:
+    name: Backup + PITR integrity
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    outputs:
+      verdict: ${{ steps.check.outputs.verdict }}
+      missing: ${{ steps.check.outputs.missing }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # pin: v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r scripts/requirements-backup.txt
+      - name: Run integrity checks
+        id: check
+        env:
+          R2_BACKUPS_ENDPOINT: ${{ secrets.R2_BACKUPS_ENDPOINT }}
+          R2_BACKUPS_BUCKET: ${{ secrets.R2_BACKUPS_BUCKET }}
+          R2_BACKUPS_ACCESS_KEY_ID: ${{ secrets.R2_BACKUPS_ACCESS_KEY_ID }}
+          R2_BACKUPS_SECRET_ACCESS_KEY: ${{ secrets.R2_BACKUPS_SECRET_ACCESS_KEY }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        # The script writes verdict= to GITHUB_OUTPUT before exiting; its exit
+        # code is mapped by the verdict job, so this step must not stop the job.
+        run: |
+          python scripts/verify_backup_integrity.py --report integrity-report.txt || true
+          if ! grep -q '^verdict=' "$GITHUB_OUTPUT"; then
+            echo "verdict=FAIL" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
+        if: always()
+        with:
+          name: dr-integrity-${{ github.run_id }}
+          path: integrity-report.txt
+          retention-days: 365
+          if-no-files-found: warn
+
+  restore-drill:
+    name: Restore drill
+    uses: ./.github/workflows/backup-restore-drill.yml
+    secrets: inherit
+
+  verdict:
+    name: DR verdict
+    needs: [integrity, restore-drill]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
 
-      - name: Set timestamp
-        id: ts
-        run: echo "stamp=$(date -u +%Y%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # pin: v8.0.2
+        with:
+          pattern: '*-${{ github.run_id }}'
+          merge-multiple: true
+        continue-on-error: true
 
-      - name: Check Render PostgreSQL status
-        id: render-check
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
-        run: |
-          echo "## Render PostgreSQL Status Check" > report.md
-          echo "" >> report.md
-          echo "**Date:** $(date -u +%Y-%m-%d)" >> report.md
-          echo "**Instance:** $RENDER_POSTGRES_ID" >> report.md
-          echo "" >> report.md
-
-          # Sprint 778: three outcomes, not two. A missing credential is not
-          # an outage, and this check cannot pass as written regardless —
-          # production Postgres moved to Neon in Phase 1 and the orphan Render
-          # instance was deleted on 2026-04-22. Saying "status: api_error
-          # (expected: available)" reads as a database problem when the real
-          # problem is that the check interrogates a database that no longer
-          # exists. Rewriting it against Neon is Sprint 778 scope item 4 and
-          # needs the connection string (CEO ask D-1).
-          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_POSTGRES_ID" ]; then
-            echo "result=UNVERIFIED" >> "$GITHUB_OUTPUT"
-            echo "**Instance Status:** not checked — credentials unset" >> report.md
-            echo "" >> report.md
-            echo "⚠️ \`RENDER_API_KEY\` / \`RENDER_POSTGRES_ID\` are unset, so this check did not run." >> report.md
-            echo "" >> report.md
-            echo "> Note: this check targets the **Render** Postgres API. Production runs on" >> report.md
-            echo "> **Neon**, and the orphan Render instance was deleted on 2026-04-22, so this" >> report.md
-            echo "> check cannot pass even with credentials. Rewriting it against Neon is" >> report.md
-            echo "> Sprint 778 scope item 4." >> report.md
-          else
-            STATUS=$(curl -sf -H "Authorization: Bearer $RENDER_API_KEY" \
-              "$RENDER_API_BASE/postgres/$RENDER_POSTGRES_ID" \
-              | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','unknown'))" 2>/dev/null || echo "api_error")
-
-            echo "**Instance Status:** $STATUS" >> report.md
-            echo "" >> report.md
-
-            if [ "$STATUS" = "available" ]; then
-              echo "result=PASS" >> "$GITHUB_OUTPUT"
-              echo "✅ Instance is available and responsive." >> report.md
-            elif [ "$STATUS" = "api_error" ]; then
-              echo "result=UNVERIFIED" >> "$GITHUB_OUTPUT"
-              echo "⚠️ Render API did not answer. Expected while this check still points at a" >> report.md
-              echo "deleted Render instance — see Sprint 778 scope item 4." >> report.md
-            else
-              echo "result=FAIL" >> "$GITHUB_OUTPUT"
-              echo "❌ Instance status: $STATUS (expected: available)" >> report.md
-            fi
-          fi
-
-      - name: Check backup availability
-        id: backup-check
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_POSTGRES_ID: ${{ secrets.RENDER_POSTGRES_ID }}
-        run: |
-          echo "" >> report.md
-          echo "## Backup Availability" >> report.md
-          echo "" >> report.md
-
-          if [ -z "$RENDER_API_KEY" ] || [ -z "$RENDER_POSTGRES_ID" ]; then
-            echo "⚠️ Credentials unset — backup availability not checked." >> report.md
-            echo "" >> report.md
-            echo "> The off-provider \`pg_dump\` → R2 backup does not exist yet (Phase 4.4 was" >> report.md
-            echo "> never implemented), so Neon PITR is the only thing behind production data." >> report.md
-            echo "> Building it is Sprint 778 scope item 1." >> report.md
-            echo "backup_available=UNVERIFIED" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          BACKUP_RESP=$(curl -sf -w "\n%{http_code}" -H "Authorization: Bearer $RENDER_API_KEY" \
-            "$RENDER_API_BASE/postgres/$RENDER_POSTGRES_ID/backup" 2>/dev/null || echo -e "\n000")
-
-          HTTP_CODE=$(echo "$BACKUP_RESP" | tail -1)
-
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Backup metadata retrieved successfully." >> report.md
-            echo "backup_available=true" >> "$GITHUB_OUTPUT"
-          elif [ "$HTTP_CODE" = "404" ]; then
-            echo "⚠️ Backup endpoint returned 404 — Render may not expose backup API." >> report.md
-            echo "Compensating control: WAL archiving verified via pg_stat_archiver." >> report.md
-            echo "backup_available=compensating" >> "$GITHUB_OUTPUT"
-          else
-            echo "❌ Backup check failed (HTTP $HTTP_CODE)." >> report.md
-            echo "backup_available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: DB liveness probe
-        id: db-probe
-        # Sprint 778: the previous `if: env.DATABASE_URL_READONLY != ''` read the
-        # job env context, where this variable is never defined — it is set in
-        # this step's own `env:` below. The condition was always false, so this
-        # probe had never run once. The empty case is handled in the script.
-        env:
-          DATABASE_URL_READONLY: ${{ secrets.DATABASE_URL_READONLY }}
-        run: |
-          echo "" >> report.md
-          echo "## Database Liveness Probe" >> report.md
-          echo "" >> report.md
-
-          if [ -z "$DATABASE_URL_READONLY" ]; then
-            echo "⚠️ \`DATABASE_URL_READONLY\` is unset — liveness probe not run." >> report.md
-            echo "probe=UNVERIFIED" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          pip install -q psycopg2-binary 2>/dev/null
-
-          python3 -c "
-          import psycopg2, os, json
-          conn = psycopg2.connect(os.environ['DATABASE_URL_READONLY'])
-          cur = conn.cursor()
-
-          # Row counts for key tables
-          tables = ['users', 'clients', 'subscriptions', 'activity_logs']
-          counts = {}
-          for t in tables:
-              cur.execute(f'SELECT COUNT(*) FROM {t}')
-              counts[t] = cur.fetchone()[0]
-
-          # WAL archiver status
-          cur.execute('SELECT * FROM pg_stat_archiver')
-          archiver = cur.fetchone()
-
-          conn.close()
-
-          print(json.dumps({'counts': counts, 'archiver_last_archived': str(archiver[1]) if archiver else 'N/A'}))
-          " > probe_result.json 2>/dev/null
-          PROBE_STATUS=$?
-
-          # Sprint 778a (PR #187 review): branch on the command's exit status and
-          # a NON-EMPTY result, not on the file existing. Shell redirection
-          # creates probe_result.json before python starts, so a failed probe
-          # leaves an empty file behind — the old `[ -f ... ]` check then wrote
-          # "✅ Database responded" into the same report that carried probe=FAIL.
-          # One branch now decides both the output and the report line, so they
-          # cannot disagree.
-          if [ "$PROBE_STATUS" -eq 0 ] && [ -s probe_result.json ]; then
-            echo "probe=PASS" >> "$GITHUB_OUTPUT"
-            echo "✅ Database responded to probe." >> report.md
-            echo '```json' >> report.md
-            cat probe_result.json >> report.md
-            echo '```' >> report.md
-          else
-            echo "probe=FAIL" >> "$GITHUB_OUTPUT"
-            echo "❌ Database probe failed (exit $PROBE_STATUS)." >> report.md
-          fi
-
-      - name: Generate final report
+      - name: Combine verdicts
         id: final
+        env:
+          INTEGRITY: ${{ needs.integrity.outputs.verdict }}
+          MISSING: ${{ needs.integrity.outputs.missing }}
+          DRILL: ${{ needs.restore-drill.outputs.verdict }}
+          DRILL_DETAIL: ${{ needs.restore-drill.outputs.detail }}
         run: |
-          echo "" >> report.md
-          echo "---" >> report.md
-          echo "" >> report.md
-
-          RENDER_RESULT="${{ steps.render-check.outputs.result }}"
-          BACKUP_RESULT="${{ steps.backup-check.outputs.backup_available }}"
-          PROBE_RESULT="${{ steps.db-probe.outputs.probe }}"
-
-          echo "| Check | Result |" >> report.md
-          echo "|-------|--------|" >> report.md
-          echo "| Render Postgres status | ${RENDER_RESULT:-UNVERIFIED} |" >> report.md
-          echo "| Backup availability | ${BACKUP_RESULT:-UNVERIFIED} |" >> report.md
-          echo "| DB liveness probe | ${PROBE_RESULT:-UNVERIFIED} |" >> report.md
-          echo "" >> report.md
-
-          # Sprint 778: the verdict used to read all three of these and branch on
-          # RENDER_RESULT alone, so a failed backup check or a dead database could
-          # not affect the outcome. All three now count. An empty value means the
-          # step was skipped, which is UNVERIFIED rather than a pass.
+          # Empty = the job was skipped or crashed before reporting: never a pass.
+          INTEGRITY="${INTEGRITY:-UNVERIFIED}"
+          DRILL="${DRILL:-UNVERIFIED}"
           OVERALL=PASS
-          for R in "${RENDER_RESULT:-UNVERIFIED}" "${BACKUP_RESULT:-UNVERIFIED}" "${PROBE_RESULT:-UNVERIFIED}"; do
+          for R in "$INTEGRITY" "$DRILL"; do
             case "$R" in
-              PASS|true|compensating) ;;
-              FAIL|false)             OVERALL=FAIL ;;
-              *)                      [ "$OVERALL" = "FAIL" ] || OVERALL=UNVERIFIED ;;
+              PASS) ;;
+              FAIL) OVERALL=FAIL ;;
+              *)    [ "$OVERALL" = "FAIL" ] || OVERALL=UNVERIFIED ;;
             esac
           done
 
-          if [ "$OVERALL" = "PASS" ]; then
-            echo "## Overall: ✅ PASS" >> report.md
-          elif [ "$OVERALL" = "FAIL" ]; then
-            echo "## Overall: ❌ FAIL" >> report.md
-          else
-            echo "## Overall: ⚠️ UNVERIFIED" >> report.md
-            echo "" >> report.md
-            echo "Nothing is known to be broken — and nothing has been verified either." >> report.md
-            echo "An unverified disaster-recovery posture is not a passing one, so this run" >> report.md
-            echo "is reported as a failure until Sprint 778 lands the backup and the Neon" >> report.md
-            echo "rewrite." >> report.md
-          fi
+          {
+            echo "## DR Test — $(date -u +%Y-%m-%d)"
+            echo ""
+            echo "| Check | Result |"
+            echo "|-------|--------|"
+            echo "| Backup + PITR integrity (R2 freshness/sha256, Neon PITR window, Neon branch) | $INTEGRITY |"
+            echo "| Restore drill (R2 dump → scratch Postgres, parity vs manifest) | $DRILL |"
+            echo ""
+            if [ -n "$MISSING" ]; then
+              echo "**UNVERIFIED — missing secret ${MISSING//,/, }**"
+              echo ""
+            fi
+            if [ -n "$DRILL_DETAIL" ]; then
+              echo "Restore drill: $DRILL_DETAIL"
+              echo ""
+            fi
+            case "$OVERALL" in
+              PASS) echo "## Overall: ✅ PASS" ;;
+              FAIL) echo "## Overall: ❌ FAIL" ;;
+              *)    echo "## Overall: ⚠️ UNVERIFIED"
+                    echo ""
+                    echo "Nothing is known to be broken — and nothing has been verified either."
+                    echo "An unverified disaster-recovery posture is not a passing one, so this"
+                    echo "run is reported as a failure. See docs/runbooks/backup-restore.md §2." ;;
+            esac
+            echo ""
+            for f in integrity-report.txt drill-report.md; do
+              if [ -s "$f" ]; then
+                echo "<details><summary>$f</summary>"; echo ""; echo '```'; cat "$f"; echo '```'; echo "</details>"
+              fi
+            done
+            echo ""
+            echo "*Generated by DR Test workflow — Sprint 465 / 778b*"
+          } > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
           echo "overall=$OVERALL" >> "$GITHUB_OUTPUT"
-
-          echo "" >> report.md
-          echo "*Generated by DR Test workflow — Sprint 465*" >> report.md
+          echo "stamp=$(date -u +%Y%m)" >> "$GITHUB_OUTPUT"
 
       - name: Upload report artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # pin: v7.0.2
         with:
-          name: dr-test-${{ steps.ts.outputs.stamp }}
+          name: dr-test-${{ steps.final.outputs.stamp }}
           path: report.md
           retention-days: 365
 
@@ -235,7 +163,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('report.md', 'utf8');
+            const report = fs.readFileSync('report.md', 'utf8').slice(0, 60000);
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -244,128 +172,12 @@ jobs:
               labels: ['dr-failure']
             });
 
-      # Sprint 778: THE false-green fix. `overall` previously only gated the
-      # issue above, so the job exited 0 no matter what its own report said —
-      # three consecutive scheduled runs (2026-07-01, 08-01, 09-01) reported
-      # workflow success while the render check resolved to FAIL. A verdict that
-      # cannot fail the job is a comment, not a check.
+      # Sprint 778a: THE false-green fix, kept. A verdict that cannot fail the
+      # job is a comment, not a check.
       - name: Fail the job when the verdict is not PASS
         if: steps.final.outputs.overall != 'PASS'
+        env:
+          OVERALL: ${{ steps.final.outputs.overall }}
         run: |
-          echo "::error::DR Test verdict: ${{ steps.final.outputs.overall }} — see the report artifact and the filed issue."
+          echo "::error::DR Test verdict: $OVERALL — see the report artifact and the filed issue."
           exit 1
-
-  # MANUAL TRIGGER ONLY: This job provisions an isolated Postgres instance
-  # and executes a real pg_restore. It is intentionally excluded from the
-  # scheduled monthly run to control cost. Trigger via workflow_dispatch
-  # at minimum once per quarter, or after any major infrastructure change.
-  restore-validation:
-    name: Restore Validation (Manual Only)
-    runs-on: ubuntu-latest
-    needs: dr-test
-    # `always()` is load-bearing (Sprint 778a, PR #187 review). `needs:` implies
-    # the prerequisite succeeded, so once dr-test started failing on a non-PASS
-    # verdict this job silently stopped running — and the verdict is expected to
-    # be UNVERIFIED until 778b lands the Neon rewrite. That would have made the
-    # manual restore drill unrunnable precisely while it is most needed: an
-    # untested backup is not a backup, and the drill is the half of the risk a
-    # second backup mechanism does not address.
-    #
-    # The drill does not depend on dr-test's verdict — it provisions its own
-    # isolated instance and runs its own pg_restore — so gating it on that
-    # verdict was never meaningful, only accidental.
-    if: always() && github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
-
-      - name: Provision isolated PostgreSQL target
-        run: |
-          docker run -d \
-            --name dr-restore \
-            -e POSTGRES_PASSWORD=drtest \
-            -p 54329:5432 \
-            postgres:17
-          # Wait for the instance to be ready
-          for i in {1..15}; do
-            pg_isready -h localhost -p 54329 -U postgres && break
-            sleep 2
-          done
-
-      - name: Download latest backup artifact
-        env:
-          BACKUP_URL: ${{ secrets.RESTORE_TEST_BACKUP_URL }}
-        run: |
-          if [ -z "$BACKUP_URL" ]; then
-            echo "RESTORE_TEST_BACKUP_URL secret is not set. Cannot proceed."
-            exit 1
-          fi
-          curl -fsSL "$BACKUP_URL" -o backup.dump
-          echo "Backup downloaded: $(du -sh backup.dump | cut -f1)"
-
-      - name: Restore backup into isolated target
-        run: |
-          pg_restore \
-            --clean \
-            --if-exists \
-            --no-owner \
-            --no-privileges \
-            --dbname postgresql://postgres:drtest@localhost:54329/postgres \
-            backup.dump
-          echo "pg_restore completed."
-
-      - name: Validate schema integrity
-        run: |
-          psql postgresql://postgres:drtest@localhost:54329/postgres \
-            -c "\dt" | grep -E "users|clients|subscriptions|activity_logs|engagements"
-          echo "Schema validation passed."
-
-      - name: Validate key table row counts
-        run: |
-          psql postgresql://postgres:drtest@localhost:54329/postgres \
-            -c "SELECT 'users' AS tbl, COUNT(*) FROM users
-                UNION ALL
-                SELECT 'clients', COUNT(*) FROM clients
-                UNION ALL
-                SELECT 'subscriptions', COUNT(*) FROM subscriptions;"
-
-      - name: Run Alembic migration check against restored DB
-        env:
-          DATABASE_URL: postgresql://postgres:drtest@localhost:54329/postgres?sslmode=disable
-        run: |
-          cd backend
-          pip install -r requirements.txt -q
-          alembic current
-          echo "Migration check passed."
-
-      - name: Backend smoke check against restored DB
-        env:
-          DATABASE_URL: postgresql://postgres:drtest@localhost:54329/postgres?sslmode=disable
-          JWT_SECRET_KEY: dr-test-key-not-for-production
-          CSRF_SECRET_KEY: dr-test-csrf-not-for-production
-          ENV_MODE: test
-        run: |
-          cd backend
-          python -c "
-          from sqlalchemy import create_engine, text
-          import os
-          # Sprint 786b: pin psycopg2 — SQLAlchemy 2.1 defaults postgresql:// to psycopg 3.
-          from db_url import normalize_database_url
-          engine = create_engine(normalize_database_url(os.environ['DATABASE_URL']))
-          with engine.connect() as conn:
-              result = conn.execute(text('SELECT COUNT(*) FROM users'))
-              count = result.scalar()
-              print(f'Backend DB connection OK — {count} users in restored DB')
-          "
-
-      - name: Record restore test result
-        if: always()
-        run: |
-          echo "## Restore Validation Result" >> $GITHUB_STEP_SUMMARY
-          echo "- **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Backup source:** RESTORE_TEST_BACKUP_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **Job status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Tear down isolated instance
-        if: always()
-        run: docker rm -f dr-restore || true
