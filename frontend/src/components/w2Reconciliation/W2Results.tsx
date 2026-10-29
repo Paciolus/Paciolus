@@ -45,6 +45,13 @@ interface Props {
 export function W2Results({ result }: Props) {
   const { employee_discrepancies, form_941_mismatches, w3_totals, tax_year } = result
   const checksNotRun = result.checks_not_run ?? []
+  const catchUpNotRun = checksNotRun.some(
+    (n) => n.reason === 'limit_not_supplied' || n.reason === 'age_not_supplied',
+  )
+  // Sprint 855 (W8): payroll employees, not W-2 drafts — with no drafts the
+  // draft count was 0 and read as an empty company.
+  const payrollCount = result.summary.employee_count
+  const employeeCount = typeof payrollCount === 'number' ? payrollCount : (w3_totals?.employee_count ?? 0)
 
   return (
     <div className="space-y-6">
@@ -59,8 +66,9 @@ export function W2Results({ result }: Props) {
             <span className="font-sans text-sm text-content-tertiary">({checksNotRun.length})</span>
           </h3>
           <p className="font-sans text-xs text-content-tertiary mb-4">
-            These catch-up checks could not be completed for this run. Amounts above the base
-            limit are still listed below, but are not asserted as excess contributions.
+            These checks could not be completed for this run.
+            {catchUpNotRun &&
+              ' Amounts above a base contribution limit are still listed below, but are not asserted as excess contributions.'}
           </p>
           <ul className="space-y-3">
             {checksNotRun.map((n) => (
@@ -79,7 +87,7 @@ export function W2Results({ result }: Props) {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Counter label="Tax year" value={tax_year} />
-        <Counter label="Employees" value={w3_totals.employee_count} />
+        <Counter label="Employees" value={employeeCount} />
         <Counter
           label="Employee discrepancies"
           value={employee_discrepancies.length}
@@ -94,14 +102,20 @@ export function W2Results({ result }: Props) {
 
       <section className="theme-card p-6">
         <h3 className="font-serif text-lg text-content-primary mb-4">W-3 Totals</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-sans">
-          <Stat label="Federal wages" value={formatAmount(w3_totals.total_federal_wages)} />
-          <Stat label="Federal withholding" value={formatAmount(w3_totals.total_federal_withholding)} />
-          <Stat label="SS wages" value={formatAmount(w3_totals.total_ss_wages)} />
-          <Stat label="SS tax withheld" value={formatAmount(w3_totals.total_ss_tax_withheld)} />
-          <Stat label="Medicare wages" value={formatAmount(w3_totals.total_medicare_wages)} />
-          <Stat label="Medicare tax withheld" value={formatAmount(w3_totals.total_medicare_tax_withheld)} />
-        </div>
+        {w3_totals === null ? (
+          <p className="font-sans text-sm text-content-tertiary">
+            No draft W-2s supplied &mdash; there is no W-3 to total.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-sans">
+            <Stat label="Federal wages" value={formatAmount(w3_totals.total_federal_wages)} />
+            <Stat label="Federal withholding" value={formatAmount(w3_totals.total_federal_withholding)} />
+            <Stat label="SS wages" value={formatAmount(w3_totals.total_ss_wages)} />
+            <Stat label="SS tax withheld" value={formatAmount(w3_totals.total_ss_tax_withheld)} />
+            <Stat label="Medicare wages" value={formatAmount(w3_totals.total_medicare_wages)} />
+            <Stat label="Medicare tax withheld" value={formatAmount(w3_totals.total_medicare_tax_withheld)} />
+          </div>
+        )}
       </section>
 
       <section className="theme-card p-6">
@@ -145,16 +159,19 @@ export function W2Results({ result }: Props) {
         </h3>
         {form_941_mismatches.length === 0 ? (
           <p className="font-sans text-sm text-content-tertiary">
-            No quarterly or YTD mismatches against Form 941 totals.
+            No mismatches between the Form 941 totals and payroll YTD or the W-3.
           </p>
         ) : (
           <ul className="space-y-3">
             {form_941_mismatches.map((m, i) => (
-              <li key={`${m.quarter ?? 'ytd'}-${m.kind}-${i}`} className="border border-theme rounded-lg p-4">
+              <li key={`${m.quarter ?? m.compared_with ?? 'ytd'}-${m.kind}-${i}`} className="border border-theme rounded-lg p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                   <div>
                     <div className="font-serif text-content-primary">
-                      {m.quarter === null ? 'YTD' : `Q${m.quarter}`} &mdash; {m.kind}
+                      {m.quarter === null
+                        ? `4-quarter total vs ${m.compared_with === 'w3' ? 'W-3' : 'payroll YTD'}`
+                        : `Q${m.quarter}`}{' '}
+                      &mdash; {m.kind}
                     </div>
                   </div>
                   <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-sans font-medium border ${SEVERITY_STYLES[m.severity]}`}>

@@ -40,12 +40,16 @@ export interface W2DraftRequest {
   box_12_code_s_simple: string
 }
 
+/**
+ * Sprint 855 (W4): an omitted figure is "not supplied" and is not compared —
+ * a 941 file without a column must not send zeros for it.
+ */
 export interface Form941QuarterRequest {
   quarter: number
-  total_federal_wages: string
-  total_federal_withholding: string
-  total_ss_wages: string
-  total_medicare_wages: string
+  total_federal_wages?: string
+  total_federal_withholding?: string
+  total_ss_wages?: string
+  total_medicare_wages?: string
 }
 
 export interface W2ReconciliationRequest {
@@ -69,6 +73,8 @@ export interface W2Discrepancy {
 
 export interface Form941Mismatch {
   quarter: number | null
+  /** Sprint 855 (W4): what the four-quarter 941 sum was compared with. */
+  compared_with?: 'payroll_ytd' | 'w3'
   kind: string
   severity: DiscrepancySeverity
   expected: string
@@ -92,10 +98,17 @@ export interface W3Totals {
  * figure was not supplied for the tax year, or the data has no age for the
  * employees it would apply to. The message names the authority (e.g.
  * IRC §223(b)(3), IRC §414(v)) whose figure was missing.
+ *
+ * Sprint 855 (W4/W9): also the Form 941 annual tie-out, when a quarter is
+ * missing or duplicated, or a 941 figure was not supplied for every quarter.
  */
 export interface W2CheckNotRun {
   check: string
-  reason: 'limit_not_supplied' | 'age_not_supplied'
+  reason:
+    | 'limit_not_supplied'
+    | 'age_not_supplied'
+    | 'form_941_quarters_incomplete'
+    | 'form_941_field_not_supplied'
   employee_ids: string[]
   message: string
 }
@@ -104,7 +117,8 @@ export interface W2ReconciliationResponse {
   tax_year: number
   employee_discrepancies: W2Discrepancy[]
   form_941_mismatches: Form941Mismatch[]
-  w3_totals: W3Totals
+  /** Sprint 855 (W8): null when no draft W-2s were supplied — there is no W-3. */
+  w3_totals: W3Totals | null
   summary: Record<string, unknown>
   statutory_basis?: number | null
   statutory_basis_source?: string | null

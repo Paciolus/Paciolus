@@ -126,7 +126,7 @@ const TOOL_ENTRIES: { id: string; label: string; href: string; toolName: string;
   { id: 'tool:sod-checker', label: 'Segregation of Duties', href: '/tools/sod', toolName: 'sod_checker', keywords: ['sod', 'segregation', 'duties', 'fraud', 'compliance', 'aicpa', 'soc1', 'coso'] },
   { id: 'tool:intercompany', label: 'Intercompany Elimination', href: '/tools/intercompany', toolName: 'intercompany_elimination', keywords: ['intercompany', 'elimination', 'consolidation', 'asc810', 'ifrs10', 'isa600', 'multi-entity', 'group'] },
   { id: 'tool:w2-reconciliation', label: 'W-2 / W-3 Reconciliation', href: '/tools/w2-reconciliation', toolName: 'w2_reconciliation', keywords: ['w2', 'w3', '941', 'payroll', 'reconciliation', 'form', 'ssa', 'irs'] },
-  { id: 'tool:form-1099', label: 'Form 1099 Preparation', href: '/tools/form-1099', toolName: 'form_1099', keywords: ['1099', 'nec', 'misc', 'int', 'vendor', 'w9', 'tin', 'irs'] },
+  { id: 'tool:form-1099', label: '1099 Vendor Threshold Review', href: '/tools/form-1099', toolName: 'form_1099', keywords: ['1099', 'nec', 'misc', 'int', 'vendor', 'w9', 'tin', 'irs'] },
   { id: 'tool:book-to-tax', label: 'Book-to-Tax Reconciliation', href: '/tools/book-to-tax', toolName: 'book_to_tax', keywords: ['book', 'tax', 'm1', 'm3', 'schedule', 'asc740', 'deferred', 'provision', '1120'] },
   { id: 'tool:cash-flow-projector', label: 'Cash Flow Projector', href: '/tools/cash-flow-projector', toolName: 'cash_flow_projector', keywords: ['cash', 'flow', 'projection', 'forecast', 'liquidity', 'runway', '90day'] },
 ]

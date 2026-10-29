@@ -274,3 +274,56 @@ class TestSerialisation:
                 "summary",
             }
         )
+
+
+class TestNegativeAmounts:
+    """Sprint 855 (I5): a negative debit is a credit, and a negative credit is a debit.
+
+    The net balance was always right (``debit - credit``), so matching worked. The
+    worksheet sums the debit and credit columns separately, though, so a payable
+    keyed as ``debit = -10,000`` understated both of that entity's column totals.
+    """
+
+    def _subsidiary_with_negative_debit_payable(self) -> EntityTrialBalance:
+        return EntityTrialBalance(
+            entity_id="subsidiary",
+            entity_name="Subsidiary Beta",
+            accounts=[
+                EntityAccount(account="1000 Cash", debit=Decimal("20000")),
+                EntityAccount(
+                    account="2500 Due to Parent",
+                    debit=Decimal("-10000"),
+                    counterparty_entity="parent",
+                ),
+                EntityAccount(account="3000 Equity", credit=Decimal("10000")),
+            ],
+        )
+
+    def test_negative_debit_moves_to_credit(self):
+        account = EntityAccount(account="2500 Due to Parent", debit=Decimal("-10000"))
+        assert account.debit == Decimal("0")
+        assert account.credit == Decimal("10000")
+
+    def test_negative_credit_moves_to_debit(self):
+        account = EntityAccount(account="1500 Due from Sub", credit=Decimal("-250.50"))
+        assert account.debit == Decimal("250.50")
+        assert account.credit == Decimal("0")
+
+    def test_net_balance_is_preserved_when_both_sides_are_present(self):
+        account = EntityAccount(account="Due to Parent", debit=Decimal("-100"), credit=Decimal("50"))
+        assert account.debit == Decimal("0")
+        assert account.credit == Decimal("150")
+
+    def test_worksheet_columns_match_the_positive_presentation(self):
+        negative = run_intercompany_elimination(
+            IntercompanyConfig(entities=[_parent_with_receivable(), self._subsidiary_with_negative_debit_payable()])
+        )
+        positive = run_intercompany_elimination(
+            IntercompanyConfig(entities=[_parent_with_receivable(), _subsidiary_with_payable()])
+        )
+        assert negative.worksheet.to_dict() == positive.worksheet.to_dict()
+        sub = {c.entity_id: c for c in negative.worksheet.columns}["subsidiary"]
+        assert sub.debit_total == Decimal("20000.00")
+        assert sub.credit_total == Decimal("20000.00")
+        assert len(negative.pairs) == 1
+        assert negative.pairs[0].reconciles is True

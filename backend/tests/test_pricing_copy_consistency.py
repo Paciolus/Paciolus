@@ -121,3 +121,23 @@ def test_retired_billing_claims_stay_retired():
         text = (REPO / rel).read_text(encoding="utf-8").lower()
         hits += [f"{rel}: {p!r}" for p in RETIRED_BILLING_CLAIMS if p in text]
     assert not hits, hits
+
+
+def test_standard_setter_count_matches_the_registry():
+    """BottomProof shows the number of standard-setters cited (Sprint 843)."""
+    import standards_registry
+
+    setter = {
+        "ISA": "IAASB",
+        "PCAOB": "PCAOB",
+        "AICPA": "AICPA",
+        "ASC": "FASB",
+        "IFRS": "IASB",
+        "IAS": "IASB",
+        "IRS": "IRS",
+    }
+    bodies = {setter[s.body] for s in standards_registry.STANDARDS if s.body in setter}
+    source = (REPO / "frontend/src/components/marketing/BottomProof.tsx").read_text(encoding="utf-8")
+    assert f"target: {len(bodies)}," in source
+    for name in bodies:
+        assert name in source

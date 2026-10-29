@@ -14,10 +14,10 @@ Paciolus is a diagnostic intelligence platform for financial professionals. Eigh
 
 **What makes Paciolus different:**
 - **Uploads not kept:** Uploaded files are processed in memory and not kept after analysis. Paciolus saves your account, client list, analysis summaries and anything you enter in an engagement — Section 22 lists exactly what.
-- **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
+- **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, 1099 Vendor Threshold Review, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
   - Sections 3–20 below walk through all eighteen in detail, one chapter each.
 - **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
-- **Professional Reports:** Client-ready PDF memos, Excel workpapers, and CSV exports with workpaper signoff
+- **Reports for your review:** PDF memos (with optional sign-off lines you complete), Excel workpapers and CSV exports
 
 **Need help?** Email help@paciolus.com or visit our [Help Center](#)
 
@@ -42,11 +42,11 @@ Paciolus is a diagnostic intelligence platform for financial professionals. Eigh
 15. [Tool 13: Segregation of Duties](#15-tool-13-segregation-of-duties)
 16. [Tool 14: Intercompany Elimination](#16-tool-14-intercompany-elimination)
 17. [Tool 15: W-2 / W-3 Reconciliation](#17-tool-15-w-2--w-3-reconciliation)
-18. [Tool 16: Form 1099 Preparation](#18-tool-16-form-1099-preparation)
+18. [Tool 16: 1099 Vendor Threshold Review](#18-tool-16-1099-vendor-threshold-review)
 19. [Tool 17: Book-to-Tax Reconciliation](#19-tool-17-book-to-tax-reconciliation)
 20. [Tool 18: Cash Flow Projector](#20-tool-18-cash-flow-projector)
 21. [Billing & Plans](#21-billing--plans)
-22. [Data Handling Guarantees](#22-data-handling-guarantees)
+22. [Data Handling Commitments](#22-data-handling-commitments)
 23. [Engagement Workspaces](#23-engagement-workspaces)
 24. [Managing Clients](#24-managing-clients)
 25. [Exports & Reports](#25-exports--reports)
@@ -79,7 +79,7 @@ All diagnostic tools require a verified email address. Without verification, you
 
 ### 1.3 Navigating the Platform
 
-The tool navigation bar appears at the top of every tool page. Six tools are shown inline and the rest sit under the "More" dropdown. The navigation bar carries the twelve core diagnostic and testing tools; the full catalogue of eighteen — including Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, Form 1099 Preparation, Book-to-Tax Reconciliation and the Cash Flow Projector — is on the Tools index page and in the command palette (Cmd+K).
+The tool navigation bar appears at the top of every tool page. Six tools are shown inline and the rest sit under the "More" dropdown. The navigation bar carries the twelve core diagnostic and testing tools; the full catalogue of eighteen — including Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, 1099 Vendor Threshold Review, Book-to-Tax Reconciliation and the Cash Flow Projector — is on the Tools index page and in the command palette (Cmd+K).
 
 ```
 [Logo] | TB Diagnostics | Multi-Period | JE Testing | AP Testing | Bank Rec | Payroll | More ▾ | [Cmd+K] | [Profile]
@@ -298,7 +298,7 @@ Upload a General Ledger export. Required columns: Entry Number, Date, Account, D
 
 1. Configure sample parameters (confidence level, expected error rate)
 2. Preview stratification (strata breakdown by amount range)
-3. Execute CSPRNG-based sample selection (PCAOB AS 2315 compliant)
+3. Execute CSPRNG-based sample selection (designed to support PCAOB AS 2315 work)
 
 ### 5.5 Exporting
 
@@ -674,7 +674,7 @@ Upload an inventory listing. Key columns: Item Description, Quantity, Unit Cost.
 ## 14. Tool 12: Statistical Sampling
 
 **Route:** `/tools/statistical-sampling`
-**Purpose:** ISA 530 / PCAOB AS 2315 compliant sampling design, selection, and evaluation.
+**Purpose:** Sampling design, selection and evaluation designed to support work under ISA 530 / PCAOB AS 2315.
 
 ### 14.1 Two-Phase Workflow
 
@@ -816,7 +816,7 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 - Mismatched Social Security and Medicare wages between payroll and the draft W-2
 - Mis-applied Social Security wage base caps
 - Over-contributions to HSAs and retirement plans
-- Quarterly 941 totals that do not agree to the payroll year-to-date totals
+- Quarterly 941 totals that do not agree to the payroll year-to-date totals or to the W-3
 
 > **Statutory limits are selected by tax year — and only 2025 is tabulated today.** The engine
 > keeps one table of limits per tax year (Social Security wage base and rates, Additional Medicare
@@ -842,16 +842,18 @@ Also supply the tax year and a tolerance (default `1.00`). Supplying only payrol
 ### 17.3 Reading the Output
 
 - **Employee discrepancies** — per-employee differences between payroll and the draft W-2.
-- **Form 941 mismatches** — an **annual aggregate** comparison. The engine sums every quarter
-  you supply and compares that sum against the full-year payroll totals; it does not compute
-  per-quarter differences, and each finding is reported without a quarter attached.
+- **Form 941 mismatches** — an **annual aggregate** comparison. The engine sums the four
+  quarters and compares that sum with the full-year payroll totals and, when you supply draft
+  W-2s, with the W-3 totals of those drafts. Each finding says which of the two it was compared
+  with; it does not compute per-quarter differences.
 
-  > **Supply all four quarters or none.** Because the comparison is against *annual* payroll,
-  > supplying only Q1 compares one quarter's totals to the whole year and reports a large
-  > mismatch that means nothing. This is a limitation of the current implementation, not a
-  > finding about your data.
-- **W-3 totals** — the computed summary of the draft W-2s, reported for review (the 941 check
-  compares the 941s with payroll year-to-date totals, not with the W-3).
+  > **The tie-out needs exactly one 941 for each quarter.** If a quarter is missing or supplied
+  > twice, the comparison is not run and **Checks Not Run** names the quarters — a partial year
+  > compared with annual payroll would only report a mismatch that means nothing. A figure your
+  > 941 file does not include (for example, no Medicare wages column) is not compared, and
+  > **Checks Not Run** says which.
+- **W-3 totals** — the computed summary of the draft W-2s. With no draft W-2s there is no W-3,
+  and the result says so instead of showing zero totals.
 
 **The engine flags discrepancies; it does not decide which number is right.** When payroll and the draft W-2 disagree, determining the correct figure is a practitioner judgment about the underlying facts.
 
@@ -864,7 +866,7 @@ A PDF memo for this tool is not yet available.
 
 ---
 
-## 18. Tool 16: Form 1099 Preparation
+## 18. Tool 16: 1099 Vendor Threshold Review
 
 **Purpose:** Aggregate vendor payments across a tax year, apply the common 1099 reporting thresholds, and produce a candidate filing list with a data-quality report.
 
@@ -1081,7 +1083,7 @@ All paid tiers (Solo, Professional, Enterprise) have access to all 18 tools.
 | Segregation of Duties | — | Yes | Yes | Yes |
 | Intercompany Elimination | — | Yes | Yes | Yes |
 | W-2 / W-3 Reconciliation | — | Yes | Yes | Yes |
-| Form 1099 Preparation | — | Yes | Yes | Yes |
+| 1099 Vendor Threshold Review | — | Yes | Yes | Yes |
 | Book-to-Tax Reconciliation | — | Yes | Yes | Yes |
 | Cash Flow Projector | — | Yes | Yes | Yes |
 

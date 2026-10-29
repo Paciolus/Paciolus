@@ -697,7 +697,7 @@ class TestDisclaimerUpdates:
         paragraphs = [e for e in story if isinstance(e, RParagraph)]
         assert len(paragraphs) > 0
         text = paragraphs[0].text
-        assert "does not constitute audit evidence sufficient" in text
+        assert "It is not audit evidence" in text  # Sprint 843 standard memo footer
 
     def test_disclaimer_mentions_professional_standards(self):
         """Disclaimer references professional standards."""

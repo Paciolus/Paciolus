@@ -176,6 +176,35 @@ export function normalizeApiError(raw: string): string {
   return SAFE_PASSTHROUGH.includes(raw) ? raw : SAFE_ERROR_FALLBACK;
 }
 
+/**
+ * Safe text for errors the backend identifies by a stable code in
+ * `detail.code`. Used where the backend message carries specifics (counts) an
+ * exact-string allowlist cannot match — the code picks frontend-owned text, so
+ * no backend string reaches the UI. Account deletion: PR #254 review.
+ */
+export const SAFE_CODE_MESSAGES: Record<string, string> = {
+  ERASURE_SUPERADMIN: 'Superadmin accounts cannot be deleted from the app.',
+  ERASURE_ORG_HAS_MEMBERS:
+    'You own an organization that still has other members. Transfer ownership or remove the members first, then delete your account.',
+  ERASURE_FOREIGN_ENTRIES:
+    'You have entries in engagements owned by someone else. Email privacy@paciolus.com and we will handle the deletion with the engagement owner.',
+  ERASURE_FOREIGN_ENGAGEMENTS:
+    'You created engagements for clients owned by someone else. Email privacy@paciolus.com and we will handle the deletion with the client owner.',
+  ERASURE_PROVIDER_FAILED:
+    'We could not reach our payment or storage provider. Nothing was deleted; please try again.',
+  ERASURE_PARTIAL_CLEANUP:
+    'Some of your shared report links were already removed. Your account and other data were not deleted; please try again.',
+};
+
+/** Mapped text for a coded error `detail`, or null when the code is unknown. */
+export function codedErrorMessage(detail: unknown): string | null {
+  if (detail && typeof detail === 'object' && 'code' in detail) {
+    const code = (detail as { code: unknown }).code;
+    if (typeof code === 'string' && Object.prototype.hasOwnProperty.call(SAFE_CODE_MESSAGES, code)) return SAFE_CODE_MESSAGES[code] ?? null;
+  }
+  return null;
+}
+
 export function isRetryableError(status: number): boolean {
   return status === 0 || status === 429 || (status >= 500 && status < 600);
 }
@@ -238,7 +267,8 @@ export async function performFetch<T>(
           const raw = parsed.message
             || (typeof parsed.detail === 'string' ? parsed.detail : '')
             || '';
-          errorMessage = raw ? normalizeApiError(raw) : getStatusMessage(response.status);
+          errorMessage = codedErrorMessage(parsed.detail)
+            ?? (raw ? normalizeApiError(raw) : getStatusMessage(response.status));
         }
       } catch {
         errorMessage = getStatusMessage(response.status);

@@ -47,7 +47,7 @@ describe('BottomProof', () => {
 
   it('renders section heading', () => {
     render(<BottomProof />)
-    expect(screen.getByText('Every Test Cites Its Standard')).toBeInTheDocument()
+    expect(screen.getByText('Every Test Names Its Rule')).toBeInTheDocument()
   })
 
   it('renders Professional Standards label', () => {
@@ -70,7 +70,7 @@ describe('BottomProof', () => {
     render(<BottomProof />)
     expect(screen.getByText('Automated Tests')).toBeInTheDocument()
     expect(screen.getByText('Audit Tools')).toBeInTheDocument()
-    expect(screen.getByText('Standards Referenced')).toBeInTheDocument()
+    expect(screen.getByText('Standard-Setters Cited')).toBeInTheDocument()
   })
 
   it('renders Explore Demo link', () => {
@@ -81,6 +81,6 @@ describe('BottomProof', () => {
 
   it('renders description text', () => {
     render(<BottomProof />)
-    expect(screen.getByText(/Eighteen audit-focused tools/)).toBeInTheDocument()
+    expect(screen.getByText(/Every test names the rule it applies/)).toBeInTheDocument()
   })
 })

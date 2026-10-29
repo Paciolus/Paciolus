@@ -1,5 +1,5 @@
 /**
- * Dual-CSV parser for Form 1099 Preparation — Sprint 689e.
+ * Dual-CSV parser for 1099 Vendor Threshold Review — Sprint 689e.
  *
  * Expected files:
  *   vendors.csv:  vendor_id, vendor_name, tin, entity_type, address_line_1, city, state, postal_code

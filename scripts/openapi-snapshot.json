@@ -1877,6 +1877,28 @@
         "title": "AccountAffected",
         "type": "object"
       },
+      "AccountDeleteRequest": {
+        "description": "Re-authenticate and confirm before an irreversible erasure.",
+        "properties": {
+          "confirm": {
+            "description": "Must be the word \"DELETE\".",
+            "title": "Confirm",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "confirm"
+        ],
+        "title": "AccountDeleteRequest",
+        "type": "object"
+      },
       "AccountMovementResponse": {
         "description": "Account movement between two periods.",
         "properties": {
@@ -7203,6 +7225,11 @@
           },
           "records_checked": {
             "title": "Records Checked",
+            "type": "integer"
+          },
+          "unchained_records": {
+            "default": 0,
+            "title": "Unchained Records",
             "type": "integer"
           }
         },
@@ -13171,28 +13198,52 @@
             "type": "integer"
           },
           "total_federal_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Federal Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Federal Wages"
           },
           "total_federal_withholding": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Federal Withholding",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Federal Withholding"
           },
           "total_medicare_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Medicare Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Medicare Wages"
           },
           "total_ss_wages": {
-            "default": "0",
-            "maxLength": 24,
-            "title": "Total Ss Wages",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Ss Wages"
           }
         },
         "required": [
@@ -27315,7 +27366,7 @@
     }
   },
   "info": {
-    "description": "18-Tool Audit Intelligence Suite for Financial Professionals",
+    "description": "18-Tool Diagnostic Intelligence Suite for Financial Professionals",
     "title": "Paciolus API",
     "version": "2.1.0"
   },
@@ -30886,6 +30937,71 @@
         "summary": "Get Supported Tax Years",
         "tags": [
           "w2-reconciliation"
+        ]
+      }
+    },
+    "/auth/account/delete": {
+      "post": {
+        "description": "Permanently delete the caller's account and everything it owns.\n\nPromised by the Privacy Policy since launch and built in Sprint 844.\nRefuses (409) the cases `services.account_erasure.check_erasable` names,\nand aborts (503) without deleting anything if Stripe or R2 refuses.",
+        "operationId": "delete_account_auth_account_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Delete Account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/account/export": {
+      "get": {
+        "description": "Download everything Paciolus stores about the caller, as JSON (GDPR Art. 15/20).",
+        "operationId": "export_account_data_auth_account_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Export Account Data",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -38021,6 +38137,56 @@
           }
         ],
         "summary": "Clear Throttle",
+        "tags": [
+          "internal-admin"
+        ]
+      }
+    },
+    "/internal/admin/users/{user_id}/erase": {
+      "post": {
+        "description": "Erase a customer's account — for privacy@ requests and terminations.\n\nRuns the same `services.account_erasure.erase_account` as self-service, so\nthe Privacy Policy's \"deleted within 30 days\" has one implementation. The\nadmin audit log keeps the user ID and row counts, nothing else.",
+        "operationId": "erase_user_internal_admin_users__user_id__erase_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Erase User Internal Admin Users  User Id  Erase Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Erase User",
         "tags": [
           "internal-admin"
         ]

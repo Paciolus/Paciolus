@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useUserProfile } from '@/contexts/UserProfileContext'
+import { AccountDataSection } from '@/components/settings/AccountDataSection'
 import { Reveal } from '@/components/ui/Reveal'
 import type { ProfileUpdate } from '@/types/auth'
 
@@ -365,6 +366,14 @@ export default function ProfileSettingsPage() {
                 </span>
               </div>
             </div>
+          </Reveal>
+
+          {/* Your data — Sprint 844 */}
+          <Reveal delay={0.2} className="theme-card p-6">
+            <h2 id="your-data" className="text-xl font-serif font-semibold text-content-primary mb-4">
+              Your Data
+            </h2>
+            <AccountDataSection />
           </Reveal>
         </div>
       </div>

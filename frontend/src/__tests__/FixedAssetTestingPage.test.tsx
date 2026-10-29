@@ -53,7 +53,7 @@ runStandardToolPageScenarios({
   getToolHookMock: () => useFixedAssetTesting as jest.Mock,
   heroText: 'Fixed Asset Testing',
   uploadPromptPattern: /Upload Fixed Asset Register/,
-  loadingTextPattern: /Running 9-test fixed asset battery/,
+  loadingTextPattern: /Running 11-test fixed asset battery/,
   successTestIds: ['fa-score-card', 'fa-test-grid', 'fa-flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },

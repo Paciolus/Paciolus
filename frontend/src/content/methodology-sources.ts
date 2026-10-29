@@ -1668,18 +1668,18 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         note: '2025 base limits from Rev. Proc. 2024-25 as recorded in the code.',
       },
       {
-        test: 'Form 941 quarters versus payroll',
-        rule: 'The sum of the four quarterly Forms 941 (federal wages, federal withholding, Social Security wages, Medicare wages) is compared with payroll year-to-date totals. MEDIUM beyond tolerance, HIGH beyond 100x tolerance.',
+        test: 'Form 941 quarters versus payroll and the W-3',
+        rule: 'The sum of the four quarterly Forms 941 (federal wages, federal withholding, Social Security wages, Medicare wages) is compared with payroll year-to-date totals and, when draft W-2s are supplied, with their W-3 totals. It runs only with exactly one 941 per quarter (a missing or duplicated quarter is reported as a check not run), and only for figures every quarter supplies. MEDIUM beyond tolerance, HIGH beyond 100x tolerance.',
         kind: 'convention',
         sources: ['Form 941', 'Form W-3'],
         configurable: true,
-        note: 'The comparison is to payroll totals; the W-3 totals are computed as the sum of the W-2 drafts and are not compared with a separately prepared W-3.',
+        note: 'The W-3 totals are computed as the sum of the W-2 drafts; a separately prepared W-3 is not an input. With no drafts there is no W-3 and only the payroll comparison runs.',
       },
     ],
   },
   {
     toolKey: 'form_1099',
-    toolName: 'Form 1099 Preparation',
+    toolName: '1099 Vendor Threshold Review',
     rules: [
       {
         test: '1099-NEC threshold',
@@ -1881,6 +1881,14 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         sources: [],
         configurable: false,
         note: 'Band boundaries are Paciolus conventions.',
+      },
+      {
+        test: 'Composite Risk Scoring: combined risk',
+        rule: 'For each account and assertion, the auditor enters inherent risk and control risk (low, moderate, elevated, high). They are combined with a 4x4 table, not by taking the higher of the two: for example moderate x moderate gives elevated, and low inherent with moderate control risk gives low.',
+        kind: 'convention',
+        sources: ['ISA 315'],
+        configurable: false,
+        note: 'ISA 315 (Revised 2019) requires inherent and control risk to be assessed separately and leaves the combination to the auditor; it prescribes no matrix. The table is a Paciolus convention. The inputs are the auditor’s judgments.',
       },
       {
         test: 'HIGH-severity floors',

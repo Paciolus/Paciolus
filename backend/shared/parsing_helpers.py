@@ -11,7 +11,7 @@ import decimal
 import functools
 import math
 import re
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date, datetime
@@ -214,7 +214,7 @@ def memoized_parse(kind: str, value: object, parse: Callable[[Any], _T]) -> _T:
         return result
 
 
-def parse_date(date_str: object, formats: Optional[Sequence[str]] = None) -> Optional[date]:
+def parse_date(date_str: object, formats: Optional[Sequence[str]] = None, day_first: bool = False) -> Optional[date]:
     """Try to parse a date string into a :class:`date` object.
 
     Supports ISO, US, EU, and datetime formats (``DEFAULT_DATE_FORMATS``, tried
@@ -225,6 +225,12 @@ def parse_date(date_str: object, formats: Optional[Sequence[str]] = None) -> Opt
     and must stay that way — e.g. a user-typed reference date whose error
     message names the forms it accepts. ``date``/``datetime`` values are
     returned as dates either way.
+
+    Ambiguous numeric dates (``01/12/2020``) read month-first unless
+    ``day_first`` is set — callers that know a column is DD/MM (see
+    :func:`infer_day_first`) opt in; the default is unchanged (Sprint 855 A4).
+    With ``formats`` as well, the day-first forms among ``formats`` are tried
+    first; nothing outside ``formats`` is ever tried.
     """
     if not date_str:
         return None
@@ -240,9 +246,60 @@ def parse_date(date_str: object, formats: Optional[Sequence[str]] = None) -> Opt
     if isinstance(date_str, date):
         return date_str
     if formats is None:
+        if day_first:
+            return memoized_parse("date_day_first", date_str, _parse_date_day_first_uncached)
         return memoized_parse("date", date_str, _parse_date_uncached)
     fmts = tuple(formats)
+    if day_first:
+        fmts = tuple(f for f in _DAY_FIRST_FORMATS if f in fmts) + tuple(f for f in fmts if f not in _DAY_FIRST_FORMATS)
+        return memoized_parse("date_day_first:" + "|".join(fmts), date_str, lambda s: _parse_date_uncached(s, fmts))
     return memoized_parse("date:" + "|".join(fmts), date_str, lambda s: _parse_date_uncached(s, fmts))
+
+
+# Sprint 855 (A4): the numeric forms whose day/month order is ambiguous, in the
+# order a day-first column needs them tried. Anything that does not match falls
+# through to the default list, where the remaining forms are unambiguous.
+_DAY_FIRST_FORMATS = (
+    "%d/%m/%Y",
+    "%d-%m-%Y",
+    "%d/%m/%Y %H:%M:%S",
+    "%d/%m/%y",
+)
+_AMBIGUOUS_NUMERIC_DATE = re.compile(r"^\s*(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})(?:[ T].*)?$")
+
+
+def infer_day_first(values: Iterable[object]) -> bool:
+    """Whether a column of dates is written day-first (DD/MM/YYYY).
+
+    True only when at least one value can only be day-first (first part > 12)
+    and none can only be month-first (second part > 12). A column with no
+    unambiguous value, or with contradictory values, keeps the month-first
+    default — a guess is not evidence.
+    """
+    day_first_seen = month_first_seen = False
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        match = _AMBIGUOUS_NUMERIC_DATE.match(value)
+        if not match:
+            continue
+        first, second = int(match.group(1)), int(match.group(2))
+        if first > 12 and second <= 12:
+            day_first_seen = True
+        elif second > 12 and first <= 12:
+            month_first_seen = True
+        if day_first_seen and month_first_seen:
+            return False
+    return day_first_seen
+
+
+def _parse_date_day_first_uncached(date_str: str) -> Optional[date]:
+    for fmt in _DAY_FIRST_FORMATS:
+        try:
+            return datetime.strptime(date_str.strip(), fmt).date()
+        except (ValueError, AttributeError):
+            continue
+    return _parse_date_uncached(date_str)
 
 
 DEFAULT_DATE_FORMATS: tuple[str, ...] = (

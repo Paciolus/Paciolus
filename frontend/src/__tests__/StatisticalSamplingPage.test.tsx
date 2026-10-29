@@ -103,7 +103,7 @@ describe('StatisticalSamplingPage', () => {
   it('renders hero header with ISA 530 reference', () => {
     render(<StatisticalSamplingPage />)
     expect(screen.getByText('Statistical Sampling')).toBeInTheDocument()
-    expect(screen.getByText('ISA 530 / PCAOB AS 2315')).toBeInTheDocument()
+    expect(screen.getByText('References ISA 530 · AS 2315')).toBeInTheDocument()
   })
 
   it('renders two tabs: Design Sample and Evaluate Results', () => {

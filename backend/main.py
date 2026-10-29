@@ -117,13 +117,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Database initialized")
 
     # Sprint 345: Register ORM deletion guard for audit-trail tables
+    from admin_audit_model import AdminAuditLog
     from engagement_model import ToolRun
     from follow_up_items_model import FollowUpItem, FollowUpItemComment
     from models import ActivityLog, DiagnosticSummary
     from shared.soft_delete import register_deletion_guard
 
-    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment])
-    logger.info("Audit immutability guard registered for 5 protected models")
+    # Sprint 845: the admin audit log is append-only too — it records every
+    # superadmin action on a customer, including impersonation and erasure.
+    register_deletion_guard([ActivityLog, DiagnosticSummary, ToolRun, FollowUpItem, FollowUpItemComment, AdminAuditLog])
+    logger.info("Audit immutability guard registered for 6 protected models")
 
     # Sprint 201/202: Clean up stale tokens on startup (cold-start catch-up)
     from auth import cleanup_expired_refresh_tokens, cleanup_expired_verification_tokens
@@ -216,7 +219,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Paciolus API",
-    description="18-Tool Audit Intelligence Suite for Financial Professionals",
+    description="18-Tool Diagnostic Intelligence Suite for Financial Professionals",
     version=__version__,
     lifespan=lifespan,
     default_response_class=DecimalJSONResponse,

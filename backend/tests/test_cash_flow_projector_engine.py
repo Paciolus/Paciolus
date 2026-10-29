@@ -117,9 +117,12 @@ class TestMinSafeCashBreach:
 
 
 class TestInputValidation:
-    def test_negative_opening_balance_rejected(self):
+    # Sprint 855 (C6): this test asserted that an overdrawn opening balance was
+    # refused. It is now projected (test_sprint_855_cash_flow.py); the input
+    # refusal that remains is a negative aging bucket (C5).
+    def test_negative_aging_bucket_rejected(self):
         try:
-            project_cash_flow(_basic_config(opening_balance=Decimal("-1")))
+            project_cash_flow(_basic_config(ar_aging=AgingBuckets(days_31_60=Decimal("-1"))))
         except CashFlowInputError:
             return
         raise AssertionError("expected CashFlowInputError")

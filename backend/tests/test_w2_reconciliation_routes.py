@@ -489,3 +489,82 @@ class TestSprint838CsvFormulaInjection:
                     assert not cell.startswith(("=", "+", "@")), cell
         finally:
             app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Sprint 855 — W-3 vs 941 (W4), no-draft W-3 (W8), 941 quarter coverage (W9)
+# ---------------------------------------------------------------------------
+
+
+def _payload_with_941s(quarters: list[dict], drafts: bool = True) -> dict:
+    payload = _valid_payload()
+    if drafts:
+        payload["w2_drafts"] = [
+            {
+                "employee_id": "E001",
+                "box_1_federal_wages": "70000.00",  # payroll and the 941s say 80,000
+                "box_2_federal_withholding": "12000.00",
+                "box_3_ss_wages": "80000.00",
+                "box_4_ss_tax_withheld": "4960.00",
+                "box_5_medicare_wages": "80000.00",
+                "box_6_medicare_tax_withheld": "1160.00",
+            }
+        ]
+    payload["form_941_quarters"] = quarters
+    return payload
+
+
+def _quarter(n: int) -> dict:
+    # No Medicare figure, as from a 941 CSV without that column.
+    return {
+        "quarter": n,
+        "total_federal_wages": "20000.00",
+        "total_federal_withholding": "3000.00",
+        "total_ss_wages": "20000.00",
+    }
+
+
+@pytest.mark.usefixtures("bypass_csrf")
+class TestSprint846Form941AndW3:
+    @pytest.mark.asyncio
+    async def test_w3_compared_and_omitted_941_field_not_compared(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/audit/w2-reconciliation", json=_payload_with_941s([_quarter(n) for n in (1, 2, 3, 4)])
+                )
+            assert response.status_code == 200
+            body = response.json()
+            assert [(m["compared_with"], m["kind"]) for m in body["form_941_mismatches"]] == [("w3", "federal_wages")]
+            assert {n["reason"] for n in body["checks_not_run"]} == {"form_941_field_not_supplied"}
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_missing_quarter_and_no_drafts_in_csv(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post(
+                    "/audit/w2-reconciliation/export.csv",
+                    json=_payload_with_941s([_quarter(n) for n in (1, 2, 3)], drafts=False),
+                )
+            assert response.status_code == 200
+            text = response.text
+            assert "No draft W-2s supplied" in text
+            assert "Total Federal Wages" not in text
+            assert "no Form 941 for Q4" in text
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_analyze_without_drafts_returns_null_w3(self, professional_user, db_session):
+        _override(professional_user, db_session)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.post("/audit/w2-reconciliation", json=_valid_payload())
+            assert response.status_code == 200
+            assert response.json()["w3_totals"] is None
+        finally:
+            app.dependency_overrides.clear()

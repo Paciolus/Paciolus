@@ -10,6 +10,7 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { testCountFor } from '@/content/tool-ledger'
 import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
 
 /**
@@ -78,14 +79,14 @@ export default function PayrollTestingPage() {
           )}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
             <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">ISA 500 Substantive Testing</span>
+            <span className="text-theme-success-text text-sm font-sans font-medium">References ISA 240 · ISA 500</span>
           </div>
           <h1 className="type-tool-title mb-3">
             Payroll &amp; Employee Testing
           </h1>
           <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
-            Upload a Payroll Register for automated testing &mdash; 11-test battery
-            for ghost employees, duplicate payments, and statistical anomalies.
+            Upload a Payroll Register for automated testing &mdash; {testCountFor('payroll_testing')}-test battery
+            for ghost-employee indicators, duplicate payments, and statistical anomalies.
           </p>
         </div>
 
@@ -152,7 +153,7 @@ export default function PayrollTestingPage() {
                 <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
                   <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
                   <span className="font-sans text-content-primary">
-                    Running 11-test battery on {selectedFile?.name}...
+                    Running {testCountFor('payroll_testing')}-test battery on {selectedFile?.name}...
                   </span>
                 </div>
               </div>
