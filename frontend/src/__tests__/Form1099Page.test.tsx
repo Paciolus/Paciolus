@@ -4,6 +4,7 @@
 import Form1099Page from '@/app/tools/form-1099/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useForm1099 } from '@/hooks/useForm1099'
+import { FORM_1099_TAX_FIGURES_BANNER } from '@/content/tax-figures'
 import { render, screen } from '@/test-utils'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
@@ -74,5 +75,16 @@ describe('Form1099Page', () => {
     expect(screen.getByText('Processor Safe-Harbor')).toBeInTheDocument()
     expect(screen.getByText('Your Data')).toBeInTheDocument()
     expect(screen.getByText(/corporate \/ processor safe-harbors/i)).toBeInTheDocument()
+  })
+
+  // Sprint 856 (793b): the tax-figures banner is shown and cannot be dismissed.
+  it('shows the non-dismissible tax-figures banner for paid tiers', () => {
+    mockUseAuthSession.mockReturnValue({
+      user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, token: 't',
+    })
+    render(<Form1099Page />)
+    const banner = screen.getByRole('note', { name: /tax figures notice/i })
+    expect(banner).toHaveTextContent(FORM_1099_TAX_FIGURES_BANNER)
+    expect(banner.querySelector('button')).toBeNull()
   })
 })
