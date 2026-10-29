@@ -77,9 +77,23 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => mockSearchParams,
 }))
 
+
+// Sprint 858: Professional/Enterprise are sales-only while
+// SELF_SERVE_TEAM_TIERS_ENABLED is off. The checkout-mechanics tests below run
+// with the flag "on" (as Sprint 853 will ship it); the sales-only block turns it off.
+let mockTeamTiersOn = true
+jest.mock('@/domain/pricing', () => {
+  const actual = jest.requireActual('@/domain/pricing')
+  return {
+    ...actual,
+    isSelfServePlan: (id: string) => mockTeamTiersOn || actual.isSelfServePlan(id),
+  }
+})
+
 describe('PricingLaunchCheckout', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockTeamTiersOn = true
     mockUseBilling.error = null
     mockUseBilling.isLoading = false
     mockCreateCheckoutSession.mockResolvedValue('https://checkout.stripe.com/test')
@@ -324,5 +338,29 @@ describe('PricingLaunchCheckout', () => {
     mockSearchParams = new URLSearchParams('plan=solo&interval=annual')
     render(<CheckoutPage />)
     expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/every year until you cancel/)
+  })
+})
+
+describe('PricingLaunchCheckout — sales-only plans (Sprint 858)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTeamTiersOn = false
+    mockUseBilling.error = null
+  })
+
+  it.each(['professional', 'enterprise'])('plan=%s shows Contact us instead of a checkout', (plan) => {
+    mockSearchParams = new URLSearchParams(`plan=${plan}&interval=monthly`)
+    render(<CheckoutPage />)
+    expect(screen.getByTestId('sales-only-plan')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Contact us' })).toHaveAttribute('href', '/contact?inquiry=Organization')
+    expect(screen.queryByRole('button', { name: /Continue to Checkout/i })).not.toBeInTheDocument()
+    expect(mockCreateCheckoutSession).not.toHaveBeenCalled()
+  })
+
+  it('plan=solo still offers checkout', () => {
+    mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
+    render(<CheckoutPage />)
+    expect(screen.queryByTestId('sales-only-plan')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Continue to Checkout/i })).toBeInTheDocument()
   })
 })

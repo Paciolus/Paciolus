@@ -1097,6 +1097,10 @@ Professional and Enterprise plans include a base number of seats. Additional sea
 
 Manage seats from **Settings > Billing > Manage Seats**.
 
+> **Professional and Enterprise are not sold online yet.** Solo can be bought at checkout today. To start a
+> Professional or Enterprise plan, or to add seats to one, use **Contact us** on the pricing page and we will set
+> it up with you.
+
 ### 21.4 Upgrading and Managing Your Plan
 
 1. Go to **Settings > Billing** or use the command palette (Cmd+K > "Billing")

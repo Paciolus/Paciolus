@@ -13,7 +13,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
-import { baseSeats, getTier, maxAdditionalSeats, seatPriceDollars, tierPriceDollars, TRIAL_DAYS, trialChargeDate } from '@/domain/pricing'
+import { baseSeats, getTier, isSelfServePlan, maxAdditionalSeats, SALES_CONTACT_HREF, SALES_CONTACT_LABEL, seatPriceDollars, tierPriceDollars, TRIAL_DAYS, trialChargeDate } from '@/domain/pricing'
 
 // Sprint 818: every price, seat count and seat limit comes from
 // `@/domain/pricing` — the same source the pricing page renders.
@@ -88,6 +88,32 @@ function CheckoutContent() {
           <Link href="/pricing" className="text-sage-600 font-sans font-medium hover:underline">
             View Plans
           </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Sprint 858: Professional/Enterprise are sales-only until Sprint 853 — the
+  // backend refuses the session, so don't offer a checkout that cannot succeed.
+  if (!isSelfServePlan(plan)) {
+    return (
+      <div className="min-h-screen bg-surface-page flex items-center justify-center px-6">
+        <div className="bg-surface-card border border-theme rounded-lg p-8 max-w-md text-center" data-testid="sales-only-plan">
+          <h1 className="font-serif text-xl text-content-primary mb-4">{planLabel} is set up with our team</h1>
+          <p className="text-content-secondary mb-6">
+            The {planLabel} plan is not available to buy online yet. Contact us and we will set it up for your firm.
+          </p>
+          <Link
+            href={SALES_CONTACT_HREF}
+            className="inline-block px-6 py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors"
+          >
+            {SALES_CONTACT_LABEL}
+          </Link>
+          <div className="mt-4">
+            <Link href="/pricing" className="text-sm text-content-secondary hover:text-content-primary transition-colors">
+              Back to Plans
+            </Link>
+          </div>
         </div>
       </div>
     )

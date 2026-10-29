@@ -1639,7 +1639,7 @@ class TestWeeklyReviewHTTP:
             app.dependency_overrides.clear()
 
 
-@pytest.mark.usefixtures("bypass_csrf")
+@pytest.mark.usefixtures("bypass_csrf", "self_serve_team_tiers")
 class TestSeatManagementHTTP:
     """HTTP-layer integration tests for seat add/remove endpoints."""
 

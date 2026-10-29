@@ -115,6 +115,32 @@ describe('BillingSettingsPage', () => {
     expect(screen.getByText('Start Free Trial')).toBeInTheDocument()
   })
 
+  it('a Professional subscription gets Contact us, not Add Seat, while team tiers are sales-only (Sprint 858)', () => {
+    mockUseAuthSession.mockReturnValue({
+      user: { is_verified: true, tier: 'professional' },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    mockUseBilling.mockReturnValue({
+      subscription: { tier: 'professional', status: 'active', billing_interval: 'monthly', cancel_at_period_end: false, total_seats: 8, seat_count: 7, additional_seats: 1 },
+      usage: null,
+      isLoading: false,
+      error: null,
+      fetchSubscription: mockFetchSubscription,
+      fetchUsage: mockFetchUsage,
+      cancelSubscription: mockCancelSubscription,
+      reactivateSubscription: mockReactivateSubscription,
+      getPortalUrl: mockGetPortalUrl,
+      addSeats: mockAddSeats,
+      removeSeats: mockRemoveSeats,
+    })
+    render(<BillingSettingsPage />)
+    expect(screen.queryByText('Add Seat')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Contact us to add seats/ })).toHaveAttribute('href', '/contact?inquiry=Organization')
+    // Removing seats is not a purchase and stays self-serve.
+    expect(screen.getByText('Remove Seat')).toBeInTheDocument()
+  })
+
   it('renders usage meters when usage data is available', () => {
     render(<BillingSettingsPage />)
     const meters = screen.getAllByTestId('usage-meter')

@@ -336,11 +336,25 @@ describe('CancelModal', () => {
 
 // ── UpgradeModal ──────────────────────────────────────────────────
 
+
+// Sprint 858: Professional/Enterprise are sales-only while
+// SELF_SERVE_TEAM_TIERS_ENABLED is off. The checkout-mechanics tests below run
+// with the flag "on" (as Sprint 853 will ship it); the sales-only block turns it off.
+let mockTeamTiersOn = true
+jest.mock('@/domain/pricing', () => {
+  const actual = jest.requireActual('@/domain/pricing')
+  return {
+    ...actual,
+    isSelfServePlan: (id: string) => mockTeamTiersOn || actual.isSelfServePlan(id),
+  }
+})
+
 describe('UpgradeModal', () => {
   const onClose = jest.fn()
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockTeamTiersOn = true
   })
 
   // ── Tier card rendering ────────────────────────────────────
@@ -469,5 +483,36 @@ describe('UpgradeModal', () => {
       <UpgradeModal currentTier="free" isOpen={false} onClose={onClose} />
     )
     expect(container.textContent).toBe('')
+  })
+})
+
+describe('UpgradeModal — sales-only plans (Sprint 858)', () => {
+  const onClose = jest.fn()
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTeamTiersOn = false
+  })
+
+  it('Professional and Enterprise show Contact us; Solo keeps its checkout CTA', () => {
+    render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
+    const contact = screen.getAllByRole('link', { name: 'Contact us' })
+    expect(contact).toHaveLength(2)
+    contact.forEach((link) => expect(link).toHaveAttribute('href', '/contact?inquiry=Organization'))
+    const checkout = screen.getAllByRole('link', { name: 'Start Free Trial' })
+    expect(checkout).toHaveLength(1)
+    expect(checkout[0]).toHaveAttribute('href', '/checkout?plan=solo&interval=monthly')
+  })
+
+  it('drops the trial promise and seat selector for sales-only plans', () => {
+    render(<UpgradeModal currentTier="free" isOpen={true} onClose={onClose} />)
+    expect(screen.getAllByText('7-day free trial')).toHaveLength(1)
+    expect(screen.queryByText('Additional seats')).not.toBeInTheDocument()
+  })
+
+  it('a Solo subscriber sees Contact us for both upgrades', () => {
+    render(<UpgradeModal currentTier="solo" isOpen={true} onClose={onClose} />)
+    expect(screen.getAllByRole('link', { name: 'Contact us' })).toHaveLength(2)
+    expect(screen.queryByRole('link', { name: 'Upgrade' })).not.toBeInTheDocument()
   })
 })

@@ -258,6 +258,20 @@ def bypass_csrf():
     security_middleware.validate_csrf_token = original
 
 
+@pytest.fixture
+def self_serve_team_tiers(monkeypatch):
+    """Turn on self-serve Professional/Enterprise purchase (Sprint 858).
+
+    Launch ships with ``SELF_SERVE_TEAM_TIERS_ENABLED`` off, so checkout and
+    seat add-ons refuse those tiers. Tests of the Pro/Enterprise checkout and
+    seat mechanics themselves opt in with
+    ``@pytest.mark.usefixtures("self_serve_team_tiers")``.
+    """
+    import billing.price_config as price_config
+
+    monkeypatch.setattr(price_config, "SELF_SERVE_TEAM_TIERS_ENABLED", True)
+
+
 # ---------------------------------------------------------------------------
 # Auth override fixture (Sprint 245)
 # ---------------------------------------------------------------------------
