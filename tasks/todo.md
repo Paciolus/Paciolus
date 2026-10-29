@@ -487,11 +487,12 @@ import → 99 collection errors in Coverage Sentinel. QA Warden crashed separate
       subtitle, "SEE THE FINDINGS" in the home hero scrubber — guardrail wording; [ ] `/tools` header says "24 tools across
       3 categories" vs 18 everywhere else; [ ] `/engagements` redirected to `/portfolio` for a fresh Professional user —
       confirm intended; [ ] hydration-mismatch console warning on authed pages (dev).*
-- [ ] **793b tax banner.** Non-dismissible disclaimer banner (existing pattern, clay/oatmeal tokens): "Statutory figures
+- [x] **793b tax banner.** Non-dismissible disclaimer banner (existing pattern, clay/oatmeal tokens): "Statutory figures
       current through tax year 2025 — verify before relying". Same line in each tool's PDF and Excel exports — the export
       is what a CPA files. **First verify per tool** which tools are year-keyed to 2025: W-2 already refuses unknown years
       (`w2_reconciliation_engine.py:21,75-80`); check 1099, Book-to-Tax and Depreciation before printing the claim.
       **Hard date:** if no practitioner has confirmed the 2026 figures by **2026-12-15**, the banner becomes a disable.
+      **Done:** verified only W-2 (2025 table, other years refused) and 1099 (2025 + secondary-source 2026 tables) apply year-keyed figures — Book-to-Tax, Depreciation and Loan apply none — so each of those two gets its own accurate banner (`backend/tax_figures_status.py` ↔ `frontend/src/content/tax-figures.ts`) on the page and as the first line of its CSV export (their only export; no PDF/Excel exists), and `tests/test_tax_figures_status.py` fails after 2026-12-15 unless a practitioner confirmation is recorded per tool.
 
 **Verification (items 1–4):** `npx tsc --noEmit` clean; `npm run lint` clean; full Jest 209 suites / 2,083 tests green
 (+4 WelcomeModal: step-1 copy, Escape, initial focus, Tab trap; +2 MarketingNav: skip link first, `#main-content`

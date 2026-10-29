@@ -25,6 +25,7 @@ from shared.filenames import safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
+from tax_figures_status import W2_TAX_FIGURES_BANNER
 from w2_reconciliation_engine import (
     STATUTORY_LIMITS_BY_YEAR,
     EmployeePayroll,
@@ -289,6 +290,10 @@ def export_reconciliation_csv(
     buffer = io.StringIO()
     writer = safe_csv_writer(buffer)
 
+    # Sprint 856: the export is what gets filed, so it carries the same
+    # tax-figures banner as the page, as its first line.
+    writer.writerow([W2_TAX_FIGURES_BANNER])
+    writer.writerow([])
     writer.writerow(["Employee Discrepancies"])
     writer.writerow(
         [

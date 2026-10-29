@@ -15,12 +15,14 @@ import {
   CitationFooter,
   DisclaimerBox,
   GuestCTA,
+  TaxFiguresBanner,
   UnverifiedCTA,
   UpgradeGate,
 } from '@/components/shared'
 import { W2FileUpload } from '@/components/w2Reconciliation/W2FileUpload'
 import { W2Results } from '@/components/w2Reconciliation/W2Results'
 import { useW2Reconciliation, useW2SupportedYears } from '@/hooks/useW2Reconciliation'
+import { W2_TAX_FIGURES_BANNER } from '@/content/tax-figures'
 
 export default function W2ReconciliationPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
@@ -56,6 +58,8 @@ export default function W2ReconciliationPage() {
         {isAuthenticated && isVerified && (
           <UpgradeGate toolName="w2_reconciliation">
             <div className="max-w-5xl mx-auto space-y-6">
+              <TaxFiguresBanner>{W2_TAX_FIGURES_BANNER}</TaxFiguresBanner>
+
               <W2FileUpload
                 onAnalyze={analyze}
                 onExport={exportCsv}

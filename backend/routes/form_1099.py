@@ -34,6 +34,7 @@ from shared.filenames import safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
+from tax_figures_status import FORM_1099_TAX_FIGURES_BANNER
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,10 @@ def export_1099_csv(
 
     buffer = io.StringIO()
     writer = safe_csv_writer(buffer)
+    # Sprint 856: the export is what gets filed, so it carries the same
+    # tax-figures banner as the page, as its first line.
+    writer.writerow([FORM_1099_TAX_FIGURES_BANNER])
+    writer.writerow([])
     writer.writerow(
         [
             "Tax Year",
