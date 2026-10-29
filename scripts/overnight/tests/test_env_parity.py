@@ -381,17 +381,38 @@ class TestOverallStatus:
 
 
 class TestTestedAsOf:
-    def test_prefers_the_run_start_sha(self):
+    def test_agent_stamps_win_over_the_run_start_sha(self):
+        """PR #288 review: HEAD can move between run start and an agent's start."""
         manifest = {"head_sha": "a" * 40, "started_at": "2026-10-28T02:00:02"}
         data = {"qa_warden": {"tested_sha": "b" * 40, "tested_at": "2026-10-28T02:00:05"}}
-        assert briefing_compiler._tested_as_of(manifest, data) == (
+        sha, at, source = briefing_compiler._tested_as_of(manifest, data)
+        assert (sha, at, source) == ("b" * 40, "2026-10-28T02:00:05", "qa_warden start")
+
+    def test_agreeing_stamps_report_one_commit_from_the_earliest_start(self):
+        data = {
+            "qa_warden": {"tested_sha": "b" * 40, "tested_at": "2026-10-28T02:00:05"},
+            "coverage_sentinel": {"tested_sha": "b" * 40, "tested_at": "2026-10-28T03:00:01"},
+        }
+        sha, at, source = briefing_compiler._tested_as_of(None, data)
+        assert (sha, at) == ("b" * 40, "2026-10-28T02:00:05")
+        assert source == "qa_warden/coverage_sentinel start"
+
+    def test_disagreeing_stamps_are_a_mixed_revision_run(self):
+        manifest = {"head_sha": "a" * 40, "started_at": "2026-10-28T02:00:02"}
+        data = {
+            "qa_warden": {"tested_sha": "b" * 40, "tested_at": "2026-10-28T02:00:05"},
+            "coverage_sentinel": {"tested_sha": "c" * 40, "tested_at": "2026-10-28T03:00:01"},
+        }
+        sha, at, source = briefing_compiler._tested_as_of(manifest, data)
+        assert sha is None and at is None
+        assert source.startswith("mixed revisions")
+        assert "qa_warden `bbbbbbbb`" in source and "coverage_sentinel `cccccccc`" in source
+
+    def test_run_start_sha_only_when_no_agent_stamped(self):
+        manifest = {"head_sha": "a" * 40, "started_at": "2026-10-28T02:00:02"}
+        assert briefing_compiler._tested_as_of(manifest, {}) == (
             "a" * 40, "2026-10-28T02:00:02", "orchestrator run start",
         )
-
-    def test_falls_back_to_an_agent_stamp(self):
-        data = {"qa_warden": {"tested_sha": "b" * 40, "tested_at": "2026-10-28T02:00:05"}}
-        sha, _at, source = briefing_compiler._tested_as_of(None, data)
-        assert (sha, source) == ("b" * 40, "qa_warden start")
 
     def test_unrecorded_is_unrecorded(self):
         assert briefing_compiler._tested_as_of(None, {}) == (None, None, "not recorded")

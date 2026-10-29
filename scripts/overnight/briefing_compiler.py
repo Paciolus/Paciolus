@@ -194,20 +194,38 @@ def _overall_status(
     return "yellow" if statuses else "red"
 
 
+_TEST_AGENTS = ("qa_warden", "coverage_sentinel", "report_auditor")
+
+
 def _tested_as_of(manifest: dict | None, agent_data: dict[str, dict | None]) -> tuple[str | None, str | None, str]:
     """(sha, timestamp, source) for the tree the suites ran against.
 
     Sprint 854. The 10-28 brief's `a9dfeb69` was HEAD at 04:00, when the brief
-    was compiled; the suites ran at 02:00-03:00. Prefer the SHA the
-    orchestrator recorded at run start, then the one QA Warden stamped as it
-    began, and only then — saying so — HEAD at compile time.
+    was compiled; the suites ran at 02:00-03:00.
+
+    PR #288 review: the test-running agents' own stamps win over the
+    orchestrator's run-start SHA. The agents start up to an hour apart (and
+    after a pre-flight of up to 600 s), so HEAD can move between them; the
+    orchestrator's SHA would then label every result with a tree some of them
+    never ran. If the stamps disagree, the run is reported as mixed — ``sha`` is
+    None and ``source`` starts with ``"mixed revisions"`` and names each one.
+    The orchestrator's SHA is used only when no agent stamped.
     """
+    stamps = [
+        (name, d["tested_sha"], d.get("tested_at"))
+        for name in _TEST_AGENTS
+        if (d := agent_data.get(name) or {}).get("tested_sha")
+    ]
+    if stamps:
+        shas = {sha for _name, sha, _at in stamps}
+        if len(shas) > 1:
+            detail = ", ".join(f"{name} `{sha[:8]}`" for name, sha, _at in stamps)
+            return None, None, f"mixed revisions: {detail}"
+        times = sorted(at for _name, _sha, at in stamps if at)
+        names = "/".join(name for name, _sha, _at in stamps)
+        return stamps[0][1], times[0] if times else None, f"{names} start"
     if manifest and manifest.get("head_sha"):
         return manifest["head_sha"], manifest.get("started_at"), "orchestrator run start"
-    for name in ("qa_warden", "coverage_sentinel", "report_auditor"):
-        d = agent_data.get(name) or {}
-        if d.get("tested_sha"):
-            return d["tested_sha"], d.get("tested_at"), f"{name} start"
     return None, None, "not recorded"
 
 
@@ -595,7 +613,13 @@ def run() -> dict:
     compiled_at = datetime.datetime.now()
     current_sha = _head_sha()
     tested_sha, tested_at, tested_source = _tested_as_of(manifest, agent_data)
-    if tested_sha is None and current_sha is not None:
+    if tested_source.startswith("mixed revisions"):
+        tested_line = (
+            f"**Mixed revisions** — the suites did not all run against one tree ({tested_source[17:]}). "
+            f"Read each agent's result against its own commit."
+        )
+        supersession = _supersession_notice(None, current_sha)
+    elif tested_sha is None and current_sha is not None:
         tested_line = (
             f"`{current_sha}` — **HEAD at brief compile time ({compiled_at:%H:%M})**, not when the "
             f"suites ran: this run did not record the commit it tested, so the verdict may be stale."
