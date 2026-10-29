@@ -102,3 +102,28 @@ def test_overdrawn_opening_balance_is_projected():
     assert base.goes_negative is True
     assert base.first_negative_day == 0
     assert base.daily[-1].ending_balance == Decimal("23500.00")
+
+
+def test_overdraft_covered_on_day_zero_is_still_reported():
+    """C6 (PR #254 review): opening -100 with a +200 receipt on the start date
+    closes day 0 positive. The account was overdrawn anyway, and the warning
+    must say so rather than report that cash never went negative."""
+    config = CashFlowConfig(
+        opening_balance=Decimal("-100"),
+        start_date=START,
+        recurring_flows=[RecurringFlow("Receipt", Decimal("200"), "monthly", START)],
+        min_safe_cash=Decimal("0"),
+    )
+    for name, scenario in project_cash_flow(config).scenarios.items():
+        assert scenario.daily[0].ending_balance > Decimal("0"), name
+        assert scenario.goes_negative is True, name
+        assert scenario.first_negative_day == 0, name
+        assert scenario.breach_min_safe_cash is True, name
+
+
+def test_positive_opening_balance_raises_no_warning():
+    config = CashFlowConfig(opening_balance=Decimal("100"), start_date=START, min_safe_cash=Decimal("50"))
+    base = project_cash_flow(config).scenarios["base"]
+    assert base.goes_negative is False
+    assert base.first_negative_day is None
+    assert base.breach_min_safe_cash is False
