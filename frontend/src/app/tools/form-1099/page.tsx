@@ -15,10 +15,12 @@ import {
   CitationFooter,
   DisclaimerBox,
   GuestCTA,
+  TaxFiguresBanner,
   UnverifiedCTA,
   UpgradeGate,
 } from '@/components/shared'
 import { useForm1099 } from '@/hooks/useForm1099'
+import { FORM_1099_TAX_FIGURES_BANNER } from '@/content/tax-figures'
 
 export default function Form1099Page() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
@@ -52,6 +54,8 @@ export default function Form1099Page() {
         {isAuthenticated && isVerified && (
           <UpgradeGate toolName="form_1099">
             <div className="max-w-5xl mx-auto space-y-6">
+              <TaxFiguresBanner>{FORM_1099_TAX_FIGURES_BANNER}</TaxFiguresBanner>
+
               <Form1099FileUpload
                 onAnalyze={analyze}
                 onExport={exportCsv}

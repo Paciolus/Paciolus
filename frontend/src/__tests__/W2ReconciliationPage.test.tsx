@@ -4,6 +4,7 @@
 import W2ReconciliationPage from '@/app/tools/w2-reconciliation/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useW2Reconciliation } from '@/hooks/useW2Reconciliation'
+import { W2_TAX_FIGURES_BANNER } from '@/content/tax-figures'
 import { fireEvent, render, screen } from '@/test-utils'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
@@ -80,6 +81,17 @@ describe('W2ReconciliationPage', () => {
     expect(screen.getByText('Form 941 Tie-Out')).toBeInTheDocument()
     expect(screen.getByText('Your Data')).toBeInTheDocument()
     expect(screen.getByText(/candidates for review before filing W-2/i)).toBeInTheDocument()
+  })
+
+  // Sprint 856 (793b): the tax-figures banner is shown and cannot be dismissed.
+  it('shows the non-dismissible tax-figures banner for paid tiers', () => {
+    mockUseAuthSession.mockReturnValue({
+      user: { is_verified: true, tier: 'professional' }, isAuthenticated: true, isLoading: false, token: 't',
+    })
+    render(<W2ReconciliationPage />)
+    const banner = screen.getByRole('note', { name: /tax figures notice/i })
+    expect(banner).toHaveTextContent(W2_TAX_FIGURES_BANNER)
+    expect(banner.querySelector('button')).toBeNull()
   })
 
   // Sprint 839
