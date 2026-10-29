@@ -59,11 +59,12 @@ def _make_assessment(
 
 
 class TestComputeCombinedRiskLevel:
-    """Tests for compute_combined_risk_level() — ISA 315 Appendix 1 RMM matrix.
+    """Tests for compute_combined_risk_level() — the Paciolus 4×4 RMM convention.
 
-    Sprint 680: the prior implementation used max(IR, CR); the ISA 315
-    Appendix 1 table escalates moderate × moderate to elevated, and
-    elevated × elevated to high. Assertions here mirror the canonical table.
+    Sprint 680: the prior implementation used max(IR, CR); the table
+    escalates moderate × moderate to elevated, and elevated × elevated to
+    high. (Attributed to ISA 315 Appendix 1 until Sprint 843; ISA 315
+    prescribes no matrix.) Assertions here mirror the table.
     """
 
     def test_both_low(self):

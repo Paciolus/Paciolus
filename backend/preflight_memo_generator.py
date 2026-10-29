@@ -360,7 +360,7 @@ def generate_preflight_memo(
         section_counter += 1
 
         # ── CONCLUSION (BUG-03) ──
-        story.append(Paragraph(f"{_roman(section_counter)}. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph(f"{_roman(section_counter)}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         conclusion_text = _build_conclusion(preflight_result, filename)

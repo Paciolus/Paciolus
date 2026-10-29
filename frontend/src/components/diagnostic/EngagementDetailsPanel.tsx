@@ -114,7 +114,7 @@ export function EngagementDetailsPanel({ value, onChange }: EngagementDetailsPan
             {/* Report Status */}
             <div>
               <label htmlFor="eng-report-status" className="block text-xs font-sans font-medium text-content-secondary mb-1">
-                Report Status
+                Status (shown on the memo cover)
               </label>
               <select
                 id="eng-report-status"
@@ -130,14 +130,14 @@ export function EngagementDetailsPanel({ value, onChange }: EngagementDetailsPan
             {/* Engagement Practitioner (formerly Prepared By) */}
             <div>
               <label htmlFor="eng-practitioner" className="block text-xs font-sans font-medium text-content-secondary mb-1">
-                Engagement Practitioner
+                Prepared by (shown on the memo cover)
               </label>
               <input
                 id="eng-practitioner"
                 type="text"
                 value={value.preparedBy}
                 onChange={(e) => update('preparedBy', e.target.value)}
-                placeholder="e.g., Jane Smith, CPA"
+                placeholder="Your name"
                 className="w-full px-3 py-1.5 bg-surface-card border border-theme rounded-lg text-sm text-content-primary font-sans placeholder:text-content-tertiary focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               />
             </div>
@@ -145,14 +145,14 @@ export function EngagementDetailsPanel({ value, onChange }: EngagementDetailsPan
             {/* Engagement Reviewer (formerly Reviewed By) */}
             <div>
               <label htmlFor="eng-reviewer" className="block text-xs font-sans font-medium text-content-secondary mb-1">
-                Engagement Reviewer
+                Reviewer (shown on the memo cover)
               </label>
               <input
                 id="eng-reviewer"
                 type="text"
                 value={value.reviewedBy}
                 onChange={(e) => update('reviewedBy', e.target.value)}
-                placeholder="e.g., John Doe, CPA"
+                placeholder="Reviewer name"
                 className="w-full px-3 py-1.5 bg-surface-card border border-theme rounded-lg text-sm text-content-primary font-sans placeholder:text-content-tertiary focus:outline-hidden focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               />
             </div>

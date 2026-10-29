@@ -402,7 +402,7 @@ def generate_currency_conversion_memo(
         # ── SECTION VII: CONCLUSION ──
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"{_roman(section_num)}. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph(f"{_roman(section_num)}. Summary of Results", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         conclusion_parts = [

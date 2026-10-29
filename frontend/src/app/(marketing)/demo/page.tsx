@@ -36,10 +36,10 @@ const DEMO_TOOLS: DemoTool[] = [
   { title: 'Multi-Period Comparison',   description: 'Compare up to three periods side-by-side with variance analysis and budget tracking.',    icon: 'trend-chart',       tier: 'solo', cluster: 'Analyze' },
   { title: 'Journal Entry Testing',     description: "Benford's Law, structural validation, and statistical anomaly detection across the GL.",  icon: 'shield-check',      tier: 'solo', cluster: 'Detect',   tests: 19 },
   { title: 'Revenue Testing',           description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',     icon: 'currency-circle',   tier: 'solo', cluster: 'Detect',   tests: 18 },
-  { title: 'AP Payment Testing',        description: 'Duplicate detection, vendor concentration, and fraud indicators across payables.',        icon: 'document-duplicate',tier: 'solo', cluster: 'Validate', tests: 14 },
+  { title: 'AP Payment Testing',        description: 'Duplicate payments, vendor concentration, and patterns associated with fraud schemes across payables.',        icon: 'document-duplicate',tier: 'solo', cluster: 'Validate', tests: 14 },
   { title: 'Bank Reconciliation',       description: 'Match bank transactions against the general ledger with automated reconciliation.',       icon: 'arrows-vertical',   tier: 'solo', cluster: 'Validate' },
   { title: 'Statistical Sampling',      description: 'MUS and random sampling with Stringer bounds — designed to support ISA 530 / PCAOB AS 2315 procedures.', icon: 'bar-chart',         tier: 'solo', cluster: 'Analyze' },
-  { title: 'Payroll Testing',           description: 'Ghost employee detection, duplicate payments, and payroll anomaly analysis.',             icon: 'users',             tier: 'solo', cluster: 'Detect',   tests: 13 },
+  { title: 'Payroll Testing',           description: 'Ghost-employee indicators, duplicate payments, and payroll anomaly analysis.',             icon: 'users',             tier: 'solo', cluster: 'Detect',   tests: 13 },
   { title: 'Three-Way Match',           description: 'PO-Invoice-Receipt matching with exact PO# linkage and procurement variance analysis.',   icon: 'circle-check',      tier: 'solo', cluster: 'Validate' },
   { title: 'AR Aging Analysis',         description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',      icon: 'clock',             tier: 'solo', cluster: 'Assess',   tests: 12 },
   { title: 'Fixed Asset Testing',       description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',        icon: 'building',          tier: 'solo', cluster: 'Assess',   tests: 11 },
@@ -47,7 +47,7 @@ const DEMO_TOOLS: DemoTool[] = [
   { title: 'Segregation of Duties',     description: 'User-role and role-permission matrices checked against an SoD rule library, ranked per user.', icon: 'padlock',        tier: 'solo', cluster: 'Validate' },
   { title: 'Intercompany Elimination',  description: 'Reciprocal balance matching across entities, proposed elimination entries, consolidation worksheet.', icon: 'arrows-vertical', tier: 'solo', cluster: 'Validate' },
   { title: 'W-2 / W-3 Reconciliation',  description: 'Payroll YTD reconciled to draft W-2s and Form 941 quarterlies before year-end filing.',   icon: 'clipboard-check',   tier: 'solo', cluster: 'Validate' },
-  { title: 'Form 1099 Preparation',     description: '1099-NEC / MISC / INT threshold detection with corporate safe-harbour and processor exemptions.', icon: 'document',    tier: 'solo', cluster: 'Validate' },
+  { title: '1099 Vendor Threshold Review',     description: '1099-NEC / MISC / INT threshold detection with corporate safe-harbour and processor exemptions.', icon: 'document',    tier: 'solo', cluster: 'Validate' },
   { title: 'Book-to-Tax Reconciliation',description: 'Book pretax income bridged to taxable income with Schedule M-1 / M-3 and an ASC 740 deferred-tax roll.', icon: 'spreadsheet', tier: 'solo', cluster: 'Analyze' },
   { title: 'Cash Flow Projector',       description: '90-day cash position across base, stress and best scenarios with liquidity-breach flagging.', icon: 'bar-chart',      tier: 'solo', cluster: 'Analyze' },
 ]
@@ -77,7 +77,7 @@ export default function DemoPage() {
           </h1>
           <p className="font-sans text-oatmeal-400 text-base leading-relaxed max-w-xl mx-auto">
             Explore all eighteen audit diagnostic tools using synthetic data.
-            Every output cites the governing accounting or auditing standard.
+            Every test names the rule it applies, or says when a threshold is our own convention.
           </p>
         </motion.div>
       </section>

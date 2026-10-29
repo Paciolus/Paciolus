@@ -135,7 +135,7 @@ TOOLS: Final[tuple[Tool, ...]] = (
         standards=("ISA 240",),
         is_marketing_audit_tool=True,
         has_dedicated_page=True,
-        summary="Ghost-employee detection, rate anomalies, overtime spikes, gross-to-net reconciliation across the payroll register.",
+        summary="Ghost-employee indicators, rate anomalies, overtime spikes, gross-to-net reconciliation across the payroll register.",
     ),
     Tool(
         slug="fixed_asset_testing",
@@ -202,7 +202,7 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="form_1099",
-        display_name="Form 1099 Preparation",
+        display_name="1099 Vendor Threshold Review",
         category="Advanced",
         test_count=None,
         standards=("IRC §6041", "IRC §6041A", "Pub 1220"),

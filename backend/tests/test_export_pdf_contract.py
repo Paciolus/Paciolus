@@ -87,7 +87,7 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
 JE_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Journal Entry Testing",  # title / cover page
     "Tier",  # risk-tier verdict ("elevated" / "moderate" / "high" sections)
-    "Conclusion",  # auditor conclusion section
+    "Results",  # summary-of-results section (Sprint 843 — was "Conclusion")
     "Findings",  # findings table or top-findings section
     "Composite",  # composite score / summary band
 )
@@ -134,7 +134,7 @@ AP_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "AP",  # title prefix; multi-word "Accounts Payable" splits across columns
     "Vendor",  # vendor analysis section
     "Tier",  # risk tier
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -159,7 +159,7 @@ PAYROLL_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Payroll",  # title
     "Employee",  # employee testing section
     "Tier",
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -184,7 +184,7 @@ REVENUE_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Revenue",  # title
     "Contract",  # ASC 606 contract analysis section
     "Tier",
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -209,7 +209,7 @@ AR_AGING_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "AR",
     "Aging",
     "Tier",
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -227,7 +227,7 @@ def test_ar_aging_memo_pdf_contains_all_required_section_labels() -> None:
 FIXED_ASSET_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Fixed Asset",
     "Tier",
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -245,7 +245,7 @@ def test_fixed_asset_memo_pdf_contains_all_required_section_labels() -> None:
 INVENTORY_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Inventory",
     "Tier",
-    "Conclusion",
+    "Results",
     "Findings",
     "Composite",
 )
@@ -291,7 +291,7 @@ THREE_WAY_MATCH_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Three-Way",
     "Match",
     "Invoice",
-    "Conclusion",
+    "Results",
     "Composite",
 )
 
@@ -308,7 +308,7 @@ def test_three_way_match_memo_pdf_contains_all_required_section_labels() -> None
 MULTI_PERIOD_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Period",
     "Tier",
-    "Conclusion",
+    "Results",
     "Composite",
 )
 
@@ -325,7 +325,7 @@ def test_multi_period_memo_pdf_contains_all_required_section_labels() -> None:
 BANK_REC_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Bank",
     "Reconciliation",
-    "Conclusion",
+    "Results",
     "Composite",
     "Match",
 )
@@ -360,7 +360,7 @@ _SAMPLING_DESIGN_FIXTURE = {
 SAMPLING_DESIGN_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Sampling",
     "MUS",
-    "Conclusion",
+    "Results",
     "Population",
 )
 
@@ -390,7 +390,7 @@ _SAMPLING_EVAL_FIXTURE = {
 SAMPLING_EVAL_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Sampling",
     "MUS",
-    "Conclusion",
+    "Results",
     "Population",
 )
 
@@ -409,7 +409,7 @@ def test_sampling_eval_memo_pdf_contains_all_required_section_labels() -> None:
 
 PREFLIGHT_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Pre-Flight",
-    "Conclusion",
+    "Results",
     "Risk",
 )
 
@@ -533,7 +533,7 @@ _CURRENCY_FIXTURE = {
 CURRENCY_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Currency",
     "Conversion",
-    "Conclusion",
+    "Results",
 )
 
 

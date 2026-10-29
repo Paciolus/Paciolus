@@ -28,9 +28,11 @@ RISK_LEVEL_WEIGHTS: dict[RiskLevel, int] = {
 
 DISCLAIMER = (
     "IMPORTANT: This composite risk profile structures auditor-provided risk "
-    "assessments alongside automated diagnostic data. Combined risk (RMM) is "
-    "computed per ISA 315 (Revised 2019) Appendix 1 — the 4×4 inherent × "
-    "control matrix (not a simple max). Risk classifications are auditor "
+    "assessments alongside automated diagnostic data. Combined risk is "
+    "computed with a Paciolus 4×4 inherent × control convention (not a "
+    "simple max); ISA 315 (Revised 2019) requires inherent and control risk "
+    "to be assessed separately but prescribes no combination matrix. Risk "
+    "classifications are auditor "
     "judgment per ISA 315 and are not algorithmically determined. Detection "
     "risk is outside the scope of this engine; audit risk (IR × CR × DR) "
     "is the auditor's responsibility to plan and respond to. This tool does "
@@ -110,9 +112,13 @@ class CompositeRiskProfile:
 # ═══════════════════════════════════════════════════════════════
 
 
-# ISA 315 (Revised 2019) Appendix 1 / ISA 330 — Risks of Material Misstatement
-# matrix.  RMM is NOT max(IR, CR); the ISA uses a 4×4 combination table where
-# moderate × moderate escalates to "elevated" rather than staying at moderate.
+# Risk-of-material-misstatement combination table — a PACIOLUS CONVENTION.
+# Sprint 843 (claims review H12): this was attributed to "ISA 315 (Revised
+# 2019) Appendix 1". ISA 315 requires inherent risk (on a spectrum) and control
+# risk to be assessed separately; it prescribes no combination matrix, and its
+# Appendix 1 concerns understanding the entity and its business model. The
+# table is ours. RMM is NOT max(IR, CR) here: moderate × moderate escalates
+# to "elevated" rather than staying at moderate.
 # Sprint 680 remediation: the prior max() implementation systematically
 # understated elevated-risk account/assertion pairs.
 #
@@ -146,10 +152,10 @@ ISA_315_RMM_MATRIX: dict[RiskLevel, dict[RiskLevel, RiskLevel]] = {
 
 
 def compute_combined_risk_level(inherent: RiskLevel, control: RiskLevel) -> RiskLevel:
-    """Combine inherent and control risk per ISA 315 Appendix 1 RMM matrix.
+    """Combine inherent and control risk with the Paciolus 4×4 convention.
 
-    Sprint 680: replaced ``max(inherent, control)`` with the ISA 315 4×4
-    table.  The prior "conservative max" approach undercounted elevated-risk
+    Sprint 680: replaced ``max(inherent, control)`` with a 4×4 table
+    (attributed to ISA 315 until Sprint 843 — see ``ISA_315_RMM_MATRIX``).  The prior "conservative max" approach undercounted elevated-risk
     pairs (e.g., moderate × moderate now escalates to elevated, not moderate).
     The table is symmetric along the diagonal.
     """

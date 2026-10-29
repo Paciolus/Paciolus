@@ -84,10 +84,10 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
         className="type-display-xl text-oatmeal-100 mb-6 text-center lg:text-left"
         variants={fadeUp}
       >
-        The Workpapers
+        Diagnostics in Seconds.
         <br />
         <span className="bg-gradient-to-r from-sage-400 via-sage-300 to-oatmeal-300 bg-clip-text text-transparent">
-          Write Themselves
+          Your Judgment, Better Informed.
         </span>
       </motion.h1>
 
@@ -96,7 +96,7 @@ function LeftColumn({ trackCtaClick }: { trackCtaClick: (cta: string) => void })
         className="font-sans text-lg text-oatmeal-400 max-w-lg mb-3 text-center lg:text-left"
         variants={fadeUp}
       >
-        Drop your trial balance. Get ISA/PCAOB-methodology diagnostics and workpapers in seconds.
+        Drop your trial balance. Get diagnostics that cite the standards they draw on, with exports you can review and file.
       </motion.p>
       <motion.p
         className="font-sans text-sm text-oatmeal-500 max-w-lg mb-6 text-center lg:text-left"
