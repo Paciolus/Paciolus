@@ -42,10 +42,12 @@ const CLOSING_METRICS: ClosingMetric[] = [
     sub: 'TB · JE · AP · Revenue · Payroll + more',
   },
   {
-    target: 7,
+    // Sprint 843: was "7 Standards Referenced" — the registry holds 80+ citations.
+    // Counted by standard-setter instead; pinned by test_pricing_copy_consistency.py.
+    target: 6,
     suffix: '',
-    label: 'Standards Referenced',
-    sub: 'ISA · PCAOB · IFRS · ASC · IAS',
+    label: 'Standard-Setters Cited',
+    sub: 'IAASB · PCAOB · AICPA · FASB · IASB · IRS',
   },
 ]
 
@@ -64,10 +66,10 @@ export function BottomProof() {
             Professional Standards
           </span>
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100">
-            Every Test Cites Its Standard
+            Every Test Names Its Rule
           </h2>
           <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto mb-4">
-            Eighteen audit-focused tools. Every result traceable to a published accounting or auditing standard.
+            Eighteen tools. Every test names the rule it applies, or says when a threshold is our own convention.
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>

@@ -553,3 +553,49 @@ def clear_throttle(
         "scope": scope,
         "cleared_at": datetime.now(UTC).isoformat(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Account erasure on request (Sprint 844)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/users/{user_id}/erase")
+@limiter.limit(RATE_LIMIT_WRITE)
+def erase_user(
+    request: Request,
+    user_id: int,
+    admin: Annotated[User, Depends(require_superadmin)],
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Erase a customer's account — for privacy@ requests and terminations.
+
+    Runs the same `services.account_erasure.erase_account` as self-service, so
+    the Privacy Policy's "deleted within 30 days" has one implementation. The
+    admin audit log keeps the user ID and row counts, nothing else.
+    """
+    from admin_audit_model import AdminActionType
+    from billing.admin_customers import _create_audit_entry
+    from services.account_erasure import ErasureBlocked, ErasureProviderError, erase_account
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found.")
+    admin_id = admin.id  # erase_account expunges the session, detaching `admin`
+    try:
+        counts = erase_account(db, target)
+    except ErasureBlocked as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ErasureProviderError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    _create_audit_entry(
+        db,
+        admin_id,
+        AdminActionType.ACCOUNT_ERASED,
+        target_user_id=None,
+        details={"erased_user_id": user_id, "rows": sum(counts.values())},
+        ip_address=get_client_ip(request),
+    )
+    db.commit()
+    return {"erased": True, "rows": sum(counts.values())}

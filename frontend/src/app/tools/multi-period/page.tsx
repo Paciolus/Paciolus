@@ -224,7 +224,7 @@ export default function MultiPeriodPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="practitioner" className="block text-xs font-sans text-content-tertiary mb-1">Engagement Practitioner</label>
+                  <label htmlFor="practitioner" className="block text-xs font-sans text-content-tertiary mb-1">Prepared by (shown on the memo cover)</label>
                   <input
                     id="practitioner"
                     type="text"
@@ -235,7 +235,7 @@ export default function MultiPeriodPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="reviewer" className="block text-xs font-sans text-content-tertiary mb-1">Engagement Reviewer</label>
+                  <label htmlFor="reviewer" className="block text-xs font-sans text-content-tertiary mb-1">Reviewer (shown on the memo cover)</label>
                   <input
                     id="reviewer"
                     type="text"

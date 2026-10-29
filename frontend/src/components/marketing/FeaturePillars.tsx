@@ -72,7 +72,7 @@ const pillars: FeaturePillar[] = [
     title: 'Professional-Grade Exports',
     tagline: 'Done before you close the tab.',
     description:
-      'PDF memos with ISA and PCAOB citations. Excel workpapers with full underlying data. CSV exports for downstream analysis. Formatted and ready to file the moment analysis completes.',
+      'PDF memos with ISA and PCAOB citations. Excel workpapers with full underlying data. CSV exports for downstream analysis. Exported when analysis completes, ready for your review.',
     accentGradient: 'from-clay-500/8 via-transparent to-transparent',
     accentBorder: 'border-clay-500/20 hover:border-clay-500/40',
     accentIconBg: 'bg-clay-500/15',
@@ -121,7 +121,7 @@ export function FeaturePillars() {
           Built for Financial Professionals
         </h2>
         <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-4">
-          Most analyses finish in seconds. Your client&apos;s uploaded files are not kept after analysis. Every output is report-ready the moment analysis completes.
+          Most analyses finish in seconds. Your client&apos;s uploaded files are not kept after analysis. Every output is exported when analysis completes, ready for your review.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
       </Reveal>

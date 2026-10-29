@@ -6,6 +6,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Each entry speci
 
 ---
 
+## [2026-10-24] Honest compliance documents (Sprints 840–845)
+
+**Type:** Major — every document rewritten to the facts; superseded versions moved to `archive/`.
+
+- **Removed claims that were not true:** SOC 2 "planned/in progress", annual penetration testing,
+  bug bounty "planned", a PGP key, CFAA / Computer Misuse Act / DMCA "authorization", PagerDuty /
+  Datadog alerting, two-engineer on-call, a status page, a 99.9% SLA, daily backups with 28-day
+  retention and RPO 1 h / RTO 2 h, tested restores, MFA required for admin access, quarterly access
+  reviews, required PR approvals, officer titles, a Render-hosted database, a claim that a breach
+  of financial data could not happen, and "no admin override".
+- **Now stated:** solo operator, no SOC 2 audit performed or scheduled, no pen test, Neon PITR as the
+  only database recovery mechanism with independent backups and restore testing in progress
+  (Sprint 778b), no in-app MFA, the read-only audited impersonation role, per-user audit chain,
+  security events persisted 365 days, account erasure as the one sanctioned hard-delete path.
+- **Terms and Privacy:** the website pages are authoritative; the markdown copies are pointers.
+- **DPA:** v2.0 is a draft, not offered for signature until counsel review.
+- **`.docx` exports removed** (they reproduced the superseded text).
+
+---
+
 ## [2026-02-26] Operational Governance Pack v1.0
 
 **Type:** Major (6 New Documents)

@@ -119,7 +119,7 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="ISA",
         code="ISA 315",
         title="Identifying and Assessing the Risks of Material Misstatement",
-        usage=("composite risk engine (Appendix 1 RMM matrix)",),
+        usage=("composite risk engine (separate IR/CR assessment; the combination table is a Paciolus convention)",),
     ),
     Standard(
         body="ISA",
@@ -347,13 +347,16 @@ STANDARDS: Final[tuple[Standard, ...]] = (
     ),
     # ── IRS / Tax / Forms ────────────────────────────────────
     Standard(
-        body="IRS", code="IRC §6041", title="Information returns at source", usage=("Form 1099 preparation tool",)
+        body="IRS",
+        code="IRC §6041",
+        title="Information returns at source",
+        usage=("1099 vendor threshold review tool",),
     ),
     Standard(
         body="IRS",
         code="IRC §6041A",
         title="Information returns regarding services",
-        usage=("Form 1099 preparation tool",),
+        usage=("1099 vendor threshold review tool",),
     ),
     Standard(body="IRS", code="IRC §6051", title="Receipts for employees (W-2)", usage=("W-2 reconciliation tool",)),
     # Sprint 826 (W1/W2): cited in the W-2 tool's catch-up findings and notices.
@@ -379,7 +382,7 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="IRS",
         code="Pub 1220",
         title="Specifications for Electronic Filing of Information Returns",
-        usage=("Form 1099 preparation tool",),
+        usage=("1099 vendor threshold review tool",),
     ),
     Standard(body="IRS", code="Pub 946", title="How To Depreciate Property", usage=("depreciation calculator",)),
     Standard(body="IRS", code="Form W-2", title="Wage and Tax Statement", usage=("W-2 reconciliation tool",)),
@@ -467,19 +470,19 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="IRS",
         code="IRC §6049",
         title="Returns regarding payments of interest",
-        usage=("Form 1099 preparation tool — 1099-INT",),
+        usage=("1099 vendor threshold review tool — 1099-INT",),
     ),
     Standard(
         body="IRS",
         code="IRC §6050N",
         title="Returns regarding payments of royalties",
-        usage=("Form 1099 preparation tool — 1099-MISC royalties",),
+        usage=("1099 vendor threshold review tool — 1099-MISC royalties",),
     ),
     Standard(
         body="IRS",
         code="IRC §6045(f)",
         title="Returns relating to payments to attorneys",
-        usage=("Form 1099 preparation tool — 1099-MISC attorney gross proceeds",),
+        usage=("1099 vendor threshold review tool — 1099-MISC attorney gross proceeds",),
     ),
     Standard(
         body="US Code",

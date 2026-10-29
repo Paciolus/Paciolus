@@ -529,3 +529,78 @@ def revoke_all_sessions(
     """
     revoke_all_user_sessions(db, current_user)
     return Response(status_code=204)
+
+
+# =============================================================================
+# Account deletion and data export (Sprint 844 — claims review Part 5)
+# =============================================================================
+
+
+class AccountDeleteRequest(BaseModel):
+    """Re-authenticate and confirm before an irreversible erasure."""
+
+    password: str = Field(..., min_length=1, max_length=256)
+    confirm: str = Field(..., description='Must be the word "DELETE".')
+
+    @field_validator("confirm")
+    @classmethod
+    def _must_say_delete(cls, value: str) -> str:
+        if value != "DELETE":
+            raise ValueError("Type DELETE to confirm.")
+        return value
+
+
+@router.post("/auth/account/delete", status_code=204)
+@limiter.limit(RATE_LIMIT_AUTH)
+def delete_account(
+    request: Request,
+    body: AccountDeleteRequest,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Permanently delete the caller's account and everything it owns.
+
+    Promised by the Privacy Policy since launch and built in Sprint 844.
+    Refuses (409) the cases `services.account_erasure.check_erasable` names,
+    and aborts (503) without deleting anything if Stripe or R2 refuses.
+    """
+    from auth import verify_password
+    from services.account_erasure import ErasureBlocked, ErasureProviderError, erase_account
+
+    if not verify_password(body.password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Password is incorrect.")
+    try:
+        erase_account(db, current_user)
+    except ErasureBlocked as exc:
+        raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)}) from exc
+    except ErasureProviderError as exc:
+        raise HTTPException(status_code=503, detail={"code": exc.code, "message": str(exc)}) from exc
+
+    out = Response(status_code=204)
+    _clear_refresh_cookie(out)
+    _clear_access_cookie(out)
+    return out
+
+
+@router.get("/auth/account/export")
+@limiter.limit(RATE_LIMIT_AUTH)
+def export_account_data(
+    request: Request,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Download everything Paciolus stores about the caller, as JSON (GDPR Art. 15/20)."""
+    import json
+
+    from services.account_erasure import export_account
+
+    payload = export_account(db, current_user)
+    log_secure_operation("account_exported", "Data export downloaded", db=db, user_id=current_user.id)
+    return Response(
+        content=json.dumps(payload, indent=2),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": 'attachment; filename="paciolus-account-export.json"',
+            "Cache-Control": "no-store",
+        },
+    )

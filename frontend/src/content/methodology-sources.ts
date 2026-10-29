@@ -1679,7 +1679,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
   },
   {
     toolKey: 'form_1099',
-    toolName: 'Form 1099 Preparation',
+    toolName: '1099 Vendor Threshold Review',
     rules: [
       {
         test: '1099-NEC threshold',
@@ -1881,6 +1881,14 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         sources: [],
         configurable: false,
         note: 'Band boundaries are Paciolus conventions.',
+      },
+      {
+        test: 'Composite Risk Scoring: combined risk',
+        rule: 'For each account and assertion, the auditor enters inherent risk and control risk (low, moderate, elevated, high). They are combined with a 4x4 table, not by taking the higher of the two: for example moderate x moderate gives elevated, and low inherent with moderate control risk gives low.',
+        kind: 'convention',
+        sources: ['ISA 315'],
+        configurable: false,
+        note: 'ISA 315 (Revised 2019) requires inherent and control risk to be assessed separately and leaves the combination to the auditor; it prescribes no matrix. The table is a Paciolus convention. The inputs are the auditor’s judgments.',
       },
       {
         test: 'HIGH-severity floors',

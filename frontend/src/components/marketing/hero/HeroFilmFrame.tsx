@@ -3,6 +3,7 @@
 
 import { motion } from 'framer-motion'
 import { BrandIcon } from '@/components/shared'
+import { TESTING_TOOL_COUNT, TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
 import { ANALYSIS_LABEL_SHORT } from '@/utils/constants'
 import { SPRING } from '@/utils/themeUtils'
 import { usePhaseTimer, useCountAnimation } from './useHeroAnimation'
@@ -231,7 +232,7 @@ const ANALYZE_PHASES = [0, 800, 2400, 5500, 7500] as const
 
 export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<number>; isActive: boolean }) {
   const phase = usePhaseTimer(isActive, ANALYZE_PHASES)
-  const testCount = useCountAnimation(108, 2.0, phase >= 3)
+  const testCount = useCountAnimation(TOTAL_AUTOMATED_TESTS, 2.0, phase >= 3)
 
   // Pre-compute which tiles activate and their stagger indices
   const activatingTiles: number[] = []
@@ -338,7 +339,7 @@ export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<numbe
           animate={phase >= 3 ? { opacity: 1 } : { opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          {testCount}/108 tests
+          {testCount}/{TOTAL_AUTOMATED_TESTS} tests
         </motion.p>
 
         {/* Findings badge */}
@@ -358,7 +359,7 @@ export function AnalyzeLayer({ opacity, isActive }: { opacity: MotionValue<numbe
         animate={phase >= 5 ? { opacity: 1 } : { opacity: 0 }}
         transition={{ duration: 0.3 }}
       >
-        108 tests run across 9 tools &middot; 3 findings flagged
+        {TOTAL_AUTOMATED_TESTS} tests run across {TESTING_TOOL_COUNT} tools &middot; 3 items flagged
       </motion.p>
     </motion.div>
   )

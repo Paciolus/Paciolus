@@ -78,7 +78,7 @@ describe('MarketingFooter', () => {
 
   it('renders disclaimer text', () => {
     render(<MarketingFooter />)
-    expect(screen.getByText(/data analytics tool for financial professionals/)).toBeInTheDocument()
+    expect(screen.getByText(/data-analytics software for accounting and audit professionals/)).toBeInTheDocument()
   })
 
   it('renders copyright', () => {

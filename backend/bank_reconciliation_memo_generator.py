@@ -930,7 +930,7 @@ def generate_bank_rec_memo(
         # ──────────────────────────────────────────────────────────────
         # VIII. CONCLUSION
         # ──────────────────────────────────────────────────────────────
-        story.append(Paragraph("VIII. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph("VIII. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
@@ -941,9 +941,12 @@ def generate_bank_rec_memo(
 
         # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
         _bank_rec_suffixes = {
+            # PR #235 review: a low composite does not mean no test flagged anything
+            # (high-value and stale items add only a few points), so this tier makes
+            # no claim about individual items.
             "low": (
-                "The reconciling difference is immaterial and the match rate is satisfactory. "
-                "No items requiring further investigation were identified."
+                "The automated tests returned a low flag-density indicator. Review any items "
+                "flagged in the sections above; a low indicator does not mean no item exceeded a threshold."
             ),
             "moderate": (
                 "The reconciling difference and outstanding items should be reviewed "

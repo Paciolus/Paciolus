@@ -1185,11 +1185,19 @@ class TestWebhookReconciliation:
 
     # --- User ID resolution ---
 
-    def test_user_id_from_metadata(self, db_session):
+    def test_user_id_from_metadata(self, db_session, make_user):
         from billing.webhook_handler import _resolve_user_id
 
-        result = _resolve_user_id(db_session, {"metadata": {"paciolus_user_id": "42"}})
-        assert result == 42
+        user = make_user(email="meta_lookup@example.com")
+        result = _resolve_user_id(db_session, {"metadata": {"paciolus_user_id": str(user.id)}})
+        assert result == user.id
+
+    def test_erased_user_in_metadata_resolves_to_none(self, db_session):
+        """Sprint 844 / PR #237: a late webhook for an erased account is acknowledged, not a 500."""
+        from billing.webhook_handler import _resolve_user_id, handle_subscription_deleted
+
+        assert _resolve_user_id(db_session, {"metadata": {"paciolus_user_id": "987654"}}) is None
+        handle_subscription_deleted(db_session, {"metadata": {"paciolus_user_id": "987654"}})  # no FK error
 
     def test_user_id_from_customer_id_lookup(self, db_session, make_user):
         from billing.webhook_handler import _resolve_user_id

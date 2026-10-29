@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-10-28] (this PR): 2026-10-28 action plan — 8-agent assessment → draft → council review and majority vote (7 questions, 21 of 23 amendments adopted); new START HERE block at the top of Active Phase, Sprints 854–858 filed, 843 merge gate and 778b checkout gate recorded, the "Stripe parked until pricing validated" line superseded, and the 2026-10-24 START HERE demoted. Live deploy verified at `1435b0e4`. No code changed (tasks/todo.md)
 - [2026-10-27] (this PR): `/export/pdf` returned 500 when `risk_summary` or `column_detection` was sent as `null` (`.get(k, {})` yields `None` for a present-but-null key); now `or {}`. Found by the Sprint 819 snapshot work. Same pattern remains in 5 memo generators, left alone to avoid conflicting with PR #285 (pdf/sections/diagnostic.py, tests/test_export_diagnostics_routes.py)
 - [2026-10-27] (this PR): `@testing-library/jest-dom` 6.9.1→7.0.1 (Dependabot #248) and `lint-staged` 16.4.0→17.6.0 (#252), both unblocked by upgrading the dev machine to Node 22.23.4 / npm 10.9.9 — the arborist `edgesOut` crash no longer reproduces, and lint-staged 17 needs Node ≥ 22.22.1. `npm audit fix` cleared 2 high (`brace-expansion` 1.1.14→1.1.21, `zod` 4.3.6→4.6.7); in-range patches for `@typescript-eslint/*` 8.72.1, `postcss` 8.5.32, `framer-motion` 12.43.0. Lockfile audited, not trusted: 0 added, 24 removed — all lint-staged 16's own terminal-UI deps (`listr2`, `log-update`, …), no peer-derived entries lost. Verified: build (all pages `ƒ`), 208 suites / 2,072 tests, `tsc`, eslint, 0 audit findings (frontend/package.json, frontend/package-lock.json)
 - [2026-10-24] (this PR): claims-review backlog — full findings saved to `reports/claims-review-2026-10-24.md`; Sprints 840–845 filed with a next-session start block; merge SHAs recorded for 836–839; Sprint 834 marked superseded; `ceo-actions.md` and `SESSION_STATE.md` refreshed (tasks/todo.md, tasks/ceo-actions.md, SESSION_STATE.md, reports/)
@@ -99,9 +100,80 @@
 ---
 
 ## Active Phase
-> **▶ Next session: start at "NEXT SESSION — START HERE" below (Sprints 840–845, from the 2026-10-24 claims review —
-> [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md)).** The worklist that follows is older context.
-> **▶ Also queued: security review 2026-10-27 → Sprints 846–853** (block directly after START HERE; 846–848 recommended before 843).
+> **▶ START HERE — ACTION PLAN 2026-10-28 (council-ratified, authoritative order).** Built from the 2026-10-28 8-agent
+> assessment (Scout 3 · Guardian 5 · Future-State 5 · Critic 6.5 · Executor 7 · Designer 7 · Auditor ~7 · Accounting
+> Expert 7.5; mean ~6/10 — engineering strong, commercial side unstarted), then reviewed by all eight agents with open
+> questions settled by majority vote (IntegratorLead breaks ties). All eight voted APPROVE WITH AMENDMENTS; 21 of 23
+> amendments adopted. New sprints 854–858 are written out in full further down this section, directly above the
+> 2026-10-24 START HERE block. Owner: **C** = Claude, **CEO** = the CEO.
+>
+> **Council votes**
+>
+> | # | Question | Result | Vote |
+> |---|----------|--------|------|
+> | Q1 | Launch scope | **Solo purchasable; Professional/Enterprise "Contact us" until Sprint 853** | 8–0 |
+> | Q2 | Freeze scope | **Freeze until Sprint 781 reports, or 30 days after Phase 3 completes — whichever first** | 6–2 (Accounting, Executor: lift at Phase 3) |
+> | Q3 | Backup vs Stripe | **778b must pass before the first live checkout** (matches the 2026-10-19 DECISION) | 5–3 (Executor, Designer, Future-State: parallel) |
+> | Q4 | Counsel timing | **Send Terms/Privacy/DPA to counsel as soon as 843–845 merge** — *council recommendation; reverses the 2026-10-24 CEO direction, so it is the CEO's call* | 8–0 |
+> | Q5 | State-doc drift check | **Tie 4–4 → IntegratorLead: build the narrowed Sprint 857** (two deterministic checks only, ~1h, freeze-exempt). The stale state that triggered the question was itself found this session; the narrowing answers the "brittle prose parser" objection | 4–4 |
+> | Q6 | Stale tax figures (793b) | **Visible banner now; becomes a disable on 2026-12-15 if no practitioner has confirmed** | 8–0 |
+> | Q7 | Tool positioning | **Decide after Sprint 781 reports** | 7–1 (Future-State: reposition now) |
+>
+> **Rejected amendments:** fold 18→5 repositioning into Sprint 843 (Future-State; contradicts Q7) · park Sprint 857
+> (Scout, Executor; resolved by the Q5 tiebreak).
+>
+> **CEO track — starts today, in parallel with everything below**
+> - [ ] **Sprint 781 (demand validation), hard-dated:** read the `waitlist_signups` count **on day 1**; **3 unguided
+>       CPA sessions on their own TB by 2026-11-07** (5–10 total); ask the price question in the first conversation.
+>       Success metrics: conversations held, **and ≥1 Solo checkout paid by someone outside the CEO's personal network
+>       within 30 days of Stripe going live.**
+> - [ ] Add the **`RENDER_API_KEY` repo secret** (arms the uptime deploy-drift probe; prerequisite for 778b's DR workflows).
+> - [ ] Confirm the **R2 `paciolus-backups` token** still works and provide the **Neon connection string** for the cron (778b).
+> - [ ] Decide **refund policy**, **legal entity** (LLC vs Inc.) and **repository visibility**.
+> - [ ] **Phase 4.3 custom domain** — `api.paciolus.com` 404s and it is the Stripe webhook target (do before 4.1).
+> - [ ] **Confirm or decline Q4** (counsel now vs. once the website is finalised).
+> - [ ] **H12:** verify the ISA 315 "Appendix 1 matrix" citation, or accept the default (relabel as a Paciolus convention).
+>
+> **Phase 0 — State and alarms (day 1, C)**
+> - [x] Live Render deploy SHA == `main` — verified 2026-10-28: `dep-dbh0plavcj2c73e057bg` is `1435b0e4`, status live.
+> - [x] Refresh `SESSION_STATE.md` to point at this plan (it still names `5f82d818` and "Sprints 840 → 845").
+> - [ ] **Sprint 854** — nightly environment parity (below).
+>
+> **Phase 1 — Make what a buyer reads true (days 1–2, C)**
+> - [ ] Sprint 843's **banned-phrase test across every memo generator gates the #235 merge** (not a follow-up).
+> - [ ] Rebase and merge **#235 (843) → #236 (844) → #237 (845)**. #235 is DIRTY.
+> - [ ] Renumber PR **#254** from the duplicate "Sprint 846" to **Sprint 855**; rebase onto main after #237 and merge.
+> - [ ] Close Dependabot **#249** in favour of **#269** (Sprint 786, framer-motion 14.7.1); rebase #269 (DIRTY).
+> - [ ] **Sprint 856** — first-run, public-page accessibility and the browser pass (below).
+> - [ ] **793b tax banner** — see Sprint 856 item 5.
+>
+> **Phase 2 — Survive losing the database (days 2–3, C + CEO console)**
+> - [ ] **Sprint 778b** (778a is already COMPLETE): `pg_dump` → R2 cron, verify Neon PITR window, one recorded restore
+>       drill per mechanism, DR workflows rewritten against Neon + R2. **Gates the first live checkout (Q3).**
+>
+> **Phase 3 — Take money, Solo first (CEO-led; C builds 858)**
+> - [ ] **Sprint 858** — Solo-only checkout gating (below).
+> - [ ] **Phase 4.1 / Sprint 447** — Stripe live at **Pricing v3** (test mode is v2: rebuild, don't copy); webhook on the
+>       working host; add a **pytest that fails on any v2 price ID** (extends `scripts/stripe_price_parity_preflight.py`);
+>       **one real-money Solo checkout verified in a browser**, then refunded. Blocked on 778b, 858, 4.3.
+>
+> **Phase 4 — Firm tier (after Phase 3, or sooner if a firm signals intent)**
+> - [ ] **Sprint 853** (existing) — one shared access helper replaces the three copy-pasted org checks; unlocks
+>       Professional/Enterprise checkout.
+>
+> **Phase 5 — Process hygiene (C, ~1h, hotfix track except 857)**
+> - [x] Mark Sprints 848 and 813 COMPLETE (both merged in `1435b0e4`), then archive — done 2026-10-28.
+> - [ ] Archive SUPERSEDED Sprints 738, 760, 761; collapse the stacked banner notes in this section.
+> - [x] Fix `.claude/agents/designer.md` (asks for Inter / navy / slate — contradicts Oat & Obsidian).
+> - [x] Update the CLAUDE.md phase table and test counts (stops at Sprint 515 / "6,188 + 1,345").
+> - [ ] **Sprint 857** — state-doc drift check (below).
+>
+> **Freeze.** No new refactor, dedup, perf or feature sprints until **Sprint 781 reports or 30 days after Phase 3
+> completes, whichever comes first.** Parked: 814, 815, 821, 822, 823, B-6…B-9, reportlab 5 major, tool repositioning
+> (Q7). **Exempt:** Sprint 857, security defects, and **any defect or confusion a CPA hits during a Sprint 781
+> session** — fix those immediately. **Tracked risk (parked, not forgotten):** `slowapi==0.1.10` is unmaintained (last
+> release Oct 2022) and sits on the rate-limit path that caused the last production outage — plan a replacement after the freeze.
+>
 > **WORKLIST — 2026-10-20 (authoritative order).** Consolidated in [`reports/next-actions-2026-10-20.md`](../reports/next-actions-2026-10-20.md) (readable: https://claude.ai/code/artifact/cdbdd9eb-3039-44cf-a97b-23bc5c598543), which re-verified the 2026-10-19 launch-readiness assessment against current source and found ten items neither that doc nor the 2026-10-20 worklist covered.
 >
 > | Track | Scope | Sprints | Owner |
@@ -114,7 +186,7 @@
 > | 5 | Legal to counsel, waitlist count, CPA validation, custom domain | 781 + Phase 4.2/4.3 | **CEO — starts today, parallel** |
 > | 6 | Backlog debt | **785**, **786**, 741, 738, 762 | Claude |
 >
-> **Parked deliberately:** B-6…B-9 until Sprint 781 reports · the live Stripe build until pricing is validated · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
+> **Parked deliberately:** B-6…B-9 until Sprint 781 reports · ~~the live Stripe build until pricing is validated~~ (superseded 2026-10-28: Stripe live runs in parallel with Sprint 781, Solo only, after 778b — see START HERE) · the 22-engine relocation · the mypy baseline · dev-only npm advisories · the deferred SOC 2 set.
 >
 > **Open asks on the CEO** (each blocks a track): Neon read-only connection string (waitlist count + Sprint 738 schema read) · `RENDER_API_KEY` repo secret (deploy-drift probe + DR workflows) · confirmation the R2 `paciolus-backups` token still works · registered address / agent / EU-rep + DPO decisions (the critical path to launch) · rebase-or-redo call on the 7 stranded sprint branches.
 > **Launch-readiness Council Review — 2026-04-16.** 8-agent consensus: code is launch-ready; gating path is CEO calendar (Phase 3 validation → Phase 4.1 Stripe cutover → legal sign-off). Full verdict tradeoff map in conversation transcript.
@@ -356,7 +428,79 @@
 > **Before accepting an inherited blocker, check what the work actually reads.**
 > Sprints 812–831 archived to `tasks/archive/sprints-812-831-details.md`.
 > Sprints 790–835 archived to `tasks/archive/sprints-790-835-details.md`.
-> **▶ NEXT SESSION — START HERE (written 2026-10-24).** The CEO asked for a legal-and-security claims review
+> **▶ ACTION PLAN 2026-10-28 — Sprints 854–858.** Order and votes are in the START HERE block at the top of this
+> section. One PR per sprint; each fix lands with a test that fails before it.
+
+### Sprint 854: Nightly environment parity
+**Status:** PENDING. **Priority:** P1 (Phase 0). **Source:** 2026-10-28 council (Guardian, Critic).
+
+The 2026-10-28 nightly went RED with no defect in the code. `backend/venv` still has fastapi 0.136.1, but Sprint 786
+moved `requirements.txt` to `fastapi==0.162.0`, so `tests/helpers/route_inventory.py:22` (`RouteContext`) fails to
+import → 99 collection errors in Coverage Sentinel. QA Warden crashed separately on the Jest side.
+
+- [ ] Orchestrator **syncs the venv from `requirements.txt` before every run** (`pip install -r`), not a one-off rebuild —
+      a hand rebuild rots again (Sprint 786 already flagged this venv as matching neither the pins nor production).
+- [ ] Pre-flight: fail the nightly RED with a named reason if installed versions still differ from the `==` pins after the sync.
+- [ ] `scripts/overnight/agents/qa_warden.py:185` — `json.loads(stdout)` with `None` → report "did not run", not a TypeError.
+- [ ] **Did-it-run check:** an agent whose sentinel is missing or crashed fails the brief visibly (only 43 of 109
+      dormant-period nights produced a qa_warden sentinel and nobody noticed).
+- [ ] The daily brief states the SHA and timestamp it tested, as-of its run time (the 10-28 brief's `a9dfeb69` was
+      HEAD at 04:00 — the defect is unstated staleness, not a wrong SHA).
+- [ ] Report Auditor on 0/0 tests reports **UNVERIFIED**, not GREEN.
+
+**Commit SHA:** TBD.
+
+### Sprint 855: Tool-correctness loose ends from 826/827 (was PR #254's "Sprint 846")
+**Status:** PENDING merge — PR #254, DIRTY. **Priority:** P2 (Phase 1).
+
+- [ ] Retitle PR #254 and its commits' references to Sprint 855 (846 is taken by the merged memo-markup sprint `826ef50f`).
+- [ ] Rebase onto `main` after #237 merges; full backend suite; merge.
+
+**Commit SHA:** TBD.
+
+### Sprint 856: First run, public-page accessibility, and one look in a browser
+**Status:** PENDING. **Priority:** P1 (Phase 1 — before the first Sprint 781 CPA session). **Source:** 2026-10-28 council (Designer, Accounting Expert, Executor).
+
+- [ ] **WelcomeModal step 1** (`components/shared/WelcomeModal.tsx:32`) still says "Upload a Trial Balance", and #235
+      does not change it — 14 of 18 tools take no TB. Point it at the tool picker. (Steps 2–3 copy is in #235; verify after merge.)
+- [ ] WelcomeModal: Escape closes it, focus trap, initial focus — match the five other modals. Fix the header comment
+      "Shows once per user" (completion is in localStorage — once per device).
+- [ ] Skip-to-content link in `MarketingNav` (public pages declare `#main-content` but nothing links to it; only
+      `UnifiedToolbar.tsx:82` has one).
+- [ ] **Browser pass:** home, pricing, workspace and two tool result tables at 375px and 1440px. Record findings; fix
+      anything a CPA would hit (no source-only review has ever looked at these rendered — `tasks/todo.md:267`).
+- [ ] **793b tax banner.** Non-dismissible disclaimer banner (existing pattern, clay/oatmeal tokens): "Statutory figures
+      current through tax year 2025 — verify before relying". Same line in each tool's PDF and Excel exports — the export
+      is what a CPA files. **First verify per tool** which tools are year-keyed to 2025: W-2 already refuses unknown years
+      (`w2_reconciliation_engine.py:21,75-80`); check 1099, Book-to-Tax and Depreciation before printing the claim.
+      **Hard date:** if no practitioner has confirmed the 2026 figures by **2026-12-15**, the banner becomes a disable.
+
+**Commit SHA:** TBD.
+
+### Sprint 857: State-doc drift check (narrowed)
+**Status:** PENDING. **Priority:** P3 (Phase 5; freeze-exempt). **Complexity:** 2/10. **Source:** Q5 tiebreak, Critic's narrowing.
+
+Two deterministic checks only, run in CI. No prose matching of "pending merge" — that would false-alarm and get muted.
+
+- [ ] `SESSION_STATE.md`'s named `main` SHA must be an ancestor of HEAD.
+- [ ] No sprint number may appear in two `### Sprint N:` titles or two PR titles with different subjects (the 846 collision).
+- [ ] Manual post-merge checklist line added to `tasks/PROTOCOL.md` for the rest (status → COMPLETE, SHA recorded).
+
+**Commit SHA:** TBD.
+
+### Sprint 858: Solo-only checkout gating
+**Status:** PENDING. **Priority:** P1 (Phase 3 — must ship before Sprint 447 goes live). **Source:** Q1 (8–0), Executor amendment.
+
+The launch sells Solo only until Sprint 853 makes clients firm-owned. Nothing in the code enforces that yet.
+
+- [ ] Pricing page, `UpgradeGate` CTAs and the upgrade flow show **"Contact us"** for Professional and Enterprise.
+- [ ] Backend **rejects** checkout-session creation for Professional/Enterprise price IDs behind a single flag that
+      Sprint 853 flips (test: request a Pro session → 4xx).
+- [ ] Copy check: no marketing surface promises self-serve Professional/Enterprise purchase while the flag is off.
+
+**Commit SHA:** TBD.
+
+> **2026-10-24 START HERE — superseded as the session start by the 2026-10-28 action plan at the top of this section; its CEO-decision defaults below still apply.** The CEO asked for a legal-and-security claims review
 > and approved fixing everything it found. **Full findings with file:line for every item:**
 > [`reports/claims-review-2026-10-24.md`](../reports/claims-review-2026-10-24.md) (CEO-readable version:
 > https://claude.ai/artifact/MFTYHezjA4zakoiKwgnNb2). Work **Sprints 840 → 845 in order**, one PR each (or 840 alone
@@ -366,7 +510,7 @@
 >
 > **Progress:** Sprint 840 (security defects) COMPLETE 2026-10-24 — detail in
 > `tasks/archive/sprints-836-840-details.md`, including its two CEO console items (R2 lifecycle rule on
-> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprint 841 (storage wording) and 842 (billing claims) COMPLETE. Next: Sprint 843.
+> `paciolus-exports`; confirm `TRUSTED_PROXY_IPS` on Render). Sprints 841 (storage wording), 842 (billing claims), 843 (positioning/disclaimers), 844 (privacy + account deletion) and 845 (compliance docs) COMPLETE — all six claims-review sprints are in PRs #232–#237, stacked, awaiting CEO merge.
 >
 > **Defaults for the open CEO decisions** (use them unless the CEO answers differently; the doc has checkboxes):
 > storage positioning **Option B** (plain description + "what we keep" list; drop "Zero-Storage" as a promise);
@@ -382,6 +526,7 @@
 > Sprints 836–840 archived to `tasks/archive/sprints-836-840-details.md`.
 > Sprints 841, 842, 846, 847 archived to `tasks/archive/sprints-841-847-details.md`.
 > Sprints 849, 850, 851, 852 archived to `tasks/archive/sprints-849-852-details.md`.
+> Sprints 813, 848 archived to `tasks/archive/sprints-813-848-details.md`.
 
 > **▶ SECURITY REVIEW 2026-10-27 — Sprints 846–853.** The CEO ran a vibecoder-style security triage. It found
 > **0 critical, 0 high, 9 medium and 14 low** issues; secrets, dependencies and cross-tenant isolation are clean.
@@ -399,36 +544,6 @@
 > - Each fix lands with a regression test that fails before the fix.
 > - Run the full backend suite before pushing. One PR per sprint.
 > - When a sprint closes, set the doc's Status dropdown to Done, or tell the CEO to.
-
-### Sprint 848: Authorization gaps (M8, M9, L1, L5)
-**Status:** COMPLETE 2026-10-27 (pending CI + merge). **Priority:** P1. **Source:** security review M8 (verified), M9, L1 (verified), L5 (verified).
-
-- [x] **M8: any org member could change firm branding.** `_get_branding(..., write=True)` also requires the
-  owner or admin role (same rule and 403 as `organization_policy.require_admin`, checked on the membership row
-  the helper already loads, so no second query). Used by `PUT /branding/`, `POST /branding/logo` and
-  `DELETE /branding/logo`; `GET` stays open to every member.
-- [x] **M9: an impersonation session could open the Stripe billing portal.** `require_current_user` sets
-  `request.state.impersonation`; new `auth.reject_impersonation` dependency (403, `IMPERSONATION_READ_ONLY`)
-  guards `GET /billing/portal-session`. Checkout is a POST, already blocked by the mutating-method guard.
-  Grep of all 82 GET routes for Stripe URLs, share tokens, download tokens and passcodes: none other —
-  `ExportShareResponse` and `OrganizationInviteResponse` carry no tokens, and `GET /auth/csrf` only enables
-  writes, which impersonation cannot make.
-- [x] **L1: `POST /activity/tool-log` stored an unvalidated `engagement_id`.** Resolved through
-  `EngagementManager.get_engagement` as `tool_run_recorder` does; unresolved → stored as `None`, still 201.
-- [x] **L5: admin billing actions could hit the wrong customer.** Fallback kept (solo customers). New
-  `_require_target_user` in `routes/internal_admin.py` (404 unknown, 409 mismatch) runs before plan override,
-  extend trial, credit, refund, force cancel **and revoke sessions** (same fallback, so it gets the same
-  guard; it now takes a `RevokeSessionsRequest` body). Impersonation reuses the helper. Every request schema
-  requires `target_user_id`; the admin hook and customer page send `d.user_id`.
-
-Tests: `tests/test_authorization_gaps.py` (23; 16 fail on the pre-fix routes — including the FK 500 on an
-unknown engagement — and pass after); `test_internal_admin.py` requests now name their target;
-`useInternalAdmin.test.ts` +1.
-
-**Verification:** ruff clean; frontend `tsc` + eslint clean, `useInternalAdmin` 10/10; full backend suite 9,990 passed (before stacking on 847–852); after stacking, the auth, admin, branding, impersonation, 847 and 849 test files pass (117). The branding test uploads a real 4×4 PNG, because Sprint 852's logo-dimension check opens the image with Pillow. OpenAPI snapshot regenerated (`target_user_id`, `RevokeSessionsRequest`).
-
-**Commit SHA:** `5a9df962` (stacked on PR #280).
----
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)
 **Status:** BLOCKED on CEO decision. **Priority:** P2 (largest change; data-model migration). **Source:** security review M7, L12.
@@ -480,68 +595,108 @@ unknown engagement — and pass after); `test_internal_admin.py` requests now na
 ---
 
 ### Sprint 843: Professional positioning, memo wording and disclaimers
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 4 (H1–H13, M1–M12, L1–L10, disclaimer set).
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 4 (H1–H13, M1–M12, L1–L10, disclaimer set).
 
-- [ ] Homepage hero (H1, H2), WelcomeModal (H3), demo memo card + AS 1215 badge (H4), About (H5, M5, L9), feature
-      pillars (H6), "every memo follows ISA/PCAOB format" (M4), approach meta "aligned" (M6).
-- [ ] Standard-name hero badges on nine tool pages + tools index + demo strip → quiet "References …" line;
-      "ISA 500 Audit Evidence" → "Bank-to-book matching" (H7).
-- [ ] Memo cover fields "(entered by user)" + cover line (H8); "Conclusion" → "Summary of Results" with the
-      flag-density wording (H9); bank-rec/TWM "immaterial / satisfactory" (H10); TB report "appears sound",
-      "Risk Assessment", "Findings", "Material Exceptions" (H11); memo disclaimer "sufficient" (M1); sampling
-      PASS/FAIL → "UEL ≤ TM" (M2); demo PASS chips (M3).
-- [ ] Composite risk ISA 315 "Appendix 1 matrix" claim (H12) — **CEO verifies against ISA 315 first**; likely relabel
-      as a Paciolus convention and add composite risk to `methodology-sources.ts`.
-- [ ] Rename "Form 1099 Preparation" → "1099 Vendor Threshold Review" (H13) across registry, ledger, pages, tests.
-- [ ] Fraud framing "detection" → "indicators" (M7); tax disclaimer on 1099, W-2, Book-to-Tax, **Depreciation and Loan
-      Amortization** (M8); USER_GUIDE "compliant", "client-ready", "Guarantees" (M9); independence line on
-      intercompany / adjusting entries / book-to-tax / FS (M11).
-- [ ] Adopt the standard disclaimer set verbatim (site footer, tool pages, memo cover + footer, tax tools).
-- [ ] Stale test counts (L1, with a consistency test), hero animation copy (L3, L7), "7 standards" (L4), "Audit
-      Intelligence" naming per CEO decision (L5: about/approach meta, `main.py:243`, `email_service.py:577`,
-      `memo_base.py:795`), memo title ISA 520 (L10).
+- [x] Homepage hero (H1 "Diagnostics in Seconds. Your Judgment, Better Informed."; H2), WelcomeModal (H3; also its
+      "12 tools / 19 fraud indicators" → 18 tools / 19 tests), demo memo card + AS 1215 badge → "PDF" (H4), About
+      (H5, M5, L9), feature pillars (H6), M4 ("Every test names the rule it applies, or says when a threshold is our
+      own convention" on EvidenceBand, BottomProof, demo). M6 was done in 841.
+- [x] H7: nine tool-page hero badges → "References …" ("Bank-to-book matching" for bank rec); tools index references
+      stripped of descriptive claims ("ISA 500 External Confirmation" was wrong for bank rec); demo strip.
+- [x] Memo cover (H8): "Prepared by / Reviewer / Status (entered by user)" + the standard cover line; input labels say
+      "(shown on the memo cover)", no "Jane Smith, CPA" placeholder. "Conclusion" → "Summary of Results" in the shared
+      template and bank rec, TWM, currency, multi-period, preflight (H9); fallback text says "flag-density indicator
+      … not a risk assessment". Bank rec / TWM low-tier "immaterial / satisfactory" removed (H10). TB report: "Diagnostic
+      Score", "Items Flagged", "Above / Below Materiality", "No items exceeded the configured thresholds" (H11). Memo
+      footer is the standard memo footer (M1). Sampling: PASS/FAIL → "UEL ≤ TM" / "UEL > TM", "Evaluation Result",
+      "Suggested close-out steps" (M2). Demo PASS chips gone, "Low flag density — N items flagged" (M3). The flux
+      memo keeps its "Conclusion:" field — that one is the auditor's own written conclusion.
+- [x] H12 relabelled: the 4×4 RMM table is a **Paciolus convention**; ISA 315 (Revised 2019) requires separate IR/CR
+      assessment and prescribes no matrix (its Appendix 1 is about understanding the entity). Engine disclaimer,
+      docstrings, standards registry usage, specimen, pages, CLAUDE.md, and a new `methodology-sources.ts` rule.
+      **CEO: confirm against your copy of ISA 315** — removing the attribution is the safe direction either way.
+- [x] H13: "Form 1099 Preparation" → "1099 Vendor Threshold Review" across registry, taxonomy, workpaper index,
+      ledger, pages, toolbar, command palette, methodology, docs and tests.
+- [x] M7 "detection" → "indicators" / "patterns associated with fraud schemes"; M8 tax disclaimer on 1099, W-2,
+      Book-to-Tax, Depreciation and Loan Amortization; M9 USER_GUIDE "compliant", "client-ready", "Guarantees";
+      M11 independence note on intercompany, adjusting entries, financial statements (book-to-tax via the tax text).
+- [x] Standard disclaimer set in `frontend/src/content/disclaimers.ts`: site footer, every tool page (inside
+      `DisclaimerBox`, above the tool's own text), tax tools; memo cover + footer in the backend.
+- [x] L1 test counts derived (`testCountFor()` on six tool pages and practice settings, demo, hero); L3/L7 hero
+      animation copy; L4 → "6 Standard-Setters Cited" (pinned to the registry); L5 naming (`main.py`, email footer,
+      memo footer; about/approach meta in 841); L10 memo title "(ref. ISA 520)". M12 (CPA advertising) is counsel's.
+- [x] **Merge gate (2026-10-28 plan):** a banned-phrase test across **every** memo generator ("we conclude", "appears
+      sound", "satisfactory", a "Conclusion" heading, …), generalising `test_multi_period_memo.py:875-890`, lands in
+      #235 **before** it merges. Re-locate H10 by symbol: bank-rec is now near `bank_reconciliation_memo_generator.py:945`
+      (the claims review cites `:985`), TWM near `three_way_match_memo_generator.py:109`.
+      **Done 2026-10-29:** `tests/test_memo_banned_phrases.py` scans (1) the rendered text of all 48 memo snapshots
+      (held to live output by `test_memo_render_equivalence.py`) and (2) every non-docstring string literal in every
+      discovered `*memo*.py` generator plus `shared/memo_base.py` / `memo_template.py`. It caught one survivor of M2:
+      sampling's two-sided notes said "The conclusion is a fail if …" → "The result is UEL > TM if …". H10 confirmed:
+      no bank-rec / TWM "satisfactory" remains.
 
 **Commit SHA:** TBD.
 
 ---
 
 ### Sprint 844: Privacy promises and legal-page accuracy (account deletion feature)
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 5. Counsel reviews the finished pages at website-final.
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 5. Counsel reviews the finished pages at website-final.
 
-- [ ] Account deletion: change copy now to "email privacy@paciolus.com; deleted within 30 days", then **build**
-      self-service deletion (hard-delete user, clients, engagements, summaries, tool runs, sessions, follow-ups,
-      misstatements, expectations; R2 shares; cancel Stripe subscription; keep only what billing/law requires and say
-      so) + a data-export endpoint; termination hard-delete job; disclose that history "clear" archives.
-- [ ] Remove the DPO line → privacy contact; fix the entity name everywhere (CEO decision); providers and regions
-      (Neon us-east-1, Render region, SendGrid, Cloudflare R2, Render Key Value, Loki if enabled) in Privacy,
-      Subprocessor List, DPA, Security Policy; passwords "hashed" not "encrypted".
-- [ ] Checkout DPA checkbox: publish the DPA at a real URL (updated for Neon/R2/actual data) or remove the checkbox
-      until it exists; Trust page DPA status consistent.
-- [ ] Make the website Terms/Privacy authoritative; delete or sync the markdown copies (dates, arbitration body,
-      refunds, seat caps, CCPA days, "[State]", placeholders, non-existent /history routes).
-- [ ] "72 hours (GDPR requirement)" → "without undue delay, and regulators as the law requires"; remove analytics
-      collection claims; drop "compliant 2024" years; CPRA rights; Terms service description (18 tools, 10 formats).
-- [ ] Trust/Privacy security claims list in report Part 5 (15-minute tokens, lockout, rate-limit wording, no RLS,
-      TLS 1.2+, memory "released", share-link exception, "enterprise-grade", monitoring/on-call).
+- [x] **Built** self-service deletion + data export (`services/account_erasure.py`): `POST /auth/account/delete`
+      (password + typing DELETE) hard-deletes the user, clients, engagements, expectations, misstatements, follow-ups
+      and comments, tool runs, summaries, activity logs, sessions, tokens, shares (R2 objects first) and the
+      subscription (Stripe cancelled first; a provider failure deletes nothing). Billing history kept with the user
+      unlinked; a security-log row records the erasure. Refused (409) for superadmins, owners of orgs that still have
+      members, and authors of entries inside someone else's engagement. `GET /auth/account/export` returns JSON of
+      everything stored (no password hashes or token material). Superadmin `POST /internal/admin/users/{id}/erase`
+      (audit-logged; migration `b9d3f6a2c418` adds `ACCOUNT_ERASED`) honours emailed requests and terminations with
+      the same code. Settings → Profile → Your Data has both controls. The no-hard-delete policy exempts exactly this
+      module, with the justification in `accounting_policy.toml`.
+- [x] Privacy: deletion section describes the real feature + what is kept; "clear history" disclosed as archival;
+      DPO → "Privacy Contact"; processors (Vercel, Render, Render Key Value, Neon, Cloudflare R2, Stripe, SendGrid,
+      Sentry) and regions (Neon us-east-1; Render/Vercel Virginia); "SCCs" → provider's standard terms; access right
+      points at the export; CPRA rights added; analytics claims (session duration, screen resolution) removed.
+- [x] Checkout DPA checkbox removed (it linked to a page calling the DPA "planned"); replaced with "request one".
+      Trust: GDPR/CCPA "2024" and DPA "2025" years removed; SOC 2 "No audit performed or scheduled".
+- [x] Website Terms/Privacy authoritative: the markdown copies moved to `docs/04-compliance/archive/` and replaced by
+      pointers (they had drifted on dates, arbitration body, refunds, seat caps, CCPA days, "[State]", placeholders,
+      non-existent /history routes).
+- [x] Breach notice "without undue delay, and regulators as the law requires"; Terms service description (18 tools,
+      10 formats); termination wording covers summaries and engagement entries.
+- [x] Trust security claims: 15-minute tokens, "5 attempts, 15 minutes", rate limits on every route, app-level account
+      scoping (no RLS claim), TLS 1.2+, "released from memory", optional sign-off block, monitoring = Sentry + 15-minute
+      uptime probe + no 24/7 on-call. (Share-link exception and "enterprise-grade" were done in 841.)
+- **Open — CEO:** legal entity (Paciolus LLC on Privacy vs Paciolus, Inc. on Terms and footer) is still unresolved and
+      deliberately not guessed. Provider DPAs / regions are stated as engineering understands them — verify in the
+      consoles (report "Verify in console").
+- **Left for 845:** provider lists inside `SUBPROCESSOR_LIST.md`, `DATA_PROCESSING_ADDENDUM.md`, `SECURITY_POLICY.md`
+      (those documents are rewritten there).
 
 **Commit SHA:** TBD.
 
 ---
 
 ### Sprint 845: Honest compliance documents (the repo is public)
-**Status:** PENDING. **Priority:** P1. **Source:** report Part 6. **CEO decision:** repo private or public.
+**Status:** COMPLETE 2026-10-24. **Priority:** P1. **Source:** report Part 6.
 
-- [ ] Rewrite `docs/04-compliance/` as short, accurate solo-operator documents: SOC 2 status ("none performed or
-      scheduled"); no pen test / bug bounty / PGP claims; disclose.io safe-harbor instead of CFAA/CMA/DMCA language;
-      incident response = founder best-effort + 15-minute uptime probe + Sentry; BCP/DR = Neon PITR, independent
-      backups in progress (Sprint 778), no SLA/RTO/RPO promises; audit logging as it actually is; MFA status;
-      Neon not Render.
-- [ ] Code fix the docs depend on: audit-chain write links across users but verifies per user
-      (`routes/activity.py:153-163` vs `shared/audit_chain.py:85-118`) — make them agree; NULL-hash rows; deletion
-      guard on the admin audit log (`main.py:149`).
-- [ ] Fix `dr-test-monthly.yml` / `backup-integrity-check.yml` to target Neon + R2 (overlaps Sprint 778).
-- [ ] If the CEO chooses private: `gh repo edit --visibility private` is a CEO action (it is outward-facing); note the
-      git history still holds the old text for anyone who cloned it.
+- [x] `docs/04-compliance/` rewritten as short, accurate solo-operator documents (Security Policy 3.0, Data Handling
+      Architecture 3.0, Subprocessor List 2.0, Incident Response 2.0, BCP/DR 2.0, Access Control 2.0, Secure SDL 2.0,
+      VDP 2.0, Audit Logging 2.0, DPA 2.0-draft). Each opens with what the old version claimed that was false. SOC 2:
+      "none performed or scheduled"; no pen test / bug bounty / PGP; disclose.io-style safe harbor instead of
+      CFAA/CMA/DMCA "authorization"; incidents = founder best-effort + 15-minute probe + Sentry, no on-call; BCP/DR =
+      Neon PITR only, no SLA/RTO/RPO, independent backup and restore testing not done (778b); audit logging as built
+      (840/845); no in-app MFA; impersonation role described; Neon not Render; branch protection as configured (no
+      required approval). Superseded versions in `archive/` with `_pre-sprint-845` names; stale `.docx` exports
+      removed; index and changelog rewritten.
+- [x] Code the docs depend on: the audit chain now links **and** verifies per user with archived rows included
+      (`shared/audit_chain.previous_chain_hash`), still accepts legacy cross-user links so existing rows verify, and
+      reports unchained (pre-Sprint-461) rows instead of skipping them; the admin audit log is under the deletion
+      guard (ORM + `accounting_policy.toml`).
+- [x] DR workflows: already report honestly (778a — UNVERIFIED rather than false-green); the Neon + R2 rewrite needs
+      credentials and stays in **Sprint 778b**.
+- [ ] **CEO:** repository visibility. Private is the safer default before launch (`gh repo edit --visibility private`
+      is a CEO action — outward-facing); git history keeps the old text for anyone who cloned it. `docs/08-internal/`
+      (SOC 2 evidence drafts, readiness assessment) is also public and was out of this sprint's scope.
 
 **Commit SHA:** TBD.
 
@@ -764,124 +919,6 @@ every IC revenue/expense pair.
       P-3 (non-USD / EU number formats — needs a locale decision).
 
 **Commit SHA:** 8f7046ac (PR #206); 38df065f (PR #213).
-
----
-
-### Sprint 813: Memo PDFs — missing footers, ignored branding, and the hand-built skeleton behind both
-**Status:** COMPLETE 2026-10-27 (pending CI + merge) — customer-facing defects (1, 2, 6, 8, 10)
-and item 7 merged earlier; structural items 3, 4, 5, 9 done 2026-10-27 with byte-independent
-rendering equivalence on every memo. Remaining work is listed under "Left open" below.
-**Priority:** **P1** — items 1–2 ship defective PDFs today.
-**Source:** Code health review 2026-10-23, memos/PDF pass.
-
-Only 6 of 20 memo modules use `shared/memo_template.generate_testing_memo`; the other 14 build
-page setup, cover, footer and `doc.build` by hand. Both defects below come from that.
-
-**Scope:**
-1. [x] **Footer missing after page 1** (S). `currency_memo_generator.py:514`,
-   `expense_category_memo.py:863`, `flux_expectations_memo.py:515`,
-   `population_profile_memo.py:765`, `sampling_memo_generator.py:1276` pass only `onFirstPage`.
-   The cover always ends in a page break, so **every** content page lacks the page number and
-   disclaimer. Confirmed on committed `sample-reports/` 13, 14, 15, 17, 18, 20. Add `onLaterPages`.
-2. [x] **Enterprise branding ignored by 11 memos** although `routes/export_memos.py:162` sets
-   the ContextVar for all: bank rec, currency, multi-period, preflight, both sampling,
-   three-way match, accrual, expense, flux, population profile. Reproduced with
-   `apply_pdf_branding(footer_text=...)`: JE memo carries it, preflight does not.
-3. [x] *(Done 2026-10-27: all 14 + `generate_testing_memo` on `memo_base.render_memo`; guard test.)*
-   Extract `render_memo(title, ref_prefix, body_builder, *, running_header=None, margins=...)`
-   in `shared/memo_base.py`; route the 14 hand-built memos **and** `generate_testing_memo`
-   through it. Keep each memo's current margins as parameters (they drift 0.75in/1.0in today)
-   so output does not move. ~500–700 lines; closes 1 and 2 permanently.
-4. [x] *(Done 2026-10-27: 20 true copies replaced; ~20 near-copies are genuine variants, left inline.)*
-   `ledger_table_style()` is copied inline 47× — add `font_size`/`extra` params, replace copies.
-5. [x] *(Done 2026-10-27: 10 memos + `build_scope_section`.)* `source_line(...)` helper for the 6-line Source block repeated in 10 memos; keep
-   "Source File" vs "Source" as a parameter (no wording change).
-6. [x] `tests/test_memo_boundary_phrasing.py:101` matches only `*_memo_generator.py`, so
-   accrual/expense/flux/population-profile `*_memo.py` are never scanned. Widen the glob.
-7. [x] *(Done 2026-10-23: memo/report producers scanned; the scanner now reads the `AU-C § 330`
-   spelling, which surfaced AU-C 320 and 330 too; 10 codes registered, every citation checked
-   accurate first. The anomaly summary's table keeps its literal titles — reading the registry's
-   would change rendered wording — but every code in it is now guarded.)*
-   `tests/test_citation_consistency.py` never scans backend PDF producers. Add them; register
-   the unregistered codes cited in customer PDFs (AS 1305, AS 1105, AS 2810, AU-C 320/330/520/570,
-   IFRS 9, ASC 275, ASC 450, 14 ASC codes in the FASB YAML). `anomaly_summary_generator.py:109-115`
-   hard-codes its list — read the registry. No wording changes.
-8. [x] Engagement ZIP (`engagements_exports.py` ~`:85-110`) ships the anomaly summary **unbranded**
-   while the standalone route brands it; also passes neither engagement nor client, so access
-   check + client lookup run twice.
-9. [x] *(Done 2026-10-27; shim kept for 7 test files.)* Small: cache `create_memo_styles()`; module-constant fonts/fills in `excel_generator.py:327,401`;
-   prefix arg on `generate_reference_number` (replaces 21 `.replace("PAC-", ...)`);
-   point the ~30 `pdf_generator` shim importers at `pdf` directly.
-10. [x] `generate_sample_reports.py:4076-~4325` `gen_anomaly_summary` re-implements the production
-   PDF with a **drifted** disclaimer. Call `AnomalySummaryGenerator._build_story(...)` instead (~230 lines).
-
-**Delivered 2026-10-23 (items 1, 2, 6, 8, 10):**
-- `report_chrome.current_page_footer()` resolves the route-scoped `PDFBrandingContext` and returns
-  the branded or default callback; all 11 hand-built memos now pass it as **both** `onFirstPage`
-  and `onLaterPages`. `build_cover_page` reads the branded logo from the same context when the
-  caller passes none, so those memos get the firm's cover logo too.
-- **Measured before/after** by rendering all 21 sample reports under Enterprise branding and
-  reading each page's text back: before, 6 PDFs had no page number on any content page and 12
-  ignored the firm's header/footer; after, 0 and 0.
-- `tests/test_memo_page_chrome.py` makes that measurement permanent. It checks **rendered output**,
-  not source, so it holds whether or not item 3's `render_memo` extraction ever lands — which
-  lowers item 3 from "closes 1 and 2 permanently" to a pure cleanup. 5 of its 6 tests fail on the
-  pre-fix code.
-- Item 10: `AnomalySummaryGenerator` split into `generate_pdf` (access check + client lookup) →
-  `generate_pdf_for_engagement` (queries) → module-level `render_anomaly_summary_pdf` (no DB).
-  The sample script now builds `SimpleNamespace` engagement/run/follow-up rows and renders through
-  production — ~230 hand-copied lines deleted. The sample grew 5 → 9 pages: the copy had been
-  omitting most of what customers actually receive.
-- Item 8: the package route wraps `generate_zip` in `apply_pdf_branding`, and the exporter hands
-  its already-verified engagement to `generate_pdf_for_engagement` (no second access check or
-  client query). Route-level test proves the scope is active during the build.
-- Item 6: glob widened to `*_memo.py`; 5 more files scanned, all clean.
-- `sample-reports/` regenerated so the committed samples no longer show the defects.
-
-**Two more defects found while verifying, both fixed:**
-- **`MemoTitle` overprinted by its own subtitle** in accrual, expense, flux and population-profile
-  (24pt font on ReportLab's default 12pt leading). Visible in the committed sample before this
-  change. `leading=29`; a test now fails any memo style whose leading is below its font size.
-- **Branded header struck through by the gold rule** on the accrual memo, which draws its own
-  page header at the same 0.5in line. Branded header moved to 0.35in for all memos.
-
-**Delivered 2026-10-27 (items 3, 4, 5, 9 — branch `sprint-813-memo-skeleton`, on top of Sprint 846):**
-- [x] **Equivalence harness first.** `tests/test_memo_render_equivalence.py` renders all 24 memo/report
-  PDFs (21 samples + engagement dashboard, analytical expectations, SUM schedule), unbranded and
-  under Enterprise branding (header, footer, logo), clock frozen; pins page count, media box,
-  per-page text, positioned text runs, text bbox and content-stream digest (byte-independent),
-  plus the Excel workpaper's cell styles. Recorded on the pre-refactor code; green after every item;
-  stable across hash seeds.
-- [x] Item 5: `memo_base.source_line(title, filename, *, filename_label=, always=)`.
-- [x] Item 4: `ledger_table_style(*, font_size=, extra=)`. A copy was converted only when moving its
-  extra commands after the ledger block cannot change the drawing (no extra precedes a ledger
-  command on the same attribute).
-- [x] Item 9: `create_memo_styles()` cached (fresh dict per call); Excel per-row fill/border/fonts are
-  module constants; `generate_reference_number(prefix)` replaces 17 `.replace("PAC-", ...)`;
-  29 production modules import `pdf` directly.
-- [x] Item 3: `render_memo(title, ref_prefix, body_builder, *, cover=, running_header=, margins=,
-  branding=, page_footer=)`; per-memo margins kept (`MEMO_MARGINS` / `TESTING_MEMO_MARGINS`).
-  Analytical expectations, SUM and anomaly summary build their own cover (banner precedes it) and
-  take `render_memo`'s reference. `current_page_footer()` removed (no callers). Guard test fails any
-  memo module that builds its own `SimpleDocTemplate`.
-- [x] Found on the way: the anomaly summary's "Tools with Clean Results" list printed in set order
-  (varied per process) — now catalog order.
-
-**Left open (and why):**
-- Engagement dashboard still uses the unbranded `draw_page_footer` (kept via `page_footer=` so output
-  does not change; no route serves it today). Making it brand-aware is a one-line product call.
-- ~20 TableStyle near-copies of the ledger style (4pt padding, no body font, no flush-left padding,
-  MIDDLE valign) stay inline — they are variants, not copies.
-- TB diagnostic / financial statements (`pdf/orchestrator.py`) and the loan-amortization PDF still
-  own their page setup — reports, not memos, with different chrome.
-- `pdf_generator.py` shim stays for the 7 test files that import it.
-
-**Verification:** full backend suite 10,052 passed / 1 failed — `test_alembic_head_matches_base_metadata_foreign_keys`
-hit its 180s subprocess timeout under full-suite load; the file passes alone (5/5). Equivalence harness
-50/50, memo/report/export test set 1,705 passed; ruff check clean.
-
-**Commit SHA:** 91753ba2 (PR #202, items 1/2/6/8/10); 064c5914 (PR #212, item 7); 4f38ecd5 (harness),
-cb65fb58 (item 5), 5f42d192 (item 4), a2b5f373 (item 9), 2ebcaf84 (item 3) — branch `sprint-813-memo-skeleton`.
 
 ---
 
@@ -2240,6 +2277,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ### Sprint 778: Build the off-provider backup, then prove recovery works
 **Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict), **778b
 PENDING** (the backup itself, the Neon rewrite and the restore drills — all need credentials).
+**2026-10-28 plan:** 778b **gates the first live Stripe checkout** (council Q3, 5–3).
 **Priority:** P1 — both halves in scope: build the backup that does not exist **and** verify that recovery works.
 
 

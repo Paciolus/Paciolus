@@ -319,9 +319,9 @@ def generate_testing_memo(
             )
             section_counter += 1
 
-        # 7. CONCLUSION
+        # 7. SUMMARY OF RESULTS (Sprint 843 — was "Conclusion"; a flag-density summary is not a conclusion)
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Conclusion", styles["MemoSection"]))
+        story.append(Paragraph(f"{section_label}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         risk_tier = composite.get("risk_tier", "low")
@@ -331,10 +331,9 @@ def generate_testing_memo(
             # than silently falling back to "low" (BUG-002 fix).
             tier_label = risk_tier.replace("_", " ").title()
             assessment = (
-                f"Based on the composite risk scoring, overall risk is assessed as "
-                f"{tier_label}. The practitioner should apply professional judgment "
-                f"to determine whether additional procedures are warranted given "
-                f"the assessed risk level."
+                f"The automated tests returned a {tier_label} flag-density indicator. "
+                f"This is not a risk assessment. The practitioner should apply professional "
+                f"judgment to determine whether additional procedures are warranted."
             )
 
         story.append(Paragraph(assessment, styles["MemoBody"]))
