@@ -40,7 +40,7 @@
 
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
-pydantic[email]==2.14.1
+pydantic[email]==2.14.2
 pandas==3.1.0
 openpyxl==3.1.5
 # Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
@@ -74,7 +74,7 @@ psycopg2-binary==2.9.13
 alembic==1.20.1
 
 # Billing (Sprint 362)
-stripe==16.0.1
+stripe==16.1.0
 
 # Email Service (Sprint 57)
 sendgrid==6.12.5
