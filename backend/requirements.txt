@@ -120,7 +120,7 @@ psutil>=7.0.0
 # every fresh resolve, which is the point. Do NOT convert to == without
 # reading the tradeoff note; that would make them rot like PyJWT did.
 cryptography>=46.0.7  # CVE-2026-26007
-pillow>=12.2.0  # CVE-2026-25990
+pillow>=13.0.0  # CVE-2026-25990
 werkzeug>=3.1.8  # CVE-2026-27199
 pyasn1>=0.6.4  # CVE-2026-30922 (DoS via recursive ASN.1 decoding)
 pypdf>=6.21.2  # CVE-2026-31826, CVE-2026-33123 (memory exhaustion via crafted PDF)
