@@ -40,8 +40,8 @@
 
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
-pydantic[email]==2.14.1
-pandas==3.1.0
+pydantic[email]==2.14.3
+pandas==3.1.1
 openpyxl==3.1.5
 # Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
 # PYSEC-2026-3039 (unbounded multipart part-header count/size -> CPU DoS),
@@ -49,7 +49,7 @@ openpyxl==3.1.5
 # value turned the bounded chunked read into read-until-EOF, loading the
 # whole body into memory at once), PYSEC-2026-3036/3037 (QuerystringParser
 # ";" separator differential + quadratic rescan). All four land by 0.0.31.
-python-multipart==0.0.32
+python-multipart==0.0.33
 python-dotenv==1.2.4
 
 # PDF Generation (Day 12)
@@ -74,7 +74,7 @@ psycopg2-binary==2.9.13
 alembic==1.20.1
 
 # Billing (Sprint 362)
-stripe==16.0.1
+stripe==16.1.0
 
 # Email Service (Sprint 57)
 sendgrid==6.12.5
@@ -89,7 +89,7 @@ limits>=5.8.0
 redis>=8.1.0
 
 # APM / Error Tracking (Sprint 275)
-sentry-sdk[fastapi]==2.73.0
+sentry-sdk[fastapi]==2.74.0
 
 # ODS (OpenDocument Spreadsheet) support (Sprint 432)
 odfpy>=1.4.1
