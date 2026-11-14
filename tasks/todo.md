@@ -1635,6 +1635,51 @@ done); **`typescript` 7 BLOCKED** until typescript-eslint supports it (see "type
 
 **Out of scope:** the 21 dev-only npm advisories (need `npm audit fix --force`; all three CI audit gates pass `--omit=dev`, so they do not gate).
 
+#### 786b — framer-motion 12 → 14
+
+**`framer-motion` 12.43.0 → 14.8.0** (supersedes Dependabot #249 and #301, and PR #269's 14.7.1 — rebuilt on `main` 2026-11-14 because #269 had gone DIRTY). No source
+changes needed; the package is still published as `framer-motion`, so the import stays.
+
+**Breaking changes (CHANGELOG 13.0.0, 14.0.0) checked against usage:**
+- **13.0 — optional `@emotion/is-prop-valid` dependency removed** (now opt-in via
+  `<MotionConfig isValidProp>`). Not affected: it was never installed (only listed as an optional peer
+  in the old lock entry), so 12.x was already using motion's built-in prop filter. Our 3
+  `MotionConfig` uses pass only `reducedMotion="user"`. No unknown-prop warnings in the browser check.
+- **14.0 — internal APIs restored in 13.5.1 removed** (`observeTimeline` etc.); `motion-dom` /
+  `motion-utils` now exact-pinned. Not affected: nothing imports `motion-dom`, `motion-utils` or
+  internals; all 127 import sites use the public surface (`motion`, `AnimatePresence`, `MotionConfig`,
+  `useInView`, `useReducedMotion`, `useScroll`, `useTransform`, `useMotionValue`, `animate`,
+  `Variants`/`Transition`/`MotionValue` types).
+- **Not breaking but behaviour-relevant:** 14.2 runs independent transforms (`x`, `y`, `scale`)
+  hardware-accelerated via WAAPI, and 14.x reworks `layoutId` (relative to `layoutRoot`). Observed:
+  hero stat lines now animate as running WAAPI animations and settle to `opacity: 1; transform: none`.
+
+**Lockfile audited by package:** exactly 3 entries changed, 0 added, 0 removed — `framer-motion`
+14.8.0, `motion-dom` 14.8.0, `motion-utils` 14.7.0.
+
+**Jest mocks:** the 81 per-file `jest.mock('framer-motion')` factories stub `motion`,
+`AnimatePresence`, `useInView`, `useReducedMotion`, `useScroll`, `useTransform`,
+`useMotionValueEvent`; every one is confirmed exported by the real 14.x module.
+
+**Verification:** `tsc --noEmit` 0; eslint 0; **208 suites / 2,072 tests / 5 snapshots** pass;
+`npm audit` 0; build passes with 65 `ƒ (Dynamic)` routes + `ƒ Proxy (Middleware)` (static: only
+`icon.png`, `sitemap.xml`).
+
+**By eye (Playwright against `npm start`, 12.43 baseline vs 14.7.1, same script — run for #269; 14.8.0 is a minor on top):** 10 public pages ×
+{normal, reduced-motion}. Same console output on both (only the expected backend
+`ERR_CONNECTION_REFUSED`, plus a React #418 hydration error on `/tools` and `/tools/trial-balance`
+under reduced motion that **reproduces identically on 12.43**, so it predates this change). No
+scroll-reveal content left below opacity 1 outside the hero film's intentionally hidden phases;
+16 of 23 screenshots byte-identical, 4 more 0 px different, and 2 hero shots ~250 px different
+(one stat line caught mid-stagger at the 2.5 s capture; settles to identical by 6 s). Hero scrubber steps show identical fully-visible text on both versions;
+`/demo` `layoutId` tab indicator lands under all 5 tabs. **Not proven:** animation feel (easing,
+spring, stagger timing) and the authenticated-only `layout` lists (adjustments, follow-ups,
+toasts, file queue) — eyeball the Vercel preview.
+
+
+**Re-verified at 14.8.0 (2026-11-14, main checkout):** `tsc --noEmit` 0; eslint 0; Jest **211 suites / 2,105 tests**;
+`npm run build` passes with only `icon.png` + `sitemap.xml` static and `ƒ Proxy (Middleware)`.
+
 #### 786b — fastapi 0.136 → 0.16x
 
 `fastapi==0.136.1` → `==0.162.0` (step 4). Starlette stays 1.10.0; the only new transitive dep is
