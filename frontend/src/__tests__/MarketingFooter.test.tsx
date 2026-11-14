@@ -83,6 +83,6 @@ describe('MarketingFooter', () => {
 
   it('renders copyright', () => {
     render(<MarketingFooter />)
-    expect(screen.getByText(/Paciolus, Inc/)).toBeInTheDocument()
+    expect(screen.getByText(/Paciolus LLC/)).toBeInTheDocument()
   })
 })

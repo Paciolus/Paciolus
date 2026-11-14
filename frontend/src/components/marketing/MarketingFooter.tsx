@@ -177,7 +177,7 @@ export function MarketingFooter() {
             {SITE_FOOTER_DISCLAIMER}
           </p>
           <p className="font-sans text-[11px] text-oatmeal-600 shrink-0">
-            &copy; {new Date().getFullYear()} Paciolus, Inc.
+            &copy; {new Date().getFullYear()} Paciolus LLC
           </p>
         </div>
       </div>
