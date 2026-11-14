@@ -15,7 +15,7 @@ export default function TermsPage() {
           </p>
           <div className="bg-clay-500/10 border-l-4 border-clay-500 p-4 rounded-r-lg">
             <p className="font-sans text-oatmeal-300">
-              This is a legal agreement between you and Paciolus, Inc. Please read it carefully.
+              This is a legal agreement between you and Paciolus LLC. Please read it carefully.
             </p>
           </div>
         </Reveal>
@@ -483,7 +483,7 @@ export default function TermsPage() {
               6. Intellectual Property
             </h2>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              Paciolus, Inc. retains all rights, title, and interest in:
+              Paciolus LLC retains all rights, title, and interest in:
             </p>
             <ul className="space-y-2 mb-4">
               <li className="flex items-start gap-3">
@@ -722,7 +722,7 @@ export default function TermsPage() {
                 Critical Liability Cap
               </p>
               <p className="font-sans text-oatmeal-300 leading-relaxed mb-4">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, PACIOLUS, INC.'S TOTAL LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATED TO THE SERVICE IS LIMITED TO THE AMOUNT YOU PAID US IN THE 12 MONTHS PRECEDING THE CLAIM (OR $100 IF YOU ARE ON THE FREE TIER).
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, PACIOLUS LLC'S TOTAL LIABILITY TO YOU FOR ALL CLAIMS ARISING FROM OR RELATED TO THE SERVICE IS LIMITED TO THE AMOUNT YOU PAID US IN THE 12 MONTHS PRECEDING THE CLAIM (OR $100 IF YOU ARE ON THE FREE TIER).
               </p>
               <p className="font-sans text-oatmeal-300 leading-relaxed mb-4">
                 IN NO EVENT WILL PACIOLUS BE LIABLE FOR:
@@ -771,7 +771,7 @@ export default function TermsPage() {
               11. Indemnification
             </h2>
             <p className="font-sans text-oatmeal-400 leading-relaxed mb-4">
-              You agree to indemnify, defend, and hold harmless Paciolus, Inc., its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including reasonable attorneys' fees) arising from:
+              You agree to indemnify, defend, and hold harmless Paciolus LLC, its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including reasonable attorneys' fees) arising from:
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-start gap-3">

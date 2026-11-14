@@ -43,7 +43,7 @@ The legal-and-security claims review (https://claude.ai/artifact/MFTYHezjA4zakoi
 **Your decisions (defaults in brackets are what the next session will use unless you say otherwise):**
 1. Storage positioning — [Option B: plain description + "what we keep" list; drop "Zero-Storage" as a promise].
 2. Refund policy — 30-day money-back, or no partial-period refunds? [ask — no default]
-3. Legal entity — Paciolus, Inc. or Paciolus LLC? [ask — no default]
+3. ~~Legal entity~~ — **DECIDED 2026-11-14: Paciolus LLC.** Live surfaces corrected (Terms, footer).
 4. Repository visibility — private, or public with rewritten compliance docs? [ask; recommend private]
 5. Product line — [“Diagnostic Intelligence for Financial Professionals”], “Audit Analytics”, or keep “Audit Intelligence”?
 6. Support promise — [“Email support; we aim to reply within 1–2 business days” for every tier].

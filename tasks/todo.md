@@ -134,7 +134,7 @@
 >       within 30 days of Stripe going live.**
 > - [ ] Add the **`RENDER_API_KEY` repo secret** (arms the uptime deploy-drift probe; prerequisite for 778b's DR workflows).
 > - [ ] Confirm the **R2 `paciolus-backups` token** still works and provide the **Neon connection string** for the cron (778b).
-> - [ ] Decide **refund policy**, **legal entity** (LLC vs Inc.) and **repository visibility**.
+> - [ ] Decide **refund policy**. *(Legal entity: Paciolus LLC; repository visibility: public until launch — both decided 2026-11-14.)*
 > - [ ] **Phase 4.3 custom domain** — `api.paciolus.com` 404s and it is the Stripe webhook target (do before 4.1).
 > - [ ] **Confirm or decline Q4** (counsel now vs. once the website is finalised).
 > - [ ] **H12:** verify the ISA 315 "Appendix 1 matrix" citation, or accept the default (relabel as a Paciolus convention).
