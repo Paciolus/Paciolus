@@ -120,14 +120,20 @@
 > **This week (2026-11-14 → 2026-11-21)**
 > - [x] Merged + live: #254 (Sprints 843, 844, 845, 855) → `48872982`, Render `dep-dbse4h6q1p3s73eoaqs0` verified live;
 >       #308 (Sprints 854, 856, 857, 858, 778b, superseding #288–#292) → `cbe2ed5c`.
-> - [ ] **Sprint 786 framer-motion 14** — #269 rebuilt at 14.8.0 (supersedes Dependabot #301), this branch.
+> - [x] **Sprint 786 framer-motion 14** — #269 rebuilt at 14.8.0, merged as #309 (`7bbda90f`); #269 + #301 closed.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests, sign-off gate (below). **C, 2–3 days; CEO sign-off ~15 min.**
-> - [ ] **CEO + C: 778b secrets** — `NEON_BACKUP_DATABASE_URL`, `R2_BACKUPS_{ENDPOINT,BUCKET,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`,
->       `NEON_API_KEY`, `NEON_PROJECT_ID` (`docs/runbooks/backup-restore.md` §2), then the first backup + restore drill.
+> - [x] **778b secrets + first backup + restore drill** — done 2026-11-14, DR Test fully green; Neon history 6 h → 7 d (Sprint 778).
 > - [ ] **CEO:** Stripe dashboard → Billing Portal → no plan switching to Professional/Enterprise (Sprint 858 CEO note).
+> - [ ] **Sprint 861** — rate limits never fire in production (#274, security; freeze-exempt). **Do first.**
+> - [ ] **Sprint 862** — Stripe dispute webhooks never find the customer (#273). **Gates Sprint 447.**
+> - [ ] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` (names, scope, where created, expiry; never values)
+>       + one yearly **Nov 1** rotation/sign-off day shared with Sprint 860 + an alarm for GitHub disabling scheduled workflows after 60 idle days.
 > - [ ] Dependabot batch: the remaining green bumps in one PR.
 >
-> **Before 2026-12-15:** CEO signs off the 2026 W-2 and 1099 tables (Sprint 860) · 778b green · Sprint 447 Stripe live (Solo)
+> **Order for the next session:** 861 → 862 → 860 → runbook → Dependabot. (861/862 are small and security/billing;
+> 860 is the 2–3 day build and must still land before the CEO sign-off ahead of 2026-12-15.)
+>
+> **Before 2026-12-15:** CEO signs off the 2026 W-2 and 1099 tables (Sprint 860) · ~~778b green~~ (done 2026-11-14) · 861 + 862 merged · Sprint 447 Stripe live (Solo)
 > · Phase 4.3 `api.paciolus.com` · revisit repository visibility.
 >
 > **▶ ACTION PLAN 2026-10-28 (council-ratified; order still applies beneath the launch block above).** Built from the 2026-10-28 8-agent
@@ -600,6 +606,43 @@ the worktree venv placed at `backend/.venv-wt`); ruff clean; mypy
 clean on touched files; frontend `tsc --noEmit` clean, `npm run lint` clean, Jest 2,086/2,086 (209 suites);
 `npm run build` not run in the worktree (Turbopack cannot build through the node_modules junction) — run from the
 main checkout.
+
+**Commit SHA:** TBD.
+
+### Sprint 861: Rate limits never fire in production (#274)
+**Status:** PENDING — filed 2026-11-14. **Priority:** P0 security (freeze-exempt). **Source:** issue #274 (2026-10-27).
+**Agents:** Guardian (lead), Executor, Critic.
+
+Production has returned **zero 429s since 2026-10-01**: 80 requests in 3 s to an undecorated route all got 200. The
+same commit run locally returns 60 × 200 then 429s, so the code works and the production environment differs. Every
+limit is affected — login, password reset, export-share passcode brute-force (Sprints 697/698), uploads — because
+they share the key function and storage.
+
+- [ ] **Diagnose on production first, don't guess.** Hypotheses from #274, in order:
+      (1) rate-limit **key**: `security_middleware.get_client_ip` trusts `X-Forwarded-For` only from `TRUSTED_PROXY_IPS`;
+      behind Cloudflare + Render the peer may differ per request, so every request gets its own bucket;
+      (2) **Redis counters** on Render Key Value `paciolus-ratelimit` not written/read — inspect `LIMITS:` keys + TTLs during a burst;
+      (3) gunicorn's 4 workers silently falling back to per-worker memory.
+- [ ] Fix the cause; keep the Sprint 774 `degrade` storage-failure policy intact.
+- [ ] Regression test for the identified cause (e.g. proxied requests from one client share a bucket).
+- [ ] **Verify on production:** a burst on an undecorated public route returns 429 after 60, and Render logs show the 429s. Close #274.
+
+**Commit SHA:** TBD.
+
+### Sprint 862: Stripe dispute webhooks never find the customer (#273)
+**Status:** PENDING — filed 2026-11-14. **Priority:** P1 — **gates Sprint 447** (live Stripe). **Source:** issue #273
+(found in the Stripe 15 → 16 upgrade, #272). **Agents:** Executor (lead), Guardian, Accounting Expert (dispute policy).
+
+`handle_dispute_created` / `handle_dispute_closed` (`backend/billing/webhook_handler.py`) read `customer` off the Dispute
+(Stripe's Dispute object has none) and fall back to `charge` only when it is an expanded dict (webhooks send a `ch_…`
+string). Both log `could not resolve customer_id` and return on every real dispute, so the AUDIT-08-F5 policy is never
+enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` billing events.
+
+- [ ] Resolve the customer from `dispute["charge"]` (or `payment_intent`) via the SDK client wrapper + `to_plain_dict()` (#272); keep the expanded-dict branch.
+- [ ] A failed Stripe lookup returns non-2xx so Stripe redelivers — never a silent drop.
+- [ ] Fix test fixtures to Stripe's real dispute shape (no `customer`, `charge` as a string) + a contract test in
+      `test_stripe_sdk_contract.py` built from a real `stripe.Dispute`.
+- [ ] Verify end to end in Stripe **test mode** (`stripe trigger charge.dispute.created`): account suspended + `DISPUTE_CREATED` recorded. Close #273.
 
 **Commit SHA:** TBD.
 
@@ -2316,7 +2359,7 @@ Bundle the 19 patch + safe-minor updates into one commit, mirroring the 2026-04-
 ---
 
 ### Sprint 778: Build the off-provider backup, then prove recovery works
-**Status:** SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict). **778b code COMPLETE (PR #292; test DSNs are assembled at runtime so the CI secret scan stays clean)
+**Status:** **COMPLETE 2026-11-14** — 778b verified against production (see Production verification below). Was: SPLIT — **778a COMPLETE** (the DR workflow now reports its own verdict). **778b code COMPLETE (PR #292; test DSNs are assembled at runtime so the CI secret scan stays clean)
 2026-10-28; verification PENDING CEO secrets:** `NEON_BACKUP_DATABASE_URL`, `R2_BACKUPS_ENDPOINT`,
 `R2_BACKUPS_BUCKET`, `R2_BACKUPS_ACCESS_KEY_ID`, `R2_BACKUPS_SECRET_ACCESS_KEY`, `NEON_API_KEY`,
 `NEON_PROJECT_ID` (where each comes from: `docs/runbooks/backup-restore.md` §2).
@@ -2459,8 +2502,16 @@ therefore never been active; share bytes are still in the Neon row. Needs its ow
 manifest + schema fingerprint, restore comparison, drill sha256/pg_restore failure paths, R2 and Neon
 checks with fakes, UNVERIFIED naming + exit 2, the DR combine step run under bash for 6 verdict
 combinations, workflow parse/pins/secret-set/no `set -x`); actionlint clean on all four workflows;
-ruff clean. **Not yet run against production** — PENDING the 7 CEO secrets, then a manual run of
-*Backup — pg_dump to R2* followed by *DR Test (Monthly)*; record both run URLs here.
+ruff clean.
+
+**Production verification (2026-11-14):** all 8 repo secrets set (7 above + `RENDER_API_KEY`); read-only
+role `backup_ro` (`pg_read_all_data`) used for the dump; R2 token `github-actions-backups` scoped to
+`paciolus-backups`, 1-year TTL (rotate each Nov 1). First *Backup — pg_dump to R2* **PASS**
+(https://github.com/Paciolus/Paciolus/actions/runs/43655183209: server 15.19, 31 tables). First *DR Test*
+FAILED only `neon_pitr_window` (6 h vs the 1-day floor) — the check doing its job; Neon History window
+raised **6 h → 7 d**. Re-run **fully PASS** (https://github.com/Paciolus/Paciolus/actions/runs/43655582429):
+R2 backup sha256-verified, PITR 7.0 days, default branch ready; restore drill tables / row counts / schema
+fingerprint / alembic `b9d3f6a2c418` all match. Issues #293, #294, #310 closed.
 
 **Commit SHA:** `f0d7d6ec` (778a; PR #187). 778b: see commit `Sprint 778: off-provider backup, restore drill and DR workflows on Neon + R2`.
 
