@@ -105,7 +105,32 @@
 ---
 
 ## Active Phase
-> **▶ START HERE — ACTION PLAN 2026-10-28 (council-ratified, authoritative order).** Built from the 2026-10-28 8-agent
+> **▶ START HERE — LAUNCH 2026-12-15 (CEO, set 2026-11-14).** No customers yet; the launch date replaces the open-ended
+> Phase 3 timing below. Everything else in the 2026-10-28 plan still applies unless struck through here.
+>
+> **CEO decisions, 2026-11-14**
+> - **Launch date: 2026-12-15.**
+> - **Legal entity: Paciolus LLC** — every live "Paciolus, Inc." is corrected (hotfix, this branch). Archived pre-845 docs keep their historical text.
+> - **Repository visibility: stays public until launch.** Going private on GitHub Free would cap Actions at 2,000 min/month
+>   (CI uses ~5,400: ~95 billable min/run × ~57 runs/month) and drop branch-protection enforcement. Revisit at launch (GitHub Team, or a CI diet).
+> - **Q6 superseded:** the one-off 2026-12-15 tax-tool disable becomes a per-tax-year rule with an annual CEO sign-off — **Sprint 860**.
+>   The CEO is a CPA and signs off the figures directly; no outside reviewer.
+> - **"Independent assurance":** not claimed anywhere and not to be added. The "diagnostic indicators, not conclusions" disclaimers stay.
+>
+> **This week (2026-11-14 → 2026-11-21)**
+> - [x] Merged + live: #254 (Sprints 843, 844, 845, 855) → `48872982`, Render `dep-dbse4h6q1p3s73eoaqs0` verified live;
+>       #308 (Sprints 854, 856, 857, 858, 778b, superseding #288–#292) → `cbe2ed5c`.
+> - [ ] **Sprint 786 framer-motion 14** — #269 rebuilt at 14.8.0 (supersedes Dependabot #301), this branch.
+> - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests, sign-off gate (below). **C, 2–3 days; CEO sign-off ~15 min.**
+> - [ ] **CEO + C: 778b secrets** — `NEON_BACKUP_DATABASE_URL`, `R2_BACKUPS_{ENDPOINT,BUCKET,ACCESS_KEY_ID,SECRET_ACCESS_KEY}`,
+>       `NEON_API_KEY`, `NEON_PROJECT_ID` (`docs/runbooks/backup-restore.md` §2), then the first backup + restore drill.
+> - [ ] **CEO:** Stripe dashboard → Billing Portal → no plan switching to Professional/Enterprise (Sprint 858 CEO note).
+> - [ ] Dependabot batch: the remaining green bumps in one PR.
+>
+> **Before 2026-12-15:** CEO signs off the 2026 W-2 and 1099 tables (Sprint 860) · 778b green · Sprint 447 Stripe live (Solo)
+> · Phase 4.3 `api.paciolus.com` · revisit repository visibility.
+>
+> **▶ ACTION PLAN 2026-10-28 (council-ratified; order still applies beneath the launch block above).** Built from the 2026-10-28 8-agent
 > assessment (Scout 3 · Guardian 5 · Future-State 5 · Critic 6.5 · Executor 7 · Designer 7 · Auditor ~7 · Accounting
 > Expert 7.5; mean ~6/10 — engineering strong, commercial side unstarted), then reviewed by all eight agents with open
 > questions settled by majority vote (IntegratorLead breaks ties). All eight voted APPROVE WITH AMENDMENTS; 21 of 23
@@ -575,6 +600,44 @@ the worktree venv placed at `backend/.venv-wt`); ruff clean; mypy
 clean on touched files; frontend `tsc --noEmit` clean, `npm run lint` clean, Jest 2,086/2,086 (209 suites);
 `npm run build` not run in the worktree (Turbopack cannot build through the node_modules junction) — run from the
 main checkout.
+
+**Commit SHA:** TBD.
+
+### Sprint 860: Annual tax tables — fetched, tested, signed off once a year
+**Status:** PENDING — scheduled 2026-11-14, target merge by 2026-11-21. **Priority:** P1 (launch gate — the W-2 and
+1099 tools must not go dark on launch day). **Source:** CEO directive 2026-11-14; supersedes council Q6 and the
+remainder of Sprint 793b. **Complexity:** 6/10 (2–3 days; the fetcher is the fiddly part). **Agents:** Executor
+(build), Accounting Expert (figure map + invariants), Guardian (fail-closed gate), Critic (fetcher brittleness).
+
+**Problem.** The W-2 tool holds one tax-year table (2025) and refuses every other year, so the first post-launch
+season (2026 W-2s, due 2027-01-31) cannot run. The 1099 2026 table rests on secondary sources. Sprint 856 then
+disables both tools after 2026-12-15 unless a practitioner confirms — a one-off date that recurs every year with
+no process behind it.
+
+**Design (CEO-approved 2026-11-14).**
+- [ ] **One table file per tax year** (`backend/tax_tables/<year>.py`): every figure with its citation and source URL,
+      plus a sign-off record (`signed_off_by`, `signed_off_on`, `sources_final: bool`). The W-2 and 1099 engines read
+      from these files; the hard-coded `STATUTORY_LIMITS_BY_YEAR` / `THRESHOLDS_BY_TABLE_YEAR` blocks go away. 2025
+      moves over unchanged.
+- [ ] **Fetcher** (`scripts/tax_tables/fetch.py` + weekly scheduled workflow, Oct–Jan): reads SSA's wage-base
+      announcement, the IRS retirement-limits notice, the HSA Rev. Proc. and the 1099-NEC/MISC/INT instructions;
+      extracts each figure with the sentence it came from; opens a PR proposing the next year's table (value, prior
+      year, source excerpt, URL). Fails loudly and names the document when a figure can't be read cleanly — never
+      guesses. Draft IRS instructions are marked `draft`, so `sources_final` stays false until the final version.
+- [ ] **Invariant tests** — the reviewer skims, the tests do the math: SS max tax = wage base × rate; age 60–63
+      catch-ups = max(statutory floor, 150% of the regular catch-up); indexed limits never fall year over year;
+      any move over ~10% is flagged; every figure has a citation; every table in use has a sign-off.
+- [ ] **Per-year gate replaces the 2026-12-15 disable**: a tool refuses a tax year whose table is missing or unsigned,
+      with an explicit code the frontend maps to "unavailable until this year's figures are signed off" (also closes
+      the #308 Codex finding: `TAX_FIGURES_UNCONFIRMED` fell through to "Something went wrong" in
+      `frontend/src/utils/transport.ts`). Cover the analysis and export error flows. Banners name the signed-off years.
+- [ ] **Early warning**: CI warns from Nov 1 when next year's table is missing or unsigned; fails from Jan 1.
+- [ ] **First run**: build the **2026** W-2 table and confirm the 2026 1099 table (incl. MISC box 10 attorney
+      proceeds, now `needs_confirmation`) from primary sources. **CEO signs off before 2026-12-15.**
+- [ ] Runbook `docs/runbooks/annual-tax-tables.md`: the yearly calendar (SSA mid-Oct, IRS limits ~Nov, HSA ~May,
+      1099 instructions late in year), and the ~15-minute CEO sign-off steps.
+
+**Out of scope:** Book-to-Tax, Depreciation and Loan apply no year-indexed figures (verified in Sprint 856).
 
 **Commit SHA:** TBD.
 
