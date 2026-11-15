@@ -55,7 +55,7 @@ export default function ApproachPage() {
         className="relative pt-32 pb-16 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-oatmeal-100 mb-6">
@@ -85,7 +85,7 @@ export default function ApproachPage() {
         <div className="max-w-4xl mx-auto">
           <motion.h2
             variants={marketingFadeUp}
-            transition={{ duration: 0.5, ease: 'easeOut' as const }}
+            transition={{ duration: 0.2, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
             How It Works
@@ -96,7 +96,7 @@ export default function ApproachPage() {
               <motion.div
                 key={idx}
                 variants={marketingFadeUp}
-                transition={{ duration: 0.5, ease: 'easeOut' as const }}
+                transition={{ duration: 0.2, ease: 'easeOut' as const }}
                 className={`bg-obsidian-800 border rounded-lg p-5 flex items-start gap-4 ${
                   idx === howItWorksSteps.length - 1
                     ? 'border-sage-500/40 bg-sage-500/10'
@@ -125,7 +125,7 @@ export default function ApproachPage() {
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto">
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center">
@@ -167,7 +167,7 @@ export default function ApproachPage() {
         <div className="max-w-4xl mx-auto">
           <motion.h2
             variants={marketingFadeUp}
-            transition={{ duration: 0.5, ease: 'easeOut' as const }}
+            transition={{ duration: 0.2, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
             What We Store and What We Don&apos;t Keep
@@ -177,7 +177,7 @@ export default function ApproachPage() {
             {/* What We Store */}
             <motion.div
               variants={marketingFadeUp}
-              transition={{ duration: 0.5, ease: 'easeOut' as const }}
+              transition={{ duration: 0.2, ease: 'easeOut' as const }}
               className="bg-obsidian-800 border-l-4 border-sage-500 border-t border-r border-b border-t-obsidian-600 border-r-obsidian-600 border-b-obsidian-600 rounded-r-lg p-6"
             >
               <h3 className="font-serif text-xl text-oatmeal-100 mb-4 flex items-center gap-3">
@@ -201,7 +201,7 @@ export default function ApproachPage() {
             {/* What We Don&apos;t Keep */}
             <motion.div
               variants={marketingFadeUp}
-              transition={{ duration: 0.5, ease: 'easeOut' as const }}
+              transition={{ duration: 0.2, ease: 'easeOut' as const }}
               className="bg-obsidian-800 border-l-4 border-clay-500 border-t border-r border-b border-t-obsidian-600 border-r-obsidian-600 border-b-obsidian-600 rounded-r-lg p-6"
             >
               <h3 className="font-serif text-xl text-oatmeal-100 mb-4 flex items-center gap-3">
@@ -236,7 +236,7 @@ export default function ApproachPage() {
         <div className="max-w-4xl mx-auto">
           <motion.h2
             variants={marketingFadeUp}
-            transition={{ duration: 0.5, ease: 'easeOut' as const }}
+            transition={{ duration: 0.2, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
             What This Means if We Were Breached
@@ -247,7 +247,7 @@ export default function ApproachPage() {
               <motion.div
                 key={advantage}
                 variants={marketingFadeUp}
-                transition={{ duration: 0.5, ease: 'easeOut' as const }}
+                transition={{ duration: 0.2, ease: 'easeOut' as const }}
                 className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-5 flex items-start gap-4 hover:border-sage-500/30 transition-colors"
               >
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-sage-500/20 flex items-center justify-center">
@@ -268,7 +268,7 @@ export default function ApproachPage() {
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto">
           <div className="bg-obsidian-800 border border-oatmeal-500/20 rounded-lg p-8">
@@ -310,7 +310,7 @@ export default function ApproachPage() {
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto">
           <h2 className="font-serif text-3xl text-oatmeal-100 mb-8 text-center">

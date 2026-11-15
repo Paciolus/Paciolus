@@ -471,10 +471,8 @@
 @layer utilities {
   /* Gradient background with subtle noise texture for depth */
   .bg-gradient-obsidian {
+    /* Sprint 864: solid surface — no gradient wash, no noise layer. */
     background-color: #212121;
-    background-image:
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"),
-      linear-gradient(to bottom, #121212, #212121 40%, #1a1a1a 60%, #121212);
   }
 
   /* Paper texture — subtle noise for light theme "Pacioli's Desk" feel */
@@ -563,129 +561,21 @@
 
   /* Recessed surface — slightly darkened, reads as "sunken" */
   .lobby-surface-recessed {
-    background-color: rgba(12, 12, 12, 0.6);
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(48, 48, 48, 0.04) 0%, transparent 70%),
-      radial-gradient(ellipse 80% 50% at 50% 100%, rgba(48, 48, 48, 0.04) 0%, transparent 70%);
+    background-color: #1a1a1a;
   }
 
   /* Raised surface — slightly lighter, reads as "lifted" */
   .lobby-surface-raised {
-    background-color: rgba(33, 33, 33, 0.35);
-    background-image:
-      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(235, 233, 228, 0.015) 0%, transparent 60%);
+    background-color: #212121;
   }
 
   /* Accent surface — faint sage tint at top edge (use 1x per page) */
   .lobby-surface-accent {
-    background-color: rgba(18, 18, 18, 0.5);
-    background-image:
-      linear-gradient(to bottom, rgba(74, 124, 89, 0.04) 0%, transparent 30%),
-      radial-gradient(ellipse 60% 30% at 50% 0%, rgba(74, 124, 89, 0.06) 0%, transparent 50%);
+    background-color: #1c1c1c;
   }
 
-  /* Sage glow halo — radial highlight at section top via ::before */
-  .lobby-glow-sage {
-    position: relative;
-  }
-  .lobby-glow-sage::before {
-    content: '';
-    position: absolute;
-    top: -1px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60%;
-    height: 120px;
-    background: radial-gradient(ellipse at center, rgba(74, 124, 89, 0.08) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Vignette — top/bottom edge darkening for containment via ::before */
-  .lobby-vignette {
-    position: relative;
-  }
-  .lobby-vignette::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 0%, transparent 8%),
-      linear-gradient(to top, rgba(0, 0, 0, 0.15) 0%, transparent 8%);
-    z-index: 0;
-  }
-
-  /* ============================================
-     Atmospheric Background Layers
-     Faint photographic textures blended behind sections.
-     Uses ::after to avoid conflict with ::before glow/vignette.
-     ============================================ */
-
-  /* Heritage texture — ledger + feather pen, sage-tinted */
-  .lobby-atmosphere-heritage {
-    position: relative;
-    overflow: hidden;
-  }
-  .lobby-atmosphere-heritage::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url('/backgrounds/background1.jpg');
-    background-size: cover;
-    background-position: center 30%;
-    background-repeat: no-repeat;
-    opacity: 0.12;
-    mix-blend-mode: luminosity;
-    pointer-events: none;
-    z-index: 0;
-    mask-image:
-      radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 75%);
-    -webkit-mask-image:
-      radial-gradient(ellipse 90% 80% at 50% 50%, black 30%, transparent 75%);
-  }
-
-  /* Modern texture — green city architecture */
-  .lobby-atmosphere-modern {
-    position: relative;
-    overflow: hidden;
-  }
-  .lobby-atmosphere-modern::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url('/backgrounds/background2.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.06;
-    mix-blend-mode: luminosity;
-    pointer-events: none;
-    z-index: 0;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-  }
-
-  /* Foil texture — metallic sage foil, mostly opaque */
-  .lobby-atmosphere-foil {
-    position: relative;
-    overflow: hidden;
-  }
-  .lobby-atmosphere-foil::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: url('/backgrounds/background3.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0.18;
-    mix-blend-mode: soft-light;
-    pointer-events: none;
-    z-index: 0;
-  }
+  /* Sprint 864: the glow halo, vignette and photographic background layers were
+     removed (WEBSITE_REVIEW.md G-02, G-04). */
 
   /* ============================================
      Editorial Composition Utilities
@@ -753,59 +643,23 @@
 
   /* Section divider with sage accent dot */
   .lobby-divider {
-    position: relative;
+    /* Sprint 864: a plain hairline rule, no glow. */
     height: 1px;
-    background: linear-gradient(to right, transparent, rgba(235, 233, 228, 0.08) 20%, rgba(235, 233, 228, 0.08) 80%, transparent);
-  }
-  .lobby-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 9999px;
-    background: rgba(74, 124, 89, 0.4);
-    box-shadow: 0 0 8px rgba(74, 124, 89, 0.2);
+    background: rgba(235, 233, 228, 0.1);
   }
 
   /* Variant: wider fade span for broader sections */
   .lobby-divider-wide {
-    position: relative;
+    /* Sprint 864: a plain hairline rule, no glow. */
     height: 1px;
-    background: linear-gradient(to right, transparent, rgba(235, 233, 228, 0.1) 10%, rgba(235, 233, 228, 0.1) 90%, transparent);
-  }
-  .lobby-divider-wide::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    border-radius: 9999px;
-    background: rgba(74, 124, 89, 0.35);
-    box-shadow: 0 0 12px rgba(74, 124, 89, 0.15);
+    background: rgba(235, 233, 228, 0.1);
   }
 
   /* Variant: sage-tinted gradient for accented transitions */
   .lobby-divider-sage {
-    position: relative;
+    /* Sprint 864: a plain hairline rule, no glow. */
     height: 1px;
-    background: linear-gradient(to right, transparent, rgba(74, 124, 89, 0.15) 30%, rgba(74, 124, 89, 0.15) 70%, transparent);
-  }
-  .lobby-divider-sage::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 9999px;
-    background: rgba(74, 124, 89, 0.5);
-    box-shadow: 0 0 10px rgba(74, 124, 89, 0.25);
+    background: rgba(74, 124, 89, 0.35);
   }
 }
 

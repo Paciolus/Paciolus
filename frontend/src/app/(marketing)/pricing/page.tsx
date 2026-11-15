@@ -111,7 +111,7 @@ export default function PricingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' as const }}
+            transition={{ duration: 0.2, ease: 'easeOut' as const }}
           >
             <h1 className="type-display text-oatmeal-100 mb-4">
               Pricing
@@ -133,8 +133,8 @@ export default function PricingPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: 'easeOut' as const, delay: 0.3 }}
-            className="rounded-xl border border-oatmeal-400/30 bg-oatmeal-200/8 px-6 py-4 text-center"
+            transition={{ duration: 0.2, ease: 'easeOut' as const }}
+            className="rounded-lg border border-oatmeal-400/30 bg-oatmeal-200/8 px-6 py-4 text-center"
           >
             <p className="font-sans text-sm text-oatmeal-300">
               <span className="font-semibold text-oatmeal-100">{promo.prefix}</span> {promo.body}
@@ -179,7 +179,7 @@ export default function PricingPage() {
 
       {/* Sage divider */}
       <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-sage-500/40 to-transparent" />
+        <div className="h-px bg-sage-500/30" />
       </div>
 
       {/* -- Feature Comparison Table (shared <PricingComparison />, Sprint 650) -- */}
@@ -191,17 +191,11 @@ export default function PricingPage() {
 
       {/* Oatmeal divider */}
       <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
+        <div className="h-px bg-oatmeal-400/20" />
       </div>
 
       {/* -- Plan Your Cost (merged Estimator + Seat Calculator) -- */}
       <section className="relative pb-16 px-6 py-16 bg-oatmeal-200/4 overflow-hidden">
-        {/* Background texture */}
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-[0.06] pointer-events-none"
-          style={{ backgroundImage: "url('/backgrounds/background5.jpg')" }}
-          aria-hidden="true"
-        />
         <div className="max-w-6xl mx-auto relative z-10">
           <motion.div
             variants={marketingFadeUpSoft}
@@ -222,7 +216,7 @@ export default function PricingPage() {
 
       {/* Oatmeal divider */}
       <div className="max-w-xs mx-auto px-6 pb-12">
-        <div className="h-px bg-gradient-to-r from-transparent via-oatmeal-400/30 to-transparent" />
+        <div className="h-px bg-oatmeal-400/20" />
       </div>
 
       {/* -- FAQ Section ----------------------- */}
@@ -243,7 +237,7 @@ export default function PricingPage() {
                 return (
                   <div
                     key={idx}
-                    className={`rounded-xl border transition-colors ${
+                    className={`rounded-lg border transition-colors ${
                       isOpen
                         ? 'border-oatmeal-400/30 bg-oatmeal-200/5'
                         : 'border-obsidian-500/30 bg-obsidian-800/50'

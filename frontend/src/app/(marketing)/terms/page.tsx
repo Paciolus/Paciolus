@@ -21,7 +21,7 @@ export default function TermsPage() {
         </Reveal>
 
         {/* Table of Contents */}
-        <Reveal delay={0.1} className="bg-obsidian-800 border border-obsidian-700 rounded-lg p-6 mb-12">
+        <Reveal className="bg-obsidian-800 border border-obsidian-700 rounded-lg p-6 mb-12">
           <h2 className="font-serif text-2xl text-oatmeal-100 mb-4">Table of Contents</h2>
           <nav aria-label="Table of contents" className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <Link href="#section-1" className="text-sage-400 hover:text-sage-300 underline font-sans">
@@ -76,7 +76,7 @@ export default function TermsPage() {
         </Reveal>
 
         {/* Content */}
-        <Reveal delay={0.2} className="prose prose-invert max-w-none">
+        <Reveal className="prose prose-invert max-w-none">
           {/* Section 1: Service Description */}
           <section id="section-1">
             <h2 className="font-serif text-2xl text-oatmeal-100 mb-4 pt-8">

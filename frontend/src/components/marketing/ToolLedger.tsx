@@ -99,7 +99,7 @@ export function ToolLedger() {
         ))}
       </div>
 
-      <Reveal delay={0.05}>
+      <Reveal>
         <p className="mt-8 text-center font-sans text-[10px] uppercase tracking-[0.18em] text-oatmeal-500">
           {CANONICAL_TOOL_COUNT} tools · every paid plan ·{' '}
           <Link href="/sources" className="text-sage-400 hover:text-sage-300 underline">

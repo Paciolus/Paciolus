@@ -51,7 +51,7 @@ export function HeroScrollSection() {
         <motion.div className="mb-8 max-w-lg" variants={fadeUp}>
           <Link
             href="/pricing"
-            className="group flex items-center gap-3 px-4 py-3 rounded-xl bg-obsidian-800/80 border border-sage-500/30 hover:border-sage-500/50 transition-colors"
+            className="group flex items-center gap-3 px-4 py-3 rounded-lg bg-obsidian-800/80 border border-sage-500/30 hover:border-sage-500/50 transition-colors"
           >
             <div className="w-0.5 h-8 bg-sage-500 rounded-full flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -69,7 +69,7 @@ export function HeroScrollSection() {
           {mounted && !isAuthenticated && (
             <Link
               href="/register"
-              className="inline-block px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-colors"
+              className="inline-block px-8 py-3.5 bg-sage-600 rounded-lg text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-colors"
               onClick={() => trackCtaClick('start_trial')}
             >
               Start Free Trial
@@ -77,7 +77,7 @@ export function HeroScrollSection() {
           )}
           <Link
             href="/demo"
-            className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-colors"
+            className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-lg text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-colors"
             onClick={() => trackCtaClick('explore_demo')}
           >
             Explore Demo

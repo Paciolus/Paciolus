@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Blockquote } from '@/components/marketing/Blockquote'
 import * as motion from '@/components/ui/motionClient'
 import { DOCUMENTATION_STATEMENT, RESPONSIBILITY_STATEMENT, SHARE_RETENTION, STORAGE_DETAIL_HREF, STORAGE_DETAIL_LABEL, STORAGE_STATEMENT } from '@/content/storage-statement'
-import { marketingFadeUpAt } from '@/lib/motion'
 
 /* ---------- Animation helpers ---------- */
 const staggerContainer = {
@@ -17,7 +16,7 @@ const cardReveal = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.45, ease: 'easeOut' as const },
+    transition: { duration: 0.2, ease: 'easeOut' as const },
   },
 }
 
@@ -40,42 +39,27 @@ const professionalsCards = [
   {
     title: 'Designed Around How Auditors Work',
     description: 'Designed to support auditors’ analytical work, with references to the standards each test draws on.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
-      </svg>
-    ),
   },
   {
     title: 'Cited Rules',
     description: 'Every test names the rule it applies, or says when a threshold is our own convention. Sources & Methodology lists each one.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-      </svg>
-    ),
   },
   {
     title: 'Memos and Workpapers',
     description: 'PDF memos (sign-off lines are optional, completed by the firm), Excel and CSV exports, for your review.',
-    icon: (
-      <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-      </svg>
-    ),
   },
 ]
 
 /* ---------- Page Component ---------- */
 export default function AboutPage() {
   return (
-    <main id="main-content" className="relative z-10 min-h-screen bg-gradient-obsidian lobby-atmosphere-heritage">
+    <main id="main-content" className="relative z-10 min-h-screen bg-gradient-obsidian">
       {/* ===== Pacioli Connection ===== */}
       <motion.section
         className="relative pt-32 pb-10 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-3xl mx-auto text-center">
           <p className="type-body-lg text-oatmeal-300 leading-relaxed">
@@ -92,7 +76,7 @@ export default function AboutPage() {
         className="relative pb-16 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="type-display text-oatmeal-100 mb-6">
@@ -112,7 +96,7 @@ export default function AboutPage() {
         className="px-6 pb-16"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.3, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <Blockquote attribution="Paciolus — founding motivation">
           &ldquo;The moment when you need a well-documented answer shouldn&rsquo;t depend on the size of your firm. We built Paciolus so it doesn&rsquo;t.&rdquo;
@@ -137,7 +121,7 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Left card — What It IS */}
             <motion.div
-              className="bg-obsidian-700/60 backdrop-blur-sm border border-sage-500/30 rounded-lg p-8"
+              className="bg-obsidian-700/60 border border-sage-500/30 rounded-lg p-8"
               variants={cardReveal}
             >
               <h3 className="font-serif text-xl text-sage-400 mb-6 flex items-center gap-3">
@@ -160,7 +144,7 @@ export default function AboutPage() {
 
             {/* Right card — What It Is NOT */}
             <motion.div
-              className="bg-obsidian-700/60 backdrop-blur-sm border border-clay-500/30 rounded-lg p-8"
+              className="bg-obsidian-700/60 border border-clay-500/30 rounded-lg p-8"
               variants={cardReveal}
             >
               <h3 className="font-serif text-xl text-clay-400 mb-6 flex items-center gap-3">
@@ -189,13 +173,13 @@ export default function AboutPage() {
         className="px-6 pb-20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-3xl mx-auto">
           <h2 className="type-headline text-oatmeal-100 text-center mb-8">
             What We Keep, and What We Don&apos;t
           </h2>
-          <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
+          <div className="bg-obsidian-700/60 border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 leading-relaxed">
               {STORAGE_STATEMENT} A summary of an analysis includes totals, ratios and the names of accounts a
               tool flagged. A report you share by link is stored with our storage provider for {SHARE_RETENTION}.{' '}
@@ -222,23 +206,18 @@ export default function AboutPage() {
             Built for Financial Professionals
           </motion.h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <ol className="border-t border-obsidian-500/60">
             {professionalsCards.map((card, i) => (
-              <motion.div
+              <li
                 key={card.title}
-                className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
-                variants={marketingFadeUpAt(i)}
+                className="grid grid-cols-[2.5rem_minmax(0,1fr)] md:grid-cols-[2.5rem_minmax(0,16rem)_minmax(0,1fr)] gap-x-6 gap-y-2 py-5 border-b border-obsidian-500/60"
               >
-                <div className="mb-4">
-                  {card.icon}
-                </div>
-                <h3 className="font-serif text-lg text-oatmeal-100 mb-3">{card.title}</h3>
-                <p className="type-body-sm text-oatmeal-400">
-                  {card.description}
-                </p>
-              </motion.div>
+                <span className="font-mono text-sm text-sage-400 tabular-nums">{i + 1}.</span>
+                <h3 className="font-serif text-lg text-oatmeal-100">{card.title}</h3>
+                <p className="col-start-2 md:col-start-3 type-body-sm text-oatmeal-400">{card.description}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </motion.section>
 
@@ -274,7 +253,7 @@ export default function AboutPage() {
             ].map((item) => (
               <motion.div
                 key={item.title}
-                className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-6"
+                className="bg-obsidian-700/60 border border-obsidian-500/30 rounded-lg p-6"
                 variants={cardReveal}
               >
                 <h3 className="font-serif text-lg text-sage-400 mb-3">{item.title}</h3>
@@ -290,13 +269,13 @@ export default function AboutPage() {
         className="px-6 pb-20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.4, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-3xl mx-auto">
           <h2 className="type-headline text-oatmeal-100 text-center mb-8">
             Where Paciolus Fits in Your Workflow
           </h2>
-          <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
+          <div className="bg-obsidian-700/60 border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 mb-6">
               Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats including QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel, CSV, TSV, TXT, PDF tables, and ODS spreadsheets.
             </p>
@@ -321,7 +300,7 @@ export default function AboutPage() {
         className="px-6 pb-24"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="type-headline text-oatmeal-100 mb-4">

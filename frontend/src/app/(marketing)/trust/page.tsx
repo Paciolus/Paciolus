@@ -26,7 +26,7 @@ export default function TrustAndSecurity() {
         className="relative pt-32 pb-16 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-5xl mx-auto text-center">
           <h1 className="type-display-xl text-oatmeal-100 mb-6">
@@ -82,7 +82,7 @@ export default function TrustAndSecurity() {
             <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="inline-block type-meta text-sage-400 mb-3"
             >
               Data Handling
@@ -91,7 +91,7 @@ export default function TrustAndSecurity() {
               id="transparency-heading"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={{ duration: 0.2 }}
               className="type-headline text-oatmeal-100"
             >
               Data Transparency
@@ -102,19 +102,19 @@ export default function TrustAndSecurity() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.2 }}
             className="relative flex items-center gap-4 mb-12"
             aria-hidden="true"
           >
             <div className="flex-1 flex items-center">
               <div className="w-2 h-2 rounded-full bg-sage-400/60" />
-              <div className="flex-1 h-px bg-gradient-to-r from-sage-400/30 to-transparent" />
+              <div className="flex-1 h-px bg-sage-400/30" />
             </div>
             <span className="font-sans text-xs font-medium text-oatmeal-400 tracking-wide uppercase px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-600 whitespace-nowrap">
               Your Data Boundary
             </span>
             <div className="flex-1 flex items-center">
-              <div className="flex-1 h-px bg-gradient-to-l from-clay-400/30 to-transparent" />
+              <div className="flex-1 h-px bg-clay-400/30" />
               <div className="w-2 h-2 rounded-full bg-clay-400/60" />
             </div>
           </motion.div>
@@ -125,7 +125,7 @@ export default function TrustAndSecurity() {
               className="bg-obsidian-800 border-l-4 border-sage-500 rounded-r-xl p-6 md:p-8"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' as const }}
+              transition={{ duration: 0.2, ease: 'easeOut' as const }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-sage-500/15 flex items-center justify-center text-sage-400">
@@ -152,7 +152,7 @@ export default function TrustAndSecurity() {
               className="bg-obsidian-800 border-l-4 border-clay-500 rounded-r-xl p-6 md:p-8"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' as const }}
+              transition={{ duration: 0.2, ease: 'easeOut' as const }}
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-clay-500/15 flex items-center justify-center text-clay-400">
@@ -194,7 +194,7 @@ export default function TrustAndSecurity() {
         meta="Security Architecture"
         title="How We Protect Your Data"
         subtitle="Four stages, and what each one keeps."
-        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
+        surface="lobby-surface-accent overflow-hidden"
       >
         <div className="mb-16">
           <DataFlowDiagram />
@@ -309,7 +309,7 @@ export default function TrustAndSecurity() {
             className="text-center mb-10"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.2 }}
           >
             <span className="inline-block type-meta text-sage-400 mb-3">Documents</span>
             <h2 id="artifacts-heading" className="type-headline-sm text-oatmeal-100 mb-2">Downloadable Artifacts</h2>
@@ -328,7 +328,7 @@ export default function TrustAndSecurity() {
               <motion.div key={artifact.href} variants={fadeUp}>
                 <Link
                   href={artifact.href}
-                  className="flex items-start gap-4 bg-obsidian-800/60 border border-obsidian-600 rounded-xl px-5 py-4 hover:border-sage-500/30 transition-colors group"
+                  className="flex items-start gap-4 bg-obsidian-800/60 border border-obsidian-600 rounded-lg px-5 py-4 hover:border-sage-500/30 transition-colors group"
                 >
                   <div className="w-9 h-9 rounded-lg bg-sage-500/15 flex items-center justify-center text-sage-400 flex-shrink-0 mt-0.5">
                     <BrandIcon name={artifact.icon} className="w-4.5 h-4.5" />

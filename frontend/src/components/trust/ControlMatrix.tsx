@@ -32,7 +32,7 @@ export function ControlMatrix() {
               onClick={() => toggleDomain(cat.key)}
               aria-expanded={isOpen}
               aria-controls={`domain-panel-${cat.key}`}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-lg border transition-all duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sage-400 ${
                 isOpen
                   ? `${a.bg} ${a.border}`
                   : 'bg-obsidian-800/60 border-obsidian-600 hover:border-obsidian-500/60'
@@ -81,7 +81,7 @@ export function ControlMatrix() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' as const }}
+                  transition={{ duration: 0.2, ease: 'easeOut' as const }}
                   className="overflow-hidden"
                 >
                   <div className="pt-2 pb-1 space-y-1">

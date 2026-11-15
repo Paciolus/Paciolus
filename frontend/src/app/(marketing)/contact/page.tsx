@@ -74,7 +74,7 @@ function ContactForm() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
         className="bg-sage-500/10 border border-sage-500/30 rounded-lg p-8 text-center"
       >
         <svg className="w-16 h-16 text-sage-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -213,7 +213,7 @@ export default function ContactPage() {
         className="relative pt-32 pb-24 px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' as const }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
       >
         <div className="max-w-2xl mx-auto">
           <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4">

@@ -86,12 +86,14 @@ export const fadeUp: Variants = {
 // to `components/ui/motionClient` elements.
 
 /** Marketing entrance — 24px lift, 0.5s easeOut (trust, about, approach). */
+// Sprint 864 (WEBSITE_REVIEW.md G-06): marketing motion must not delay
+// content — a short fade, a small lift, no long staggers.
 export const marketingFadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' as const },
+    transition: { duration: 0.2, ease: 'easeOut' as const },
   },
 } satisfies Variants
 
@@ -101,14 +103,14 @@ export function marketingFadeUpAt(index: number) {
     hidden: marketingFadeUp.hidden,
     visible: {
       ...marketingFadeUp.visible,
-      transition: { delay: index * 0.1, ...marketingFadeUp.visible.transition },
+      transition: { delay: Math.min(index * 0.03, 0.1), ...marketingFadeUp.visible.transition },
     },
   } satisfies Variants
 }
 
 /** Marketing entrance, softer — 20px lift, 0.5s easeOut (pricing). */
 export const marketingFadeUpSoft = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 6 },
   visible: marketingFadeUp.visible,
 } satisfies Variants
 

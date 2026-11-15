@@ -32,10 +32,10 @@ describe('EngravedStat', () => {
     expect(firstChild!.textContent).toBe('7')
   })
 
-  it('applies oldstyle-nums inline style to the value', () => {
+  it('applies tabular lining figures to the value (Sprint 864)', () => {
     render(<EngravedStat value="1,452" label="Tests" />)
     const valueEl = screen.getByText('1,452')
-    expect(valueEl.getAttribute('style')).toContain('oldstyle-nums')
+    expect(valueEl.getAttribute('style')).toContain('tabular-nums')
   })
 
   it('honours the accent prop on the kicker colour class', () => {

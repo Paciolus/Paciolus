@@ -1,31 +1,9 @@
-'use client'
-
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
-import { BrandIcon, type BrandIconName } from '@/components/shared'
-import { Reveal } from '@/components/ui/Reveal'
-import { DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
-import { SPRING } from '@/utils/themeUtils'
-import { staggerContainerTight, fadeUp } from '@/lib/motion'
-
 /**
- * ProcessTimeline - Marketing Component
+ * ProcessTimeline — "How It Works" (Sprint 861 copy, Sprint 864 layout).
  *
- * Visual flow showing the Paciolus transformation process:
- * 1. Upload - Raw trial balance data
- * 2. Analyze - tests run on your file
- * 3. Export - memos and workpapers (PDF/Excel/CSV)
- *
- * Design: "Visual Storytelling" with connecting timeline.
- * Horizontal on desktop, vertical on mobile.
- *
- * Animations:
- * - STAGGER.standard for step sequence
- * - ENTER.fadeUpDramatic for step cards
- * - DRAW.lineHorizontal/lineVertical for connecting lines
- * - Shared CountUp from marketingMotion
- *
- * See: skills/theme-factory/themes/oat-and-obsidian.md
+ * Three numbered steps on hairline rules. The icon tiles, glow shadows,
+ * spin-in number badges, count-ups and drawn connector lines were removed
+ * (WEBSITE_REVIEW.md G-02, G-06, G-07); the step numbers are static.
  */
 
 interface ProcessStep {
@@ -34,8 +12,6 @@ interface ProcessStep {
   title: string
   description: string
   detail: string
-  icon: BrandIconName
-  accentColor: 'sage' | 'oatmeal' | 'clay'
 }
 
 const steps: ProcessStep[] = [
@@ -45,8 +21,6 @@ const steps: ProcessStep[] = [
     title: 'Upload',
     description: 'Raw trial balance data',
     detail: 'Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF and ODS. Multi-sheet workbooks supported.',
-    accentColor: 'oatmeal',
-    icon: 'cloud-upload',
   },
   {
     id: 'analyze',
@@ -54,8 +28,6 @@ const steps: ProcessStep[] = [
     title: 'Analyze',
     description: 'Tests run on your file',
     detail: 'Accounts are classified by keyword rules, then each tool runs its tests and flags items for your review.',
-    accentColor: 'sage',
-    icon: 'bar-chart',
   },
   {
     id: 'export',
@@ -63,227 +35,34 @@ const steps: ProcessStep[] = [
     title: 'Export',
     description: 'Memos and workpapers',
     detail: 'PDF memos and Excel/CSV workpapers for your review. Your firm keeps them in its own documentation system. Custom branding on Enterprise.',
-    accentColor: 'sage',
-    icon: 'file-download',
   },
 ]
 
-// Get accent color classes based on step
-function getAccentClasses(accent: ProcessStep['accentColor']) {
-  const classes = {
-    sage: {
-      bg: 'bg-sage-500/20',
-      border: 'border-sage-500/40',
-      text: 'text-sage-400',
-      line: 'from-sage-500/40 to-sage-500/20',
-      glow: 'shadow-sage-500/30',
-    },
-    oatmeal: {
-      bg: 'bg-oatmeal-500/15',
-      border: 'border-oatmeal-400/40',
-      text: 'text-oatmeal-300',
-      line: 'from-oatmeal-400/40 to-oatmeal-400/20',
-      glow: 'shadow-oatmeal-400/25',
-    },
-    clay: {
-      bg: 'bg-clay-500/20',
-      border: 'border-clay-500/40',
-      text: 'text-clay-400',
-      line: 'from-clay-500/40 to-clay-500/20',
-      glow: 'shadow-clay-500/30',
-    },
-  }
-  return classes[accent]
-}
-
-// Icon pulse — bouncy spring for icons (kept inline: unique delay)
-const iconVariants = {
-  hidden: { scale: 0.8, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: {
-      ...SPRING.bouncy,
-      delay: 0.2,
-    },
-  },
-} as const
-
-// Number badge — unique scale+rotate combo (kept inline)
-const numberVariants = {
-  hidden: { scale: 0, rotate: -180 },
-  visible: {
-    scale: 1,
-    rotate: 0,
-    transition: SPRING.snappy,
-  },
-} as const
-
 export function ProcessTimeline() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(containerRef, { once: true, margin: '0px 0px 200px 0px' })
-
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Section Header */}
-      <Reveal className="max-w-3xl mx-auto text-center mb-16">
-        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
-        <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
+    <section className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <span className="block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
           How It Works
         </span>
         <h2 className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4">
           From Your File to Flagged Items and Exports
         </h2>
-        <p className="font-sans text-lg text-oatmeal-400 mb-4">
+        <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mb-12">
           Upload your source document. Paciolus runs the tests and gives you the items to review and the exports to keep.
         </p>
-        <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
-      </Reveal>
 
-      {/* Timeline Container */}
-      <motion.div
-        ref={containerRef}
-        variants={staggerContainerTight}
-        initial="hidden"
-        animate={isInView ? 'visible' : 'hidden'}
-        className="max-w-5xl mx-auto"
-      >
-        {/* Desktop: Horizontal Timeline */}
-        <div className="hidden md:block relative">
-          {/* Connecting Lines (between steps) */}
-          <div className="absolute top-[4.5rem] left-0 right-0 flex justify-center pointer-events-none z-0">
-            <div className="w-full max-w-3xl flex">
-              {/* Line 1 -> 2 */}
-              <div className="flex-1 flex justify-center px-8">
-                <motion.div
-                  variants={DRAW.lineHorizontal(0.5)}
-                  className="w-full h-0.5 bg-gradient-to-r from-oatmeal-400/50 via-sage-500/50 to-sage-500/40"
-                />
-              </div>
-              {/* Line 2 -> 3 */}
-              <div className="flex-1 flex justify-center px-8">
-                <motion.div
-                  variants={DRAW.lineHorizontal(0.75)}
-                  className="w-full h-0.5 bg-gradient-to-r from-sage-500/40 via-sage-500/50 to-sage-500/40"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Steps Grid */}
-          <div className="grid grid-cols-3 gap-8">
-            {steps.map((step, index) => {
-              const accent = getAccentClasses(step.accentColor)
-
-              return (
-                <motion.div
-                  key={step.id}
-                  variants={fadeUp}
-                  className="relative flex flex-col items-center text-center"
-                >
-                  {/* Step Number Badge — Count-up */}
-                  <motion.div
-                    variants={numberVariants}
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 z-10"
-                  >
-                    <span
-                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full ${accent.bg} border ${accent.border} font-mono text-xs font-bold ${accent.text}`}
-                    >
-                      <CountUp target={index + 1} pad={2} />
-                    </span>
-                  </motion.div>
-
-                  {/* Icon Container */}
-                  <motion.div
-                    variants={iconVariants}
-                    whileHover={{ scale: 1.05, rotate: 5 }}
-                    className={`relative z-10 w-24 h-24 rounded-2xl ${accent.bg} border ${accent.border} flex items-center justify-center mb-6 ${accent.text} shadow-lg ${accent.glow}`}
-                  >
-                    {/* Subtle inner glow */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
-                    <BrandIcon name={step.icon} />
-                  </motion.div>
-
-                  {/* Title */}
-                  <h3 className="font-serif text-xl font-semibold text-oatmeal-100 mb-2">
-                    {step.title}
-                  </h3>
-
-                  {/* Description */}
-                  <p className={`font-sans text-sm font-medium ${accent.text} mb-3`}>
-                    {step.description}
-                  </p>
-
-                  {/* Detail */}
-                  <p className="font-sans text-sm text-oatmeal-500 leading-relaxed max-w-xs">
-                    {step.detail}
-                  </p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Mobile: Vertical Timeline */}
-        <div className="md:hidden relative">
-          {/* Vertical Connecting Line */}
-          <motion.div
-            variants={DRAW.lineVertical(0.4)}
-            className="absolute left-[2.25rem] top-12 bottom-12 w-0.5 bg-gradient-to-b from-oatmeal-400/50 via-sage-500/50 to-sage-500/40 z-0"
-          />
-
-          {/* Steps */}
-          <div className="space-y-12">
-            {steps.map((step, index) => {
-              const accent = getAccentClasses(step.accentColor)
-
-              return (
-                <motion.div
-                  key={step.id}
-                  variants={fadeUp}
-                  className="relative flex items-start gap-6"
-                >
-                  {/* Icon Container */}
-                  <motion.div
-                    variants={iconVariants}
-                    className={`relative z-10 flex-shrink-0 w-[4.5rem] h-[4.5rem] rounded-xl ${accent.bg} border ${accent.border} flex items-center justify-center ${accent.text} shadow-lg ${accent.glow}`}
-                  >
-                    {/* Step Number Badge — Count-up */}
-                    <motion.div
-                      variants={numberVariants}
-                      className="absolute -top-2 -right-2 z-10"
-                    >
-                      <span
-                        className={`inline-flex items-center justify-center w-6 h-6 rounded-full bg-obsidian-800 border ${accent.border} font-mono text-[10px] font-bold ${accent.text}`}
-                      >
-                        <CountUp target={index + 1} pad={2} />
-                      </span>
-                    </motion.div>
-
-                    {/* Inner glow */}
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-oatmeal-50/5 to-transparent pointer-events-none" />
-                    <BrandIcon name={step.icon} />
-                  </motion.div>
-
-                  {/* Content */}
-                  <div className="flex-1 pt-1">
-                    <h3 className="font-serif text-lg font-semibold text-oatmeal-100 mb-1">
-                      {step.title}
-                    </h3>
-                    <p className={`font-sans text-sm font-medium ${accent.text} mb-2`}>
-                      {step.description}
-                    </p>
-                    <p className="font-sans text-sm text-oatmeal-500 leading-relaxed">
-                      {step.detail}
-                    </p>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </motion.div>
-
+        <ol className="grid md:grid-cols-3 gap-x-8">
+          {steps.map(step => (
+            <li key={step.id} className="border-t-2 border-sage-500/70 pt-4 pb-8">
+              <span className="font-mono text-sm text-sage-400 tabular-nums">{step.number}</span>
+              <h3 className="font-serif text-xl font-semibold text-oatmeal-100 mt-1">{step.title}</h3>
+              <p className="font-sans text-sm font-medium text-sage-400 mt-1 mb-3">{step.description}</p>
+              <p className="font-sans text-sm text-oatmeal-400 leading-relaxed">{step.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   )
 }

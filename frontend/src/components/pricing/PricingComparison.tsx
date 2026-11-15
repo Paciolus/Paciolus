@@ -40,7 +40,7 @@ export default function PricingComparison() {
       </h2>
 
       <div
-        className="relative overflow-x-auto rounded-2xl border border-sage-500/20 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] md:[mask-image:none]"
+        className="relative overflow-x-auto rounded-lg border border-sage-500/20 [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)] md:[mask-image:none]"
         aria-describedby="pricing-comparison-scroll-hint"
       >
         <span id="pricing-comparison-scroll-hint" className="sr-only">

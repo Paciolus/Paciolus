@@ -26,7 +26,7 @@ export const lineGrow = {
   hidden: { scaleX: 0, originX: 0 },
   visible: {
     scaleX: 1,
-    transition: { duration: 1.0, ease: 'easeOut' as const, delay: 0.4 },
+    transition: { duration: 0.2, ease: 'easeOut' as const },
   },
 } as const
 
@@ -34,7 +34,7 @@ export const vertLineGrow = {
   hidden: { scaleY: 0, originY: 0 },
   visible: {
     scaleY: 1,
-    transition: { duration: 1.2, ease: 'easeOut' as const, delay: 0.3 },
+    transition: { duration: 0.2, ease: 'easeOut' as const },
   },
 } as const
 
