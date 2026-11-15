@@ -3,7 +3,7 @@
  *
  * Type definitions for multi-file batch upload infrastructure.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All file data stored in React state (memory only)
  * - Files are processed individually, never persisted
  * - Queue state is ephemeral (lost on page refresh)

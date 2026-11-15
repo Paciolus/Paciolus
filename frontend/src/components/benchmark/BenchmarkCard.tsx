@@ -14,7 +14,7 @@
  * - Animated entrance with stagger support
  * - Oat & Obsidian theme compliance
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display component only, no data persistence
  */
 

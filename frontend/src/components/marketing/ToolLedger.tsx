@@ -10,9 +10,11 @@
  * rows expand in place on click.
  *
  * Layout:
- *   - md+: 4-column header (№ · Name · Tests · Standards) followed by
+ *   - md+: 3-column header (№ · Name · Tests) followed by
+ *     (Sprint 861: the Standards column was removed — no standard names on
+ *     marketing pages; citations live on /sources)
  *     18 rows with hairline rules between. Row click expands an
- *     accordion body with the one-line summary + standards + a link to
+ *     accordion body with the one-line summary + a link to
  *     the tool catalog card.
  *   - Below md: simplified vertical list (one row per tool, tap to
  *     expand) — keeps the same data, drops the 4-column header.
@@ -71,17 +73,16 @@ export function ToolLedger() {
           Eighteen Tools · One Platform
         </h2>
         <p className="font-sans text-sm text-oatmeal-400 max-w-xl mx-auto">
-          Every paid tier unlocks the full suite. Click any row for the one-line scope.
+          Every paid plan includes all 18 tools. Click any row for the one-line scope.
         </p>
       </Reveal>
 
       {/* md+ ledger header */}
       <Reveal>
-        <div className="hidden md:grid grid-cols-[3rem_minmax(0,1fr)_5rem_minmax(0,16rem)] gap-x-6 px-4 pb-2 border-b border-obsidian-500/60 font-sans text-[10px] uppercase tracking-[0.18em] text-oatmeal-500">
+        <div className="hidden md:grid grid-cols-[3rem_minmax(0,1fr)_5rem] gap-x-6 px-4 pb-2 border-b border-obsidian-500/60 font-sans text-[10px] uppercase tracking-[0.18em] text-oatmeal-500">
           <span className="text-right">№</span>
           <span>Tool</span>
           <span className="text-right">Tests</span>
-          <span>Standards</span>
         </div>
       </Reveal>
 
@@ -100,7 +101,10 @@ export function ToolLedger() {
 
       <Reveal delay={0.05}>
         <p className="mt-8 text-center font-sans text-[10px] uppercase tracking-[0.18em] text-oatmeal-500">
-          {CANONICAL_TOOL_COUNT} tools · every paid plan · every result cited
+          {CANONICAL_TOOL_COUNT} tools · every paid plan ·{' '}
+          <Link href="/sources" className="text-sage-400 hover:text-sage-300 underline">
+            every test cites its rule
+          </Link>
         </p>
       </Reveal>
     </section>
@@ -132,7 +136,7 @@ function LedgerRow({
         onKeyDown={onKey}
         className={`
           w-full grid gap-x-6 px-4 py-4 text-left
-          grid-cols-[2rem_minmax(0,1fr)] md:grid-cols-[3rem_minmax(0,1fr)_5rem_minmax(0,16rem)]
+          grid-cols-[2rem_minmax(0,1fr)] md:grid-cols-[3rem_minmax(0,1fr)_5rem]
           hover:bg-obsidian-800/40 focus:outline-hidden
           focus-visible:ring-2 focus-visible:ring-sage-500 focus-visible:ring-offset-1 focus-visible:ring-offset-obsidian-900
           transition-colors motion-reduce:transition-none
@@ -158,16 +162,6 @@ function LedgerRow({
           {entry.testCount ?? '—'}
         </span>
 
-        <span className="hidden md:flex flex-wrap gap-1 self-center">
-          {entry.standards.map(code => (
-            <span
-              key={code}
-              className="font-sans text-[10px] uppercase tracking-wider text-oatmeal-400 border border-obsidian-500/40 rounded-full px-2 py-0.5"
-            >
-              {code}
-            </span>
-          ))}
-        </span>
       </button>
 
       {/* Accordion panel */}
@@ -185,17 +179,6 @@ function LedgerRow({
               <p className="font-serif text-oatmeal-200 leading-relaxed">
                 {entry.summary}
               </p>
-              {/* Mobile-only standards pills (desktop shows them in the row) */}
-              <div className="md:hidden mt-3 flex flex-wrap gap-1">
-                {entry.standards.map(code => (
-                  <span
-                    key={code}
-                    className="font-sans text-[10px] uppercase tracking-wider text-oatmeal-400 border border-obsidian-500/40 rounded-full px-2 py-0.5"
-                  >
-                    {code}
-                  </span>
-                ))}
-              </div>
               <div className="mt-4">
                 <Link
                   href={entry.href}

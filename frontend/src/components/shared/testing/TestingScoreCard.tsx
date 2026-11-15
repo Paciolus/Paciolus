@@ -175,7 +175,7 @@ export function TestingScoreCard({
       {/* Top findings */}
       {top_findings.length > 0 && (
         <div className="mt-6 pt-6 border-t border-theme-divider">
-          <h4 className="font-sans text-xs text-content-secondary uppercase tracking-wider mb-3">Top Findings</h4>
+          <h4 className="font-sans text-xs text-content-secondary uppercase tracking-wider mb-3">Top flagged items</h4>
           {findings_renderer ? (
             findings_renderer(top_findings)
           ) : (

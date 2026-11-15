@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { RevenueScoreCard, RevenueTestResultGrid, RevenueDataQualityBadge, FlaggedRevenueTable } from '@/components/revenueTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractRevenueProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -162,7 +162,7 @@ export default function RevenueTestingPage() {
                   </p>
                 </div>
 
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

@@ -4,7 +4,6 @@ import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
-import { ANALYSIS_LABEL_STANDARD } from '@/utils/constants'
 import { DRAW, VIEWPORT, CountUp } from '@/utils/marketingMotion'
 import { SPRING } from '@/utils/themeUtils'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
@@ -14,8 +13,8 @@ import { staggerContainerTight, fadeUp } from '@/lib/motion'
  *
  * Visual flow showing the Paciolus transformation process:
  * 1. Upload - Raw trial balance data
- * 2. Analyze - Intelligent classification & anomaly detection
- * 3. Export - Reclassified intelligence (PDF/Excel)
+ * 2. Analyze - tests run on your file
+ * 3. Export - memos and workpapers (PDF/Excel/CSV)
  *
  * Design: "Visual Storytelling" with connecting timeline.
  * Horizontal on desktop, vertical on mobile.
@@ -53,8 +52,8 @@ const steps: ProcessStep[] = [
     id: 'analyze',
     number: '02',
     title: 'Analyze',
-    description: 'Intelligent classification',
-    detail: 'Automated account typing, anomaly detection, and materiality assessment in seconds.',
+    description: 'Tests run on your file',
+    detail: 'Accounts are classified by keyword rules, then each tool runs its tests and flags items for your review.',
     accentColor: 'sage',
     icon: 'bar-chart',
   },
@@ -62,8 +61,8 @@ const steps: ProcessStep[] = [
     id: 'export',
     number: '03',
     title: 'Export',
-    description: 'Reclassified intelligence',
-    detail: 'PDF summaries and Excel workpapers, formatted for your review. Custom branding on Enterprise.',
+    description: 'Memos and workpapers',
+    detail: 'PDF memos and Excel/CSV workpapers for your review. Your firm keeps them in its own documentation system. Custom branding on Enterprise.',
     accentColor: 'sage',
     icon: 'file-download',
   },
@@ -133,10 +132,10 @@ export function ProcessTimeline() {
           How It Works
         </span>
         <h2 className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4">
-          From Raw Data to Diagnostic Intelligence
+          From Your File to Flagged Items and Exports
         </h2>
         <p className="font-sans text-lg text-oatmeal-400 mb-4">
-          Upload your source document. Receive a complete diagnostic workup in seconds.
+          Upload your source document. Paciolus runs the tests and gives you the items to review and the exports to keep.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
       </Reveal>
@@ -285,15 +284,6 @@ export function ProcessTimeline() {
         </div>
       </motion.div>
 
-      {/* Bottom CTA hint */}
-      <Reveal delay={0.12} className="max-w-lg mx-auto text-center mt-16">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-obsidian-800/70 border border-obsidian-500/40">
-          <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse" />
-          <span className="font-sans text-sm text-oatmeal-400">
-            Analysis time: <span className="font-mono text-sage-400">{ANALYSIS_LABEL_STANDARD}</span>
-          </span>
-        </div>
-      </Reveal>
     </section>
   )
 }

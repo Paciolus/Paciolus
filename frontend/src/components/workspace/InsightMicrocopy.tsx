@@ -37,7 +37,7 @@ export function InsightMicrocopy(props: InsightMicrocopyProps) {
   return (
     <div>
       <span className="text-[10px] font-sans font-medium text-content-tertiary uppercase tracking-wider block mb-2">
-        Intelligence Briefing
+        Notes for this engagement
       </span>
       <div className="space-y-2">
         <AnimatePresence>

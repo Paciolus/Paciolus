@@ -3,7 +3,7 @@
  *
  * Types for prior period comparison functionality.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display types only, no data persistence
  * - Comparisons computed on-demand
  */

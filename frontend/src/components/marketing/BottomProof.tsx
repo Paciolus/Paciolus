@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { EngravedStat } from '@/components/marketing/EngravedStat'
-import { StandardsSpecimen } from '@/components/marketing/StandardsSpecimen'
 import { Reveal } from '@/components/ui/Reveal'
 import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
 import { VIEWPORT } from '@/utils/marketingMotion'
@@ -63,24 +62,24 @@ export function BottomProof() {
         <Reveal className="text-center">
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto mb-4" />
           <span className="inline-block font-sans text-xs uppercase tracking-[0.2em] text-sage-400 mb-3">
-            Professional Standards
+            Sources
           </span>
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100">
             Every Test Names Its Rule
           </h2>
           <p className="font-sans text-oatmeal-400 mt-3 max-w-xl mx-auto mb-4">
             Eighteen tools. Every test names the rule it applies, or says when a threshold is our own convention.
+            <br />
+            <Link href="/sources" className="text-sage-400 hover:text-sage-300 underline">
+              Check each one on Sources &amp; Methodology
+            </Link>
           </p>
           <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
         </Reveal>
 
-        {/* Sprint 705 — Standards specimen replaces the pill strip.
-            The specimen layout is the single differentiating design
-            moment on the homepage; the pill strip is retained as a
-            mobile-only fallback inside <StandardsSpecimen>. */}
-        <Reveal>
-          <StandardsSpecimen />
-        </Reveal>
+        {/* Sprint 861 (CEO decision 2026-11-14): no standard names on marketing
+            pages. The standards specimen was removed; the citations live on
+            /sources, where each one has its context. */}
 
         {/* Sprint 704 — closing metric band rendered as engraved
             monuments (oversized display serif numerals + Roman-numeral

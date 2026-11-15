@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { InvTestResult, InventoryEntryData } from '@/types/inventoryTesting'
 
 interface FlaggedInventoryTableProps {
@@ -59,7 +60,7 @@ export function FlaggedInventoryTable({ results }: FlaggedInventoryTableProps) {
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search item ID, description, issue..."
-      emptyMessage="No flagged entries found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="entries"
     />
   )

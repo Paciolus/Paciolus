@@ -2,19 +2,19 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { BrandIcon } from '@/components/shared'
 import { SITE_FOOTER_DISCLAIMER } from '@/content/disclaimers'
+import { DOCUMENTATION_STATEMENT, RESPONSIBILITY_STATEMENT, STORAGE_DETAIL_HREF, STORAGE_DETAIL_LABEL, STORAGE_STATEMENT } from '@/content/storage-statement'
 
 /**
  * MarketingFooter — Sprint 338 Redesign
  *
  * 4-column strategic layout:
- * - Brand: logo, tagline, zero-storage badge
+ * - Brand: logo, tagline, the approved storage statement (Sprint 861)
  * - Solutions: tool + workspace links
  * - Resources: about, approach, trust, contact
  * - Legal: privacy, terms, pricing, auth links
  *
  * Features:
  * - Underline-slide hover on all links (matches nav)
- * - BrandIcon accent on zero-storage badge
  * - Sage top-border accent on footer boundary
  * - Professional disclaimer bar preserved
  */
@@ -88,14 +88,15 @@ export function MarketingFooter() {
                   className="h-8 w-auto object-contain transition-opacity group-hover:opacity-80"
                 />
               </Link>
-              <p className="font-sans text-sm text-oatmeal-500 leading-relaxed mb-4">
-                Eighteen tools. Uploaded files are not kept. Results in seconds for standard file sizes.
+              <p className="font-sans text-sm text-oatmeal-500 leading-relaxed mb-3">
+                Trial balance and ledger testing for audit teams. Eighteen tools.
               </p>
-              {/* Data-handling badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-obsidian-800/60 border border-obsidian-500/20">
-                <BrandIcon name="padlock" className="w-3.5 h-3.5 text-theme-success-text" />
-                <span className="font-sans text-xs text-oatmeal-400">Uploads not kept after analysis</span>
-              </div>
+              <p className="font-sans text-xs text-oatmeal-500 leading-relaxed">
+                {STORAGE_STATEMENT}{' '}
+                <Link href={STORAGE_DETAIL_HREF} className="text-oatmeal-400 hover:text-oatmeal-200 underline">
+                  {STORAGE_DETAIL_LABEL}
+                </Link>
+              </p>
             </div>
 
             {/* Column 2: Solutions */}
@@ -173,9 +174,10 @@ export function MarketingFooter() {
       {/* Disclaimer Bar */}
       <div className="border-t border-obsidian-500/15 bg-obsidian-900/90">
         <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="font-sans text-[11px] text-oatmeal-600 leading-relaxed max-w-2xl">
-            {SITE_FOOTER_DISCLAIMER}
-          </p>
+          <div className="font-sans text-[11px] text-oatmeal-600 leading-relaxed max-w-2xl space-y-1">
+            <p>{SITE_FOOTER_DISCLAIMER}</p>
+            <p>{RESPONSIBILITY_STATEMENT} {DOCUMENTATION_STATEMENT}</p>
+          </div>
           <p className="font-sans text-[11px] text-oatmeal-600 shrink-0">
             &copy; {new Date().getFullYear()} Paciolus LLC
           </p>

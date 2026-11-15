@@ -17,7 +17,7 @@ import { fadeUp } from '@/lib/motion';
  * Now shows engagement summary and expandable workspace list,
  * replacing the separate Workspaces page.
  *
- * ZERO-STORAGE: Displays metadata only, no financial data.
+ * DATA HANDLING: Displays metadata only, no financial data.
  */
 
 interface ClientCardProps {

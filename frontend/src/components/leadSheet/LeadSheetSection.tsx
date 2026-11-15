@@ -13,7 +13,7 @@
  * - Filter by category type
  * - Oat & Obsidian theme compliance
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display component only, no data persistence
  * - Lead sheet data computed at audit time
  */

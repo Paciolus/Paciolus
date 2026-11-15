@@ -12,7 +12,7 @@
  *                                                 passcode, 429 with Retry-After on
  *                                                 per-token or per-IP lockout.
  *
- * Zero-Storage: nothing persisted. The blob is streamed to an anchor click and
+ * data-handling: nothing persisted. The blob is streamed to an anchor click and
  * revoked immediately after the browser initiates the download.
  */
 

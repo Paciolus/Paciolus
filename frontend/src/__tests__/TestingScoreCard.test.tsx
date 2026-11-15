@@ -100,13 +100,13 @@ describe('TestingScoreCard', () => {
 
   it('renders top findings', () => {
     render(<TestingScoreCard {...defaultProps} />)
-    expect(screen.getByText('Top Findings')).toBeInTheDocument()
+    expect(screen.getByText('Top flagged items')).toBeInTheDocument()
     expect(screen.getByText('Unusual weekend postings')).toBeInTheDocument()
     expect(screen.getByText('Round amount entries')).toBeInTheDocument()
   })
 
   it('does not render findings section when empty', () => {
     render(<TestingScoreCard {...defaultProps} top_findings={[]} />)
-    expect(screen.queryByText('Top Findings')).not.toBeInTheDocument()
+    expect(screen.queryByText('Top flagged items')).not.toBeInTheDocument()
   })
 })

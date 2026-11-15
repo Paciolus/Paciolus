@@ -7,7 +7,7 @@
  * Sprint 63: Three-way comparison (Prior + Current + Budget/Forecast)
  * and CSV export support.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All files processed in-memory only
  * - Comparison results are ephemeral (React state only)
  */

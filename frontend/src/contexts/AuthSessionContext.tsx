@@ -8,7 +8,7 @@
  * user-data refresh.  Every other auth-related context depends on this
  * one for the current token and user object.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - JWT access tokens stored in-memory only (React ref — not storage)
  * - Refresh tokens stored as HttpOnly Secure SameSite=Lax server-set cookies
  * - User metadata in-memory only (React state) — rehydrated via /auth/refresh on reload

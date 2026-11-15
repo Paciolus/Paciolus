@@ -8,7 +8,7 @@ agent sweep (Hallucination Audit C-4 + Accounting Methodology Audit Rank-1).
 Surfaces scanned:
 - `frontend/src/app/(marketing)/**/*.tsx`
 - `frontend/src/app/(marketing)/trust/page.tsx` + `frontend/src/content/trust.ts` + `frontend/src/components/trust/**`
-- `frontend/src/content/standards-specimen.ts`
+- (Sprint 861: `content/standards-specimen.ts` removed with the homepage standards list)
 - `frontend/src/components/marketing/**/*.tsx`
 - `docs/07-user-facing/USER_GUIDE.md`
 - `CLAUDE.md`
@@ -46,7 +46,6 @@ SCANNED_GLOBS: tuple[str, ...] = (
     # surfaced exactly that one citation across all tool pages, so the cost of
     # the coverage is a single registry row.
     "frontend/src/app/tools/**/*.tsx",
-    "frontend/src/content/standards-specimen.ts",
     # The methodology catalog tells a client which authority each test rule
     # comes from; every code it names must be registered.
     "frontend/src/content/methodology-sources.ts",

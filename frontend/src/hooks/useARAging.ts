@@ -3,7 +3,7 @@
  *
  * Dual-file upload wrapper around createTestingHook for AR Aging Analysis.
  * TB file required, sub-ledger file optional.
- * Zero-Storage: files processed on backend, results ephemeral.
+ * data-handling: files processed on backend, results ephemeral.
  */
 
 import type { ARAgingResult } from '@/types/arAging'

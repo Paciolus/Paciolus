@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { FATestResult, FixedAssetEntryData } from '@/types/fixedAssetTesting'
 
 interface FlaggedFixedAssetTableProps {
@@ -49,7 +50,7 @@ export function FlaggedFixedAssetTable({ results }: FlaggedFixedAssetTableProps)
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search asset ID, description, issue..."
-      emptyMessage="No flagged entries found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="entries"
     />
   )

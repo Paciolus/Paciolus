@@ -144,12 +144,12 @@ describe('SumSchedulePanel', () => {
     });
   });
 
-  it('archives item via Archive button', async () => {
+  it('removes item via Remove button', async () => {
     const user = userEvent.setup();
     const schedule = makeSchedule({ items: [item({ id: 11 })] });
     render(<SumSchedulePanel {...defaultProps} schedule={schedule} />);
 
-    await user.click(screen.getByLabelText(/archive misstatement 11/i));
+    await user.click(screen.getByLabelText(/remove misstatement 11/i));
     await waitFor(() => {
       expect(defaultProps.onArchive).toHaveBeenCalledWith(11);
     });

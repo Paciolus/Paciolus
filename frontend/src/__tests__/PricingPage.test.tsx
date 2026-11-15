@@ -201,7 +201,7 @@ describe('PricingPage', () => {
   it('hero subtitle describes the platform', () => {
     render(<PricingPage />)
     expect(
-      screen.getByText('Eighteen tools. Uploads not kept. One platform. Pick the plan that matches your practice.')
+      screen.getByText('Every paid plan includes all 18 tools. Pick the plan that matches your practice.')
     ).toBeInTheDocument()
   })
 

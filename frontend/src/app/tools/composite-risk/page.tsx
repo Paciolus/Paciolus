@@ -8,7 +8,7 @@
  * optionally integrates automated diagnostic data (TB anomaly score, tool
  * scores, going concern indicators).
  *
- * Form input only — no file upload, no data persisted (Zero-Storage).
+ * Form input only — no file upload, no data persisted (data-handling).
  */
 
 import { memo, useCallback, useMemo, useState } from 'react'

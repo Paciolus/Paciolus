@@ -5,7 +5,7 @@
  *
  * React hook for fetching and managing the client list.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Client data is fetched from API and stored in React state (memory only)
  * - No client data is persisted to localStorage or sessionStorage
  * - Client list is re-fetched on authentication state changes

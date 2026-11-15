@@ -42,7 +42,7 @@ export interface AccountMapping {
   isManual: boolean;
 }
 
-// Configuration for export/import (Zero-Storage: user's local machine only)
+// Configuration for export/import (data-handling: user's local machine only)
 export interface MappingConfig {
   version: string;
   createdAt: string;

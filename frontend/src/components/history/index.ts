@@ -3,7 +3,7 @@
  * Heritage Timeline & Activity Entry for audit history display
  *
  * Design: Traditional accounting ledger aesthetic with Oat & Obsidian theme.
- * Zero-Storage architecture - only metadata displayed, never financial data.
+ * data-handling architecture - only metadata displayed, never financial data.
  *
  * See: logs/dev-log.md for IP documentation
  */

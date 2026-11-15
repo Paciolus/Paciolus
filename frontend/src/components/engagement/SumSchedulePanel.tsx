@@ -249,9 +249,9 @@ export function SumSchedulePanel({
                     type="button"
                     onClick={() => onArchive(item.id)}
                     className="text-xs font-sans text-content-tertiary hover:text-clay-600 transition-colors"
-                    aria-label={`Archive misstatement ${item.id}`}
+                    aria-label={`Remove misstatement ${item.id}`}
                   >
-                    Archive
+                    Remove
                   </button>
                 </div>
 

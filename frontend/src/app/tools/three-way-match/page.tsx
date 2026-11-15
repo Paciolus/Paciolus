@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, FileDropZone, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractTWMProof } from '@/components/shared/proof'
 import { MatchSummaryCard, MatchResultsTable, UnmatchedDocumentsPanel, VarianceDetailCard } from '@/components/threeWayMatch'
 import { TWMRunSettings, computeTWMRunOverrides, twmBaseline, type TWMRunEdits } from '@/components/threeWayMatch/TWMRunSettings'
@@ -194,7 +194,7 @@ export default function ThreeWayMatchPage() {
                   </button>
                 </div>
 
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

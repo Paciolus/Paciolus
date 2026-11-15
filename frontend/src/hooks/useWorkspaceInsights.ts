@@ -15,7 +15,7 @@ import { apiGet } from '@/utils';
  *
  * Returns portfolio-level fallback when no engagement selected.
  *
- * ZERO-STORAGE: All data from API, stored in React state only.
+ * DATA HANDLING: All data from API, stored in React state only.
  */
 
 export type RiskLevel = 'high' | 'medium' | 'low';

@@ -4,7 +4,7 @@
  *
  * React hook for fetching and comparing client ratios to industry benchmarks.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Benchmark reference data fetched from API (public aggregate data)
  * - Comparison results computed in real-time, never stored
  * - Client ratio data is ephemeral (session only)

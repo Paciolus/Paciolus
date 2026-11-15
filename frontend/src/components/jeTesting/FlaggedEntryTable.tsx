@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { JETestResult, JournalEntryData } from '@/types/jeTesting'
 
 interface FlaggedEntryTableProps {
@@ -57,7 +58,7 @@ export function FlaggedEntryTable({ results }: FlaggedEntryTableProps) {
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search account, description, entry ID..."
-      emptyMessage="No flagged entries found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="entries"
     />
   )

@@ -2991,3 +2991,13 @@ happened again in Sprint 845 with the new DPA.
 
 **Run tracked-file guards after `git add`, not before.** And a document that explains what was wrong
 with old wording should describe it, not quote it — the quote is exactly what the guard looks for.
+
+### 2026-11-14 — Sprint 861: replacement copy needs the same proof as the copy it replaces
+While removing unprovable claims from the website I wrote two new false ones: the demo's diagnostic-package ZIP
+was described as holding "PDF memos and Excel files" (it holds an anomaly-summary PDF, a workpaper index and a
+manifest — `engagement_export.py`), and About said the activity log is "included in the diagnostic package
+export" (it is not). A background check of the Trust page's 22 security sentences found 7 that overstated the code
+(CSRF on "all" endpoints, a "cell-count" limit that does not exist, "every DB query" scoped, TLS versions that are
+infrastructure, memory "released"). **Every factual sentence in replacement copy gets checked against the code
+before it ships — open the file, don't trust the old copy or your memory of the feature.** The new guard
+`backend/tests/test_marketing_claims.py` catches phrases, not facts; only reading the code catches facts.

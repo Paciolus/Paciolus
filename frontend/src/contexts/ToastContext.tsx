@@ -9,7 +9,7 @@
  * - info (oatmeal): neutral information
  *
  * Follows Oat & Obsidian design tokens.
- * Zero-Storage: no persistence — toasts are ephemeral UI state.
+ * data-handling: no persistence — toasts are ephemeral UI state.
  */
 
 import {

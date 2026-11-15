@@ -35,20 +35,20 @@ const DEMO_TOOLS: DemoTool[] = [
   { title: 'Trial Balance Diagnostics', description: 'Anomaly detection, ratio analysis, lead sheet mapping, and financial statement generation.', icon: 'calculator',         tier: 'solo', cluster: 'Analyze' },
   { title: 'Multi-Period Comparison',   description: 'Compare up to three periods side-by-side with variance analysis and budget tracking.',    icon: 'trend-chart',       tier: 'solo', cluster: 'Analyze' },
   { title: 'Journal Entry Testing',     description: "Benford's Law, structural validation, and statistical anomaly detection across the GL.",  icon: 'shield-check',      tier: 'solo', cluster: 'Detect',   tests: 19 },
-  { title: 'Revenue Testing',           description: 'ISA 240 fraud risk plus ASC 606 / IFRS 15 recognition timing and cut-off analysis.',     icon: 'currency-circle',   tier: 'solo', cluster: 'Detect',   tests: 18 },
+  { title: 'Revenue Testing',           description: 'Revenue analytics plus contract-aware recognition timing and cut-off analysis.',     icon: 'currency-circle',   tier: 'solo', cluster: 'Detect',   tests: 18 },
   { title: 'AP Payment Testing',        description: 'Duplicate payments, vendor concentration, and patterns associated with fraud schemes across payables.',        icon: 'document-duplicate',tier: 'solo', cluster: 'Validate', tests: 14 },
-  { title: 'Bank Reconciliation',       description: 'Match bank transactions against the general ledger with automated reconciliation.',       icon: 'arrows-vertical',   tier: 'solo', cluster: 'Validate' },
-  { title: 'Statistical Sampling',      description: 'MUS and random sampling with Stringer bounds — designed to support ISA 530 / PCAOB AS 2315 procedures.', icon: 'bar-chart',         tier: 'solo', cluster: 'Analyze' },
+  { title: 'Bank Reconciliation',       description: 'Match bank transactions against the general ledger and list the reconciling items.',       icon: 'arrows-vertical',   tier: 'solo', cluster: 'Validate' },
+  { title: 'Statistical Sampling',      description: 'MUS and random sampling with Stringer bounds, for your sampling procedures.', icon: 'bar-chart',         tier: 'solo', cluster: 'Analyze' },
   { title: 'Payroll Testing',           description: 'Ghost-employee indicators, duplicate payments, and payroll anomaly analysis.',             icon: 'users',             tier: 'solo', cluster: 'Detect',   tests: 13 },
   { title: 'Three-Way Match',           description: 'PO-Invoice-Receipt matching with exact PO# linkage and procurement variance analysis.',   icon: 'circle-check',      tier: 'solo', cluster: 'Validate' },
   { title: 'AR Aging Analysis',         description: 'Receivables aging with concentration risk, stale balances, and allowance adequacy.',      icon: 'clock',             tier: 'solo', cluster: 'Assess',   tests: 12 },
-  { title: 'Fixed Asset Testing',       description: 'PP&E depreciation, useful life, and residual value anomaly detection per IAS 16.',        icon: 'building',          tier: 'solo', cluster: 'Assess',   tests: 11 },
-  { title: 'Inventory Testing',         description: 'Unit cost outliers, slow-moving detection, and valuation anomalies per IAS 2.',           icon: 'cube',              tier: 'solo', cluster: 'Assess',   tests: 10 },
+  { title: 'Fixed Asset Testing',       description: 'PP&E depreciation, useful life and residual value anomaly detection.',        icon: 'building',          tier: 'solo', cluster: 'Assess',   tests: 11 },
+  { title: 'Inventory Testing',         description: 'Unit cost outliers, slow-moving detection and valuation anomalies.',           icon: 'cube',              tier: 'solo', cluster: 'Assess',   tests: 10 },
   { title: 'Segregation of Duties',     description: 'User-role and role-permission matrices checked against an SoD rule library, ranked per user.', icon: 'padlock',        tier: 'solo', cluster: 'Validate' },
   { title: 'Intercompany Elimination',  description: 'Reciprocal balance matching across entities, proposed elimination entries, consolidation worksheet.', icon: 'arrows-vertical', tier: 'solo', cluster: 'Validate' },
   { title: 'W-2 / W-3 Reconciliation',  description: 'Payroll YTD reconciled to draft W-2s and Form 941 quarterlies before year-end filing.',   icon: 'clipboard-check',   tier: 'solo', cluster: 'Validate' },
   { title: '1099 Vendor Threshold Review',     description: '1099-NEC / MISC / INT threshold detection with corporate safe-harbour and processor exemptions.', icon: 'document',    tier: 'solo', cluster: 'Validate' },
-  { title: 'Book-to-Tax Reconciliation',description: 'Book pretax income bridged to taxable income with Schedule M-1 / M-3 and an ASC 740 deferred-tax roll.', icon: 'spreadsheet', tier: 'solo', cluster: 'Analyze' },
+  { title: 'Book-to-Tax Reconciliation',description: 'Book pretax income bridged to taxable income with Schedule M-1 / M-3 and a deferred-tax roll.', icon: 'spreadsheet', tier: 'solo', cluster: 'Analyze' },
   { title: 'Cash Flow Projector',       description: '90-day cash position across base, stress and best scenarios with liquidity-breach flagging.', icon: 'bar-chart',      tier: 'solo', cluster: 'Analyze' },
 ]
 
@@ -73,7 +73,7 @@ export default function DemoPage() {
           </div>
 
           <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4">
-            See Paciolus in Action
+            Sample Outputs From All 18 Tools
           </h1>
           <p className="font-sans text-oatmeal-400 text-base leading-relaxed max-w-xl mx-auto">
             Explore all eighteen audit diagnostic tools using synthetic data.
@@ -167,11 +167,11 @@ export default function DemoPage() {
       <section className="py-20 px-6">
         <Reveal className="max-w-2xl mx-auto text-center">
           <h2 className="font-serif text-3xl text-oatmeal-100 mb-4">
-            Ready to Analyze Your Own Data?
+            Run the Tools on Your Own Trial Balance
           </h2>
           <p className="font-sans text-oatmeal-400 mb-8 max-w-lg mx-auto">
-            Start your 7-day free trial. Upload a real trial balance and
-            run the full diagnostic suite — usually in a few seconds for standard files.
+            Start the 7-day trial and run the tools on your own trial balance. A card is required;
+            you are not charged until the trial ends, and you can cancel before then.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -179,7 +179,7 @@ export default function DemoPage() {
               href="/register"
               className="px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
             >
-              Start 7-Day Trial — Free
+              Start 7-Day Trial
             </Link>
             <Link
               href="/pricing"

@@ -36,7 +36,7 @@ jest.mock('@/components/bankRec', () => ({
 jest.mock('@/components/shared', () => ({
   FileDropZone: ({ label }: any) => <div data-testid={`file-drop-${label}`}>{label}</div>,
   GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}</div>,
-  ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
+  UploadHandlingNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   ToolStatePresence: ({ children }: any) => <div data-testid="tool-state-presence">{children}</div>,
   UpgradeGate: ({ children }: any) => <>{children}</>,

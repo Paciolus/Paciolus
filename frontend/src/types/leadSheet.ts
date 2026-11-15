@@ -4,7 +4,7 @@
  * Types for lead sheet mapping and grouping in audit workpapers.
  * Lead sheets (A-Z) organize accounts by standard audit categories.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display types only, no data persistence
  * - Lead sheet assignments computed at audit time
  */

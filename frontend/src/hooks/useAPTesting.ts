@@ -2,7 +2,7 @@
  * useAPTesting Hook (Sprint 75, refactored Sprint 82, factory Sprint 161)
  *
  * Thin wrapper around createTestingHook for AP Payment Testing.
- * Zero-Storage: file processed on backend, results ephemeral.
+ * data-handling: file processed on backend, results ephemeral.
  */
 
 import type { APTestingResult } from '@/types/apTesting'

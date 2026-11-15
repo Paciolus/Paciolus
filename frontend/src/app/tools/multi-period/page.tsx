@@ -15,7 +15,7 @@ import {
   PeriodFileDropZone,
   stagger,
 } from '@/components/multiPeriod'
-import { DisclaimerBox, GuestCTA, UpgradeGate, ZeroStorageNotice } from '@/components/shared'
+import { DisclaimerBox, GuestCTA, UpgradeGate, UploadHandlingNotice } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import {
   type MovementSummaryResponse,
@@ -410,8 +410,8 @@ export default function MultiPeriodPage() {
                     for professional judgment or substantive audit procedures per ISA 520.
                   </DisclaimerBox>
 
-                  {/* Zero-Storage Notice */}
-                  <ZeroStorageNotice className="mt-4" />
+                  {/* Data-handling notice */}
+                  <UploadHandlingNotice className="mt-4" />
                 </motion.div>
               )}
             </AnimatePresence>

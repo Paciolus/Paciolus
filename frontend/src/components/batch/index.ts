@@ -3,7 +3,7 @@
  *
  * Multi-file batch upload UI components.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All files in React state (memory only)
  * - No persistence to localStorage/sessionStorage
  */

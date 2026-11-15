@@ -23,10 +23,6 @@ jest.mock('@/components/ui/Reveal', () => ({
   Reveal: ({ children, className }: any) => <div className={className}>{children}</div>,
 }))
 
-jest.mock('@/utils/constants', () => ({
-  ANALYSIS_LABEL_STANDARD: 'under 3 seconds',
-}))
-
 jest.mock('@/utils/marketingMotion', () => ({
   DRAW: {
     lineHorizontal: () => ({ hidden: {}, visible: {} }),
@@ -53,7 +49,7 @@ jest.mock('@/lib/motion', () => ({
 describe('ProcessTimeline', () => {
   it('renders section heading', () => {
     render(<ProcessTimeline />)
-    expect(screen.getByText('From Raw Data to Diagnostic Intelligence')).toBeInTheDocument()
+    expect(screen.getByText('From Your File to Flagged Items and Exports')).toBeInTheDocument()
   })
 
   it('renders How It Works label', () => {
@@ -83,13 +79,13 @@ describe('ProcessTimeline', () => {
   it('renders step descriptions', () => {
     render(<ProcessTimeline />)
     expect(screen.getAllByText('Raw trial balance data').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Intelligent classification').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Reclassified intelligence').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Tests run on your file').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Memos and workpapers').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders analysis time hint', () => {
+  it('makes no speed claim (Sprint 861)', () => {
     render(<ProcessTimeline />)
-    expect(screen.getByText('under 3 seconds')).toBeInTheDocument()
+    expect(screen.queryByText(/seconds/i)).not.toBeInTheDocument()
   })
 
   it('renders description text', () => {

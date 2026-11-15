@@ -2,7 +2,7 @@
  * useFixedAssetTesting Hook (Sprint 116, factory Sprint 161)
  *
  * Thin wrapper around createTestingHook for Fixed Asset Testing.
- * Zero-Storage: file processed on backend, results ephemeral.
+ * data-handling: file processed on backend, results ephemeral.
  */
 
 import type { FixedAssetTestingResult } from '@/types/fixedAssetTesting'

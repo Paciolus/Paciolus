@@ -1,25 +1,20 @@
-// Telemetry hook: all analytics event calls, keyed to animation state transitions.
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { trackEvent } from '@/utils/telemetry'
-import type { FilmStep, OnStepChange } from './useHeroAnimation'
 
-/**
- * Encapsulates all hero-film telemetry in a single hook.
- *
- * Returns:
- * - `onStepChange` — fire when the scrubber reaches a new step
- * - `trackCtaClick` — fire when a CTA button is clicked
- */
+/** Hero CTA telemetry (Sprint 861: the film's step events went with the film). */
 export function useHeroTelemetry() {
-  const onStepChange: OnStepChange = useCallback((step: FilmStep) => {
-    trackEvent('hero_step_reached', { step })
-  }, [])
-
   const trackCtaClick = useCallback((cta: string) => {
     trackEvent('hero_cta_click', { cta })
   }, [])
 
-  return { onStepChange, trackCtaClick }
+  return { trackCtaClick }
+}
+
+/** Hydration guard — auth-dependent CTAs render only after mount. */
+export function useHasMounted() {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted
 }

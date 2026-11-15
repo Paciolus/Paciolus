@@ -4,7 +4,7 @@
  * Control buttons for batch upload operations.
  * Process All, Clear Queue, Cancel Processing, Retry Failed.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Actions only, no data storage
  */
 

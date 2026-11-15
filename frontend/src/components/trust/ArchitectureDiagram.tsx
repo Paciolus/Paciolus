@@ -30,7 +30,7 @@ export function ArchitectureDiagram() {
           </span>
         </div>
         <p className="font-sans text-xs text-oatmeal-500 mb-8 text-center">
-          Your upload lives here temporarily — processed in memory, then released
+          Your upload is processed in memory and not kept after analysis
         </p>
 
         {/* Desktop: Horizontal Pipeline */}
@@ -194,7 +194,7 @@ export function ArchitectureDiagram() {
         <svg className="w-5 h-5 text-oatmeal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
-        <span className="font-sans text-sm text-oatmeal-400">Data destroyed after processing</span>
+        <span className="font-sans text-sm text-oatmeal-400">Uploaded file released from memory after analysis (a previewed file: up to 10 minutes)</span>
       </motion.div>
 
       {/* ── Persistent Boundary ── */}
@@ -212,7 +212,7 @@ export function ArchitectureDiagram() {
         </div>
         <h3 className="font-serif text-lg text-oatmeal-100 mb-2">What we store</h3>
         <p className="font-sans text-sm text-oatmeal-400 leading-relaxed mb-4">
-          User profiles, practice settings, engagement metadata, and aggregate diagnostic summaries. No raw files. No line-level financial data. No client PII in analysis results.
+          Your account, client list, analysis summaries, flagged account names and anything you enter in an engagement. Reports you share by link are stored separately, with our storage provider, for up to 24 hours (Professional) or 48 hours (Enterprise).
         </p>
         {architectureNodes[3] && (
           <div className="space-y-2">

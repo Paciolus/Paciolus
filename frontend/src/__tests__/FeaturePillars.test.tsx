@@ -39,7 +39,7 @@ jest.mock('@/lib/motion', () => ({
 describe('FeaturePillars', () => {
   it('renders section heading', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText('Built for Financial Professionals')).toBeInTheDocument()
+    expect(screen.getByText('What You Get')).toBeInTheDocument()
   })
 
   it('renders Why Paciolus label', () => {
@@ -50,26 +50,26 @@ describe('FeaturePillars', () => {
   it('renders the uploads-not-kept pillar', () => {
     render(<FeaturePillars />)
     expect(screen.getByText('Uploads Not Kept')).toBeInTheDocument()
-    expect(screen.getByText('Processed in memory, then released.')).toBeInTheDocument()
+    expect(screen.getByText('Processed in memory.')).toBeInTheDocument()
   })
 
   it('renders Precision pillar', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText('Precision at Every Threshold')).toBeInTheDocument()
-    expect(screen.getByText('Set once. Applied everywhere.')).toBeInTheDocument()
+    expect(screen.getByText('Your Materiality, Your Thresholds')).toBeInTheDocument()
+    expect(screen.getByText('Set per engagement.')).toBeInTheDocument()
   })
 
   it('renders Professional-Grade Exports pillar', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText('Professional-Grade Exports')).toBeInTheDocument()
-    expect(screen.getByText('Done before you close the tab.')).toBeInTheDocument()
+    expect(screen.getByText('PDF Memos and Excel Workpapers')).toBeInTheDocument()
+    expect(screen.getByText('For your review.')).toBeInTheDocument()
   })
 
   it('renders pillar descriptions', () => {
     render(<FeaturePillars />)
-    expect(screen.getByText(/processed in memory and not kept/)).toBeInTheDocument()
-    expect(screen.getByText(/Configure materiality/)).toBeInTheDocument()
-    expect(screen.getByText(/PDF memos with ISA and PCAOB citations/)).toBeInTheDocument()
+    expect(screen.getByText(/We save your account, client list, analysis summaries/)).toBeInTheDocument()
+    expect(screen.getByText(/You set materiality for each engagement/)).toBeInTheDocument()
+    expect(screen.getByText(/Paciolus is not a workpaper archive/)).toBeInTheDocument()
   })
 
   it('renders brand icons for each pillar', () => {

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ZeroStorageNotice } from '@/components/shared'
+import { UploadHandlingNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingDesignConfig, SamplingMethod } from '@/types/statisticalSampling'
@@ -205,7 +205,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
             </p>
           </div>
         )}
-        <ZeroStorageNotice className="mt-4" />
+        <UploadHandlingNotice className="mt-4" />
       </div>
 
       {/* Validation/Error Messages */}

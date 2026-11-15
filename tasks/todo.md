@@ -16,7 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
-- [2026-11-14] (uncommitted): website claims review — `WEBSITE_REVIEW.md` written, CEO approved all 19 recommendations, Sprints 861–865 filed with a START HERE block; live-site check found `/security` and `/subprocessors` 404 and a public `/status` page with hard-coded "Passed" results. No site code changed (WEBSITE_REVIEW.md, tasks/todo.md, tasks/ceo-actions.md)
+- [2026-11-14] 29cb4c29: website claims review — `WEBSITE_REVIEW.md` written, CEO approved all 19 recommendations, Sprints 861–865 filed with a START HERE block; live-site check found `/security` and `/subprocessors` 404 and a public `/status` page with hard-coded "Passed" results. No site code changed (WEBSITE_REVIEW.md, tasks/todo.md, tasks/ceo-actions.md)
 
 - [2026-10-28] (this PR): 2026-10-28 action plan — 8-agent assessment → draft → council review and majority vote (7 questions, 21 of 23 amendments adopted); new START HERE block at the top of Active Phase, Sprints 854–858 filed, 843 merge gate and 778b checkout gate recorded, the "Stripe parked until pricing validated" line superseded, and the 2026-10-24 START HERE demoted. Live deploy verified at `1435b0e4`. No code changed (tasks/todo.md)
 - [2026-10-27] (this PR): `/export/pdf` returned 500 when `risk_summary` or `column_detection` was sent as `null` (`.get(k, {})` yields `None` for a present-but-null key); now `or {}`. Found by the Sprint 819 snapshot work. Same pattern remains in 5 memo generators, left alone to avoid conflicting with PR #285 (pdf/sections/diagnostic.py, tests/test_export_diagnostics_routes.py)
@@ -136,7 +136,7 @@
 > Subprocessor List or architecture document (all exist, current, in `docs/04-compliance/`), and the public `/status`
 > page shows hard-coded "25/25 Passed" results with a "ZeroStorageLeak" category. CEO directed this work, so it is
 > **exempt from the freeze**. Order: 861 → 862 (863 runs alongside, with counsel) → 865 → 864.
-> - [ ] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). **C, ~1–2 days.**
+> - [x] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). COMPLETE 2026-11-14.
 > - [ ] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. **C, ~2 days.**
 > - [ ] **Sprint 863** — Privacy Policy, Terms and Security Policy corrections as a counsel draft. **C drafts; CEO + counsel approve.**
 > - [ ] **Sprint 865** — product screenshots and downloadable samples, synthetic data, local dev only. **C, ~1–2 days.**
@@ -525,7 +525,7 @@
 > Sprints 843–855 archived to `tasks/archive/sprints-843-855-details.md`.
 
 ### Sprint 861: Website claims — remove what we cannot prove
-**Status:** PENDING. **Priority:** P0 (before 2026-12-15 launch). **Source:** `WEBSITE_REVIEW.md` §1–2, CEO decisions 2026-11-14.
+**Status:** COMPLETE 2026-11-14. **Priority:** P0 (before 2026-12-15 launch). **Source:** `WEBSITE_REVIEW.md` §1–2, CEO decisions 2026-11-14.
 **Owner:** C. **Rule:** if a claim cannot be proven from the code or a published document, delete it.
 
 Facts established 2026-11-14 from the code (use these, not the older copy):
@@ -539,59 +539,78 @@ Facts established 2026-11-14 from the code (use these, not the older copy):
 - No production speed benchmark exists.
 
 Marketing — Trust page
-- [ ] Delete the compliance timeline: SOC 2 "Available", GDPR/CCPA "Compliant", DPA "Available" badges and the
+- [x] Delete the compliance timeline: SOC 2 "Available", GDPR/CCPA "Compliant", DPA "Available" badges and the
       "Independent Attestation / Compliance Roadmap" section (R-01–R-03). Replace with the plain certification paragraph
       (no certification held or claimed) — links land in Sprint 862.
-- [ ] Remove "Zero / Raw Data Stored", "Zero raw data persisted", "the evidence to prove it", both "What We NEVER Store"
+- [x] Remove "Zero / Raw Data Stored", "Zero raw data persisted", "the evidence to prove it", both "What We NEVER Store"
       headings (→ "What We Don't Keep" + the shared-link exception) (R-05, R-16).
-- [ ] Remove "PCAOB AS 1215" from the Optional Sign-Off control (R-07); remove "No PII in logs", "Immediate isolation…",
+- [x] Remove "PCAOB AS 1215" from the Optional Sign-Off control (R-07); remove "No PII in logs", "Immediate isolation…",
       "No client PII in analysis results" (R-06); replace the four-phase playbook with three plain sentences
       (detection · handled by the founder · notification as the law requires).
-- [ ] Remove "encrypted" from every marketing surface; remove "nothing at rest to breach" lines (R-21).
+- [x] Remove "encrypted" from every marketing surface; remove "nothing at rest to breach" lines (R-21).
 
 Marketing — homepage, About, Approach, Demo, Pricing, metadata
-- [ ] Hero: delete "Zero data retained." (R-15); new headline "Trial balance and ledger testing for audit teams." with the
+- [x] Hero: delete "Zero data retained." (R-15); new headline "Trial balance and ledger testing for audit teams." with the
       method subline; remove the animated product film and the "3 findings" / "17 PDF Memos" / struck-out tiles (R-09,
       R-24, G-05) — static layout until Sprint 865 supplies the screenshot.
-- [ ] **No standard names on marketing pages.** Replace ToolLedger chips, `StandardsSpecimen` (incl. AS 1215, R-08),
+- [x] **No standard names on marketing pages.** Replace ToolLedger chips, `StandardsSpecimen` (incl. AS 1215, R-08),
       the EvidenceBand "ISA · PCAOB · ASC" cell (R-10), About's ISA/PCAOB list and demo tool/Standards-tab citations with
       one line: "Every test cites the rule it applies. See Sources & Methodology." (`/sources` keeps the citations.) SOC 1
       goes with them (R-04).
-- [ ] Remove every speed claim ("in seconds", "Seconds", "<5 seconds", "Immediate Results") (G-11).
-- [ ] Render `STORAGE_STATEMENT` verbatim + "See exactly what we keep" link on hero, footer, About, Approach, Pricing,
+- [x] Remove every speed claim ("in seconds", "Seconds", "<5 seconds", "Immediate Results") (G-11).
+- [x] Render `STORAGE_STATEMENT` verbatim + "See exactly what we keep" link on hero, footer, About, Approach, Pricing,
       Register, Login and `ZeroStorageNotice` (S-03, A-06, A-07). Share-link retention as "up to 24 hours (Professional)
       or 48 hours (Enterprise)" everywhere (R-20). Preview-cache wording per the facts above (R-17). Remove "never saved /
       never kept / destroyed / released after the request / not kept" for exports (R-17–R-19).
-- [ ] Retention line: "Analysis summaries and engagement entries are kept while your account is open. Deleting your account
+- [x] Retention line: "Analysis summaries and engagement entries are kept while your account is open. Deleting your account
       deletes them." Drop "archived on schedule" / "deleted on request". "What we keep" lists note that flagged account
       names can include a person's name.
-- [ ] Approach: replace the "Traditional SaaS vs Paciolus" table with the factual what / how-long table (R-23).
-- [ ] About: replace the CaseWare/TeamMate paragraph with the approved division-of-responsibility sentence (R-12); add
+- [x] Approach: replace the "Traditional SaaS vs Paciolus" table with the factual what / how-long table (R-23).
+- [x] About: replace the CaseWare/TeamMate paragraph with the approved division-of-responsibility sentence (R-12); add
       "not a substitute for your firm's audit documentation and retention obligations" to footer, About and Pricing FAQ
       (S-05); add "Paciolus is developed and operated by Paciolus LLC, a US company."
-- [ ] Remove "intelligent / intelligence / Surgical Precision / unlocks / Professional-grade" from copy and metadata
+- [x] Remove "intelligent / intelligence / Surgical Precision / unlocks / Professional-grade" from copy and metadata
       (G-10, G-12, G-13). Demo CTA: "Start 7-day trial" + card-required line (R-25).
 
 App
-- [ ] "All tests returned clean results" ×7 → "No exceptions flagged." via one constant (R-13); "Top Findings" → "Top
+- [x] "All tests returned clean results" ×7 → "No exceptions flagged." via one constant (R-13); "Top Findings" → "Top
       flagged items" (R-14); "workpaper-ready CSV" (R-11); "Intelligent column detection", "Intelligence Briefing",
       "Flux & Variance Intelligence" (A-04); Archive → Remove on misstatement/expectation rows (A-09).
-- [ ] `/status`: delete the hard-coded test-results section (keep the health check) (R-26).
+- [x] `/status`: delete the hard-coded test-results section (keep the health check) (R-26).
 
 Hygiene and checkability
-- [ ] Rename `ZeroStorageNotice` → `UploadHandlingNotice` and drop "Zero-Storage" from code comments, so the retired
+- [x] Rename `ZeroStorageNotice` → `UploadHandlingNotice` and drop "Zero-Storage" from code comments, so the retired
       term stops being copied forward (R-22).
-- [ ] Every remaining numeric claim (test counts, tool count, standard-setters cited, security-control count) links to
+- [x] Every remaining numeric claim (test counts, tool count, standard-setters cited, security-control count) links to
       where it can be checked (`/sources`, the control list) (S-14).
-- [ ] Sweep the leftovers found during the review: EvidenceBand "None / Uploaded Files Kept", "Every output is exported
+- [x] Sweep the leftovers found during the review: EvidenceBand "None / Uploaded Files Kept", "Every output is exported
       when analysis completes", demo "Workpapers 12 indexed", root metadata "Close Health Reports".
 
 Guard
-- [ ] Extend `backend/tests/test_storage_claims.py` (or a sibling) with a banned-phrase list for customer-facing copy:
+- [x] Extend `backend/tests/test_storage_claims.py` (or a sibling) with a banned-phrase list for customer-facing copy:
       zero data, never stored/saved/kept, destroyed, not written to disk, clean results, findings (outside negations),
       audit-ready, workpaper-ready, intelligent, SOC 2/SOC 1 outside Sources, compliant, encrypted, in seconds.
 
-**Verification:** `npm run build`, `npm test`, backend claims tests; one Chrome pass over every marketing page.
+**Review (2026-11-14):**
+- Facts behind every new sentence checked against the code; a background check of the Trust page's 22 security
+  sentences corrected 7 (CSRF scope, no cell-count limit, query scoping, TLS, memory release). Two false claims found
+  in *existing* copy along the way and fixed: the diagnostic-package ZIP contents and the activity log "included in
+  the package" (`tasks/lessons.md`).
+- One source for all data-handling sentences and lists: `frontend/src/content/storage-statement.ts` (Trust and
+  Approach render the same lists — S-06 done here, not in 862).
+- Removed: animated hero film, standards specimen (incl. AS 1215), ToolLedger standards column, demo Standards tab,
+  compliance timeline, playbook, Trust count-ups, `/status` test results. Renamed `ZeroStorageNotice` →
+  `UploadHandlingNotice`; retired term gone from frontend comments.
+- Leftovers deferred, by design: page layout and decoration (Sprint 864); the hero has no image until Sprint 865;
+  Privacy/Terms wording goes through counsel (Sprint 863). `tool-ledger.ts` still carries a `standards` field
+  (incl. SOC 1) that nothing renders — left because the catalog tests read it.
+- New guard: `backend/tests/test_marketing_claims.py` (banned phrases on every customer-facing surface; no standard
+  codes on marketing pages; no hard-coded status results).
+
+**Verification:** `npm run lint` clean · `tsc --noEmit` clean · Jest 2,100/2,100 (210 suites) · `npm run build` passes ·
+backend claims/citation/pricing/catalog tests 71 passed · Chrome pass over `/`, `/trust`, `/approach`, `/demo`,
+`/status` on a local production build.
+
 **Commit SHA:** TBD.
 
 ### Sprint 862: Publish the compliance documents; rebuild the Trust page's proof
@@ -627,6 +646,9 @@ Guard
       `SECURITY_POLICY.md:27`); flat "48 hours" → 24 h Professional / 48 h Enterprise (`privacy:230, 373, 420`;
       `terms:429`); "encrypted" for shared reports; summary retention (archived after 365 days, removed on account
       deletion; "Clear history" hides); preview-cache scope; flagged account names may include a person's name.
+- [ ] Also found during Sprint 861: Privacy security list says "TLS 1.2 or higher (1.3 where supported)" — not
+      provable from code (`privacy/page.tsx:551`); Privacy says the upload is "released" "when the response
+      completes" (`:352`); Terms says "Uploaded files were never kept" (`terms/page.tsx:871`).
 - [ ] One-page note for counsel listing each change and the code fact behind it.
 - [ ] CEO action logged in `tasks/ceo-actions.md`.
 

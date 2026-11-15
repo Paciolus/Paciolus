@@ -5,7 +5,7 @@
  * Renders existing UI components in read-only demo mode for guests.
  * No API calls, no storage - pure static showcase.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All data is hardcoded constants (no user data)
  * - Used for display purposes only
  */

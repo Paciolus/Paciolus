@@ -4,7 +4,7 @@
  *
  * Day 14: Activity Logging & Metadata History
  *
- * IMPORTANT: Zero-Storage architecture means we store ONLY metadata,
+ * IMPORTANT: data-handling architecture means we store ONLY metadata,
  * never actual financial data. File contents are never persisted.
  *
  * GDPR/CCPA COMPLIANT: No PII stored, filenames are hashed.

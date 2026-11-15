@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ScanlineOverlay, MechanicalGauge, MarginAnnotation } from '@/components/demo'
 import { Reveal } from '@/components/ui/Reveal'
@@ -25,20 +26,21 @@ const DEMO_TESTS = [
  *
  * Expanded 5-tab interactive demo widget for the /demo page.
  * Replaces ProductPreview (3 tabs) with deeper content:
- * TB Diagnostics, Testing Suite, Workspace, Sample Reports, Audit Standards.
+ * TB Diagnostics, Testing Suite, Workspace, Sample Reports.
+ * (Sprint 861: the Standards tab was removed — no standard names on marketing
+ * pages; citations live on /sources.)
  *
  * Guardian requirement: persistent "Synthetic data" disclaimer banner.
  * Uses layoutId="demo-tab-indicator" (distinct from ProductPreview's "preview-tab-indicator").
  */
 
-type DemoTab = 'diagnostics' | 'testing' | 'workspace' | 'reports' | 'standards'
+type DemoTab = 'diagnostics' | 'testing' | 'workspace' | 'reports'
 
 const TABS: Array<{ id: DemoTab; label: string; icon: string }> = [
   { id: 'diagnostics', label: 'TB Diagnostics', icon: '📊' },
   { id: 'testing',     label: 'Testing Suite',  icon: '🔍' },
   { id: 'workspace',  label: 'Workspace',       icon: '📋' },
   { id: 'reports',    label: 'Sample Reports',  icon: '📄' },
-  { id: 'standards',  label: 'Standards',       icon: '⚖️' },
 ]
 
 /* ─── Tab content components ─────────────────────────────── */
@@ -46,7 +48,7 @@ const TABS: Array<{ id: DemoTab; label: string; icon: string }> = [
 function DiagnosticsTab() {
   return (
     // Sprint 707 — scanline overlay sweeps the TB diagnostic block once
-    // on tab mount. Sells the "under three seconds" claim viscerally.
+    // on tab mount.
     // Reduced-motion skips the sweep; content renders immediately.
     <ScanlineOverlay>
       <div className="space-y-4">
@@ -136,7 +138,7 @@ function TestingTab() {
         <svg className="w-4 h-4 text-theme-success-text shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
-        <span className="text-oatmeal-500 text-xs font-sans">References ISA 240 · ISA 530 · AS 2315 · ASC 606 · IFRS 15</span>
+        <span className="text-oatmeal-500 text-xs font-sans">Every test cites its rule. See <Link href="/sources" className="text-sage-400 underline">Sources &amp; Methodology</Link>.</span>
       </div>
     </div>
   )
@@ -163,7 +165,7 @@ function WorkspaceTab() {
         {[
           { label: 'Tools Run', value: '8', sub: 'of 18' },
           { label: 'Follow-ups', value: '5', sub: 'items' },
-          { label: 'Workpapers', value: '12', sub: 'indexed' },
+          { label: 'Exports', value: '12', sub: 'downloaded' },
         ].map((stat) => (
           <div key={stat.label} className="p-3 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30 text-center">
             <p className="font-mono text-lg font-bold text-oatmeal-200">{stat.value}</p>
@@ -204,25 +206,25 @@ function ReportsTab() {
         {[
           {
             format: 'PDF Memo',
-            desc: 'Structured memo of test results with standards references, for your review.',
+            desc: 'Memo of test results that cites the rule behind each test, for your review.',
             badge: 'PDF',
             icon: '📄',
           },
           {
             format: 'Excel Workbook',
-            desc: 'Multi-sheet output with raw flagged data, ratio tables, and a summary dashboard for further analysis.',
+            desc: 'Multi-sheet workbook with the flagged items, ratio tables and a summary sheet.',
             badge: 'XLS / XLSX',
             icon: '📊',
           },
           {
             format: 'Diagnostic Package ZIP',
-            desc: 'All outputs for an engagement bundled into a single downloadable archive — PDF memos, Excel, and index.',
+            desc: 'One ZIP per engagement: an anomaly summary PDF, a workpaper index and a file manifest.',
             badge: 'Engagement',
             icon: '📦',
           },
           {
             format: 'CSV Extract',
-            desc: 'Machine-readable flat file of flagged transactions for import into audit management software.',
+            desc: 'Flat file of flagged transactions for use in other software.',
             badge: 'CSV',
             icon: '📃',
           },
@@ -249,68 +251,19 @@ function ReportsTab() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span className="font-sans text-xs text-oatmeal-500">
-          Exports are generated on demand and not kept. Analysis summaries are saved to your history.
+          Exports are generated when you request them and sent to your browser. A report you share by link is stored for up to 24 hours (Professional) or 48 hours (Enterprise), then deleted. Analysis summaries are saved to your history.
         </span>
       </div>
     </div>
   )
 }
 
-function StandardsTab() {
-  const STANDARDS = [
-    { code: 'ISA 240',        title: 'Auditor Responsibilities — Fraud',       tools: 'JE Testing, Revenue Testing' },
-    { code: 'ISA 500',        title: 'Audit Evidence',                          tools: 'AR Aging, Fixed Assets' },
-    { code: 'ISA 520',        title: 'Analytical Procedures',                   tools: 'TB Diagnostics, Multi-Period' },
-    { code: 'ISA 530',        title: 'Audit Sampling',                          tools: 'Statistical Sampling, JE Testing' },
-    { code: 'ISA 540',        title: 'Auditing Accounting Estimates',           tools: 'AR Aging, Fixed Assets' },
-    { code: 'ISA 570',        title: 'Going Concern',                           tools: 'TB Diagnostics (Going Concern)' },
-    { code: 'PCAOB AS 2315',  title: 'Audit Sampling',                          tools: 'Statistical Sampling' },
-    { code: 'PCAOB AS 2401',  title: 'Fraud in a Financial Statement Audit',    tools: 'JE Testing, Revenue Testing' },
-    { code: 'ASC 606',        title: 'Revenue from Contracts with Customers',   tools: 'Revenue Testing (contract-aware)' },
-    { code: 'IFRS 15',        title: 'Revenue from Contracts with Customers',   tools: 'Revenue Testing (contract-aware)' },
-    { code: 'IAS 2',          title: 'Inventories',                             tools: 'Inventory Testing' },
-    { code: 'IAS 16',         title: 'Property, Plant and Equipment',           tools: 'Fixed Asset Testing' },
-    { code: 'IFRS 16 / ASC 842', title: 'Leases',                              tools: 'TB Diagnostics (Lease Diagnostic)' },
-  ]
-
-  return (
-    <div className="space-y-3">
-      <p className="text-oatmeal-500 text-xs font-sans uppercase tracking-wide">Standards Referenced in Platform Outputs</p>
-      <div className="rounded-lg border border-obsidian-500/30 overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-obsidian-700/60 border-b border-obsidian-500/30">
-              <th className="text-left font-sans font-medium text-oatmeal-500 px-3 py-2 uppercase tracking-wide text-[10px]">Standard</th>
-              <th className="text-left font-sans font-medium text-oatmeal-500 px-3 py-2 uppercase tracking-wide text-[10px] hidden sm:table-cell">Description</th>
-              <th className="text-left font-sans font-medium text-oatmeal-500 px-3 py-2 uppercase tracking-wide text-[10px]">Used In</th>
-            </tr>
-          </thead>
-          <tbody>
-            {STANDARDS.map((row, i) => (
-              <tr
-                key={row.code}
-                className={`border-b border-obsidian-500/20 ${i % 2 === 0 ? 'bg-obsidian-800/30' : 'bg-obsidian-700/20'}`}
-              >
-                <td className="px-3 py-2 font-mono text-[11px] text-sage-400 whitespace-nowrap">{row.code}</td>
-                <td className="px-3 py-2 font-sans text-[11px] text-oatmeal-500 hidden sm:table-cell">{row.title}</td>
-                <td className="px-3 py-2 font-sans text-[11px] text-oatmeal-400">{row.tools}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const TAB_CONTENT: Record<DemoTab, React.ReactNode> = {
   diagnostics: <DiagnosticsTab />,
   testing:     <TestingTab />,
   workspace:   <WorkspaceTab />,
   reports:     <ReportsTab />,
-  standards:   <StandardsTab />,
 }
 
 /* ─── Main export ─────────────────────────────────────────── */

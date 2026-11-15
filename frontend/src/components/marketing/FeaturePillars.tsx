@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { STORAGE_STATEMENT, RESPONSIBILITY_STATEMENT, UPLOAD_HANDLING } from '@/content/storage-statement'
 import { CHART_SHADOWS } from '@/utils/chartTheme'
 import { HOVER, VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
@@ -11,9 +12,11 @@ import { staggerContainerTight, fadeUp } from '@/lib/motion'
  * FeaturePillars - Marketing Component
  *
  * Showcases three key value propositions for Paciolus:
- * 1. Zero-Storage Security
- * 2. Precision at Every Threshold
- * 3. Professional-Grade Exports
+ * 1. Uploads not kept
+ * 2. Your materiality, your thresholds
+ * 3. PDF memos and Excel workpapers
+ *
+ * Sprint 861: copy states only what can be shown (CEO decision 2026-11-14).
  *
  * Design: "Fintech Authority" aesthetic with Oat & Obsidian palette.
  * Cards feature subtle sage accents on icons and hover states.
@@ -44,9 +47,8 @@ const pillars: FeaturePillar[] = [
   {
     id: 'zero-knowledge',
     title: 'Uploads Not Kept',
-    tagline: 'Processed in memory, then released.',
-    description:
-      'Uploaded files are processed in memory and not kept after analysis — the ledger rows in them are never saved. We keep your account, client list, analysis summaries and what you enter in an engagement, and list exactly what on the Trust page.',
+    tagline: 'Processed in memory.',
+    description: `${STORAGE_STATEMENT} The Trust page lists exactly what.`,
     accentGradient: 'from-sage-500/15 via-transparent to-transparent',
     accentBorder: 'border-sage-500/30 hover:border-sage-500/50',
     accentIconBg: 'bg-sage-500/20',
@@ -56,10 +58,10 @@ const pillars: FeaturePillar[] = [
   },
   {
     id: 'automated-sensitivity',
-    title: 'Precision at Every Threshold',
-    tagline: 'Set once. Applied everywhere.',
+    title: 'Your Materiality, Your Thresholds',
+    tagline: 'Set per engagement.',
     description:
-      'Configure materiality to your engagement. Every flag, every ratio, every anomaly is weighted against your criteria — not generic defaults. What matters surfaces. What doesn\'t, stays out of the way.',
+      'You set materiality for each engagement. Where a tool lets you change a threshold for a run, the Sources page says so, and every default Paciolus sets is marked there as our own convention.',
     accentGradient: 'from-oatmeal-400/10 via-transparent to-transparent',
     accentBorder: 'border-oatmeal-400/30 hover:border-oatmeal-400/50',
     accentIconBg: 'bg-oatmeal-400/15',
@@ -69,10 +71,9 @@ const pillars: FeaturePillar[] = [
   },
   {
     id: 'professional-exports',
-    title: 'Professional-Grade Exports',
-    tagline: 'Done before you close the tab.',
-    description:
-      'PDF memos with ISA and PCAOB citations. Excel workpapers with full underlying data. CSV exports for downstream analysis. Exported when analysis completes, ready for your review.',
+    title: 'PDF Memos and Excel Workpapers',
+    tagline: 'For your review.',
+    description: `PDF memos cite the rule behind each test; Excel and CSV exports hold the results. ${RESPONSIBILITY_STATEMENT}`,
     accentGradient: 'from-clay-500/8 via-transparent to-transparent',
     accentBorder: 'border-clay-500/20 hover:border-clay-500/40',
     accentIconBg: 'bg-clay-500/15',
@@ -118,10 +119,10 @@ export function FeaturePillars() {
           Why Paciolus
         </span>
         <h2 className="font-serif text-3xl sm:text-4xl font-bold text-oatmeal-100 mb-4">
-          Built for Financial Professionals
+          What You Get
         </h2>
         <p className="font-sans text-lg text-oatmeal-400 max-w-2xl mx-auto mb-4">
-          Most analyses finish in seconds. Your client&apos;s uploaded files are not kept after analysis. Every output is exported when analysis completes, ready for your review.
+          {UPLOAD_HANDLING} The conclusions you draw from the results are yours.
         </p>
         <div className="w-12 h-[2px] bg-sage-500 rounded-full mx-auto" />
       </Reveal>
