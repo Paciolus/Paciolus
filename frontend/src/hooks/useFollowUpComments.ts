@@ -4,7 +4,7 @@
  * useFollowUpComments Hook — Sprint 113
  *
  * CRUD operations for follow-up item comments.
- * Narrative-only, Zero-Storage compliant.
+ * Narrative-only, data-handling compliant.
  */
 
 import { useState, useCallback } from 'react';

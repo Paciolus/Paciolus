@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice } from '@/components/bankRec'
 import { BankRecRunSettings, BankRecThresholdsApplied, validateBankRecThresholds, type BankRecThresholdInputs } from '@/components/bankRec/BankRecRunSettings'
-import { FileDropZone, GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { FileDropZone, GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -199,7 +199,7 @@ export default function BankRecPage() {
                   />
 
                   <div className="flex items-center justify-between">
-                    <ZeroStorageNotice />
+                    <UploadHandlingNotice />
                     <button
                       onClick={handleReconcile}
                       disabled={!bankFile || !ledgerFile || !validated.valid}
@@ -346,7 +346,7 @@ export default function BankRecPage() {
               </div>
               <h3 className="font-serif text-content-primary text-sm mb-2">Auto-Detection</h3>
               <p className="font-sans text-content-tertiary text-xs">
-                Intelligent column detection for date, amount, description, and reference fields. Works with CSV, Excel, QBO, and OFX formats.
+                Column detection for date, amount, description, and reference fields. Works with CSV, Excel, QBO, and OFX formats.
               </p>
             </div>
  <div className="theme-card p-6">
@@ -357,7 +357,7 @@ export default function BankRecPage() {
               </div>
               <h3 className="font-serif text-content-primary text-sm mb-2">CSV Export</h3>
               <p className="font-sans text-content-tertiary text-xs">
-                Export matched items, outstanding deposits, outstanding checks, and reconciliation summary to workpaper-ready CSV.
+                Export matched items, outstanding deposits, outstanding checks, and reconciliation summary to CSV for your review.
               </p>
             </div>
           </div>

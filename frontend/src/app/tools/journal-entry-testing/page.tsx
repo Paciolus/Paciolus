@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { JEScoreCard, TestResultGrid, GLDataQualityBadge, FlaggedEntryTable, SamplingPanel, HolidayCalendarPanel } from '@/components/jeTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, Citation, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractJEProof } from '@/components/shared/proof'
 import { ChartSkeleton } from '@/components/shared/skeletons'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -154,7 +154,7 @@ export default function JournalEntryTestingPage() {
                 </div>
 
                 <HolidayCalendarPanel calendar={holidayCalendar} onChange={setHolidayCalendar} />
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

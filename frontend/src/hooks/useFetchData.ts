@@ -5,7 +5,7 @@
  * Generic hook for fetching data from the API with authentication.
  * Extracts common pattern from useTrends, useIndustryRatios, useRollingWindow.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Data is stored in React state (memory only)
  * - No data is persisted to localStorage or sessionStorage
  */

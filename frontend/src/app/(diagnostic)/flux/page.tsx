@@ -153,12 +153,12 @@ export default function FluxPage() {
                 className="max-w-7xl mx-auto"
             >
                 <header className="mb-8">
-                    <h1 className="text-3xl font-serif font-bold text-content-primary">Flux & Variance Intelligence</h1>
+                    <h1 className="text-3xl font-serif font-bold text-content-primary">Flux & Variance Analysis</h1>
                     <p className="text-content-secondary mt-2 font-sans">Compare period-over-period changes and identify risks.</p>
                 </header>
 
                 {!isAuthenticated && (
-                    <GuestCTA description="Flux & Variance Intelligence requires a verified account. Sign in or create an account to continue." />
+                    <GuestCTA description="Flux & Variance Analysis requires a verified account. Sign in or create an account to continue." />
                 )}
 
                 {isAuthenticated && (<>

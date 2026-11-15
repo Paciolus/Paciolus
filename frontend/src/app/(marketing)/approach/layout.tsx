@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Our Approach — How Paciolus Works',
-  description: 'Upload your trial balance, map accounts automatically, and receive diagnostic intelligence in seconds. Uploaded files are processed in memory and not kept, with references to the standards each test draws on.',
+  description: 'What happens to a file you upload, and exactly what Paciolus keeps. Your uploaded files are processed in memory and not kept after analysis.',
   openGraph: {
     title: 'Our Approach — How Paciolus Works',
-    description: 'Upload, map and analyze, with references to the standards each test draws on.',
+    description: 'What happens to a file you upload, and exactly what Paciolus keeps.',
   },
 }
 

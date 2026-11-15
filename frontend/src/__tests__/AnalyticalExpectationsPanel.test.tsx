@@ -160,12 +160,12 @@ describe('AnalyticalExpectationsPanel', () => {
     });
   });
 
-  it('archives an item via Archive button', async () => {
+  it('removes an item via Remove button', async () => {
     const user = userEvent.setup();
     const items = [makeItem({ id: 7, procedure_target_label: 'Inventory' })];
     render(<AnalyticalExpectationsPanel {...defaultProps} items={items} />);
 
-    await user.click(screen.getByLabelText(/archive expectation inventory/i));
+    await user.click(screen.getByLabelText(/remove expectation inventory/i));
     await waitFor(() => {
       expect(defaultProps.onArchive).toHaveBeenCalledWith(7);
     });

@@ -5,7 +5,7 @@
  * Triggered when backend column detection confidence is below 80%.
  * Allows users to manually select which CSV columns represent Account Name, Debit, and Credit.
  *
- * Zero-Storage Compliance:
+ * data-handling rules:
  * - Column mappings stored in React state only
  * - Cleared on session termination
  * - Never persisted to localStorage or server
@@ -259,7 +259,7 @@ export function ColumnMappingModal({
           </button>
         </div>
 
-        {/* Zero-Storage Badge */}
+        {/* Data-handling badge */}
         <div className="absolute top-4 right-4">
           <div className="flex items-center gap-1 px-2 py-1 bg-sage-500/10 border border-sage-500/30 rounded-full">
             <svg className="w-3 h-3 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

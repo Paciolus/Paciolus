@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { APTestResult, APPaymentData } from '@/types/apTesting'
 
 interface FlaggedPaymentTableProps {
@@ -54,7 +55,7 @@ export function FlaggedPaymentTable({ results }: FlaggedPaymentTableProps) {
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search vendor, invoice #, description..."
-      emptyMessage="No flagged payments found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="payments"
     />
   )

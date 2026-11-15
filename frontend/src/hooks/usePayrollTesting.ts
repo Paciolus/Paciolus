@@ -2,7 +2,7 @@
  * usePayrollTesting Hook (Sprint 87, factory Sprint 161)
  *
  * Thin wrapper around createTestingHook for Payroll & Employee Testing.
- * Zero-Storage: file processed on backend, results ephemeral.
+ * data-handling: file processed on backend, results ephemeral.
  */
 
 import type { PayrollTestingResult } from '@/types/payrollTesting'

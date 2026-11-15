@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { PayrollScoreCard, PayrollTestResultGrid, PayrollDataQualityBadge, FlaggedEmployeeTable } from '@/components/payrollTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, ToolSettingsDrawer, CitationFooter, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractPayrollProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -143,7 +143,7 @@ export default function PayrollTestingPage() {
                   </p>
                 </div>
 
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

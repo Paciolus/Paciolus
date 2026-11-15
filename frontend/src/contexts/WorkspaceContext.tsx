@@ -23,7 +23,7 @@ import type { Engagement, EngagementCreateInput, ToolRun, MaterialityCascade, Co
  * Nested: Data (outermost) → Selection → Layout (innermost).
  * Backward-compatible useWorkspaceContext() merges all three.
  *
- * ZERO-STORAGE: All state is React context + API. No new persistence.
+ * DATA HANDLING: All state is React context + API. No new persistence.
  */
 
 export type WorkspaceView = 'portfolio' | 'engagements';

@@ -7,13 +7,14 @@ import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import VaultTransition from '@/components/VaultTransition'
 import { useFormValidation, commonValidators } from '@/hooks'
+import { STORAGE_STATEMENT } from '@/content/storage-statement'
 import { fadeUp } from '@/lib/motion'
 
 /**
  * Obsidian Vault Login Page - Day 13
  *
  * Design: "Secure Vault" visual metaphor with premium Oat & Obsidian styling.
- * Zero-Storage Promise badge prominently displayed to reinforce trust.
+ * Data-handling badge shows the approved storage statement (Sprint 861).
  *
  * Refactored: Now uses useFormValidation hook for form state management
  *
@@ -152,7 +153,6 @@ export default function LoginPage() {
             className="px-8 py-4 bg-obsidian-700/30 border-b border-obsidian-700"
           >
             <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
               <span className="text-sage-300 text-sm font-sans font-medium">
                 Uploads Not Kept
               </span>
@@ -165,7 +165,7 @@ export default function LoginPage() {
                   ?
                 </button>
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-obsidian-900 border border-obsidian-500 rounded-lg text-xs text-oatmeal-300 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 font-sans">
-                  Uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and what you enter in an engagement.
+                  {STORAGE_STATEMENT}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-obsidian-500"></div>
                 </div>
               </div>

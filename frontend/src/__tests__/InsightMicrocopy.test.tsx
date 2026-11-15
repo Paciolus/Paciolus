@@ -77,7 +77,7 @@ describe('InsightMicrocopy', () => {
         riskSignals={[{ level: 'high', label: 'Test', detail: 'Detail' }]}
       />
     )
-    expect(screen.getByText('Intelligence Briefing')).toBeInTheDocument()
+    expect(screen.getByText('Notes for this engagement')).toBeInTheDocument()
     expect(screen.getByText(/surfaced/)).toBeInTheDocument()
   })
 

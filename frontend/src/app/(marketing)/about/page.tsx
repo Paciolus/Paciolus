@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Blockquote } from '@/components/marketing/Blockquote'
 import * as motion from '@/components/ui/motionClient'
+import { DOCUMENTATION_STATEMENT, RESPONSIBILITY_STATEMENT, SHARE_RETENTION, STORAGE_DETAIL_HREF, STORAGE_DETAIL_LABEL, STORAGE_STATEMENT } from '@/content/storage-statement'
 import { marketingFadeUpAt } from '@/lib/motion'
 
 /* ---------- Animation helpers ---------- */
@@ -24,7 +25,7 @@ const cardReveal = {
 const whatItIs = [
   'An analytical tool designed to support auditors’ analytical work',
   'A tool that surfaces analytical exceptions requiring professional evaluation',
-  'Exports (PDF, Excel, CSV) formatted for your working papers, after your review',
+  'PDF memos and Excel/CSV workpapers, for your review',
   'Built so uploaded files are processed in memory and not kept after analysis',
 ]
 
@@ -32,7 +33,7 @@ const whatItIsNot = [
   'Not an audit software that replaces professional judgment',
   'Not a system that provides assurance opinions',
   'Not a tool that generates audit evidence',
-  'Not a document store — your uploaded files are not kept',
+  'Not a workpaper archive — your firm keeps its own documentation',
 ]
 
 const professionalsCards = [
@@ -46,8 +47,8 @@ const professionalsCards = [
     ),
   },
   {
-    title: 'Professional Standards',
-    description: 'Every test battery references applicable professional standards. Memos cite ISA 240, ISA 500, PCAOB AS 2401, and more.',
+    title: 'Cited Rules',
+    description: 'Every test names the rule it applies, or says when a threshold is our own convention. Sources & Methodology lists each one.',
     icon: (
       <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
@@ -55,8 +56,8 @@ const professionalsCards = [
     ),
   },
   {
-    title: 'Formatted for Your Workpapers',
-    description: 'PDF memos (with optional sign-off lines you complete), Excel exports with the underlying data, and CSV output — for your review before filing.',
+    title: 'Memos and Workpapers',
+    description: 'PDF memos (sign-off lines are optional, completed by the firm), Excel and CSV exports, for your review.',
     icon: (
       <svg className="w-8 h-8 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -78,8 +79,8 @@ export default function AboutPage() {
       >
         <div className="max-w-3xl mx-auto text-center">
           <p className="type-body-lg text-oatmeal-300 leading-relaxed">
-            In 1494, Luca Pacioli published <span className="italic">Summa de arithmetica</span>, establishing
-            the principles of double-entry bookkeeping that still govern the profession today.
+            In 1494, Luca Pacioli published <span className="italic">Summa de arithmetica</span>, the first printed
+            description of double-entry bookkeeping.
             Paciolus is built on the same foundation Pacioli laid &mdash; rigor, precision, and
             respect for professional judgment.
           </p>
@@ -100,8 +101,8 @@ export default function AboutPage() {
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto">
             Audit work demands precision, professional skepticism, and thorough documentation.
             The tools that support this work should reflect the same rigor. Paciolus was designed
-            to meet that standard &mdash; purpose-built for substantive analytical procedures,
-            not adapted from general-purpose analytics.
+            to meet that standard &mdash; built for the analytical work in an audit, not adapted from
+            general-purpose analytics tools.
           </p>
         </div>
       </motion.section>
@@ -183,7 +184,7 @@ export default function AboutPage() {
         </div>
       </motion.section>
 
-      {/* ===== Zero-Storage Commitment ===== */}
+      {/* ===== What we keep (Sprint 861) ===== */}
       <motion.section
         className="px-6 pb-20"
         initial={{ opacity: 0, y: 20 }}
@@ -196,13 +197,10 @@ export default function AboutPage() {
           </h2>
           <div className="bg-obsidian-700/60 backdrop-blur-sm border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 leading-relaxed">
-              Your uploaded files are processed in memory and not kept after analysis &mdash; the
-              ledger rows, invoices and payroll records in them are never saved. We do save your account,
-              your client list, a summary of each analysis (totals, ratios and the names of accounts a tool
-              flagged) and anything you enter in an engagement, such as materiality, analytical expectations
-              and uncorrected misstatements. Reports you share by link are held for up to 48 hours.{' '}
-              <Link href="/trust#transparency" className="text-sage-400 hover:text-sage-300 underline transition-colors">
-                See exactly what we keep
+              {STORAGE_STATEMENT} A summary of an analysis includes totals, ratios and the names of accounts a
+              tool flagged. A report you share by link is stored with our storage provider for {SHARE_RETENTION}.{' '}
+              <Link href={STORAGE_DETAIL_HREF} className="text-sage-400 hover:text-sage-300 underline transition-colors">
+                {STORAGE_DETAIL_LABEL}
               </Link>.
             </p>
           </div>
@@ -270,12 +268,8 @@ export default function AboutPage() {
                 description: 'Uploaded files are parsed in memory and not kept after analysis. What we do save — summaries and your engagement entries — is listed on the Trust page.',
               },
               {
-                title: 'Standards-Cited Memos',
-                description: 'Every PDF memo cites the standards its tests draw on, and marks thresholds that are Paciolus conventions. Formatted for your working papers after your review.',
-              },
-              {
-                title: 'Immediate Results',
-                description: 'Upload to documented analysis, usually in a few seconds for standard files. No batch queuing, no overnight processing.',
+                title: 'Cited Memos',
+                description: 'Every PDF memo cites the rule behind each test and marks thresholds that are Paciolus conventions. For your review.',
               },
             ].map((item) => (
               <motion.div
@@ -307,10 +301,16 @@ export default function AboutPage() {
               Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats including QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel, CSV, TSV, TXT, PDF tables, and ODS spreadsheets.
             </p>
             <p className="type-body text-oatmeal-400 mb-6">
-              Export results as PDF memos, Excel workpapers, or CSV files and import them directly into your working paper system &mdash; whether that&apos;s CaseWare, TeamMate, or a firm-internal structure.
+              {RESPONSIBILITY_STATEMENT} Exports are standard PDF, XLSX and CSV files.
             </p>
             <p className="type-body text-oatmeal-400">
-              Every tool run is logged in your activity history with timestamps, so you have a documented record of which analyses were performed, when, and for which client. This log is visible in your workspace and included in the diagnostic package export.
+              Every tool run is logged in your activity history with a timestamp, visible in your workspace.
+            </p>
+            <p className="type-body text-oatmeal-400 mt-6">
+              {DOCUMENTATION_STATEMENT}
+            </p>
+            <p className="type-body text-oatmeal-400 mt-6">
+              Paciolus is developed and operated by Paciolus LLC, a US company.
             </p>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function AboutPage() {
       >
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="type-headline text-oatmeal-100 mb-4">
-            Start your first analysis.
+            Try the eighteen tools for seven days.
           </h2>
           <p className="type-body text-oatmeal-400 mb-8">
             Seven-day trial. All eighteen tools. Your uploaded files are not kept after analysis.

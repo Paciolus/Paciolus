@@ -1,19 +1,20 @@
 import Link from 'next/link'
 import { BrandIcon } from '@/components/shared'
 import { ArchitectureDiagram } from '@/components/trust/ArchitectureDiagram'
-import { ComplianceTimeline } from '@/components/trust/ComplianceTimeline'
 import { ControlMatrix } from '@/components/trust/ControlMatrix'
-import { CountUp } from '@/components/trust/CountUp'
 import { ModuleSection } from '@/components/trust/ModuleSection'
-import { PlaybookPreview } from '@/components/trust/PlaybookPreview'
 import { containerVariants, fadeUp, listItem } from '@/components/trust/variants'
 import * as motion from '@/components/ui/motionClient'
-import { downloadableArtifacts, weNeverStore, weStore } from '@/content/trust'
+import { PREVIEW_CACHE, RETENTION_STATEMENT, SHARE_RETENTION } from '@/content/storage-statement'
+import { controlCategories, downloadableArtifacts, incidentStatements, securityControls, weDontKeep, weStore } from '@/content/trust'
+
+const CONTROL_COUNT = securityControls.length
+const DOMAIN_COUNT = controlCategories.length
 
 /**
  * Trust Center — server component (Sprint 820). Data lives in
  * `content/trust.ts`; the interactive blocks (architecture diagram, control
- * matrix, playbook tabs, count-up) are client components in
+ * matrix) are client components in
  * `components/trust/`. Mount animations use `components/ui/motionClient` elements.
  */
 export default function TrustAndSecurity() {
@@ -31,28 +32,19 @@ export default function TrustAndSecurity() {
             Trust Center
           </h1>
           <p className="type-body-lg text-oatmeal-400 max-w-2xl mx-auto mb-10">
-            How we protect your data — and the evidence to prove it.
+            How we protect your data, what we keep, and the documents you can check.
           </p>
 
           {/* Trust Metrics Bar */}
           <div className="inline-flex items-center gap-6 sm:gap-8 px-6 py-3 rounded-full bg-obsidian-800/60 border border-obsidian-600">
             <div className="text-center">
-              <span className="type-proof text-oatmeal-100">
-                <CountUp target={19} />
-              </span>
+              <span className="type-proof text-oatmeal-100 tabular-nums">{CONTROL_COUNT}</span>
               <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Security Controls</p>
             </div>
             <div className="w-px h-8 bg-obsidian-600" aria-hidden="true" />
             <div className="text-center">
-              <span className="type-proof text-oatmeal-100">
-                <CountUp target={5} />
-              </span>
+              <span className="type-proof text-oatmeal-100 tabular-nums">{DOMAIN_COUNT}</span>
               <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Control Domains</p>
-            </div>
-            <div className="w-px h-8 bg-obsidian-600" aria-hidden="true" />
-            <div className="text-center">
-              <span className="type-num-lg text-sage-400">Zero</span>
-              <p className="font-sans text-xs text-oatmeal-500 mt-0.5">Raw Data Stored</p>
             </div>
           </div>
 
@@ -62,7 +54,7 @@ export default function TrustAndSecurity() {
               { label: 'Data Transparency', href: '#transparency' },
               { label: 'Architecture', href: '#architecture' },
               { label: 'Controls', href: '#controls' },
-              { label: 'Compliance', href: '#compliance' },
+              { label: 'Certifications', href: '#certifications' },
               { label: 'Incident Response', href: '#playbook' },
               { label: 'Artifacts', href: '#artifacts' },
             ].map(link => (
@@ -163,7 +155,7 @@ export default function TrustAndSecurity() {
                 <div className="w-8 h-8 rounded-lg bg-clay-500/15 flex items-center justify-center text-clay-400">
                   <BrandIcon name="shield-check" className="w-4.5 h-4.5" />
                 </div>
-                <h3 className="font-serif text-xl text-oatmeal-100">What We NEVER Store</h3>
+                <h3 className="font-serif text-xl text-oatmeal-100">What We Don&apos;t Keep</h3>
               </div>
               <motion.ul
                 className="space-y-3.5"
@@ -171,7 +163,7 @@ export default function TrustAndSecurity() {
                 initial="hidden"
                 animate="visible"
               >
-                {weNeverStore.map(item => (
+                {weDontKeep.map(item => (
                   <motion.li key={item} variants={listItem} className="flex items-start gap-3">
                     <BrandIcon name="x-mark" className="w-4 h-4 text-clay-400 flex-shrink-0 mt-0.5" />
                     <span className="type-body-sm text-oatmeal-300">{item}</span>
@@ -179,6 +171,14 @@ export default function TrustAndSecurity() {
                 ))}
               </motion.ul>
             </motion.div>
+          </div>
+
+          <div className="mt-8 space-y-2 max-w-3xl mx-auto">
+            <p className="type-body-sm text-oatmeal-400">{PREVIEW_CACHE}</p>
+            <p className="type-body-sm text-oatmeal-400">
+              A report you share by link is the complete file, stored with our storage provider for {SHARE_RETENTION}.
+            </p>
+            <p className="type-body-sm text-oatmeal-400">{RETENTION_STATEMENT}</p>
           </div>
         </div>
       </section>
@@ -190,7 +190,7 @@ export default function TrustAndSecurity() {
         id="architecture"
         meta="Security Architecture"
         title="How We Protect Your Data"
-        subtitle="Four stages. Every control documented. Zero raw data persisted."
+        subtitle="Four stages, and what each one keeps."
         surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
       >
         <ArchitectureDiagram />
@@ -203,7 +203,7 @@ export default function TrustAndSecurity() {
         id="controls"
         meta="Implemented Controls"
         title="Security Control Inventory"
-        subtitle="19 implemented controls across 5 domains, each mapped to its standard reference. Expand any domain to inspect."
+        subtitle={`${CONTROL_COUNT} controls across ${DOMAIN_COUNT} domains. Expand any domain to read each one.`}
         surface="lobby-surface-recessed"
       >
         <ControlMatrix />
@@ -211,28 +211,43 @@ export default function TrustAndSecurity() {
 
       <div className="lobby-divider max-w-4xl mx-auto" />
 
-      {/* ── Section 4: Compliance Timeline ───────────────────── */}
+      {/* ── Section 4: Certifications (Sprint 861) ───────────── */}
       <ModuleSection
-        id="compliance"
-        meta="Independent Attestation"
-        title="Compliance Roadmap"
-        subtitle="Self-assessed compliance posture and independent attestation progress. Artifact links provided for due diligence."
+        id="certifications"
+        meta="Certifications"
+        title="What We Do and Don&apos;t Claim"
         surface=""
       >
-        <ComplianceTimeline />
+        <div className="max-w-3xl mx-auto space-y-6 type-body text-oatmeal-300">
+          <p>
+            Paciolus holds no SOC 1, SOC 2, ISO 27001 or other third-party certification, and does not claim one.
+          </p>
+          <p>
+            Our Privacy Policy explains how we handle requests under GDPR and the CCPA/CPRA, including access,
+            deletion and breach notification.{' '}
+            <Link href="/privacy" className="text-sage-400 hover:text-sage-300 underline">Privacy Policy</Link>
+          </p>
+          <p>
+            A Data Processing Addendum is available on request while counsel finalizes it.{' '}
+            <Link href="/contact?inquiry_type=organization" className="text-sage-400 hover:text-sage-300 underline">Request the DPA</Link>
+          </p>
+        </div>
       </ModuleSection>
 
       <div className="lobby-divider max-w-4xl mx-auto" />
 
-      {/* ── Section 5: Incident-Preparedness Playbook ────────── */}
+      {/* ── Section 5: Incident response (Sprint 861) ────────── */}
       <ModuleSection
         id="playbook"
         meta="Incident Response"
-        title="Preparedness Playbook"
-        subtitle="Our four-phase incident response posture. Not keeping uploads limits what a breach could expose."
-        surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
+        title="If Something Goes Wrong"
+        surface="lobby-surface-accent"
       >
-        <PlaybookPreview />
+        <ul className="max-w-3xl mx-auto space-y-3">
+          {incidentStatements.map(line => (
+            <li key={line} className="type-body text-oatmeal-300">{line}</li>
+          ))}
+        </ul>
       </ModuleSection>
 
       <div className="lobby-divider max-w-4xl mx-auto" />

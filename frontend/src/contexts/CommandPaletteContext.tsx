@@ -8,7 +8,7 @@
  *
  * Backward-compatible useCommandPaletteContext() merges both.
  *
- * Recency persisted to sessionStorage (command IDs only — Zero-Storage compliant).
+ * Recency persisted to sessionStorage (command IDs only — data-handling compliant).
  * Global Cmd+K listener via direct document.addEventListener (NOT useKeyboardShortcuts,
  * because meta+K must fire even when focused on an input field).
  */

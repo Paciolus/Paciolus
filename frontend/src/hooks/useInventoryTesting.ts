@@ -2,7 +2,7 @@
  * useInventoryTesting Hook (Sprint 119, factory Sprint 161)
  *
  * Thin wrapper around createTestingHook for Inventory Testing.
- * Zero-Storage: file processed on backend, results ephemeral.
+ * data-handling: file processed on backend, results ephemeral.
  */
 
 import type { InventoryTestingResult } from '@/types/inventoryTesting'

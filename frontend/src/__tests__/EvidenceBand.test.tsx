@@ -36,9 +36,6 @@ jest.mock('@/lib/motion', () => ({
   fadeUp: { hidden: {}, visible: {} },
 }))
 
-jest.mock('@/utils/constants', () => ({
-  ANALYSIS_LABEL_SHORT: 'Under 3s',
-}))
 
 describe('EvidenceBand', () => {
   it('renders section heading', () => {
@@ -54,15 +51,21 @@ describe('EvidenceBand', () => {
   it('renders stat values', () => {
     render(<EvidenceBand />)
     expect(screen.getByText('97')).toBeInTheDocument() // TOTAL_AUTOMATED_TESTS, derived from the ledger
-    expect(screen.getByText('None')).toBeInTheDocument()
+    expect(screen.getByText('In memory')).toBeInTheDocument()
   })
 
   it('renders cell labels', () => {
     render(<EvidenceBand />)
     expect(screen.getByText('Automated Tests')).toBeInTheDocument()
-    expect(screen.getByText('Per-Memo Citations')).toBeInTheDocument()
-    expect(screen.getByText('Uploaded Files Kept')).toBeInTheDocument()
-    expect(screen.getByText('Typical Runtime')).toBeInTheDocument()
+    expect(screen.getByText('Rules With Their Source')).toBeInTheDocument()
+    expect(screen.getByText('Uploaded Files')).toBeInTheDocument()
+    expect(screen.queryByText('Typical Runtime')).not.toBeInTheDocument()
+  })
+
+  it('links every claim to where it can be checked (Sprint 861)', () => {
+    render(<EvidenceBand />)
+    expect(screen.getByText('See every test').closest('a')).toHaveAttribute('href', '/sources')
+    expect(screen.getByText('See exactly what we keep').closest('a')).toHaveAttribute('href', '/trust#transparency')
   })
 
   it('renders demo CTA link', () => {

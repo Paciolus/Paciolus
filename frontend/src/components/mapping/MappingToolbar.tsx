@@ -4,7 +4,7 @@
  * Mapping Toolbar Component
  * Provides export/import/clear functionality for account mappings
  *
- * Zero-Storage Compliance:
+ * data-handling rules:
  * - Export saves to user's local machine
  * - Import reads from user's local file
  * - No server-side persistence

@@ -4,7 +4,7 @@
  *
  * Fetches diagnostic history exclusively from the API.
  *
- * ZERO-STORAGE: No financial data is cached in browser storage.
+ * DATA HANDLING: No financial data is cached in browser storage.
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react'

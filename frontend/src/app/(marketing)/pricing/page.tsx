@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import PricingCard from '@/components/pricing/PricingCard'
 import PricingComparison from '@/components/pricing/PricingComparison'
 import PricingEstimator from '@/components/pricing/PricingEstimator'
+import { STORAGE_DETAIL_HREF, STORAGE_DETAIL_LABEL, STORAGE_STATEMENT } from '@/content/storage-statement'
 import { type BillingInterval, faqItems, getPromoCopy, SELF_SERVE_TEAM_TIERS_ENABLED, tiers, TRIAL_DAYS } from '@/domain/pricing'
 import { trackEvent } from '@/utils/telemetry'
 import { marketingFadeUpSoft } from '@/lib/motion'
@@ -112,10 +114,10 @@ export default function PricingPage() {
             transition={{ duration: 0.6, ease: 'easeOut' as const }}
           >
             <h1 className="type-display text-oatmeal-100 mb-4">
-              Straightforward Pricing for Serious Work
+              Pricing
             </h1>
             <p className="type-body text-oatmeal-400 max-w-xl mx-auto mb-3">
-              Eighteen tools. Uploads not kept. One platform. Pick the plan that matches your practice.
+              Every paid plan includes all 18 tools. Pick the plan that matches your practice.
             </p>
             <p className="font-sans text-sm text-sage-400">
               {/* Sprint 858: only self-serve plans carry a trial. */}
@@ -167,6 +169,12 @@ export default function PricingPage() {
             <PricingCard key={tier.name} tier={tier} interval={billingInterval} />
           ))}
         </motion.div>
+        <p className="max-w-3xl mx-auto mt-8 text-center font-sans text-sm text-oatmeal-400">
+          {STORAGE_STATEMENT}{' '}
+          <Link href={STORAGE_DETAIL_HREF} className="text-sage-400 hover:text-sage-300 underline">
+            {STORAGE_DETAIL_LABEL}
+          </Link>
+        </p>
       </section>
 
       {/* Sage divider */}

@@ -4,7 +4,7 @@
  * Paciolus Mapping Context
  * Provides state management for account type mappings
  *
- * Zero-Storage Compliance:
+ * data-handling rules:
  * - Mappings live in React state only (no browser storage)
  * - Export to user's local machine as JSON file
  * - Never persisted on server
@@ -30,7 +30,7 @@ interface MappingContextValue {
   clearAllMappings: () => void;
   initializeFromAudit: (abnormalBalances: Array<{ account: string; category?: string; confidence?: number }>) => void;
 
-  // Persistence (Zero-Storage: sessionStorage + file export)
+  // Persistence (data-handling: sessionStorage + file export)
   exportConfig: () => MappingConfig;
   importConfig: (config: MappingConfig) => void;
   downloadConfig: () => void;

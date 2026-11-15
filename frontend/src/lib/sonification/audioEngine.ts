@@ -4,7 +4,7 @@
  * Singleton Web Audio API engine for data sonification.
  * Lazy AudioContext creation (respects browser autoplay policy).
  * Short oscillator tones with gain envelope. No audio files, no network.
- * Mute state persisted in sessionStorage (Zero-Storage compliant).
+ * Mute state persisted in sessionStorage (data-handling compliant).
  */
 
 import type { ToneName, ToneConfig } from './types'

@@ -4,7 +4,7 @@
  * Individual file row in the batch queue.
  * Shows file info, status badge, progress bar, and remove action.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display only, no file storage
  */
 

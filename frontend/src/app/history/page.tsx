@@ -12,13 +12,13 @@ import type { AuditActivity } from '@/types/history'
  *
  * Sprint 18: Diagnostic Fidelity & Batch Intelligence
  *
- * Displays diagnostic history with Zero-Storage reassurance.
+ * Displays diagnostic history with data-handling reassurance.
  * - Authenticated users: Fetches from backend API
  * - Anonymous users: Falls back to localStorage
  *
  * Features:
  * - Heritage Timeline component with ledger aesthetic
- * - Zero-Storage Reassurance Banner
+ * - Data-handling banner
  * - Quick Re-Run navigation (requires re-upload)
  * - Empty state for new users
  *
@@ -90,7 +90,7 @@ export default function HistoryPage() {
       <footer className="border-t border-theme mt-auto">
         <div className="max-w-3xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between text-xs font-sans text-content-tertiary">
-            <span>Paciolus - Surgical Precision for Trial Balance Diagnostics</span>
+            <span>Paciolus — trial balance and ledger testing for audit teams</span>
             <span>Summaries only — uploaded files are not kept</span>
           </div>
         </div>

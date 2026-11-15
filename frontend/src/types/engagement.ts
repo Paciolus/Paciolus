@@ -4,7 +4,7 @@
  *
  * Types matching backend EngagementResponse, ToolRunResponse, MaterialityResponse.
  *
- * ZERO-STORAGE: These types describe metadata only.
+ * DATA HANDLING: These types describe metadata only.
  * No account numbers, amounts, or PII.
  */
 

@@ -4,7 +4,7 @@
  * Convenient hook for batch file upload operations.
  * Wraps BatchUploadContext with additional helpers and derived state.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All file data in React state (memory only)
  * - No persistence to localStorage/sessionStorage
  */

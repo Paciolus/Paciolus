@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { ARTestResult, AREntryData } from '@/types/arAging'
 
 interface FlaggedARTableProps {
@@ -49,7 +50,7 @@ export function FlaggedARTable({ results }: FlaggedARTableProps) {
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search customer, account, invoice..."
-      emptyMessage="No flagged items found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="items"
       filterSkipped
     />

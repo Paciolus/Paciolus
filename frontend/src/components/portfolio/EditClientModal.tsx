@@ -17,7 +17,7 @@ import { fadeScale } from '@/lib/motion';
  * - Clay Red for validation errors
  * - Smooth enter/exit animations
  *
- * ZERO-STORAGE: Updates client metadata only, no financial data
+ * DATA HANDLING: Updates client metadata only, no financial data
  */
 
 interface EditClientModalProps {
@@ -300,7 +300,7 @@ export function EditClientModal({
               </div>
             </form>
 
-            {/* Zero-Storage Badge */}
+            {/* Data-handling badge */}
             <div className="px-6 pb-5">
               <div className="flex items-center justify-center gap-2 text-xs font-sans text-content-tertiary">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

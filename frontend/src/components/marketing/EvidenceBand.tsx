@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { BrandIcon, type BrandIconName } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
+import { METHODOLOGY_SOURCES } from '@/content/methodology-sources'
 import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
-import { ANALYSIS_LABEL_SHORT } from '@/utils/constants'
 import { VIEWPORT } from '@/utils/marketingMotion'
 import { staggerContainerTight, fadeUp } from '@/lib/motion'
 
@@ -23,8 +23,16 @@ interface EvidenceCell {
   label: string
   sub: string
   accent: 'sage' | 'oatmeal'
+  /** Sprint 861: every claim links to where the reader can check it. */
+  check: { label: string; href: string }
 }
 
+/** Rules listed on the Sources page — derived, never typed. */
+const METHODOLOGY_RULE_COUNT = METHODOLOGY_SOURCES.reduce((n, tool) => n + tool.rules.length, 0)
+
+// Sprint 861 (CEO decision 2026-11-14): no standard names, no speed claim and
+// no "None kept" absolute on marketing pages — each cell states a fact the
+// reader can check.
 const CELLS: EvidenceCell[] = [
   {
     icon: 'shield-check',
@@ -32,27 +40,23 @@ const CELLS: EvidenceCell[] = [
     label: 'Automated Tests',
     sub: 'Across the testing tools',
     accent: 'sage',
+    check: { label: 'See every test', href: '/sources' },
   },
   {
     icon: 'document-duplicate',
-    stat: 'ISA · PCAOB · ASC',
-    label: 'Per-Memo Citations',
-    sub: 'Every export cites the governing standard',
+    stat: String(METHODOLOGY_RULE_COUNT),
+    label: 'Rules With Their Source',
+    sub: 'Each rule names its source, or says the threshold is our own convention',
     accent: 'oatmeal',
+    check: { label: 'Sources & Methodology', href: '/sources' },
   },
   {
     icon: 'padlock',
-    stat: 'None',
-    label: 'Uploaded Files Kept',
-    sub: 'Files are processed in memory, then released',
+    stat: 'In memory',
+    label: 'Uploaded Files',
+    sub: 'Processed in memory and not kept after analysis',
     accent: 'sage',
-  },
-  {
-    icon: 'trend-chart',
-    stat: ANALYSIS_LABEL_SHORT,
-    label: 'Typical Runtime',
-    sub: 'Most standard trial balance files finish in seconds',
-    accent: 'oatmeal',
+    check: { label: 'See exactly what we keep', href: '/trust#transparency' },
   },
 ]
 
@@ -84,7 +88,7 @@ export function EvidenceBand() {
         {/* 4-cell grid */}
         <Reveal>
           <motion.div
-            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+            className="grid grid-cols-1 md:grid-cols-3 gap-3"
             variants={staggerContainerTight}
             initial="hidden"
             whileInView="visible"
@@ -120,6 +124,9 @@ export function EvidenceBand() {
               </p>
               <p className="font-serif text-sm text-oatmeal-300 mb-1">{cell.label}</p>
               <p className="font-sans text-xs text-oatmeal-600 leading-snug">{cell.sub}</p>
+              <Link href={cell.check.href} className="inline-block mt-2 font-sans text-xs text-sage-400 hover:text-sage-300 underline">
+                {cell.check.label}
+              </Link>
             </motion.div>
           ))}
           </motion.div>

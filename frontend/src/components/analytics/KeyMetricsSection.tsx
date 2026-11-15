@@ -194,7 +194,7 @@ export const KeyMetricsSection = memo(function KeyMetricsSection({
       {/* Section Header - Using shared SectionHeader component */}
       <SectionHeader
         title="Key Metrics"
-        subtitle={hasAdvancedRatios ? '9 financial ratios' : 'Financial ratio intelligence'}
+        subtitle={hasAdvancedRatios ? '9 financial ratios' : 'Financial ratios'}
         accentColor="sage"
         icon={
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

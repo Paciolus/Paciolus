@@ -32,3 +32,11 @@ export const TAX_TOOL_DISCLAIMER =
 export const INDEPENDENCE_NOTE =
   'If the entity is your attest client, preparing entries or a tax provision is a nonattest service — ' +
   'check your independence rules first.'
+
+/**
+ * Empty-result message for every flagged-items table (Sprint 861). Never
+ * "clean", "passed" or "verified" — a run with nothing flagged has no
+ * exceptions flagged, nothing more.
+ */
+export const NO_EXCEPTIONS_FLAGGED =
+  'No exceptions flagged. A run with no flags doesn’t mean nothing is wrong.'

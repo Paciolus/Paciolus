@@ -18,7 +18,7 @@ interface HeritageTimelineProps {
  * Uses Oat & Obsidian theme with "Premium Restraint" design.
  *
  * Features:
- * - Zero-Storage Reassurance Banner (top)
+ * - Data-handling banner (top)
  * - Staggered entry animations via framer-motion
  * - Ledger-style ruled lines and columns
  * - Empty state with encouraging CTA
@@ -112,7 +112,7 @@ export function HeritageTimeline({ activities, onReRun }: HeritageTimelineProps)
 
   return (
     <div className="space-y-6">
-      {/* Zero-Storage Reassurance Banner */}
+      {/* Data-handling banner */}
       <div
         className="
           relative rounded-xl overflow-hidden

@@ -4,7 +4,7 @@
  * Multi-file drop zone for batch uploads.
  * Supports drag-and-drop with file type validation.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Files passed to parent via callback
  * - No local file storage
  */

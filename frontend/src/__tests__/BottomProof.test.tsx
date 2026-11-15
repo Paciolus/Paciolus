@@ -50,20 +50,16 @@ describe('BottomProof', () => {
     expect(screen.getByText('Every Test Names Its Rule')).toBeInTheDocument()
   })
 
-  it('renders Professional Standards label', () => {
+  it('renders Sources label', () => {
     render(<BottomProof />)
-    expect(screen.getByText('Professional Standards')).toBeInTheDocument()
+    expect(screen.getByText('Sources')).toBeInTheDocument()
   })
 
-  it('renders credential badges', () => {
-    // Sprint 705: pill strip replaced with <StandardsSpecimen>, which
-    // emits each code twice (desktop specimen row + mobile fallback
-    // link). getByText would throw on the duplicate; getAllByText is
-    // the correct assertion — the intent is "these standards appear
-    // on the page," and they do.
+  it('names no standard on the homepage (Sprint 861)', () => {
     render(<BottomProof />)
-    expect(screen.getAllByText(/ISA 240/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/PCAOB AS 2315/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/ISA 240/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/AS 1215/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Check each one on Sources/).closest('a')).toHaveAttribute('href', '/sources')
   })
 
   it('renders closing metrics', () => {

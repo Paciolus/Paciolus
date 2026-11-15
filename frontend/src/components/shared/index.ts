@@ -31,7 +31,7 @@ export { FileDropZone } from './FileDropZone'
 
 export { GuestCTA } from './GuestCTA'
 export { UnverifiedCTA } from './UnverifiedCTA'
-export { ZeroStorageNotice } from './ZeroStorageNotice'
+export { UploadHandlingNotice } from './UploadHandlingNotice'
 export { DisclaimerBox } from './DisclaimerBox'
 export { TaxFiguresBanner } from './TaxFiguresBanner'
 export { BrandIcon, type BrandIconName, type IconSize, type IconTone, type IconState } from './BrandIcon'

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useFormValidation, commonValidators } from '@/hooks'
+import { STORAGE_STATEMENT } from '@/content/storage-statement'
 import { setPendingEmail, setPendingPlanSelection } from '@/lib/authFlowState'
 import { fadeUp } from '@/lib/motion'
 
@@ -16,7 +17,7 @@ const ALLOWED_INTERVALS = new Set(['monthly', 'annual'])
  * Obsidian Vault Registration Page - Day 13
  *
  * Design: Same vault aesthetic as login with password strength indicator.
- * Zero-Storage Promise badge reinforces trust messaging.
+ * Data-handling badge shows the approved storage statement (Sprint 861).
  *
  * Refactored: Now uses useFormValidation hook for form state management
  *
@@ -214,18 +215,17 @@ function RegisterPageInner() {
             </p>
           </div>
 
-          {/* Zero-Storage Badge */}
+          {/* Data-handling badge (Sprint 861) */}
           <div
             className="px-8 py-4 bg-obsidian-700/30 border-b border-obsidian-700"
           >
             <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-sage-400 rounded-full animate-pulse"></div>
               <span className="text-sage-300 text-sm font-sans font-medium">
                 Uploads Not Kept
               </span>
             </div>
             <p className="text-oatmeal-500 text-xs font-sans text-center mt-2">
-              Uploaded files are processed in memory and not kept. We save your account, client list, analysis summaries and engagement entries.
+              {STORAGE_STATEMENT}
             </p>
           </div>
 

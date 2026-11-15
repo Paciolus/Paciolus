@@ -4,7 +4,7 @@
  *
  * CRUD hook for engagement management, following useClients pattern.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Engagement data fetched from API, stored in React state only
  * - No financial data — metadata only
  */

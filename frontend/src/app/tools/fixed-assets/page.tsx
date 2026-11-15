@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -125,7 +125,7 @@ export default function FixedAssetTestingPage() {
                   </p>
                 </div>
 
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

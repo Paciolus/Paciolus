@@ -19,7 +19,7 @@ import { staggerContainerTight, fadeUp, fadeScale } from '@/lib/motion';
  * - useClients() replaced with useWorkspaceContext()
  * - All modals, grid rendering, and page-specific logic intact
  *
- * ZERO-STORAGE: Displays client metadata only, no financial data.
+ * DATA HANDLING: Displays client metadata only, no financial data.
  */
 
 export default function PortfolioPage() {

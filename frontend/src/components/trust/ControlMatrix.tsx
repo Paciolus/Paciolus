@@ -50,7 +50,7 @@ export function ControlMatrix() {
               {/* Collapsed: show standard refs as compact pills */}
               {!isOpen && (
                 <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-                  {domainControls.slice(0, 3).map(ctrl => (
+                  {domainControls.filter(c => c.standard !== '—').slice(0, 3).map(ctrl => (
                     <span
                       key={ctrl.name}
                       className="font-mono text-[9px] text-oatmeal-600 px-1.5 py-0.5 rounded bg-obsidian-700/50 border border-obsidian-600/50"
@@ -94,7 +94,9 @@ export function ControlMatrix() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline justify-between gap-3">
                             <span className="font-sans text-sm text-oatmeal-200">{ctrl.name}</span>
-                            <span className="font-mono text-[10px] text-sage-400/80 flex-shrink-0">{ctrl.standard}</span>
+                            {ctrl.standard !== '—' && (
+                              <span className="font-mono text-[10px] text-sage-400/80 flex-shrink-0">{ctrl.standard}</span>
+                            )}
                           </div>
                           <p className="font-sans text-[11px] text-oatmeal-500 leading-relaxed mt-1">{ctrl.description}</p>
                         </div>

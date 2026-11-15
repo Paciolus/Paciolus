@@ -4,7 +4,7 @@
  * Composite component combining all batch upload UI elements.
  * Drop zone, file queue, progress bar, and controls.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All files in React state (memory only)
  * - No persistence to localStorage/sessionStorage
  */
@@ -58,7 +58,7 @@ function BatchUploadPanelContent({
       {/* Controls */}
       <BatchUploadControls size="md" />
 
-      {/* Zero-Storage Notice */}
+      {/* Data-handling notice */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

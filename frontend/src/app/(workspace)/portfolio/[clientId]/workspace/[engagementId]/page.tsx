@@ -7,7 +7,7 @@
  * Shows the 4-tab engagement detail: Status, Follow-Up, Workpapers, Convergence.
  * Accessed from Portfolio ClientCard → engagement row click.
  *
- * ZERO-STORAGE: Displays engagement metadata only, no financial data.
+ * DATA HANDLING: Displays engagement metadata only, no financial data.
  */
 
 import { useState, useEffect, useCallback } from 'react';

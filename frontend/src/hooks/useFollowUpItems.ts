@@ -4,7 +4,7 @@
  *
  * CRUD hook for follow-up items, following useEngagement pattern.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Follow-up item data fetched from API, stored in React state only
  * - Narrative descriptions only — no account numbers, amounts, or PII
  */

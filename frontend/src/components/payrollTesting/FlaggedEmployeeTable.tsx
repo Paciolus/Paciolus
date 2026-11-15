@@ -1,6 +1,7 @@
 'use client'
 
 import { FlaggedEntriesTable, type ColumnDef } from '@/components/shared/testing/FlaggedEntriesTable'
+import { NO_EXCEPTIONS_FLAGGED } from '@/content/disclaimers'
 import type { PayrollTestResult, PayrollEntryData } from '@/types/payrollTesting'
 
 interface FlaggedEmployeeTableProps {
@@ -54,7 +55,7 @@ export function FlaggedEmployeeTable({ results }: FlaggedEmployeeTableProps) {
       columns={columns}
       searchFields={SEARCH_FIELDS}
       searchPlaceholder="Search employee, ID, department..."
-      emptyMessage="No flagged employees found. All tests returned clean results."
+      emptyMessage={NO_EXCEPTIONS_FLAGGED}
       entityLabel="entries"
     />
   )

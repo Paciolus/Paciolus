@@ -6,7 +6,7 @@
  * Threaded comment display with inline reply form.
  * Renders inside the FollowUpItemsTable expanded detail view.
  *
- * Zero-Storage: narratives only, no financial data.
+ * data-handling: narratives only, no financial data.
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';

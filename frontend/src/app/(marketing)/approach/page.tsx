@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import * as motion from '@/components/ui/motionClient'
+import { PREVIEW_CACHE, RETENTION_STATEMENT, SHARE_RETENTION, STORAGE_STATEMENT, WE_DONT_KEEP, WE_KEEP } from '@/content/storage-statement'
 import { marketingFadeUp } from '@/lib/motion'
 
 const stagger = {
@@ -51,69 +52,35 @@ const flowSteps = [
 
 const howItWorksSteps = [
   'You upload a trial balance, journal entries, or financial document',
-  'Our server reads the file into ephemeral memory (RAM only)',
+  'Our server reads the file into memory',
   'Analytics run: anomaly detection, ratio analysis, test batteries',
-  'Results stream back to your browser in real-time',
-  'When the response completes the uploaded file is released from memory and not kept — a summary (category totals, ratios, row counts, flagged account names) is saved to your history',
+  'Results are returned to your browser',
+  'The uploaded file is released from memory and not kept. A summary (category totals, ratios, row counts, flagged account names) is saved to your history',
 ]
 
-const comparisonRows = [
-  {
-    aspect: 'Data Storage',
-    traditional: 'Persistent database',
-    paciolus: 'Uploaded files in memory only; summaries and engagement entries saved',
-  },
-  {
-    aspect: 'Breach Risk',
-    traditional: 'Database is attack target',
-    paciolus: 'No uploaded files or ledger rows at rest; summaries and engagement entries are stored',
-  },
-  {
-    aspect: 'Data Retention',
-    traditional: 'Months or years',
-    paciolus: 'Uploaded file: the length of the request; summaries per retention policy',
-  },
-  {
-    aspect: 'Deletion Requests',
-    traditional: 'Complex, error-prone',
-    paciolus: 'Uploaded files are never kept; summaries are archived on schedule, and deleted on request',
-  },
-  {
-    aspect: 'Compliance (GDPR/CCPA)',
-    traditional: 'Requires data mapping',
-    paciolus: 'Simplified \u2014 minimal PI stored',
-  },
+// Sprint 861: the "Traditional SaaS vs Paciolus" comparison was unsourced.
+// This table says only what happens to each kind of data.
+const dataRows = [
+  { what: 'Uploaded file', where: 'Server memory', howLong: 'For the request. A previewed PDF or workbook: up to 10 minutes' },
+  { what: 'Account and client list', where: 'Our database', howLong: 'While your account is open' },
+  { what: 'Analysis summary (totals, ratios, row counts, flagged account names)', where: 'Our database', howLong: 'While your account is open' },
+  { what: 'What you enter in an engagement', where: 'Our database', howLong: 'While your account is open' },
+  { what: 'Report you share by link (the complete file)', where: 'Our storage provider', howLong: 'Up to 24 hours (Professional) or 48 hours (Enterprise), then deleted' },
 ]
 
-// Sprint 834 (CEO decision 8): kept identical in substance to the Trust page
-// lists, which say exactly what the database holds.
-const weStore = [
-  'User account (name, email)',
-  'Client metadata (names, industries)',
-  'Aggregate totals from each analysis (category totals, ratios, row counts)',
-  'Names of accounts a tool flagged (no amounts)',
-  'What you enter in an engagement, including materiality, analytical expectations and uncorrected misstatements',
-  'Report files shared by link, for up to 48 hours',
-  'Counts of tool runs and uploads (for your upload allowance)',
-]
-
-const weNeverStore = [
-  'Uploaded files',
-  'Line-level trial balance rows from your uploads',
-  'Journal entries or transaction details from your uploads',
-  'Flagged-entry details from your uploads',
-]
+// Sprint 861: one source with the Trust page (content/storage-statement.ts).
+const weStore = WE_KEEP
+const weDontKeep = WE_DONT_KEEP
 
 const securityAdvantages = [
-  'No uploaded files or line-level ledger data at rest to breach',
-  'No backup tapes with uploaded client data',
-  'No data migration risks for uploaded data during updates',
-  'Simplified incident response — uploaded ledger rows were never kept',
+  'Uploaded files are not kept, so a breach of our database would not expose them',
+  'The database does hold what you enter in an engagement, including misstatement amounts and analytical expectations',
+  `A report you share by link is held by our storage provider for ${SHARE_RETENTION}`,
 ]
 
 const tradeOffs = [
   'History keeps summaries only — to re-run a test you upload the file again',
-  'Line-level detail (individual flagged entries) lives in your exports, not in Paciolus',
+  'Line-level detail (individual flagged entries) lives in the exports you download, not in your Paciolus history',
   'Trend views use saved summary totals, not your original files',
 ]
 
@@ -132,7 +99,7 @@ export default function ApproachPage() {
             How We Handle Your Data
           </h1>
           <p className="font-sans text-lg md:text-xl text-oatmeal-400 max-w-2xl mx-auto leading-relaxed">
-            Your uploaded files are processed in memory and not kept after analysis. Here is exactly what we do save.
+            {STORAGE_STATEMENT} Here is exactly what, and for how long.
           </p>
         </div>
       </motion.section>
@@ -174,19 +141,7 @@ export default function ApproachPage() {
             ))}
           </div>
 
-          {/* Timing indicator */}
-          <motion.div
-            variants={marketingFadeUp}
-            transition={{ duration: 0.5, ease: 'easeOut' as const }}
-            className="mt-6 text-center"
-          >
-            <span className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-5 py-2">
-              <svg className="w-4 h-4 text-sage-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-mono text-sm text-sage-300">Entire lifecycle: &lt;5 seconds</span>
-            </span>
-          </motion.div>
+          <p className="mt-6 text-center font-sans text-sm text-oatmeal-400">{PREVIEW_CACHE}</p>
         </div>
       </motion.section>
 
@@ -235,7 +190,7 @@ export default function ApproachPage() {
         </div>
       </motion.section>
 
-      {/* 4. Comparison Table */}
+      {/* 4. Data table (Sprint 861) */}
       <motion.section
         className="relative pb-20 px-6"
         initial={{ opacity: 0, y: 24 }}
@@ -245,33 +200,34 @@ export default function ApproachPage() {
       >
         <div className="max-w-4xl mx-auto">
           <h2 className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center">
-            Traditional SaaS vs Paciolus
+            What Happens to Each Kind of Data
           </h2>
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-obsidian-800 border-b border-obsidian-600">
-                  <th className="text-left p-4 font-serif text-oatmeal-100">Aspect</th>
-                  <th className="text-left p-4 font-serif text-clay-300">Traditional SaaS</th>
-                  <th className="text-left p-4 font-serif text-sage-300">Paciolus</th>
+                  <th className="text-left p-4 font-serif text-oatmeal-100">What</th>
+                  <th className="text-left p-4 font-serif text-oatmeal-100">Where</th>
+                  <th className="text-left p-4 font-serif text-oatmeal-100">How long</th>
                 </tr>
               </thead>
               <tbody>
-                {comparisonRows.map((row, idx) => (
-                  <tr key={row.aspect} className={`border-b border-obsidian-700 ${idx % 2 === 1 ? 'bg-obsidian-800/50' : ''}`}>
-                    <td className="p-4 font-sans text-oatmeal-200 font-medium">{row.aspect}</td>
-                    <td className="p-4 font-sans text-clay-400/80">{row.traditional}</td>
-                    <td className="p-4 font-sans text-sage-400">{row.paciolus}</td>
+                {dataRows.map((row, idx) => (
+                  <tr key={row.what} className={`border-b border-obsidian-700 ${idx % 2 === 1 ? 'bg-obsidian-800/50' : ''}`}>
+                    <td className="p-4 font-sans text-oatmeal-200 font-medium">{row.what}</td>
+                    <td className="p-4 font-sans text-oatmeal-300">{row.where}</td>
+                    <td className="p-4 font-sans text-oatmeal-300">{row.howLong}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="mt-6 font-sans text-sm text-oatmeal-400">{RETENTION_STATEMENT}</p>
         </div>
       </motion.section>
 
-      {/* 5. What We Store vs What We NEVER Store */}
+      {/* 5. What We Store vs What We Don&apos;t Keep */}
       <motion.section
         className="relative pb-20 px-6"
         variants={stagger}
@@ -285,7 +241,7 @@ export default function ApproachPage() {
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
-            What We Store vs What We Never Store
+            What We Store and What We Don&apos;t Keep
           </motion.h2>
 
           <div className="grid md:grid-cols-2 gap-6">
@@ -313,7 +269,7 @@ export default function ApproachPage() {
               </ul>
             </motion.div>
 
-            {/* What We NEVER Store */}
+            {/* What We Don&apos;t Keep */}
             <motion.div
               variants={marketingFadeUp}
               transition={{ duration: 0.5, ease: 'easeOut' as const }}
@@ -323,10 +279,10 @@ export default function ApproachPage() {
                 <svg className="w-6 h-6 text-clay-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                What We NEVER Store
+                What We Don&apos;t Keep
               </h3>
               <ul className="space-y-3">
-                {weNeverStore.map((item) => (
+                {weDontKeep.map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <svg className="w-5 h-5 text-clay-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -354,7 +310,7 @@ export default function ApproachPage() {
             transition={{ duration: 0.5, ease: 'easeOut' as const }}
             className="font-serif text-3xl md:text-4xl text-oatmeal-100 mb-10 text-center"
           >
-            Security Advantages
+            What This Means if We Were Breached
           </motion.h2>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -413,7 +369,7 @@ export default function ApproachPage() {
             </ul>
 
             <p className="font-sans text-sm text-oatmeal-500 mt-6 ml-14">
-              We made this architectural choice deliberately. For auditors handling sensitive client data, the security benefits far outweigh the convenience costs.
+              We made this choice deliberately.
             </p>
           </div>
         </div>
@@ -463,7 +419,7 @@ export default function ApproachPage() {
                 </h3>
               </div>
               <p className="font-sans text-sm text-oatmeal-500">
-                Infrastructure, encryption, and compliance details.
+                Security controls, what we keep, and what we do not claim.
               </p>
             </Link>
 

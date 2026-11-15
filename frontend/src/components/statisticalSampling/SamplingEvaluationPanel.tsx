@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { ZeroStorageNotice } from '@/components/shared'
+import { UploadHandlingNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingEvaluationConfig, SamplingDesignResult } from '@/types/statisticalSampling'
@@ -169,7 +169,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
             </p>
           </div>
         )}
-        <ZeroStorageNotice className="mt-4" />
+        <UploadHandlingNotice className="mt-4" />
       </div>
 
       {/* Errors */}

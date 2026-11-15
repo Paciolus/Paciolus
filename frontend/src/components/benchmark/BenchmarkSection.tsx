@@ -14,7 +14,7 @@
  * - Disclaimer for compliance
  * - Oat & Obsidian theme compliance
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display component only, no data persistence
  * - Comparison data is ephemeral (session only)
  */

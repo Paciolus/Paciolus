@@ -6,7 +6,7 @@
  * React Context for managing multi-file batch uploads.
  * Provides centralized state management for file queue operations.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - All file data stored in React state (memory only)
  * - Files are processed individually via API
  * - No persistence to localStorage/sessionStorage

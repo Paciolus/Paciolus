@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { APScoreCard, APTestResultGrid, APDataQualityBadge, FlaggedPaymentTable } from '@/components/apTesting'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, ToolSettingsDrawer, CitationFooter, UpgradeGate, SavedSettingsNotice } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractAPProof } from '@/components/shared/proof'
 import { Button } from '@/components/ui/Button'
 import { useAPTesting } from '@/hooks/useAPTesting'
@@ -141,7 +141,7 @@ export default function APTestingPage() {
                   </p>
                 </div>
 
-                <ZeroStorageNotice className="mt-4" />
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

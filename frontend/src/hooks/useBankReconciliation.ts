@@ -5,7 +5,7 @@
  * materiality and performance materiality when the user enters them; an
  * empty field sends nothing and the Paciolus default applies (the result's
  * `active_thresholds` says which).
- * Zero-Storage: files processed on backend, results ephemeral.
+ * data-handling: files processed on backend, results ephemeral.
  */
 
 import { useMemo } from 'react'

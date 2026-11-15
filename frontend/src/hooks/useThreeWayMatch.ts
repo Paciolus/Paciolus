@@ -5,7 +5,7 @@
  * Sprint 839: sends per-run tolerance overrides — only the fields the user
  * changed from their saved settings / the Paciolus defaults. A field left
  * alone sends nothing, so saved settings still apply and are reported as such.
- * Zero-Storage: files processed on backend, results ephemeral.
+ * data-handling: files processed on backend, results ephemeral.
  */
 
 import { useMemo } from 'react'

@@ -45,15 +45,15 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-  description: 'Financial Professionals: flags likely sign errors and misclassifications with automated Close Health Reports. Uploaded files are processed in memory and not kept after analysis.',
+  title: 'Paciolus — Trial Balance and Ledger Testing for Audit Teams',
+  description: 'Paciolus runs tests on your trial balance and ledgers, flags items for your review, and produces PDF memos and Excel workpapers. Your uploaded files are processed in memory and not kept after analysis.',
   icons: {
     icon: '/PaciolusLogo_LightBG.png',
     apple: '/PaciolusLogo_LightBG.png',
   },
   openGraph: {
-    title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-    description: 'Upload. Map. Export. Trial balance diagnostics for Financial Professionals.',
+    title: 'Paciolus — Trial Balance and Ledger Testing for Audit Teams',
+    description: 'Trial balance and ledger testing for audit teams. Upload a file, review the flagged items, take the PDF memos and Excel workpapers.',
     type: 'website',
     url: 'https://paciolus.com',
     siteName: 'Paciolus',
@@ -68,8 +68,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Paciolus - Surgical Precision for Trial Balance Diagnostics',
-    description: 'Upload. Map. Export. Trial balance diagnostics for Financial Professionals.',
+    title: 'Paciolus — Trial Balance and Ledger Testing for Audit Teams',
+    description: 'Trial balance and ledger testing for audit teams. Upload a file, review the flagged items, take the PDF memos and Excel workpapers.',
     images: ['/PaciolusLogo_LightBG.png'],
   },
   metadataBase: new URL('https://paciolus.com'),

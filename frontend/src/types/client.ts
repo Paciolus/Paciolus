@@ -4,7 +4,7 @@
  *
  * TypeScript interfaces for client management.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Client objects contain ONLY identification metadata
  * - No financial data, transactions, or audit results are included
  * - Client-specific audits remain ephemeral (in-memory only)

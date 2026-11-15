@@ -66,9 +66,15 @@ describe('MarketingFooter', () => {
     expect(link.closest('a')).toHaveAttribute('href', '/login')
   })
 
-  it('renders the uploads-not-kept badge', () => {
+  it('renders the approved storage statement with its link (Sprint 861)', () => {
     render(<MarketingFooter />)
-    expect(screen.getByText('Uploads not kept after analysis')).toBeInTheDocument()
+    expect(screen.getByText(/Your uploaded files are processed in memory and not kept after analysis\. We save your account/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'See exactly what we keep' })).toHaveAttribute('href', '/trust#transparency')
+  })
+
+  it('states the division of responsibility (Sprint 861)', () => {
+    render(<MarketingFooter />)
+    expect(screen.getByText(/Paciolus is not a workpaper archive/)).toBeInTheDocument()
   })
 
   it('renders Pacioli motto', () => {

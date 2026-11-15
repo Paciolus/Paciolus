@@ -5,7 +5,7 @@
  * PERFORMANCE: Intl.NumberFormat and Intl.DateTimeFormat instances are
  * expensive to create. We memoize them at module level for reuse.
  *
- * ZERO-STORAGE: Pure utility functions with no state persistence.
+ * DATA HANDLING: Pure utility functions with no state persistence.
  */
 
 // =============================================================================

@@ -3,7 +3,7 @@
  *
  * Container for file queue items with animations and empty state.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display only, no file storage
  */
 

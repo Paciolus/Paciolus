@@ -48,7 +48,7 @@ jest.mock('@/hooks/useTestingExport', () => ({
 
 jest.mock('@/components/shared', () => ({
   GuestCTA: ({ description }: any) => <div data-testid="guest-cta">{description}<a href="/login">Sign In</a><a href="/register">Create Account</a></div>,
-  ZeroStorageNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
+  UploadHandlingNotice: () => <div data-testid="zero-storage-notice">Zero-Storage</div>,
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   UpgradeGate: ({ children, toolName }: any) => {
     const { useAuthSession } = jest.requireMock('@/contexts/AuthSessionContext')

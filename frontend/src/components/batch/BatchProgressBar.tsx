@@ -3,7 +3,7 @@
  *
  * Overall batch progress visualization with animated progress bar.
  *
- * ZERO-STORAGE COMPLIANCE:
+ * DATA HANDLING:
  * - Display only, no data storage
  */
 

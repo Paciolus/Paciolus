@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { ARScoreCard, ARTestResultGrid, ARDataQualityBadge, FlaggedARTable } from '@/components/arAging'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared/proof'
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
@@ -223,8 +223,8 @@ export default function ARAgingPage() {
                   </div>
                 )}
 
-                {/* Zero-Storage notice */}
-                <ZeroStorageNotice className="mt-4" />
+                {/* Data-handling notice */}
+                <UploadHandlingNotice className="mt-4" />
               </div>
             )}
 

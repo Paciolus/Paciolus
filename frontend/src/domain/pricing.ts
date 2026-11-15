@@ -356,7 +356,11 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Can I downgrade my plan?',
-    answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Your client list, analysis summaries and engagement entries stay in your account; upload limits adjust to the new tier. Paciolus does not store your exported files, so keep the ones you downloaded.',
+    answer: 'Yes. You can downgrade at any time. When downgrading, your current plan remains active until the end of the billing period. After that, your account transitions to the lower tier. Your client list, analysis summaries and engagement entries stay in your account; upload limits adjust to the new tier. Exports are sent to your browser and not saved by Paciolus (except a report you share by link, which is deleted after 24 or 48 hours), so keep the ones you downloaded.',
+  },
+  {
+    question: 'Does Paciolus keep my workpapers?',
+    answer: 'No. Paciolus produces PDF memos and Excel/CSV workpapers. Your firm keeps them in its own documentation system; Paciolus is not a workpaper archive. Paciolus is not a substitute for your firm’s audit documentation and retention obligations. A report you share by link is stored for up to 24 hours (Professional) or 48 hours (Enterprise), then deleted.',
   },
   {
     question: 'What payment methods do you accept?',

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
-import { GuestCTA, UnverifiedCTA, ZeroStorageNotice, DisclaimerBox, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import {
   SamplingDesignPanel,
   SampleSelectionTable,

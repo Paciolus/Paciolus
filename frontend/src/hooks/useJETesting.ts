@@ -3,7 +3,7 @@
  *
  * Journal Entry Testing upload hook. Sprint 831: sends the auditor's holiday
  * calendar for the client with each run when one is set.
- * Zero-Storage: file processed on backend, results ephemeral.
+ * data-handling: file processed on backend, results ephemeral.
  */
 
 import { useMemo } from 'react'
