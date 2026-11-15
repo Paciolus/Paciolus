@@ -425,3 +425,44 @@ class TestCleanupSchedulerPurgesR2:
 
         assert purge_expired_export_shares(db_session) == 0
         assert fake_r2.delete_calls == []
+
+
+class TestProductionNeverFallsBackToTheDatabase:
+    """Sprint 862: the site and Subprocessor List say shared reports are stored in
+    Cloudflare R2. In production a share is stored there or refused — never
+    written to the database blob column."""
+
+    @pytest.mark.usefixtures("bypass_csrf")
+    @pytest.mark.anyio
+    async def test_production_without_r2_refuses_and_stores_nothing(
+        self,
+        db_session: Any,
+        make_user: Any,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import config
+        from auth import require_verified_user
+        from database import get_db
+        from main import app
+
+        monkeypatch.setattr(config, "ENV_MODE", "production")
+        monkeypatch.setattr(export_share_storage, "is_configured", lambda: False)
+        user = make_user(email="sprint862_no_r2@example.com", tier=UserTier.PROFESSIONAL)
+        app.dependency_overrides[require_verified_user] = lambda: user
+        app.dependency_overrides[get_db] = lambda: db_session
+
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+                resp = await client.post(
+                    "/export-sharing/create",
+                    json={
+                        "tool_name": "trial_balance",
+                        "export_format": "pdf",
+                        "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 503, resp.text
+        assert db_session.query(ExportShare).filter_by(user_id=user.id).count() == 0

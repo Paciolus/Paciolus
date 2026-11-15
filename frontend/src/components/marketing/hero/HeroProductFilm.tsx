@@ -12,7 +12,7 @@ import { useHasMounted, useHeroTelemetry } from './useHeroTelemetry'
  * Homepage hero — Sprint 861.
  *
  * The animated "product film" (cursor, scanning tool grid, download bar) was
- * removed: it showed "3 findings", "17 PDF Memos" and a 12-tool grid with
+ * removed: it showed "3 findings", "17 PDF Memos" and a partial tool grid with
  * struck-out tools, none of which matched the product (CEO decision
  * 2026-11-14 — a claim we cannot prove is removed). A real screenshot made
  * from synthetic data replaces it in Sprint 865; until then the hero is text.

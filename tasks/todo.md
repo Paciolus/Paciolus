@@ -137,7 +137,7 @@
 > page shows hard-coded "25/25 Passed" results with a "ZeroStorageLeak" category. CEO directed this work, so it is
 > **exempt from the freeze**. Order: 861 → 862 (863 runs alongside, with counsel) → 865 → 864.
 > - [x] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). COMPLETE 2026-11-14.
-> - [ ] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. **C, ~2 days.**
+> - [x] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. COMPLETE 2026-11-14.
 > - [ ] **Sprint 863** — Privacy Policy, Terms and Security Policy corrections as a counsel draft. **C drafts; CEO + counsel approve.**
 > - [ ] **Sprint 865** — product screenshots and downloadable samples, synthetic data, local dev only. **C, ~1–2 days.**
 > - [ ] **Sprint 864** — strip the decorative layer (glows, glass, stock photos, parallax, count-ups). **C, ~1–2 days.**
@@ -611,31 +611,60 @@ Guard
 backend claims/citation/pricing/catalog tests 71 passed · Chrome pass over `/`, `/trust`, `/approach`, `/demo`,
 `/status` on a local production build.
 
-**Commit SHA:** TBD.
+**Commit SHA:** `45a6d7df`. (Correction recorded in Sprint 862: the retention sentence shipped here was false for
+backups.)
+Also missed here: a comment in `HeroProductFilm.tsx` broke `test_doc_consistency_guard.py` (not run) — fixed in
+Sprint 862 (`tasks/lessons.md`).
 
 ### Sprint 862: Publish the compliance documents; rebuild the Trust page's proof
-**Status:** PENDING. **Priority:** P0. **Source:** `WEBSITE_REVIEW.md` S-02, S-06, S-08, S-09; live-site check 2026-11-14.
+**Status:** COMPLETE 2026-11-14. **Priority:** P0. **Source:** `WEBSITE_REVIEW.md` S-02, S-06, S-08, S-09; live-site check 2026-11-14.
 **Owner:** C. **Depends on:** Sprint 861 (Trust page cleared); Security Policy wording from Sprint 863 before it is published.
 
-- [ ] Publish `SECURITY_POLICY.md`, `SUBPROCESSOR_LIST.md` and the architecture document as site pages (rendered from
+- [x] Publish `SECURITY_POLICY.md`, `SUBPROCESSOR_LIST.md` and the architecture document as site pages (rendered from
       the markdown, one source), linked from the Trust page, footer and certification paragraph. `/security` and
       `/subprocessors` resolve (they 404 today).
-- [ ] Rename `ZERO_STORAGE_ARCHITECTURE.md` → `DATA_HANDLING_ARCHITECTURE.md` (title too) before linking it — the
+- [x] Rename `ZERO_STORAGE_ARCHITECTURE.md` → `DATA_HANDLING_ARCHITECTURE.md` (title too) before linking it — the
       retired term must not be in a customer-facing URL or title. Update references.
-- [ ] Certification paragraph, final: "Paciolus holds no SOC 1, SOC 2, ISO 27001 or other third-party certification,
+- [x] Certification paragraph, final: "Paciolus holds no SOC 1, SOC 2, ISO 27001 or other third-party certification,
       and does not claim one." + links to the three documents.
-- [ ] Vendor-review facts block: hosting ("Uploads are processed, and your account data is stored, in the eastern United
+- [x] Vendor-review facts block: hosting ("Uploads are processed, and your account data is stored, in the eastern United
       States. Every service we use, and where it operates, is in our Subprocessor List." — Render Virginia, Neon
       us-east-1, R2 Eastern North America; re-check against the Subprocessor List at build time), DPA on request
       (stays "on request" — `DATA_PROCESSING_ADDENDUM.md` is 2.0-draft), support response 1–2 business days.
-- [ ] Trust FAQ: "Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?" — answer per `WEBSITE_REVIEW.md` S-09 (AU-C 230 first).
-- [ ] One "what we keep" source in `content/`, rendered identically on Trust `#transparency` and Approach (S-06).
-- [ ] Two-path data-flow diagram, static SVG in the palette, on Trust and Approach (S-02): A — upload → in memory
+- [x] Trust FAQ: "Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?" — answer per `WEBSITE_REVIEW.md` S-09 (AU-C 230 first).
+- [x] One "what we keep" source in `content/`, rendered identically on Trust `#transparency` and Approach (S-06).
+- [x] Two-path data-flow diagram in the palette (built in HTML, not an SVG image, so it reflows and reads as two ordered lists), on Trust and Approach (S-02): A — upload → in memory
       (preview cache up to 10 min) → results returned → uploaded file discarded; B — share link → stored up to 24 h
       (Professional) / 48 h (Enterprise) → deleted.
-- [ ] Backend: in production, shared exports **fail** rather than fall back to a DB blob when R2 is unavailable
+- [x] Backend: in production, shared exports **fail** rather than fall back to a DB blob when R2 is unavailable
       (`routes/export_sharing.py`), so "stored with our storage provider" stays true. Test it.
 - Deferred (CEO 2026-11-14): security-questionnaire pack (after the Security Policy update) · curated release notes.
+
+**Review (2026-11-14):**
+- **New facts found and fixed while publishing.** The daily backup to R2 went live today (backup and DR runs green
+  2026-11-14), and nothing customer-facing said so: (1) the Security Policy said "no off-provider backup exists";
+  (2) the Subprocessor List said GitHub "handles no customer data", but GitHub Actions now runs the dump and the restore
+  tests, and Cloudflare was listed for shared reports only; (3) Sprint 861's retention line "Deleting your account
+  deletes them" was false — copies stay in backups up to 12 months (30 daily + 12 monthly). All three corrected
+  (Security Policy 3.1, Subprocessor List 2.1, Data Handling Architecture 3.1, site copy). **CEO note:** the
+  Subprocessor List promises to be updated *before* a subprocessor is added; GitHub was added for backups without
+  that. No customers yet, so nobody was owed notice — but the promise was broken once.
+- **Why the lint missed it:** `scripts/lint_subprocessors.py` read buckets from backend code only. It now also reads
+  CI workflows and scripts, and fails if a workflow uses a customer-data secret while GitHub is unlisted (proved: the
+  old list fails, the new one passes).
+- Documents are the single source: `scripts/sync_policy_docs.py` → `frontend/src/content/policies.generated.ts`;
+  `backend/tests/test_policy_docs_published.py` fails if they drift. Renderer `components/policy/PolicyMarkdown.tsx`
+  (no new dependency); links to unpublished documents render as text. New pages `/security`, `/subprocessors`,
+  `/data-handling`, registered in `theme-routes.ts` and the sitemap, linked from the footer and Trust.
+- Security Policy 3.1 also narrows four sentences to the code (CSRF scope, query scoping, upload limits, transport);
+  those factual edits go to counsel with Sprint 863 for review, since the document is now on the site.
+- Backend: in production a share is stored in R2 or refused (503) — no silent database fallback. **After deploy,
+  confirm the four `R2_EXPORTS_*` env vars are still set on Render, or sharing will refuse.**
+
+**Verification:** full backend suite 10,633 passed / 1 failed — `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` (`content-encoding` gzip vs null), which fails identically on `main` in a clean worktree, so pre-existing and not this sprint · Jest 2,108/2,108 (211 suites) · lint and `tsc` clean · build passes (three new routes) · backend
+claims, policy-drift, data-disclosure, extractor and all export-sharing tests pass (48 sharing) · subprocessor lint
+passes · Chrome pass on `/subprocessors` and the Trust diagram and vendor-review sections (a `/security` tab froze in
+Chrome; the page itself returned 200 in 22 ms with the right content via curl).
 
 **Commit SHA:** TBD.
 
@@ -649,6 +678,10 @@ backend claims/citation/pricing/catalog tests 71 passed · Chrome pass over `/`,
 - [ ] Also found during Sprint 861: Privacy security list says "TLS 1.2 or higher (1.3 where supported)" — not
       provable from code (`privacy/page.tsx:551`); Privacy says the upload is "released" "when the response
       completes" (`:352`); Terms says "Uploaded files were never kept" (`terms/page.tsx:871`).
+- [ ] Also found during Sprint 862: Privacy says deleting your account "removes" summaries — backups keep copies up
+      to 12 months; Privacy lists Vercel as "United States (Virginia)" while the Subprocessor List (correctly) says
+      "United States / global edge"; Privacy's subprocessor table lacks GitHub and the backup bucket; Security Policy
+      3.1's factual edits (made so the published page is accurate) need counsel's read.
 - [ ] One-page note for counsel listing each change and the code fact behind it.
 - [ ] CEO action logged in `tasks/ceo-actions.md`.
 

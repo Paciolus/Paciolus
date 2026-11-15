@@ -1,6 +1,6 @@
 """`flagged_accounts` holds identifiers only — never balances.
 
-`docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` tells customers that
+`docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md` tells customers that
 ``tool_runs.flagged_accounts`` carries "the account *names* a tool flagged —
 identifiers only, never their balances". That is a promise in a document
 shown to customers and prospective auditors, and until Sprint 801 nothing
@@ -101,7 +101,7 @@ def test_extractor_emits_account_names_and_nothing_else(tool_name):
         assert isinstance(value, str), f"{tool_name}: emitted a non-string {value!r}"
         assert value not in FORBIDDEN_VALUES, (
             f"{tool_name}: emitted {value!r}, which is an amount, a transaction identifier "
-            f"or a party name. ZERO_STORAGE_ARCHITECTURE.md promises customers that "
+            f"or a party name. DATA_HANDLING_ARCHITECTURE.md promises customers that "
             f"flagged_accounts carries identifiers only."
         )
         assert not AMOUNT_SHAPE.search(value), (

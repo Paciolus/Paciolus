@@ -45,7 +45,7 @@ This runbook defines the mandatory steps for onboarding new Paciolus team member
 ### Policy Acknowledgment
 - [ ] Read `docs/04-compliance/SECURITY_POLICY.md` (full document)
 - [ ] Read `docs/04-compliance/ACCESS_CONTROL_POLICY.md` (full document)
-- [ ] Read `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md` (full document — critical for understanding what data must never be stored)
+- [ ] Read `docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md` (full document — critical for understanding what data must never be stored)
 - [ ] Sign acknowledgment form (or send email to CISO confirming receipt and review)
 
 ### Security Training — Day 1 Modules

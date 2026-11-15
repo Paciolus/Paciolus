@@ -232,7 +232,7 @@ _[CEO ACTION: If any criterion failed, document the remediation action and targe
 |----------|-------------|
 | [BCP/DR Plan](../../04-compliance/BUSINESS_CONTINUITY_DISASTER_RECOVERY.md) | §7.2 defines the test procedure this report follows |
 | [Incident Response Plan](../../04-compliance/INCIDENT_RESPONSE_PLAN.md) | Referenced for P0 escalation during restore failures |
-| [Zero-Storage Architecture](../../04-compliance/ZERO_STORAGE_ARCHITECTURE.md) | Confirms financial data scope exclusion (Step 9) |
+| [Zero-Storage Architecture](../../04-compliance/DATA_HANDLING_ARCHITECTURE.md) | Confirms financial data scope exclusion (Step 9) |
 
 ---
 

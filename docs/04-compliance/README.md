@@ -14,10 +14,10 @@ are authoritative; the files here point to them.
 |----------|---------|-----------|----------------|
 | [Terms of Service](TERMS_OF_SERVICE.md) — pointer to paciolus.com/terms | — | 2026-10-24 | Legal |
 | [Privacy Policy](PRIVACY_POLICY.md) — pointer to paciolus.com/privacy | — | 2026-10-24 | Public |
-| [Security Policy](SECURITY_POLICY.md) | 3.0 | 2026-10-24 | Public |
-| [Data Handling Architecture](ZERO_STORAGE_ARCHITECTURE.md) | 3.0 | 2026-10-24 | Public |
+| [Security Policy](SECURITY_POLICY.md) | 3.1 | 2026-11-14 | Public |
+| [Data Handling Architecture](DATA_HANDLING_ARCHITECTURE.md) | 3.1 | 2026-11-14 | Public |
 | [Data Processing Addendum](DATA_PROCESSING_ADDENDUM.md) | 2.0-draft | not yet offered | Draft |
-| [Subprocessor List](SUBPROCESSOR_LIST.md) | 2.0 | 2026-10-24 | Public |
+| [Subprocessor List](SUBPROCESSOR_LIST.md) | 2.1 | 2026-11-14 | Public |
 | [Incident Response Plan](INCIDENT_RESPONSE_PLAN.md) | 2.0 | 2026-10-24 | Public |
 | [Business Continuity / Disaster Recovery](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md) | 2.0 | 2026-10-24 | Public |
 | [Access Control Policy](ACCESS_CONTROL_POLICY.md) | 2.0 | 2026-10-24 | Public |

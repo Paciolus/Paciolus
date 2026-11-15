@@ -54,10 +54,13 @@ export const DARK_ROUTES: ReadonlySet<string> = new Set([
   '/about',
   '/approach',
   '/contact',
+  '/data-handling',
   '/demo',
   '/pricing',
   '/privacy',
+  '/security',
   '/sources',
+  '/subprocessors',
   '/terms',
   '/trust',
   // (auth)

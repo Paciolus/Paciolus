@@ -28,6 +28,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+import config
 from auth import require_verified_user
 from database import get_db
 from export_share_model import ExportShare
@@ -389,6 +390,16 @@ def create_share(
     # ``object_key`` / ``export_data`` is set on each row.
     object_key: str | None = None
     inline_bytes: bytes | None = export_bytes
+    # Sprint 862: in production a share is stored with the storage provider or
+    # not at all. The Subprocessor List, Security Policy and website say shared
+    # reports live in Cloudflare R2 — a silent fallback to the database blob
+    # would make that false. Refuse instead (and log, so the gap is noticed).
+    if config.ENV_MODE == "production" and not export_share_storage.is_configured():
+        logger.error("Export sharing refused: R2 export storage is not configured in production")
+        raise HTTPException(
+            status_code=503,
+            detail="Export storage is temporarily unavailable. Please try again.",
+        )
     if export_share_storage.is_configured():
         content_type = _CONTENT_TYPES.get(body.export_format, "application/octet-stream")
         try:

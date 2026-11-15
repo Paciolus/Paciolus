@@ -94,7 +94,17 @@ BANNED_EVERYWHERE = (
 # Standard codes, as the citation registry writes them. Body names (IAASB,
 # PCAOB, FASB …) are organizations, not standards, and are allowed.
 STANDARD_CODE = re.compile(r"\b(ISA \d{3}|AS \d{4}|ASC \d{3}|IFRS \d{1,2}|IAS \d{1,2}|AU-C \d{3}|SOC [12]|ISO 27001)\b")
-ALLOWED_STANDARD_LINES = ("holds no SOC 1, SOC 2, ISO 27001 or other third-party certification",)
+# The only standard names allowed on marketing pages: the Trust page's statement
+# of certifications we do NOT hold, and the Trust FAQ answer the CEO brief
+# requires (AU-C 230 and PCAOB AS 1215, named only in answer to a direct
+# question, AU-C 230 first).
+ALLOWED_STANDARD_LINES = (
+    "holds no SOC 1, SOC 2, ISO 27001 or other third-party certification",
+    "None held or claimed (no SOC 1, SOC 2 or ISO 27001).",
+    "Does Paciolus hold a SOC 2 report or any other certification?",
+    "Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?",
+    "No. AU-C 230 and PCAOB AS 1215 set documentation and retention duties for audit firms",
+)
 
 COMMENT_LINE = re.compile(r"^\s*(\*|//|/\*|\{/\*)")
 
@@ -149,6 +159,16 @@ def test_marketing_pages_name_no_standard():
             if m:
                 hits.append(f"{rel}:{n}: {m.group(0)!r}")
     assert not hits, "Standard codes belong on /sources, not marketing pages:\n" + "\n".join(hits)
+
+
+def test_documentation_standards_are_named_only_in_the_trust_faq():
+    """AU-C 230 / AS 1215 appear on marketing surfaces only in the Trust FAQ, AU-C 230 first."""
+    pattern = re.compile(r"AU-C 230|AS 1215")
+    for rel in _files(MARKETING_PREFIXES):
+        for n, line in _lines(rel):
+            if pattern.search(line):
+                assert rel == "frontend/src/content/trust.ts", f"{rel}:{n} names a documentation standard"
+                assert line.find("AU-C 230") < line.find("AS 1215"), f"{rel}:{n}: AU-C 230 must come first"
 
 
 def test_status_page_shows_no_hard_coded_test_results():

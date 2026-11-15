@@ -223,20 +223,50 @@ def _component_link_hosts() -> dict[str, set[str]]:
     return hosts
 
 
-def _configured_buckets() -> set[str]:
-    """Storage bucket env-var prefixes the backend actually reads."""
-    found: set[str] = set()
-    for path in BACKEND.rglob("*.py"):
-        if "venv" in path.parts or "tests" in path.parts:
+WORKFLOWS = REPO_ROOT / ".github" / "workflows"
+SCRIPTS = REPO_ROOT / "scripts"
+
+# Secrets that give a CI job customer data. A workflow that reads one runs that
+# data through GitHub Actions, which makes GitHub a subprocessor (Sprint 862:
+# the daily pg_dump → R2 backup did exactly that and no list said so).
+CUSTOMER_DATA_SECRETS = ("NEON_BACKUP_DATABASE_URL", "DATABASE_URL", "R2_BACKUPS_ACCESS_KEY_ID")
+
+
+def _scanned_sources():
+    """Backend code, CI workflows and repo scripts — everywhere a bucket can be written from."""
+    paths = [p for p in BACKEND.rglob("*.py") if "venv" not in p.parts and "tests" not in p.parts]
+    paths += sorted(WORKFLOWS.glob("*.yml")) + sorted(SCRIPTS.glob("*.py"))
+    for path in paths:
+        if path.resolve() == Path(__file__).resolve():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            yield path, path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
+
+
+def _configured_buckets() -> set[str]:
+    """
+    Storage bucket env-var prefixes written anywhere: the backend, CI workflows
+    or repo scripts. Sprint 862: this used to read the backend only, so the
+    `R2_BACKUPS` bucket — written by a GitHub Actions job — was never seen.
+    """
+    found: set[str] = set()
+    for _path, text in _scanned_sources():
         for prefix in BUCKET_ENV_TO_PROVIDER:
             if f"{prefix}_BUCKET" in text:
                 found.add(prefix)
     return found
+
+
+def _workflows_with_customer_data() -> list[str]:
+    """CI workflows that read a secret giving access to customer data."""
+    hits = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        if any(re.search(rf"secrets\.{secret}", text) for secret in CUSTOMER_DATA_SECRETS):
+            hits.append(path.name)
+    return hits
 
 
 def main() -> int:
@@ -277,11 +307,20 @@ def main() -> int:
         provider = BUCKET_ENV_TO_PROVIDER[prefix]
         if provider not in listed:
             _fail(
-                f"bucket '{prefix}' is written by the backend, maps to '{provider}', and "
+                f"bucket '{prefix}' is written by the backend or CI, maps to '{provider}', and "
                 f"'{provider}' is not in the Active Subprocessors table. This is how "
                 f"export-share file bytes went to an undisclosed processor for six months."
             )
             failures += 1
+
+    ci_jobs = _workflows_with_customer_data()
+    print(f"  CI workflows with customer data: {', '.join(ci_jobs) or '(none)'}")
+    if ci_jobs and "GitHub" not in listed:
+        _fail(
+            f"{', '.join(ci_jobs)} read a customer-data secret, so GitHub Actions processes "
+            f"customer data, and 'GitHub' is not in the Active Subprocessors table."
+        )
+        failures += 1
 
     print()
     if failures:

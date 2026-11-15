@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { DataFlowDiagram } from '@/components/trust/DataFlowDiagram'
 import * as motion from '@/components/ui/motionClient'
-import { PREVIEW_CACHE, RETENTION_STATEMENT, SHARE_RETENTION, STORAGE_STATEMENT, WE_DONT_KEEP, WE_KEEP } from '@/content/storage-statement'
+import { RETENTION_STATEMENT, SHARE_RETENTION, STORAGE_STATEMENT, WE_DONT_KEEP, WE_KEEP } from '@/content/storage-statement'
 import { marketingFadeUp } from '@/lib/motion'
 
 const stagger = {
@@ -10,45 +11,6 @@ const stagger = {
     },
   },
 }
-
-const flowSteps = [
-  {
-    label: 'Upload',
-    description: 'You upload a file (CSV, Excel, TSV, TXT, QBO, OFX, IIF, PDF, or ODS)',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Process',
-    description: 'The uploaded file is parsed in memory',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Display',
-    description: 'Results stream to your browser',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    label: 'Released',
-    description: 'The uploaded file is released from memory; a summary is saved',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-  },
-]
 
 const howItWorksSteps = [
   'You upload a trial balance, journal entries, or financial document',
@@ -62,10 +24,11 @@ const howItWorksSteps = [
 // This table says only what happens to each kind of data.
 const dataRows = [
   { what: 'Uploaded file', where: 'Server memory', howLong: 'For the request. A previewed PDF or workbook: up to 10 minutes' },
-  { what: 'Account and client list', where: 'Our database', howLong: 'While your account is open' },
+  { what: 'Account and client list', where: 'Our database', howLong: 'While your account is open (see backups below)' },
   { what: 'Analysis summary (totals, ratios, row counts, flagged account names)', where: 'Our database', howLong: 'While your account is open' },
   { what: 'What you enter in an engagement', where: 'Our database', howLong: 'While your account is open' },
   { what: 'Report you share by link (the complete file)', where: 'Our storage provider', howLong: 'Up to 24 hours (Professional) or 48 hours (Enterprise), then deleted' },
+  { what: 'Database backups (everything above except shared reports)', where: 'A separate storage provider', howLong: '30 daily and 12 monthly copies; a deleted account stays in older backups for up to 12 months' },
 ]
 
 // Sprint 861: one source with the Trust page (content/storage-statement.ts).
@@ -104,46 +67,12 @@ export default function ApproachPage() {
         </div>
       </motion.section>
 
-      {/* 2. Data Flow Diagram */}
-      <motion.section
-        className="relative pb-20 px-6"
-        variants={stagger}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-0 items-center">
-            {flowSteps.map((step, idx) => (
-              <motion.div key={step.label} variants={marketingFadeUp} transition={{ duration: 0.5, ease: 'easeOut' as const }} className="flex flex-col items-center relative">
-                {/* Arrow between steps (desktop only) */}
-                {idx > 0 && (
-                  <div className="hidden md:block absolute -left-4 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10">
-                    <svg className="w-6 h-6 text-theme-success-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                )}
-                {/* Mobile arrow (between rows) */}
-                {idx > 0 && (
-                  <div className="md:hidden mb-3">
-                    <svg className="w-6 h-6 text-theme-success-text mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                  </div>
-                )}
-                <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6 w-full text-center hover:border-sage-500/40 transition-colors">
-                  <div className="text-sage-400 mb-3 flex justify-center">{step.icon}</div>
-                  <h3 className="font-serif text-lg text-oatmeal-100 mb-1">{step.label}</h3>
-                  <p className="font-sans text-sm text-oatmeal-400">{step.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <p className="mt-6 text-center font-sans text-sm text-oatmeal-400">{PREVIEW_CACHE}</p>
+      {/* 2. Data flow (Sprint 862: the same two-path diagram as the Trust page) */}
+      <section className="relative pb-20 px-6">
+        <div className="max-w-5xl mx-auto">
+          <DataFlowDiagram />
         </div>
-      </motion.section>
+      </section>
 
       {/* 3. How It Works — Numbered Steps */}
       <motion.section
