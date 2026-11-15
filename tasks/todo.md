@@ -138,7 +138,7 @@
 > **exempt from the freeze**. Order: 861 → 862 (863 runs alongside, with counsel) → 865 → 864.
 > - [x] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). COMPLETE 2026-11-14.
 > - [x] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. COMPLETE 2026-11-14.
-> - [ ] **Sprint 863** — Privacy Policy, Terms and Security Policy corrections as a counsel draft. **C drafts; CEO + counsel approve.**
+> - [~] **Sprint 863** — counsel draft DONE (`counsel-redline-863`, `reports/counsel-note-2026-11-14.md`); **waiting on CEO + counsel.**
 > - [ ] **Sprint 865** — product screenshots and downloadable samples, synthetic data, local dev only. **C, ~1–2 days.**
 > - [ ] **Sprint 864** — strip the decorative layer (glows, glass, stock photos, parallax, count-ups). **C, ~1–2 days.**
 >
@@ -669,23 +669,30 @@ Chrome; the page itself returned 200 in 22 ms with the right content via curl).
 **Commit SHA:** TBD.
 
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
-**Status:** PENDING. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
+**Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 
-- [ ] Redline (branch + PR marked do-not-merge) covering: "not written to disk" (`privacy/page.tsx:340, 373`;
+- [x] Redline (branch + PR marked do-not-merge) covering: "not written to disk" (`privacy/page.tsx:340, 373`;
       `SECURITY_POLICY.md:27`); flat "48 hours" → 24 h Professional / 48 h Enterprise (`privacy:230, 373, 420`;
       `terms:429`); "encrypted" for shared reports; summary retention (archived after 365 days, removed on account
       deletion; "Clear history" hides); preview-cache scope; flagged account names may include a person's name.
-- [ ] Also found during Sprint 861: Privacy security list says "TLS 1.2 or higher (1.3 where supported)" — not
+- [x] Also found during Sprint 861: Privacy security list says "TLS 1.2 or higher (1.3 where supported)" — not
       provable from code (`privacy/page.tsx:551`); Privacy says the upload is "released" "when the response
       completes" (`:352`); Terms says "Uploaded files were never kept" (`terms/page.tsx:871`).
-- [ ] Also found during Sprint 862: Privacy says deleting your account "removes" summaries — backups keep copies up
+- [x] Also found during Sprint 862: Privacy says deleting your account "removes" summaries — backups keep copies up
       to 12 months; Privacy lists Vercel as "United States (Virginia)" while the Subprocessor List (correctly) says
       "United States / global edge"; Privacy's subprocessor table lacks GitHub and the backup bucket; Security Policy
       3.1's factual edits (made so the published page is accurate) need counsel's read.
-- [ ] One-page note for counsel listing each change and the code fact behind it.
-- [ ] CEO action logged in `tasks/ceo-actions.md`.
+- [x] One-page note for counsel listing each change and the code fact behind it.
+- [x] CEO action logged in `tasks/ceo-actions.md`.
 
-**Commit SHA:** TBD.
+**Review (2026-11-14):** redline on branch `counsel-redline-863` (Privacy + Terms only; **do not merge without
+counsel sign-off**); note for counsel `reports/counsel-note-2026-11-14.md`. Two more items found while editing and
+put to counsel rather than reworded: the Privacy Policy says Paciolus relies on SCCs for EEA transfers while the
+Subprocessor List says transfer mechanisms are "being confirmed"; and the draft DPA §6 promises deletion "within 30
+days" of termination, which the 12-month backup retention contradicts — **CEO decision: disclose 12 months, or
+shorten backup retention.** DPA left unchanged pending that decision.
+
+**Commit SHA:** TBD (redline merges only after sign-off).
 
 ### Sprint 864: Strip the decorative layer
 **Status:** PENDING. **Priority:** P1. **Source:** `WEBSITE_REVIEW.md` G-01–G-09, S-11, S-12. **Owner:** C. CEO-directed — freeze-exempt.
