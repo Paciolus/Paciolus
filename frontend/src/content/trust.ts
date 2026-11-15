@@ -180,6 +180,48 @@ export const FLOW_STAGES = [
   },
 ]
 
+/* ─── Published documents (Sprint 862) ───────────────────── */
+
+/** The compliance documents published on the site from docs/04-compliance/. */
+export const policyDocuments = [
+  { label: 'Security Policy', href: '/security', description: 'What is in place: controls, certifications we do not hold, backups and incidents.' },
+  { label: 'Data Handling Architecture', href: '/data-handling', description: 'Every table that stores your data, how long it is kept, and what deletion removes.' },
+  { label: 'Subprocessor List', href: '/subprocessors', description: 'The third parties that process data for Paciolus, and where.' },
+] as const
+
+/** Facts for a vendor review — each one checkable in the documents above. */
+export const vendorFacts: { term: string; detail: string }[] = [
+  { term: 'Certifications', detail: 'None held or claimed (no SOC 1, SOC 2 or ISO 27001).' },
+  { term: 'Where uploads are processed', detail: 'Render, United States (Virginia).' },
+  { term: 'Where the database is', detail: 'Neon, United States (N. Virginia, us-east-1).' },
+  { term: 'Shared reports and backups', detail: 'Cloudflare R2, Eastern North America.' },
+  { term: 'Every other service', detail: 'Listed, with its region, in the Subprocessor List.' },
+  { term: 'Backups', detail: 'Daily, kept as 30 daily and 12 monthly copies; a restore is tested monthly.' },
+  { term: 'Data Processing Addendum', detail: 'Available on request while counsel finalizes it.' },
+  { term: 'Security contact', detail: 'security@paciolus.com' },
+  { term: 'Support', detail: 'Email, with a reply within 1–2 business days.' },
+]
+
+/**
+ * Trust FAQ (Sprint 862). The CEO brief allows AU-C 230 and PCAOB AS 1215 to be
+ * named only here, in answer to a direct question, AU-C 230 first;
+ * `backend/tests/test_marketing_claims.py` allows exactly these lines.
+ */
+export const trustFaq: { question: string; answer: string }[] = [
+  {
+    question: 'Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?',
+    answer: 'No. AU-C 230 and PCAOB AS 1215 set documentation and retention duties for audit firms, not for software vendors, so Paciolus does not claim compliance with them. Paciolus produces PDF memos and Excel/CSV workpapers. Your firm keeps them in its own documentation system; Paciolus is not a workpaper archive.',
+  },
+  {
+    question: 'Does Paciolus hold a SOC 2 report or any other certification?',
+    answer: 'No. Paciolus holds no SOC 1, SOC 2, ISO 27001 or other third-party certification, and does not claim one. The Security Policy describes what is in place.',
+  },
+  {
+    question: 'If I delete my account, is everything gone?',
+    answer: 'Deleting your account deletes your data from our database and removes your shared reports. Copies in our database backups are deleted as those backups age out, within 12 months.',
+  },
+]
+
 /* ─── Accent Utilities ───────────────────────────────────── */
 
 export function accentClasses(accent: AccentColor) {

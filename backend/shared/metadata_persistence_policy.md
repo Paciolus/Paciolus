@@ -1,7 +1,7 @@
 # Metadata Persistence Policy
 
 > **Engineering guidance.** The authoritative, customer-facing statement is
-> [`docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md`](../../docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md).
+> [`docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md`](../../docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md).
 > **Where the two differ, the compliance document wins** — it is the one
 > customers and auditors are shown. This file exists to answer the narrower
 > question an engineer has: *may I persist this?*
@@ -102,5 +102,5 @@ a past tool run's results.
    database — pass it through the response instead.
 3. If you believe you have a fourth exception, it needs the same treatment as
    the three above: a stated reason here **and** a row in
-   `docs/04-compliance/ZERO_STORAGE_ARCHITECTURE.md`, because that is the
+   `docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md`, because that is the
    document the customer is shown.

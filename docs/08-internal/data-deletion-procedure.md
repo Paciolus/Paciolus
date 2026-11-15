@@ -377,7 +377,7 @@ docs/08-internal/soc2-evidence/pi4/
 
 - [Privacy Policy §6.3](../04-compliance/PRIVACY_POLICY.md#63-deletion-gdpr-article-17-ccpa-17981050) — public-facing deletion rights statement
 - [AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md](../04-compliance/AUDIT_LOGGING_AND_EVIDENCE_RETENTION.md) — soft-delete archival model
-- [ZERO_STORAGE_ARCHITECTURE.md](../04-compliance/ZERO_STORAGE_ARCHITECTURE.md) — why financial data is not subject to deletion
+- [DATA_HANDLING_ARCHITECTURE.md](../04-compliance/DATA_HANDLING_ARCHITECTURE.md) — why financial data is not subject to deletion
 - [DATA_PROCESSING_ADDENDUM.md](../04-compliance/DATA_PROCESSING_ADDENDUM.md) — processor data handling obligations
 
 ---

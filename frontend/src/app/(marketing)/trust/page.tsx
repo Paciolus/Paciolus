@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { BrandIcon } from '@/components/shared'
 import { ArchitectureDiagram } from '@/components/trust/ArchitectureDiagram'
 import { ControlMatrix } from '@/components/trust/ControlMatrix'
+import { DataFlowDiagram } from '@/components/trust/DataFlowDiagram'
 import { ModuleSection } from '@/components/trust/ModuleSection'
 import { containerVariants, fadeUp, listItem } from '@/components/trust/variants'
 import * as motion from '@/components/ui/motionClient'
 import { PREVIEW_CACHE, RETENTION_STATEMENT, SHARE_RETENTION } from '@/content/storage-statement'
-import { controlCategories, downloadableArtifacts, incidentStatements, securityControls, weDontKeep, weStore } from '@/content/trust'
+import { controlCategories, downloadableArtifacts, incidentStatements, policyDocuments, securityControls, trustFaq, vendorFacts, weDontKeep, weStore } from '@/content/trust'
 
 const CONTROL_COUNT = securityControls.length
 const DOMAIN_COUNT = controlCategories.length
@@ -55,6 +56,8 @@ export default function TrustAndSecurity() {
               { label: 'Architecture', href: '#architecture' },
               { label: 'Controls', href: '#controls' },
               { label: 'Certifications', href: '#certifications' },
+              { label: 'Vendor Review', href: '#vendor-review' },
+              { label: 'Questions', href: '#questions' },
               { label: 'Incident Response', href: '#playbook' },
               { label: 'Artifacts', href: '#artifacts' },
             ].map(link => (
@@ -193,6 +196,9 @@ export default function TrustAndSecurity() {
         subtitle="Four stages, and what each one keeps."
         surface="lobby-surface-accent lobby-glow-sage overflow-hidden"
       >
+        <div className="mb-16">
+          <DataFlowDiagram />
+        </div>
         <ArchitectureDiagram />
       </ModuleSection>
 
@@ -221,6 +227,12 @@ export default function TrustAndSecurity() {
         <div className="max-w-3xl mx-auto space-y-6 type-body text-oatmeal-300">
           <p>
             Paciolus holds no SOC 1, SOC 2, ISO 27001 or other third-party certification, and does not claim one.
+            What is in place is described in our{' '}
+            <Link href="/security" className="text-sage-400 hover:text-sage-300 underline">Security Policy</Link>,
+            our{' '}
+            <Link href="/data-handling" className="text-sage-400 hover:text-sage-300 underline">Data Handling Architecture</Link>{' '}
+            and our{' '}
+            <Link href="/subprocessors" className="text-sage-400 hover:text-sage-300 underline">Subprocessor List</Link>.
           </p>
           <p>
             Our Privacy Policy explains how we handle requests under GDPR and the CCPA/CPRA, including access,
@@ -232,6 +244,44 @@ export default function TrustAndSecurity() {
             <Link href="/contact?inquiry_type=organization" className="text-sage-400 hover:text-sage-300 underline">Request the DPA</Link>
           </p>
         </div>
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Vendor review facts (Sprint 862) ─────────────────── */}
+      <ModuleSection
+        id="vendor-review"
+        meta="Vendor Review"
+        title="Facts for Your Vendor Review"
+        surface="lobby-surface-recessed"
+      >
+        <dl className="max-w-3xl mx-auto divide-y divide-obsidian-600 border-y border-obsidian-600">
+          {vendorFacts.map(fact => (
+            <div key={fact.term} className="grid sm:grid-cols-[14rem_minmax(0,1fr)] gap-x-6 gap-y-1 py-3">
+              <dt className="font-serif text-oatmeal-100">{fact.term}</dt>
+              <dd className="font-sans text-sm text-oatmeal-300">{fact.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </ModuleSection>
+
+      <div className="lobby-divider max-w-4xl mx-auto" />
+
+      {/* ── Questions (Sprint 862) ───────────────────────────── */}
+      <ModuleSection
+        id="questions"
+        meta="Questions"
+        title="Direct Answers"
+        surface=""
+      >
+        <dl className="max-w-3xl mx-auto space-y-8">
+          {trustFaq.map(item => (
+            <div key={item.question}>
+              <dt className="font-serif text-lg text-oatmeal-100 mb-2">{item.question}</dt>
+              <dd className="type-body text-oatmeal-300">{item.answer}</dd>
+            </div>
+          ))}
+        </dl>
       </ModuleSection>
 
       <div className="lobby-divider max-w-4xl mx-auto" />
@@ -274,7 +324,7 @@ export default function TrustAndSecurity() {
             initial="hidden"
             animate="visible"
           >
-            {downloadableArtifacts.map(artifact => (
+            {[...policyDocuments.map(doc => ({ ...doc, icon: 'shield-check' as const, type: 'Policy' })), ...downloadableArtifacts].map(artifact => (
               <motion.div key={artifact.href} variants={fadeUp}>
                 <Link
                   href={artifact.href}

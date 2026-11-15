@@ -15,7 +15,11 @@
  *   Cloudflare R2 for 24 h (Professional) or 48 h (Enterprise), then deleted
  *   (`backend/routes/export_sharing.py`).
  * - Analysis summaries are archived (hidden) after RETENTION_DAYS, not
- *   deleted; deleting the account deletes them (`backend/retention_cleanup.py`).
+ *   deleted; deleting the account deletes them from the database
+ *   (`backend/retention_cleanup.py`).
+ * - The database is backed up daily to Cloudflare R2 `paciolus-backups`:
+ *   30 daily + 12 monthly copies (`.github/workflows/backup-pg-dump.yml`), so
+ *   a deleted account stays in older backups for up to 12 months.
  * - Flagged account names come from the client's chart of accounts and can
  *   contain a person's name.
  *
@@ -46,7 +50,7 @@ export const PREVIEW_CACHE =
 
 /** How long what we keep is kept. */
 export const RETENTION_STATEMENT =
-  'Analysis summaries and engagement entries are kept while your account is open. Deleting your account deletes them.'
+  'Analysis summaries and engagement entries are kept while your account is open. Deleting your account deletes them from our database; copies in our database backups are deleted as those backups age out, within 12 months.'
 
 /** Division of responsibility — CEO-approved wording. */
 export const RESPONSIBILITY_STATEMENT =
@@ -65,6 +69,7 @@ export const WE_KEEP: readonly string[] = [
   'What you enter in an engagement: materiality, follow-up items, intercompany account mappings, analytical-expectation workpapers (expected and actual values) and misstatement workpapers (account, debit or credit, amount)',
   `Reports you share by link: the complete file, stored with our storage provider for ${SHARE_RETENTION}`,
   'Counts of which tools you run and how many uploads you make (for your upload allowance)',
+  'A daily backup of everything above except shared reports, kept with a separate storage provider as 30 daily and 12 monthly copies',
 ]
 
 /** What we don't keep — each line true as written, exceptions stated. */

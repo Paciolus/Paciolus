@@ -125,6 +125,10 @@ ALLOWLISTED_TOKENS_PER_FILE: dict[str, set[str]] = {
     # Marketing demo explorer's "PDF Workpaper Memo" badge cites AS 1215 for
     # the workpaper-signoff metadata — that's correct AS 1215 usage.
     "frontend/src/components/marketing/DemoTabExplorer.tsx": set(),
+    # Sprint 862: the Trust FAQ names AU-C 230 only to say Paciolus does *not*
+    # claim compliance with it (a firm's documentation duty, not a vendor's).
+    # It is not a methodology citation, so it is deliberately not registered.
+    "frontend/src/content/trust.ts": {"AU-C 230"},
 }
 
 # Patterns that legitimately appear but aren't standard citations

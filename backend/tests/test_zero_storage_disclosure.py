@@ -8,7 +8,7 @@ their own professional confidentiality obligations. Two features shipped
 (ISA 450 uncorrected misstatements, ISA 520 analytical expectations) that
 legitimately persist practitioner-entered account names and amounts. Both were
 documented in their own coverage docs — but the main
-ZERO_STORAGE_ARCHITECTURE.md still carried an absolute claim that individual
+DATA_HANDLING_ARCHITECTURE.md still carried an absolute claim that individual
 account names are "Never Stored", and its §2.2 exception list omitted both
 tables. The documents contradicted each other for roughly six months.
 
@@ -28,7 +28,7 @@ import pytest
 from sqlalchemy import Numeric
 
 BACKEND = Path(__file__).resolve().parent.parent
-ZERO_STORAGE_DOC = BACKEND.parent / "docs" / "04-compliance" / "ZERO_STORAGE_ARCHITECTURE.md"
+ZERO_STORAGE_DOC = BACKEND.parent / "docs" / "04-compliance" / "DATA_HANDLING_ARCHITECTURE.md"
 
 # Models whose monetary/account columns are knowingly NOT in §2.2, each with a
 # reason. Empty is the goal and the current state — keep it that way.
@@ -137,7 +137,7 @@ class TestZeroStorageDisclosure:
         if undisclosed:
             lines = [
                 "These models persist money or account identifiers but are NOT listed in",
-                "ZERO_STORAGE_ARCHITECTURE.md §2.2 Controlled Storage Exceptions:",
+                "DATA_HANDLING_ARCHITECTURE.md §2.2 Controlled Storage Exceptions:",
                 "",
             ]
             for table, cols in sorted(undisclosed.items()):

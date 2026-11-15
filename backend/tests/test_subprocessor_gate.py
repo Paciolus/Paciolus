@@ -76,9 +76,17 @@ class TestSubprocessorListParsing:
         """
         listed = gate._listed_providers()
 
-        assert "GitHub" not in listed
+        # Sprint 862: GitHub *is* a processor now — GitHub Actions runs the daily
+        # database backup and the restore tests — so it moved into the Active
+        # table. Infrastructure that touches no customer data stays out.
         assert "Dependabot" not in listed
+        assert "Cloudflare DNS" not in listed
         assert "Prometheus" not in listed
+
+    def test_github_is_listed_because_actions_processes_backups(self):
+        """Sprint 862: a workflow reads a customer-data secret, so GitHub must be listed."""
+        assert gate._workflows_with_customer_data(), "expected the backup workflows to be detected"
+        assert "GitHub" in gate._listed_providers()
 
 
 class TestCspHostExtraction:

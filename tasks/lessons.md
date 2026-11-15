@@ -3001,3 +3001,11 @@ export" (it is not). A background check of the Trust page's 22 security sentence
 infrastructure, memory "released"). **Every factual sentence in replacement copy gets checked against the code
 before it ships — open the file, don't trust the old copy or your memory of the feature.** The new guard
 `backend/tests/test_marketing_claims.py` catches phrases, not facts; only reading the code catches facts.
+
+### 2026-11-14 — Sprint 861/862: run the whole backend suite after copy changes, not just the guards you know
+Sprint 861 ran the five claims/consistency tests it knew about and committed. A comment it wrote in
+`HeroProductFilm.tsx` ("a 12-tool grid") broke `test_doc_consistency_guard.py`, which it had not run — CI would
+have failed. Sprint 862 found it only because it ran every test that reads `docs/04-compliance`. Copy is guarded
+by more tests than any one person remembers (`test_doc_consistency_guard`, `test_subprocessor_gate`,
+`test_citation_consistency`, `test_storage_claims`, `test_marketing_claims` …). **After any copy or doc change, run
+the full backend suite (with a private `--basetemp` on Windows) before committing.**

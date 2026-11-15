@@ -1,10 +1,9 @@
 # Data Handling Architecture
 
-**Version:** 3.0 · **Effective:** 2026-10-24 · **Owner:** security@paciolus.com · **Classification:** Public
+**Version:** 3.1 · **Effective:** 2026-11-14 · **Owner:** security@paciolus.com · **Classification:** Public
 
-*(Filename kept for link stability. Paciolus no longer describes itself as "Zero-Storage": the word read
-as a promise about all data, and the database does store summaries and engagement content. The earlier
-versions are in [`archive/`](archive/).)*
+*(v3.1, 2026-11-14: renamed from its earlier filename, database backups added, and the deletion section
+corrected for them. Earlier versions are in [`archive/`](archive/).)*
 
 ## In one sentence
 
@@ -15,7 +14,7 @@ list, analysis summaries and anything you enter in an engagement.
 
 1. **Receive.** The file arrives in the request body (capped at 110 MB; files at 100 MB / 500,000
    rows). Multipart parts are kept in memory up to the request cap rather than spooled to disk.
-2. **Validate.** Signature, size, row/column/cell limits, archive-bomb limits per format, `defusedxml`.
+2. **Validate.** Signature, size, row/column/cell-length limits, archive-bomb limits per format, `defusedxml`.
 3. **Analyse** in memory. If you previewed the file first, its bytes are held in an in-memory cache for
    up to 10 minutes, bound to your account and consumable once.
 4. **Respond** with the results.
@@ -23,7 +22,7 @@ list, analysis summaries and anything you enter in an engagement.
    totals, ratios, row counts, total debits and credits, materiality, anomaly counts, the first
    characters of the filename and its hash — and, when a tool flags accounts, their **names** (no amounts).
 
-Nothing from the upload is written to disk, and nothing from it reaches the logs or Sentry: application
+Nothing from the upload is saved to the database or to file storage, and nothing from it reaches the logs or Sentry: application
 logs carry exception type names only, and Sentry events have request bodies, local variables, exception
 messages and breadcrumbs removed before they are sent.
 
@@ -41,6 +40,7 @@ messages and breadcrumbs removed before they are sent.
 | **Sessions and security events** | Neon | Session tokens hashed, until expiry; security events (hashed IP) 365 days |
 | **Shared report files** | Cloudflare R2 `paciolus-exports`, keyed by a hash of the share token | 24 h (Professional) / 48 h (Enterprise); the DB row is removed only after R2 confirms deletion |
 | **Rate-limit counters** | Render Key Value | Short-lived |
+| **Database backups** — a daily copy of everything in Neon above | Cloudflare R2 `paciolus-backups` (a separate provider), written by a GitHub Actions job using a read-only database role | 30 daily and 12 monthly copies. A deleted account stays in older backups until they age out |
 
 Exported PDFs, Excel and CSV files are generated on request and sent to the browser without being
 saved — except a report you share by link, as above.
@@ -107,20 +107,25 @@ Superadmin actions, including credit and refund amounts. Append-only.
 
 Per tool use: tool name, first characters of the filename, and a short caller-supplied summary (up to 2,000 characters).
 
-### 2.3 What is never kept
+### 2.3 What is not kept
 
 Uploaded files, and the line-level rows in them — individual balances, journal entries, invoices,
-payments and payroll records.
+payments and payroll records — except where those rows are inside a report a user shares by link
+(§2.1).
 
 ## Deletion
 
 "Clear history" and "delete engagement" **archive** records. **Deleting your account**
-(Settings → Profile → Your Data) physically removes everything above that belongs to you, cancels
-your subscription with Stripe and removes your shared files from R2; billing history is kept with your
-identity removed. You can download everything first from the same page.
+(Settings → Profile → Your Data) physically removes everything above that belongs to you from the
+database, cancels your subscription with Stripe and removes your shared files from R2; billing history is
+kept with your identity removed. You can download everything first from the same page.
+
+**Backups.** Copies of the database made before the deletion still contain your data until those backups
+age out under the retention in §2.1 (up to 12 months for the oldest monthly copy). Backups are used only
+to restore the service and to test, once a month, that a restore works.
 
 ## Why it matters, accurately stated
 
-Not keeping uploads means there are no uploaded files or ledger rows at rest to leak. It does **not**
-mean there is nothing to protect: the summaries and engagement entries above are client financial
+Not keeping uploads means uploaded files are not at rest to leak — except the rows inside a report a user
+shares by link, for its 24 or 48 hours. It does **not** mean there is nothing to protect: the summaries, engagement entries and backups above are client financial
 content and are protected as described in the [Security Policy](SECURITY_POLICY.md).

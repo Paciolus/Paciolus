@@ -97,7 +97,7 @@ def test_no_retired_storage_absolutes():
 
 # "Zero-Storage" as a product claim is retired on the surfaces customers read.
 # The compliance documents are rewritten in Sprint 845 and still use the name
-# (including the ZERO_STORAGE_ARCHITECTURE.md filename), so they are not in
+# (Sprint 862 renamed that document DATA_HANDLING_ARCHITECTURE.md), so they are not in
 # scope here; code comments are not customer-facing and are skipped.
 _TERM = re.compile(r"zero[- ]storage", re.IGNORECASE)
 _TERM_PREFIXES = (

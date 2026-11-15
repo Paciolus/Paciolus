@@ -1,8 +1,9 @@
 # Security Policy
 
-**Version:** 3.0 · **Effective:** 2026-10-24 · **Owner:** security@paciolus.com · **Classification:** Public
+**Version:** 3.1 · **Effective:** 2026-11-14 · **Owner:** security@paciolus.com · **Classification:** Public
 
-This replaces version 2.6, which described an organization Paciolus is not (a CISO, an on-call
+Version 3.1 (2026-11-14) adds the database backups that went live that day and narrows four sentences
+to what the code shows (CSRF scope, query scoping, upload limits, transport). It replaces version 2.6, which described an organization Paciolus is not (a CISO, an on-call
 rotation, annual penetration tests, monthly encryption verification, a database "architecturally
 impossible" to breach). This version describes what is actually in place, so a customer can rely on
 every sentence. The previous text is kept for the record in
@@ -24,12 +25,13 @@ Security issues are handled by the founder as soon as they are seen. Report one 
 
 | Data | Where | Notes |
 |------|-------|-------|
-| Uploaded files | Server memory, for the request | Not written to disk or the database. A previewed PDF or workbook is held in memory for up to 10 minutes so the tool can reuse it. |
+| Uploaded files | Server memory, for the request | Not saved to the database or file storage. A previewed PDF or workbook is held in memory for up to 10 minutes so the tool can reuse it. |
 | Accounts, client metadata, settings | Neon PostgreSQL (US East, us-east-1) | |
 | Analysis summaries | Neon | Category totals, ratios, row counts, total debits/credits, materiality, flagged account names (no amounts). |
 | Engagement entries | Neon | What the user types: materiality, follow-ups, intercompany mappings, analytical expectations, uncorrected misstatements (with amounts). |
 | Shared report files | Cloudflare R2 (`paciolus-exports`) | Only reports a user chooses to share by link; 24 h (Professional) or 48 h (Enterprise), then deleted. |
 | Rate-limit counters | Render Key Value | Request counts keyed by user or IP. |
+| Database backups | Cloudflare R2 (`paciolus-backups`) | A daily `pg_dump` of the Neon database, made by a GitHub Actions job with a read-only role; 30 daily and 12 monthly copies. |
 | Application logs | Render log stream (and Grafana Cloud Loki if enabled) | No uploaded file contents; exception type names only; tracebacks stripped in production. |
 | Error reports | Sentry | No request bodies, frame local variables, exception messages or breadcrumbs (stripped before sending). |
 | Payments | Stripe | Card data never reaches Paciolus. |
@@ -37,8 +39,8 @@ Security issues are handled by the founder as soon as they are seen. Report one 
 
 ## 4. Controls in place
 
-**Transport.** TLS 1.2 or higher (1.3 where supported), terminated at Vercel (frontend) and Render
-(backend). HSTS, a nonce-based Content-Security-Policy with `strict-dynamic`, `frame-ancestors 'none'`
+**Transport.** HTTPS (TLS) is provided by our hosts, Vercel (frontend) and Render (backend); the TLS
+versions offered are theirs. HSTS, a nonce-based Content-Security-Policy with `strict-dynamic`, `frame-ancestors 'none'`
 and `no-store` on downloads. Strict CORS allowlist.
 
 **At rest.** Encryption at rest is provided and managed by Neon and Cloudflare R2. Paciolus does not
@@ -50,15 +52,18 @@ in the browser; refresh tokens are HttpOnly, Secure, SameSite cookies rotated on
 account for 15 minutes. Unknown-email and locked-account logins take the same time as real ones.
 **There is no multi-factor authentication in the app**, including for the platform administrator.
 
-**Request integrity.** CSRF tokens are HMAC-bound to the user, plus Origin and Fetch-Metadata checks.
+**Request integrity.** State-changing requests made while signed in carry CSRF tokens HMAC-bound to the
+user, plus Origin and Fetch-Metadata checks. Pre-sign-in routes (login, registration, password reset),
+the Stripe webhook, the contact form and the waitlist are exempt.
 Every route is rate-limited (60 requests/minute by default, tighter on authentication, upload,
 export and write endpoints).
 
-**Tenancy.** Every database query is scoped to the signed-in account in application code. There is
+**Tenancy.** Customer-data queries are scoped to the signed-in account in application code (the
+platform-administrator routes in §4 are deliberately not). There is
 no database row-level security. This is designed to prevent one customer reading another's data;
 no isolation guarantee beyond that is made.
 
-**Uploads.** Size (100 MB), row (500,000), column and cell limits; file-signature checks; archive-bomb
+**Uploads.** Size (100 MB), row (500,000), column (1,000) and cell-length (100,000 characters) limits; file-signature checks; archive-bomb
 limits (uncompressed size and ratio, per format); `defusedxml` for XML; a 500-page cap on PDFs.
 
 **Exports.** Every CSV cell is escaped against spreadsheet formula injection by one shared writer.
@@ -77,9 +82,11 @@ kept for 365 days. See the [Incident Response Plan](INCIDENT_RESPONSE_PLAN.md).
 
 ## 6. Backups and recovery
 
-The database relies on Neon's point-in-time recovery (window per the current Neon plan, to be
-confirmed). **No independent, off-provider backup exists yet and no restore has been tested**; both
-are in progress (Sprint 778b). See [Business Continuity](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md).
+The database is copied every day with `pg_dump` to Cloudflare R2, a separate provider, by a GitHub
+Actions job that uses a read-only database role. A weekly check confirms the newest backup is complete
+and recent, and a monthly test restores a backup into a temporary database and compares it. Neon's
+point-in-time recovery is available in addition. The first full restore test passed on 2026-11-14.
+See [Business Continuity](BUSINESS_CONTINUITY_DISASTER_RECOVERY.md).
 
 ## 7. Changes
 
