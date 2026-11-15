@@ -123,7 +123,7 @@ Files Changed Since Last Audit: 7 files (Sprint 531 remediation + archival enfor
 - **Severity**: P3
 - **Category**: CI/CD / Coverage Enforcement
 - **Evidence**:
-  - Backend: `--cov-fail-under=60` but actual coverage is ~93% (per `tasks/usage-metrics-review.md`)
+  - Backend: `--cov-fail-under=60` but actual coverage is ~93% (per `tasks/archive/usage-metrics-review.md`)
   - Frontend: `coverageThreshold: 25%` but actual coverage exceeds 45%
   - A 33% regression in backend coverage could happen silently
   - Sprint 531 added the 60% threshold (F-008 from morning DEC) — intentionally conservative for baseline

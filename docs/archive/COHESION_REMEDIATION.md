@@ -94,7 +94,7 @@ The old API_REFERENCE.md received a deprecation header warning that it reflects 
 | `frontend/src/app/(marketing)/demo/page.tsx:14` | Comment references "5-tab DemoTabExplorer" — likely stale from 5-tool era | Low (code comment only) |
 | `docs/07-user-facing/USER_GUIDE.md:13` | "Twelve specialized tools" in intro but "Ten supported file formats" — both correct but intro doesn't list all 12 tools inline | Low (informational) |
 | `docs/website-usability-analysis.md` | References old pricing ($130–400/month), "Team" tier, "5 tools" for Solo — entire doc is stale | Medium (external-facing analysis) |
-| `tasks/pricing-launch-qa.md` | References `STRIPE_PRICE_TEAM_*` env vars — Stripe env var names still use "team" | Medium (operational — requires CEO decision on Stripe rename timing) |
+| `tasks/archive/pricing-launch-qa.md` | References `STRIPE_PRICE_TEAM_*` env vars — Stripe env var names still use "team" | Medium (operational — requires CEO decision on Stripe rename timing) |
 | `CLAUDE.md:104` | Era summary references "Solo/Team/Org" in historical context | Low (internal protocol doc, historical reference) |
 
 ---

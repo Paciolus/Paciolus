@@ -1,6 +1,6 @@
 """Sprint 861: claims we cannot prove stay off the website and out of the app.
 
-CEO decision 2026-11-14 (website review, `WEBSITE_REVIEW.md`): a claim we
+CEO decision 2026-11-14 (website review, `reports/website-review-2026-11-14.md`): a claim we
 cannot prove from the code or a published document is removed, not reworded.
 This guard fails the build if any of the removed claims come back.
 
@@ -144,7 +144,7 @@ def test_banned_phrases_stay_out_of_customer_facing_copy():
             m = pattern.search(text)
             if m:
                 hits.append(f"{rel}:{n}: {m.group(0)!r}")
-    assert not hits, "Removed claims are back (WEBSITE_REVIEW.md, Sprint 861):\n" + "\n".join(hits)
+    assert not hits, "Removed claims are back (reports/website-review-2026-11-14.md, Sprint 861):\n" + "\n".join(hits)
 
 
 def test_marketing_pages_name_no_standard():

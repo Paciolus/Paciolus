@@ -5,7 +5,7 @@
 ---
 
 ### Sprint 861: Website claims — remove what we cannot prove
-**Status:** COMPLETE 2026-11-14. **Priority:** P0 (before 2026-12-15 launch). **Source:** `WEBSITE_REVIEW.md` §1–2, CEO decisions 2026-11-14.
+**Status:** COMPLETE 2026-11-14. **Priority:** P0 (before 2026-12-15 launch). **Source:** `reports/website-review-2026-11-14.md` §1–2, CEO decisions 2026-11-14.
 **Owner:** C. **Rule:** if a claim cannot be proven from the code or a published document, delete it.
 
 Facts established 2026-11-14 from the code (use these, not the older copy):
@@ -100,7 +100,7 @@ Sprint 862 (`tasks/lessons.md`).
 ---
 
 ### Sprint 862: Publish the compliance documents; rebuild the Trust page's proof
-**Status:** COMPLETE 2026-11-14. **Priority:** P0. **Source:** `WEBSITE_REVIEW.md` S-02, S-06, S-08, S-09; live-site check 2026-11-14.
+**Status:** COMPLETE 2026-11-14. **Priority:** P0. **Source:** `reports/website-review-2026-11-14.md` S-02, S-06, S-08, S-09; live-site check 2026-11-14.
 **Owner:** C. **Depends on:** Sprint 861 (Trust page cleared); Security Policy wording from Sprint 863 before it is published.
 
 - [x] Publish `SECURITY_POLICY.md`, `SUBPROCESSOR_LIST.md` and the architecture document as site pages (rendered from
@@ -114,7 +114,7 @@ Sprint 862 (`tasks/lessons.md`).
       States. Every service we use, and where it operates, is in our Subprocessor List." — Render Virginia, Neon
       us-east-1, R2 Eastern North America; re-check against the Subprocessor List at build time), DPA on request
       (stays "on request" — `DATA_PROCESSING_ADDENDUM.md` is 2.0-draft), support response 1–2 business days.
-- [x] Trust FAQ: "Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?" — answer per `WEBSITE_REVIEW.md` S-09 (AU-C 230 first).
+- [x] Trust FAQ: "Does Paciolus satisfy AU-C 230 or PCAOB AS 1215?" — answer per `reports/website-review-2026-11-14.md` S-09 (AU-C 230 first).
 - [x] One "what we keep" source in `content/`, rendered identically on Trust `#transparency` and Approach (S-06).
 - [x] Two-path data-flow diagram in the palette (built in HTML, not an SVG image, so it reflows and reads as two ordered lists), on Trust and Approach (S-02): A — upload → in memory
       (preview cache up to 10 min) → results returned → uploaded file discarded; B — share link → stored up to 24 h
@@ -155,7 +155,7 @@ Chrome; the page itself returned 200 in 22 ms with the right content via curl).
 ---
 
 ### Sprint 864: Strip the decorative layer
-**Status:** COMPLETE 2026-11-15. **Priority:** P1. **Source:** `WEBSITE_REVIEW.md` G-01–G-09, S-11, S-12. **Owner:** C. CEO-directed — freeze-exempt.
+**Status:** COMPLETE 2026-11-15. **Priority:** P1. **Source:** `reports/website-review-2026-11-14.md` G-01–G-09, S-11, S-12. **Owner:** C. CEO-directed — freeze-exempt.
 
 - [x] Remove the four stock-photo backgrounds (`public/backgrounds/background1/2/3/5.jpg`; CEO: royalty-free downloads,
       no license records kept — remove rather than rely on them) and their `.lobby-atmosphere-*` utilities.

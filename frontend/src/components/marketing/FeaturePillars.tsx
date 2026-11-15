@@ -5,7 +5,7 @@ import { RESPONSIBILITY_STATEMENT, STORAGE_STATEMENT, UPLOAD_HANDLING } from '@/
  *
  * Three numbered rows on hairline rules, set like a workpaper index — no icon
  * cards, hover lifts, gradient overlays or clip-path reveals
- * (WEBSITE_REVIEW.md G-02, G-06, G-07). Copy states only what can be shown.
+ * (reports/website-review-2026-11-14.md G-02, G-06, G-07). Copy states only what can be shown.
  */
 
 interface Pillar {

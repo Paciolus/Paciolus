@@ -1,5 +1,5 @@
 /**
- * What each tool takes and what it gives — Sprint 866 (WEBSITE_REVIEW.md S-04).
+ * What each tool takes and what it gives — Sprint 866 (reports/website-review-2026-11-14.md S-04).
  *
  * Every row was established from the code on 2026-11-15, not from marketing
  * copy; the evidence comment on each row names where. When a tool's upload

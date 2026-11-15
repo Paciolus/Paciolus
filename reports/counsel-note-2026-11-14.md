@@ -10,7 +10,7 @@ same day (they are now published on the website) and are listed in Part C for re
 
 The CEO directed on 2026-11-14 that every customer-facing claim must be provable from the code or a
 published document, and that a claim that cannot be proven is removed. A website review
-(`WEBSITE_REVIEW.md`) and a check of the backend found that the legal documents still contain statements
+(`reports/website-review-2026-11-14.md`) and a check of the backend found that the legal documents still contain statements
 that are broader than what the system does. Each item below gives the current text, the fact in the
 code that contradicts or limits it, and proposed wording. The proposed wording is a starting point for
 counsel, not legal advice.
