@@ -140,6 +140,9 @@
 > - [x] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). COMPLETE 2026-11-14.
 > - [x] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. COMPLETE 2026-11-14.
 > - [~] **Sprint 863** — counsel draft DONE (`counsel-redline-863`, `reports/counsel-note-2026-11-14.md`); **waiting on CEO + counsel.**
+> - [ ] **Open from the website review (not yet filed as a sprint):** S-04, a per-tool table — input file and columns · what
+>       Paciolus does (tests, by number) · what you get (memo sections, Excel tabs) — on `/sources` or a new page.
+>       Sprint 864 only reshaped the card rows; it did not build this. Each row must be checked against the code.
 > - [ ] **Sprint 865** — product screenshots and downloadable samples. **BLOCKED on the CEO signing in once** in the Chrome Claude uses (CEO approved production 2026-11-15; Claude cannot enter passwords).
 > - [x] **Sprint 864** — strip the decorative layer (glows, glass, stock photos, parallax, count-ups). COMPLETE 2026-11-15.
 >

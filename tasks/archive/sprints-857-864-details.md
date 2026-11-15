@@ -164,7 +164,8 @@ Chrome; the page itself returned 200 in 22 ms with the right content via curl).
 - [x] Remove parallax, magnetic buttons, spin-ins, clip wipes and count-ups (the live Trust page loads showing
       "2 Security Controls / 1 Control Domains" mid-count); keep ≤200 ms opacity fades only (G-06).
 - [x] Replace the three-icon-card rows (FeaturePillars, ProcessTimeline, About cards) with numbered, hairline-ruled
-      input → mechanism → output rows (G-07, S-04); left-aligned demo hero without the pill (G-08).
+      rows (G-07). **Correction 2026-11-15:** the per-tool input → mechanism → output table (S-04) was *not* built
+      here — it is filed as an open item in the Active Phase; left-aligned demo hero without the pill (G-08).
 - [x] Tabular lining figures on every price and stat; app-matching button and card shapes (S-11, S-12).
 
 **Review (2026-11-15):** shared CSS utilities flattened (solid surfaces, plain hairline dividers; glow halo,
