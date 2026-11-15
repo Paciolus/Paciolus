@@ -144,7 +144,17 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
 
         return true
       } catch {
-        // Network error during refresh
+        // Network error during refresh (offline, proxy, CORS failure). The
+        // session cannot be confirmed, so treat it as signed out — otherwise
+        // isLoading stays true and every authenticated page spins forever
+        // instead of redirecting to /login (found 2026-11-15).
+        tokenRef.current = null
+        setState({
+          user: null,
+          token: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
         return false
       } finally {
         refreshPromiseRef.current = null
