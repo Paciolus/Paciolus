@@ -454,14 +454,14 @@ def generate_accrual_completeness_memo(
 
         # ── V. FINDINGS ──
         if findings:
-            story.append(Paragraph("V. Findings", styles["MemoSection"]))
+            story.append(Paragraph("V. Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             story.append(
                 Paragraph(
-                    "The following findings were identified from the accrual completeness analysis, "
+                    "The following items were flagged from the accrual completeness analysis, "
                     "reasonableness testing, and missing accrual estimation performed in the "
-                    "preceding sections. Each finding requires evaluation by the engagement team.",
+                    "preceding sections. Each item requires evaluation by the engagement team.",
                     styles["MemoBody"],
                 )
             )
@@ -474,7 +474,7 @@ def generate_accrual_completeness_memo(
                 key=lambda f: _tier_severity.get((f.get("risk", "low") if isinstance(f, dict) else "low").lower(), 3),
             )
 
-            finding_headers = ["#", "Area", "Finding", "Risk", "Action Required"]
+            finding_headers = ["#", "Area", "Item", "Risk", "Action Required"]
             finding_widths = [0.3 * inch, 1.2 * inch, 2.5 * inch, 0.7 * inch, 1.8 * inch]
             finding_data = [finding_headers]
 
@@ -504,7 +504,7 @@ def generate_accrual_completeness_memo(
 
             story.append(
                 Paragraph(
-                    "The following procedures are suggested based on the findings identified in "
+                    "The following procedures are suggested based on the items flagged in "
                     "the preceding analysis. Procedures are prioritized by risk level.",
                     styles["MemoBody"],
                 )

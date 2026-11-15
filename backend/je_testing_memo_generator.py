@@ -76,7 +76,7 @@ _JE_CONFIG = TestingMemoConfig(
         "moderate": (
             "Based on the automated journal entry testing procedures applied, "
             "the General Ledger extract returned MODERATE flag density across the automated tests. "
-            "Flagged entries warrant focused review, particularly high-severity findings."
+            "Flagged entries warrant focused review, particularly high-severity items."
         ),
         "high": (
             "Based on the automated journal entry testing procedures applied, "

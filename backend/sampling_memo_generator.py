@@ -411,7 +411,7 @@ def _build_evaluation_next_steps(
     cross_ref_body = (
         f"Cross-reference the {errors_found} identified errors to the related testing "
         f"memo. Confirm whether any of the sampled items ({error_id_text}) "
-        "relate to findings in other workpapers."
+        "relate to items flagged in other workpapers."
     )
 
     steps = [

@@ -173,7 +173,7 @@ def gen_tb_diagnostic() -> None:
                 # Change 6: Cross-reference to currency memo
                 "cross_reference_note": (
                     "Note: Unconverted intercompany balances were also identified in the "
-                    "Multi-Currency Conversion memo (Ref: MCY-2026-0215-042). These findings "
+                    "Multi-Currency Conversion memo (Ref: MCY-2026-0215-042). These items "
                     "may relate to the same counterparty. Cross-reference recommended."
                 ),
             },

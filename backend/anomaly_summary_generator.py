@@ -62,7 +62,7 @@ DISCLAIMER_TEXT = (
     "DATA ANALYTICS REPORT \u2014 NOT AN AUDIT COMMUNICATION. "
     "This report lists data anomalies detected through automated testing. It does not "
     "constitute an audit opinion, internal control assessment, or management letter per "  # allow-deny-phrase: disclaiming what the report is NOT (ISA 265 negative use)
-    "ISA 265/PCAOB AS 1305. Classification of findings as deficiencies, significant "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
+    "ISA 265/PCAOB AS 1305. Classification of these items as deficiencies, significant "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
     "deficiencies, or material weaknesses is a matter of auditor judgment and is "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
     "outside the scope of this report."
 )
@@ -607,7 +607,7 @@ class AnomalySummaryGenerator:
                             Paragraph("Practitioner Classification Notes", styles["MemoTableCell"]),
                             Paragraph(
                                 "[PRACTITIONER TO COMPLETE]<br/>"
-                                "<i>Classification of findings (e.g., deficiency, exception, inquiry) "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
+                                "<i>Classification of these items (e.g., deficiency, exception, inquiry) "  # allow-deny-phrase: disclaimer reserving classification to the auditor (ISA 265 negative use)
                                 "is a matter of auditor judgment and is outside the scope of this report.</i>",
                                 styles["MemoTableCell"],
                             ),

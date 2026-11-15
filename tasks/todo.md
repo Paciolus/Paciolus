@@ -141,7 +141,11 @@
 > - [x] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. COMPLETE 2026-11-14.
 > - [~] **Sprint 863** — counsel draft DONE (`counsel-redline-863`, `reports/counsel-note-2026-11-14.md`); **waiting on CEO + counsel.**
 > - [x] **Sprint 866** — per-tool "takes, does, gives" table on `/sources` (WEBSITE_REVIEW.md S-04). COMPLETE 2026-11-15.
-> - [ ] **Sprint 865** — product screenshots and downloadable samples. **BLOCKED on the CEO signing in once** in the Chrome Claude uses (CEO approved production 2026-11-15; Claude cannot enter passwords).
+> - [x] **Sprint 865** — product screenshots, sample memo download, and memo/PDF wording. COMPLETE 2026-11-15.
+> - [ ] **Sprint 867 — P0 before launch** — balance sheet shows "OUT OF BALANCE" for a balanced, pre-closing trial balance (current-period earnings left out of equity).
+> - [ ] **Sprint 868 — P0 before launch** — sessions die every 15 minutes when the browser does not send the cross-site refresh cookie; move the API to `api.paciolus.com` (Phase 4.3) and re-test.
+> - [ ] **Sprint 869** — JE Testing calibration: "unusual account combinations" flags ~90% of small ledgers; the memo's "Total Journal Entries Tested" counts lines, not entries.
+> - [ ] **CEO:** confirm the four `R2_EXPORTS_*` env vars are set on Render (sharing now refuses rather than falling back) — Render logs after the 2026-11-15 deploy were inconclusive.
 > - [x] **Sprint 864** — strip the decorative layer (glows, glass, stock photos, parallax, count-ups). COMPLETE 2026-11-15.
 >
 > **Before 2026-12-15:** CEO signs off the 2026 W-2 and 1099 tables (Sprint 860) · 778b green · Sprint 447 Stripe live (Solo)
@@ -582,6 +586,53 @@ shorten backup retention.** DPA left unchanged pending that decision.
   "18 memo PDFs" is an internal count, not customer-facing.
 
 **Commit SHA:** TBD.
+
+### Sprint 865: Product screenshots, sample memo, and the memo wording behind them
+**Status:** COMPLETE 2026-11-15. **Source:** WEBSITE_REVIEW.md S-01, S-07, G-05. **Owner:** C (Chrome, CEO-signed-in production session, synthetic data only).
+
+- [x] Screenshots from the live app on a synthetic, balanced trial balance ("Meridian Capital Group", fixtures in
+      `backend/tests/anomaly_framework`): hero (`/screenshots/tb-flagged-accounts.png`), Fig. 1 upload check
+      (`tb-upload-columns.png`), Fig. 2 JE memo page (`je-memo-proof-summary.png`). Captions say synthetic data.
+- [x] Sample JE Testing memo (`/samples/paciolus-sample-je-testing-memo.pdf`) generated from `main`'s code with the
+      default layout (sign-off off), "SAMPLE — synthetic data" stamped on every page; linked from the homepage and
+      the Demo page. A sample XLSX was not added: JE Testing exports CSV only (Sprint 866 table), and the TB Excel
+      export carries the balance-sheet defect (Sprint 867).
+- [x] **Found while capturing — every memo PDF ended with the retired claim** "Zero-Storage Architecture: … not
+      persisted to any storage medium. No client financial data is retained by Paciolus" (`shared/memo_base.py`,
+      `pdf/sections/diagnostic.py`; the TB and financial-statement PDFs also said "never stored"). The claims guards
+      only scanned the website. Replaced with the approved storage sentence + `paciolus.com/data-handling`.
+- [x] Also removed from customer documents: "Diagnostic Intelligence" (memo/report footers, the TB report title,
+      the ZIP disclaimer, email footer, public OpenAPI description); "Paciolus®" (two PDF footers — the ® asserts a
+      registration nobody has confirmed); "Tests Clear" → "Tests With No Exceptions Flagged"; "Findings" in memo
+      headings, tables and narrative → "Items Flagged" / "Item" / "flags" (the auditor-reserving disclaimers reworded,
+      not deleted). `tests/test_memo_banned_phrases.py` now bans all of these in rendered output and source.
+- [x] Trial-balance page footer used a partial "what we keep" line; now the shared `UploadHandlingNotice`.
+- **Product defects found (filed above):** Sprint 867 balance sheet; Sprint 868 15-minute sessions; Sprint 869 JE
+  calibration and the lines-vs-entries count.
+
+**Commit SHA:** TBD.
+
+### Sprint 867: Balance sheet out of balance for a balanced, pre-closing trial balance
+**Status:** PENDING. **Priority:** P0 (before launch — auditors upload pre-closing TBs). **Owner:** C.
+Reproduced 2026-11-15 on production with a balanced synthetic TB (debits = credits = $1,253,800.25): Financial
+Statements shows "OUT OF BALANCE by -$4,699.50" and blames "a mapping or sign issue". -$4,699.50 is the period's net
+income, which the balance sheet leaves out of equity; the Key Metrics panel on the same page already says "Equity
+includes -$4,699.50 of unclosed current-period earnings". Fix: present current-period earnings in equity on the
+balance sheet (and the Excel/PDF exports); test with a pre-closing TB.
+
+### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
+**Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
+Seen 2026-11-15: in a browser that does not send the `paciolus-api.onrender.com` refresh cookie from
+`paciolus.com` (third-party cookie), every reload signs the user out, and the session ends when the 15-minute access
+token expires — mid-analysis ("Please sign in to run diagnostics"). The API on a separate site is the cause; Phase 4.3
+(`api.paciolus.com`, first-party) is the fix. Re-test reload and 20-minute idle after the move. The spinner half of
+this was fixed in PR #313.
+
+### Sprint 869: JE Testing calibration and the entries count
+**Status:** PENDING. **Priority:** P2. **Owner:** C.
+- "Unusual account combinations" flagged 52 of 58 entries on a small synthetic ledger (flag rate 100%); on 204
+  entries it flagged 2. Consider a minimum population, like Benford's 300.
+- The memo's "Total Journal Entries Tested" printed 408 for a file of 204 entries (408 lines) — label or count.
 
 ### Sprint 856: First run, public-page accessibility, and one look in a browser
 **Status:** PENDING. **Priority:** P1 (Phase 1 — before the first Sprint 781 CPA session). **Source:** 2026-10-28 council (Designer, Accounting Expert, Executor).

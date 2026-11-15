@@ -199,7 +199,7 @@ def _generate_procedures(findings: list[dict], categories: list[dict]) -> list[d
                     "procedure": (
                         f"Payroll & Benefits changed ${abs_change:,.0f} ({pct_str}). "
                         "Reconcile to headcount changes, wage rate increases, and benefits enrollment. "
-                        "Cross-reference with Report 05 (Payroll & Employee Testing) findings."
+                        "Cross-reference with Report 05 (Payroll & Employee Testing) flags."
                     ),
                 }
             )
@@ -715,13 +715,13 @@ def generate_expense_category_memo(
         # ── V. FINDINGS ──
         if findings:
             section_v = "V" if has_prior_data else "IV"
-            story.append(Paragraph(f"{section_v}. Findings", styles["MemoSection"]))
+            story.append(Paragraph(f"{section_v}. Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             story.append(
                 Paragraph(
-                    "The following findings were identified from the variance analysis and ratio "
-                    "benchmarking performed in the preceding sections. Each finding requires "
+                    "The following items were flagged from the variance analysis and ratio "
+                    "benchmarking performed in the preceding sections. Each item requires "
                     "evaluation by the engagement team.",
                     styles["MemoBody"],
                 )
@@ -732,7 +732,7 @@ def generate_expense_category_memo(
             _tier_severity = {"high": 0, "elevated": 1, "moderate": 2, "low": 3}
             findings.sort(key=lambda f: _tier_severity.get(f.get("priority", "low"), 3))
 
-            finding_headers = ["#", "Category", "Finding", "Risk", "Priority"]
+            finding_headers = ["#", "Category", "Item", "Risk", "Priority"]
             finding_widths = [0.3 * inch, 1.4 * inch, 3.3 * inch, 0.7 * inch, 0.7 * inch]
             finding_data = [finding_headers]
 
@@ -763,7 +763,7 @@ def generate_expense_category_memo(
 
             story.append(
                 Paragraph(
-                    "The following procedures are suggested based on the findings identified in "
+                    "The following procedures are suggested based on the items flagged in "
                     "the preceding analysis. Procedures are prioritized by risk level and reference "
                     "specific dollar amounts and percentages from the current period data.",
                     styles["MemoBody"],

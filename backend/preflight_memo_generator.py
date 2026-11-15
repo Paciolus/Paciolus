@@ -492,7 +492,7 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
             f"contains {row_count:,} accounts and presents {len(ranked)} "
             f"{item_word} that must be resolved before downstream diagnostic "
             f"testing can be relied upon: {items_text} The high-severity "
-            f"finding(s) above {plural_invalidate} downstream test results; "
+            f"item(s) above {plural_invalidate} downstream test results; "
             "do not record conclusions against the affected figures until "
             "the issues are remediated and the file is re-processed."
         )

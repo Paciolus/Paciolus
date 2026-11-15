@@ -570,7 +570,7 @@ def _build_key_findings(
     composite: dict,
 ) -> None:
     """Build Section VI: Key Findings."""
-    story.append(Paragraph("VI. Key Findings", styles["MemoSection"]))
+    story.append(Paragraph("VI. Key Items Flagged", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     finding_num = 0

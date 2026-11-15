@@ -3009,3 +3009,11 @@ have failed. Sprint 862 found it only because it ran every test that reads `docs
 by more tests than any one person remembers (`test_doc_consistency_guard`, `test_subprocessor_gate`,
 `test_citation_consistency`, `test_storage_claims`, `test_marketing_claims` …). **After any copy or doc change, run
 the full backend suite (with a private `--basetemp` on Windows) before committing.**
+
+### 2026-11-15 — Sprint 865: the claims guards covered the website, not the documents customers file
+Sprints 841 and 861 retired "Zero-Storage" and "never stored" on every web page, with tests. Every memo PDF still
+ended with "Zero-Storage Architecture … no client financial data is retained by Paciolus", because the guards scanned
+`frontend/` and the compliance docs, not the PDF generators. It surfaced only when a memo page was rendered for a
+website screenshot. **When retiring a claim, grep the whole repo for it — backend string literals, PDF/email
+templates, fixtures — not just the surface the review looked at; then put the phrase in the guard that scans that
+surface** (`test_memo_banned_phrases.py` for PDFs).

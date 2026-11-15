@@ -527,9 +527,7 @@ def draw_page_header(canvas: Any, doc: Any, title: str = "", reference: str = ""
 # Page footer callback (all pages)
 # =============================================================================
 
-_DISCLAIMER_LINE = (
-    "Prepared using Paciolus Diagnostic Intelligence. Does not constitute an audit, review, or attestation engagement."
-)
+_DISCLAIMER_LINE = "Prepared using Paciolus. Does not constitute an audit, review, or attestation engagement."
 
 
 def draw_page_footer(canvas: Any, doc: Any) -> None:

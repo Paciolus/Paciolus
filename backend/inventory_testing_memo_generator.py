@@ -201,7 +201,7 @@ def _build_risk_score_note(
     if tests_clear == 0 and score < 30 and len(test_results) > 0:
         story.append(
             Paragraph(
-                "<i>Although all tests flagged items, the majority of flagged findings are "
+                "<i>Although all tests flagged items, the majority of flagged items are "
                 "low-to-medium severity slow-moving inventory indicators. The composite diagnostic "
                 "score reflects weighted severity, not test pass rate. A low composite score "
                 "with zero clear tests indicates broad but low-severity data quality flags "

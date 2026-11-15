@@ -526,7 +526,7 @@ def _build_key_findings(
     if not top_findings:
         return
 
-    story.append(Paragraph("VI. Key Findings", styles["MemoSection"]))
+    story.append(Paragraph("VI. Key Items Flagged", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     # Map finding text to procedure keys

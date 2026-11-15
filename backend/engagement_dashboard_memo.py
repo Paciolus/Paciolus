@@ -83,7 +83,7 @@ def generate_engagement_dashboard_memo(
             create_leader_dots("Reports Analyzed", str(report_count)),
             create_leader_dots("Overall Diagnostic Score", f"{overall_score:.1f} / 100"),
             create_leader_dots("Overall Diagnostic Tier", tier_label),
-            create_leader_dots("Total High-Severity Findings", str(total_high)),
+            create_leader_dots("Total High-Severity Flags", str(total_high)),
         ]
         if client_name:
             summary_lines.insert(0, create_leader_dots("Client", client_name))
@@ -143,7 +143,7 @@ def generate_engagement_dashboard_memo(
             story.append(
                 Paragraph(
                     f"{len(threads)} cross-report risk thread(s) were identified based on "
-                    "correlated findings across multiple reports:",
+                    "correlated flags across multiple reports:",
                     styles["MemoBody"],
                 )
             )
@@ -170,7 +170,7 @@ def generate_engagement_dashboard_memo(
             story.append(
                 Paragraph(
                     "No cross-report risk threads were identified. "
-                    "Individual report findings do not exhibit correlated patterns.",
+                    "Flags in individual reports do not exhibit correlated patterns.",
                     styles["MemoBody"],
                 )
             )
@@ -187,7 +187,7 @@ def generate_engagement_dashboard_memo(
         if actions:
             story.append(
                 Paragraph(
-                    "Based on the aggregated findings, the following audit response actions "
+                    "Based on the aggregated flags, the following audit response actions "
                     "are recommended in order of priority:",
                     styles["MemoBody"],
                 )
