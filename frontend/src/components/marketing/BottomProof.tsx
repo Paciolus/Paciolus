@@ -87,7 +87,7 @@ export function BottomProof() {
             pre-Sprint-704 obsidian-tile stat-cards. CountUp retired —
             the editorial reading mode values a stable number more than
             an animated one. */}
-        <Reveal delay={0.08} className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 mt-16">
+        <Reveal className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6 mt-16">
           {CLOSING_METRICS.map((metric, i) => (
             <EngravedStat
               key={metric.label}
@@ -100,18 +100,18 @@ export function BottomProof() {
         </Reveal>
 
         {/* CTA row */}
-        <Reveal delay={0.16} className="flex items-center justify-center gap-4 mt-12">
+        <Reveal className="flex items-center justify-center gap-4 mt-12">
           {mounted && !isAuthenticated && (
             <Link
               href="/register"
-              className="px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              className="px-8 py-3.5 bg-sage-600 rounded-lg text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-colors"
             >
               Start Free Trial
             </Link>
           )}
           <Link
             href="/demo"
-            className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
+            className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-lg text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
           >
             Explore Demo
           </Link>

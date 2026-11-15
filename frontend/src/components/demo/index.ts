@@ -8,6 +8,5 @@
  * performance-affordances, not reporting primitives.
  */
 
-export { ScanlineOverlay } from './ScanlineOverlay'
 export { MechanicalGauge } from './MechanicalGauge'
 export { MarginAnnotation } from './MarginAnnotation'

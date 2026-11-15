@@ -70,7 +70,7 @@ export function EngravedStat({
       )}
       <span
         className="font-serif text-5xl md:text-6xl font-semibold text-oatmeal-100 leading-none"
-        style={{ fontVariantNumeric: 'oldstyle-nums proportional-nums' }}
+        style={{ fontVariantNumeric: 'tabular-nums lining-nums' }}
       >
         {value}
       </span>

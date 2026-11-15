@@ -66,8 +66,8 @@ export function MarketingNav() {
       aria-label="Marketing navigation"
       className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         scrolled
-          ? 'bg-obsidian-900/95 backdrop-blur-xl border-b border-obsidian-500/30 shadow-lg shadow-obsidian-900/60'
-          : 'bg-obsidian-900/40 backdrop-blur-md border-b border-transparent'
+          ? 'bg-obsidian-900 border-b border-obsidian-500/30'
+          : 'bg-obsidian-900 border-b border-transparent'
       }`}
     >
       {/* Sprint 856: every (marketing) page and its error boundary declares
@@ -116,14 +116,14 @@ export function MarketingNav() {
                 <>
                   <Link
                     href="/login"
-                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 backdrop-blur-md border border-oatmeal-200/10 shadow-lg shadow-black/30 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 hover:shadow-xl hover:shadow-black/40 transition-all duration-200"
+                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 border border-oatmeal-200/10 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 hover:shadow-xl hover:shadow-black/40 transition-all duration-200"
                     style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.06), 0 4px 12px -2px rgba(0,0,0,0.3)' }}
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/register"
-                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 hover:shadow-xl hover:shadow-sage-900/40 transition-all duration-200"
+                    className="px-4 py-1.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 border border-sage-400/20 hover:bg-sage-500/80 hover:border-sage-400/30 hover:shadow-xl hover:shadow-sage-900/40 transition-all duration-200"
                     style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                   >
                     Start Free Trial
@@ -169,7 +169,7 @@ export function MarketingNav() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="md:hidden border-t border-obsidian-500/30 bg-obsidian-900/98 backdrop-blur-xl"
+            className="md:hidden border-t border-obsidian-500/30 bg-obsidian-900"
           >
             <div className="px-6 py-5 space-y-1">
               {NAV_LINKS.map((link) => (
@@ -196,7 +196,7 @@ export function MarketingNav() {
                     <Link
                       href="/login"
                       onClick={closeMobile}
-                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 backdrop-blur-md border border-oatmeal-200/10 shadow-lg shadow-black/30 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 transition-all duration-200"
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-200 rounded-lg bg-obsidian-700/50 border border-oatmeal-200/10 hover:bg-obsidian-600/60 hover:border-oatmeal-200/20 transition-all duration-200"
                       style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.06), 0 4px 12px -2px rgba(0,0,0,0.3)' }}
                     >
                       Sign In
@@ -204,7 +204,7 @@ export function MarketingNav() {
                     <Link
                       href="/register"
                       onClick={closeMobile}
-                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 backdrop-blur-md border border-sage-400/20 shadow-lg shadow-sage-900/30 hover:bg-sage-500/80 hover:border-sage-400/30 transition-all duration-200"
+                      className="block text-center px-3 py-2.5 text-sm font-sans font-medium text-oatmeal-50 rounded-lg bg-sage-600/70 border border-sage-400/20 hover:bg-sage-500/80 hover:border-sage-400/30 transition-all duration-200"
                       style={{ boxShadow: 'inset 0 1px 0 0 rgba(255,255,255,0.1), 0 4px 12px -2px rgba(74,124,89,0.3)' }}
                     >
                       Start Free Trial

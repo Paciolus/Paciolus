@@ -23,7 +23,7 @@ export function ModuleSection({
           <motion.span
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.2 }}
             className="inline-block type-meta text-sage-400 mb-3"
           >
             {meta}
@@ -32,7 +32,7 @@ export function ModuleSection({
             id={`${id}-heading`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.2 }}
             className="type-headline text-oatmeal-100 mb-4"
           >
             {title}
@@ -41,7 +41,7 @@ export function ModuleSection({
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.2 }}
               className="font-sans text-oatmeal-400"
             >
               {subtitle}

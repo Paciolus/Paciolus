@@ -9,7 +9,6 @@
 
 export { FeaturePillars } from './FeaturePillars'
 export { ProcessTimeline } from './ProcessTimeline'
-export { DemoZone } from './DemoZone'
 export { MarketingNav } from './MarketingNav'
 export { MarketingFooter } from './MarketingFooter'
 export { HeroScrollSection } from './hero/HeroProductFilm'

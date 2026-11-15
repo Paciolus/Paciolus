@@ -57,27 +57,22 @@ export default function DemoPage() {
     <main id="main-content" className="relative min-h-screen bg-obsidian-800 pt-20">
 
       {/* ── Page Hero ─────────────────────────────────────────── */}
-      <section className="py-16 px-6 text-center">
+      <section className="py-16 px-6">
         <motion.div
           initial="hidden"
           animate="visible"
           variants={fadeUp}
-          className="max-w-2xl mx-auto"
+          className="max-w-5xl mx-auto"
         >
-          <div className="inline-flex items-center gap-2 bg-sage-500/10 border border-sage-500/20 rounded-full px-4 py-1.5 mb-6">
-            <svg className="w-4 h-4 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span className="text-sage-300 text-sm font-sans font-medium">Product Tour — Sample Outputs, No Account Required</span>
-          </div>
-
           <h1 className="font-serif text-4xl md:text-5xl text-oatmeal-100 mb-4">
             Sample Outputs From All 18 Tools
           </h1>
-          <p className="font-sans text-oatmeal-400 text-base leading-relaxed max-w-xl mx-auto">
+          <p className="font-sans text-oatmeal-400 text-base leading-relaxed max-w-2xl">
             Explore all eighteen audit diagnostic tools using synthetic data.
             Every test names the rule it applies, or says when a threshold is our own convention.
+          </p>
+          <p className="font-sans text-sm text-oatmeal-500 mt-3">
+            Sample outputs on synthetic data. No account required.
           </p>
         </motion.div>
       </section>
@@ -109,7 +104,7 @@ export default function DemoPage() {
                 return (
                   <div key={tool.title}>
                     <div className={`
-                      h-full rounded-xl p-4 border-l-[3px] border
+                      h-full rounded-lg p-4 border-l-[3px] border
                       ${isSolo
                         ? 'border-l-sage-500/50 border-obsidian-500/25 bg-obsidian-800/50'
                         : 'border-l-oatmeal-400/35 border-obsidian-500/20 bg-obsidian-800/40'
@@ -177,13 +172,13 @@ export default function DemoPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
-              className="px-8 py-3.5 bg-sage-600 rounded-xl text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-all shadow-lg shadow-sage-600/25 hover:shadow-xl hover:shadow-sage-600/30"
+              className="px-8 py-3.5 bg-sage-600 rounded-lg text-oatmeal-50 font-sans font-medium hover:bg-sage-500 transition-colors"
             >
               Start 7-Day Trial
             </Link>
             <Link
               href="/pricing"
-              className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-xl text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
+              className="px-8 py-3.5 bg-transparent border border-oatmeal-400/30 rounded-lg text-oatmeal-300 font-sans font-medium hover:border-oatmeal-400/50 hover:bg-oatmeal-200/5 transition-all"
             >
               View Pricing
             </Link>

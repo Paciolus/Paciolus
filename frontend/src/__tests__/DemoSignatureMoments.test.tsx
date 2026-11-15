@@ -1,5 +1,5 @@
 /**
- * Sprint 707: tests for ScanlineOverlay + MechanicalGauge + MarginAnnotation.
+ * Sprint 707: tests for MechanicalGauge + MarginAnnotation (Sprint 864 removed ScanlineOverlay).
  *
  * Coverage goals:
  *   - Each component renders its intended affordance.
@@ -7,72 +7,8 @@
  *     behaviour (gauge skips animation; scanline suppresses the sweep).
  *   - A11y assertions on aria-labels and role="note".
  */
-import { ScanlineOverlay, MechanicalGauge, MarginAnnotation } from '@/components/demo'
+import { MechanicalGauge, MarginAnnotation } from '@/components/demo'
 import { render, screen, act } from '@/test-utils'
-
-describe('ScanlineOverlay', () => {
-  beforeEach(() => {
-    jest.useFakeTimers()
-  })
-  afterEach(() => {
-    jest.useRealTimers()
-  })
-
-  it('renders children', () => {
-    render(
-      <ScanlineOverlay>
-        <p>inner content</p>
-      </ScanlineOverlay>,
-    )
-    expect(screen.getByText('inner content')).toBeInTheDocument()
-  })
-
-  it('does not render the sweep element before the start delay elapses', () => {
-    const { container } = render(
-      <ScanlineOverlay delayMs={200} durationMs={1200}>
-        <p>x</p>
-      </ScanlineOverlay>,
-    )
-    // aria-hidden sweep element carries the keyframes animation
-    expect(container.querySelector('[aria-hidden="true"]')).toBeNull()
-  })
-
-  it('mounts the sweep element once the delay elapses', () => {
-    const { container } = render(
-      <ScanlineOverlay delayMs={100} durationMs={500}>
-        <p>x</p>
-      </ScanlineOverlay>,
-    )
-    act(() => {
-      jest.advanceTimersByTime(150)
-    })
-    expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull()
-  })
-
-  it('suppresses the sweep when prefers-reduced-motion matches', () => {
-    // Stub matchMedia to return matches=true for reduced motion.
-    const originalMatchMedia = window.matchMedia
-    window.matchMedia = jest.fn().mockImplementation(q => ({
-      matches: q.includes('reduce'),
-      media: q,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    })) as unknown as typeof window.matchMedia
-    try {
-      const { container } = render(
-        <ScanlineOverlay delayMs={50} durationMs={200}>
-          <p>x</p>
-        </ScanlineOverlay>,
-      )
-      act(() => {
-        jest.advanceTimersByTime(400)
-      })
-      expect(container.querySelector('[aria-hidden="true"]')).toBeNull()
-    } finally {
-      window.matchMedia = originalMatchMedia
-    }
-  })
-})
 
 describe('MechanicalGauge', () => {
   it('renders the score label and risk caption', () => {

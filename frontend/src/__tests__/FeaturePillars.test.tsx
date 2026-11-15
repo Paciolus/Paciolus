@@ -72,10 +72,9 @@ describe('FeaturePillars', () => {
     expect(screen.getByText(/Paciolus is not a workpaper archive/)).toBeInTheDocument()
   })
 
-  it('renders brand icons for each pillar', () => {
-    render(<FeaturePillars />)
-    expect(screen.getByTestId('icon-padlock')).toBeInTheDocument()
-    expect(screen.getByTestId('icon-sliders')).toBeInTheDocument()
-    expect(screen.getByTestId('icon-document')).toBeInTheDocument()
+  it('renders numbered rows, not icon cards (Sprint 864)', () => {
+    const { container } = render(<FeaturePillars />)
+    expect(container.querySelectorAll('ol > li')).toHaveLength(3)
+    expect(screen.queryByTestId(/^icon-/)).not.toBeInTheDocument()
   })
 })

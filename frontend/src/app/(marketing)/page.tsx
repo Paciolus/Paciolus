@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FeaturePillars, ProcessTimeline, HeroScrollSection, ToolLedger, BottomProof, EvidenceBand } from '@/components/marketing'
-import { ParallaxSection } from '@/utils/marketingMotion'
 
 /**
  * Platform Homepage (Sprint 66, redesigned Sprint 319-323, slideshow + scrubber Sprint 449)
@@ -34,7 +33,7 @@ export default function HomePage() {
       {/* Sprint 706 — Tool ledger. Full tool catalog rendered in place
           of the one-card-at-a-time slideshow. Respects the auditor's
           scan-the-index reading pattern. */}
-      <div className="lobby-surface-recessed lobby-atmosphere-modern relative z-10">
+      <div className="lobby-surface-recessed relative z-10">
         <ToolLedger />
       </div>
 
@@ -43,10 +42,10 @@ export default function HomePage() {
         <div className="lobby-divider" />
       </div>
 
-      {/* Feature Pillars — accent surface + sage glow + parallax */}
-      <ParallaxSection className="lobby-surface-accent lobby-glow-sage relative z-10" speed={0.06}>
+      {/* Feature Pillars (Sprint 864: no parallax, no glow) */}
+      <div className="lobby-surface-accent relative z-10">
         <FeaturePillars />
-      </ParallaxSection>
+      </div>
 
       {/* Section Divider — sage accent between pillars and timeline */}
       <div className="relative z-10 max-w-4xl mx-auto px-6">
@@ -54,14 +53,14 @@ export default function HomePage() {
       </div>
 
       {/* Process Timeline — raised + vignette */}
-      <div className="lobby-surface-raised lobby-vignette relative z-10">
+      <div className="lobby-surface-raised relative z-10">
         <ProcessTimeline />
       </div>
 
-      {/* Evidence Band — platform credentials + parallax */}
-      <ParallaxSection className="lobby-surface-recessed relative z-10" speed={0.05}>
+      {/* Evidence Band */}
+      <div className="lobby-surface-recessed relative z-10">
         <EvidenceBand />
-      </ParallaxSection>
+      </div>
 
       {/* Section Divider — wide before closing proof */}
       <div className="relative z-10 max-w-5xl mx-auto px-6">

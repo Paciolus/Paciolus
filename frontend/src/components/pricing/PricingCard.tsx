@@ -32,7 +32,7 @@ export default function PricingCard({
   return (
     <motion.div
       variants={cardVariants}
-      className={`relative rounded-2xl p-6 flex flex-col border transition-all duration-200 bg-sage-500/15 border-sage-500/40 shadow-lg shadow-sage-500/10 hover:shadow-xl hover:shadow-sage-500/15 hover:-translate-y-1 ${isHighlighted ? 'md:-translate-y-2 shadow-xl shadow-brass-400/10 ring-1 ring-brass-400/25' : ''}`}
+      className={`relative rounded-lg p-6 flex flex-col border transition-colors duration-200 bg-sage-500/15 border-sage-500/40 hover:border-sage-500/60 ${isHighlighted ? 'ring-1 ring-brass-400/25' : ''}`}
     >
       {/* Sprint 708 — brass "Most Popular" foil badge.
           Rendered only when tier.badge is set; no tier
@@ -43,8 +43,7 @@ export default function PricingCard({
           className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-brass-400 bg-obsidian-800 border border-brass-400/50 shadow-md shadow-obsidian-900/60"
           style={{
             fontVariantNumeric: 'oldstyle-nums proportional-nums',
-            backgroundImage: 'linear-gradient(180deg, rgba(176,141,87,0.08) 0%, rgba(176,141,87,0) 60%)',
-          }}
+            backgroundImage: 'linear-gradient(180deg, rgba(176,141,87,0.08) 0%, rgba(176,141,87,0) 60%)' }}
         >
           {tier.badge}
         </span>
@@ -66,7 +65,7 @@ export default function PricingCard({
             {/* Sprint 703 / 708 — price in font-mono with oldstyle figures. */}
             <span
               className={`text-oatmeal-100 ${hasDollar ? 'type-num-xl' : 'font-serif text-2xl'}`}
-              style={hasDollar ? { fontVariantNumeric: 'oldstyle-nums proportional-nums' } : undefined}
+              style={hasDollar ? { fontVariantNumeric: 'tabular-nums lining-nums' } : undefined}
             >
               {priceStr}
             </span>
@@ -98,7 +97,7 @@ export default function PricingCard({
       <Link
         href={tier.ctaHref(interval)}
         onClick={() => trackEvent('click_plan_cta', { plan: tier.name, interval: interval })}
-        className={`block text-center py-2.5 rounded-xl font-sans font-medium text-sm transition-colors ${
+        className={`block text-center py-2.5 rounded-lg font-sans font-medium text-sm transition-colors ${
           tier.ctaFilled
             ? 'bg-sage-500 text-oatmeal-50 hover:bg-sage-600'
             : 'bg-transparent border border-sage-500/40 text-sage-300 hover:bg-sage-500/10'

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { BrandIcon, type BrandIconName } from '@/components/shared'
+import { BrandIcon } from '@/components/shared'
 import { Reveal } from '@/components/ui/Reveal'
 import { METHODOLOGY_SOURCES } from '@/content/methodology-sources'
 import { TOTAL_AUTOMATED_TESTS } from '@/content/tool-ledger'
@@ -18,7 +18,6 @@ import { staggerContainerTight, fadeUp } from '@/lib/motion'
  */
 
 interface EvidenceCell {
-  icon: BrandIconName
   stat: string
   label: string
   sub: string
@@ -35,7 +34,6 @@ const METHODOLOGY_RULE_COUNT = METHODOLOGY_SOURCES.reduce((n, tool) => n + tool.
 // reader can check.
 const CELLS: EvidenceCell[] = [
   {
-    icon: 'shield-check',
     stat: String(TOTAL_AUTOMATED_TESTS),
     label: 'Automated Tests',
     sub: 'Across the testing tools',
@@ -43,7 +41,6 @@ const CELLS: EvidenceCell[] = [
     check: { label: 'See every test', href: '/sources' },
   },
   {
-    icon: 'document-duplicate',
     stat: String(METHODOLOGY_RULE_COUNT),
     label: 'Rules With Their Source',
     sub: 'Each rule names its source, or says the threshold is our own convention',
@@ -51,7 +48,6 @@ const CELLS: EvidenceCell[] = [
     check: { label: 'Sources & Methodology', href: '/sources' },
   },
   {
-    icon: 'padlock',
     stat: 'In memory',
     label: 'Uploaded Files',
     sub: 'Processed in memory and not kept after analysis',
@@ -62,7 +58,7 @@ const CELLS: EvidenceCell[] = [
 
 export function EvidenceBand() {
   return (
-    <section className="relative py-16 px-6 overflow-hidden paper-grain">
+    <section className="relative py-16 px-6">
       {/* Background texture — Sprint 703: swapped marble JPG at 7% for the
           canonical .paper-grain utility (256x256 seamless FFT noise, 5.6KB,
           3% opacity via mix-blend-mode multiply). One texture language
@@ -88,7 +84,7 @@ export function EvidenceBand() {
         {/* 4-cell grid */}
         <Reveal>
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-3"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
             variants={staggerContainerTight}
             initial="hidden"
             whileInView="visible"
@@ -98,26 +94,10 @@ export function EvidenceBand() {
               <motion.div
                 key={cell.label}
                 variants={fadeUp}
-              className={`
-                p-5 rounded-xl border border-l-[3px] bg-obsidian-800/50
-                ${cell.accent === 'sage'
-                  ? 'border-l-sage-500/50 border-obsidian-500/20'
-                  : 'border-l-oatmeal-400/35 border-obsidian-500/20'
-                }
-              `}
+              className="border-t-2 border-sage-500/60 pt-4 pb-2"
             >
-              <div className={`
-                w-9 h-9 rounded-lg flex items-center justify-center mb-4
-                ${cell.accent === 'sage'
-                  ? 'bg-sage-500/15 text-sage-400'
-                  : 'bg-oatmeal-400/10 text-oatmeal-400'
-                }
-              `}>
-                <BrandIcon name={cell.icon} className="w-4 h-4" />
-              </div>
-
               <p className={`
-                font-mono text-xl font-bold mb-1 tabular-nums
+                font-mono text-3xl font-bold mb-1 tabular-nums
                 ${cell.accent === 'sage' ? 'text-sage-300' : 'text-oatmeal-200'}
               `}>
                 {cell.stat}
@@ -133,7 +113,7 @@ export function EvidenceBand() {
         </Reveal>
 
         {/* CTA */}
-        <Reveal delay={0.08} className="flex justify-center mt-6">
+        <Reveal className="flex justify-center mt-6">
           <Link
             href="/demo"
             className="inline-flex items-center gap-2 font-sans text-sm text-oatmeal-400 hover:text-oatmeal-200 transition-colors group"

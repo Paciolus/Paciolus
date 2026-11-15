@@ -69,7 +69,7 @@ function SegmentedSelector<T extends string>({
   return (
     <div>
       <p id={labelId} className="font-sans text-sm text-oatmeal-400 mb-2">{label}</p>
-      <div className="flex rounded-xl border border-oatmeal-500/20 overflow-hidden" role="radiogroup" aria-labelledby={labelId}>
+      <div className="flex rounded-lg border border-oatmeal-500/20 overflow-hidden" role="radiogroup" aria-labelledby={labelId}>
         {options.map((opt) => (
           <button
             key={opt.value}
@@ -122,7 +122,7 @@ function SeatCalculator({ interval }: { interval: BillingInterval }) {
         const seatRate = interval === 'annual' ? config.seatAnnual : config.seatMonthly
 
         return (
-          <div key={config.label} className="rounded-xl border border-sage-500/30 bg-sage-500/5 p-6">
+          <div key={config.label} className="rounded-lg border border-sage-500/30 bg-sage-500/5 p-6">
             <h3 className="font-serif text-sm text-sage-300 mb-4">{config.label} Seat Calculator</h3>
 
             <div className="flex items-center gap-4 mb-5">
@@ -220,7 +220,7 @@ export default function PricingEstimator({ interval }: { interval: BillingInterv
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
       {/* Left column: Plan Estimator */}
-      <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/40 p-6">
+      <div className="rounded-lg border border-obsidian-500/30 bg-obsidian-800/40 p-6">
         <h3 className="font-serif text-base text-oatmeal-200 mb-6">Find Your Plan</h3>
 
         {/* Persona toggles */}
@@ -230,7 +230,7 @@ export default function PricingEstimator({ interval }: { interval: BillingInterv
               key={persona.key}
               type="button"
               onClick={() => selectPersona(persona)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-sans text-sm transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-sans text-sm transition-colors ${
                 activePersona === persona.key
                   ? 'border-sage-500/50 bg-sage-500/15 text-sage-300'
                   : 'border-obsidian-500/30 bg-obsidian-800/50 text-oatmeal-400 hover:text-oatmeal-200 hover:border-obsidian-400/40'
@@ -283,7 +283,7 @@ export default function PricingEstimator({ interval }: { interval: BillingInterv
       </div>
 
       {/* Right column: Seat Calculator */}
-      <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/40 p-6">
+      <div className="rounded-lg border border-obsidian-500/30 bg-obsidian-800/40 p-6">
         <h3 className="font-serif text-base text-oatmeal-200 mb-2">Seat Calculator</h3>
         <p className="font-sans text-xs text-oatmeal-500 mb-6">
           {getSeatCalculatorDescription()}

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ScanlineOverlay, MechanicalGauge, MarginAnnotation } from '@/components/demo'
+import { MechanicalGauge, MarginAnnotation } from '@/components/demo'
 import { Reveal } from '@/components/ui/Reveal'
 import { TOOL_LEDGER } from '@/content/tool-ledger'
 import { AXIS } from '@/utils/marketingMotion'
@@ -36,11 +36,11 @@ const DEMO_TESTS = [
 
 type DemoTab = 'diagnostics' | 'testing' | 'workspace' | 'reports'
 
-const TABS: Array<{ id: DemoTab; label: string; icon: string }> = [
-  { id: 'diagnostics', label: 'TB Diagnostics', icon: '📊' },
-  { id: 'testing',     label: 'Testing Suite',  icon: '🔍' },
-  { id: 'workspace',  label: 'Workspace',       icon: '📋' },
-  { id: 'reports',    label: 'Sample Reports',  icon: '📄' },
+const TABS: Array<{ id: DemoTab; label: string }> = [
+  { id: 'diagnostics', label: 'TB Diagnostics' },
+  { id: 'testing',     label: 'Testing Suite' },
+  { id: 'workspace',  label: 'Workspace' },
+  { id: 'reports',    label: 'Sample Reports' },
 ]
 
 /* ─── Tab content components ─────────────────────────────── */
@@ -50,7 +50,7 @@ function DiagnosticsTab() {
     // Sprint 707 — scanline overlay sweeps the TB diagnostic block once
     // on tab mount.
     // Reduced-motion skips the sweep; content renders immediately.
-    <ScanlineOverlay>
+    <div>
       <div className="space-y-4">
         <div className="flex items-center gap-3 p-3 rounded-lg bg-sage-500/10 border border-sage-500/20">
           <div className="w-8 h-8 rounded-full bg-sage-500/20 flex items-center justify-center">
@@ -96,7 +96,7 @@ function DiagnosticsTab() {
           </MarginAnnotation>
         </div>
       </div>
-    </ScanlineOverlay>
+    </div>
   )
 }
 
@@ -208,30 +208,25 @@ function ReportsTab() {
             format: 'PDF Memo',
             desc: 'Memo of test results that cites the rule behind each test, for your review.',
             badge: 'PDF',
-            icon: '📄',
           },
           {
             format: 'Excel Workbook',
             desc: 'Multi-sheet workbook with the flagged items, ratio tables and a summary sheet.',
             badge: 'XLS / XLSX',
-            icon: '📊',
           },
           {
             format: 'Diagnostic Package ZIP',
             desc: 'One ZIP per engagement: an anomaly summary PDF, a workpaper index and a file manifest.',
             badge: 'Engagement',
-            icon: '📦',
           },
           {
             format: 'CSV Extract',
             desc: 'Flat file of flagged transactions for use in other software.',
             badge: 'CSV',
-            icon: '📃',
           },
         ].map((item) => (
           <div key={item.format} className="p-4 rounded-lg bg-obsidian-700/50 border border-obsidian-500/30">
             <div className="flex items-start gap-3">
-              <span className="text-xl">{item.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-sans text-sm font-medium text-oatmeal-200">{item.format}</p>
@@ -283,8 +278,8 @@ export function DemoTabExplorer() {
         </span>
       </div>
 
-      {/* Glass container */}
-      <div className="rounded-2xl border border-obsidian-500/30 bg-obsidian-800/60 backdrop-blur-xl overflow-hidden shadow-2xl shadow-obsidian-900/50">
+      {/* Container (Sprint 864: opaque, no glass) */}
+      <div className="rounded-lg border border-obsidian-500/30 bg-obsidian-800 overflow-hidden">
         {/* Tab bar — horizontal scroll on mobile */}
         <div className="flex border-b border-obsidian-500/30 overflow-x-auto scrollbar-none">
           {TABS.map((tab) => (
@@ -297,8 +292,7 @@ export function DemoTabExplorer() {
                   : 'text-oatmeal-500 hover:text-oatmeal-300 hover:bg-obsidian-700/20'
               }`}
             >
-              <span className="text-base" role="img" aria-hidden="true">{tab.icon}</span>
-              <span className="hidden sm:inline whitespace-nowrap">{tab.label}</span>
+              <span className="whitespace-nowrap">{tab.label}</span>
               {activeTab === tab.id && (
                 <motion.div
                   layoutId="demo-tab-indicator"
