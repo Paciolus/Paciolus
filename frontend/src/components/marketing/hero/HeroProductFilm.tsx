@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
@@ -15,7 +16,8 @@ import { useHasMounted, useHeroTelemetry } from './useHeroTelemetry'
  * removed: it showed "3 findings", "17 PDF Memos" and a partial tool grid with
  * struck-out tools, none of which matched the product (CEO decision
  * 2026-11-14 — a claim we cannot prove is removed). A real screenshot made
- * from synthetic data replaces it in Sprint 865; until then the hero is text.
+ * from synthetic data replaces it (Sprint 865): the screenshot is the live app
+ * on a synthetic trial balance, and the figures below it are captioned as such.
  */
 export function HeroScrollSection() {
   const { isAuthenticated } = useAuthSession()
@@ -25,8 +27,8 @@ export function HeroScrollSection() {
 
   return (
     <section className="relative z-10 pt-32 pb-16 px-6" aria-label="Introduction">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] gap-12 items-start">
       <motion.div
-        className="max-w-4xl mx-auto"
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
@@ -87,6 +89,53 @@ export function HeroScrollSection() {
           Free plan needs no card. Paid trials ask for one; no charge for {TRIAL_DAYS} days.
         </motion.p>
       </motion.div>
+
+      <figure className="lg:pt-4">
+        <Image
+          src="/screenshots/tb-flagged-accounts.png"
+          alt="Trial Balance Diagnostics results: a $500 materiality threshold and two flagged accounts, a receivable with a credit balance and an unreconciled suspense balance."
+          width={722}
+          height={564}
+          priority
+          className="w-full h-auto rounded-lg border border-obsidian-500/60"
+        />
+        <figcaption className="mt-3 font-sans text-xs text-oatmeal-500">
+          Trial Balance Diagnostics on a synthetic trial balance: two accounts flagged for review.
+        </figcaption>
+      </figure>
+      </div>
+
+      <div className="max-w-6xl mx-auto mt-20 grid md:grid-cols-2 gap-10">
+        <figure>
+          <Image
+            src="/screenshots/tb-upload-columns.png"
+            alt="Data readiness score of 95 and column detection matching the Account, Debit and Credit columns."
+            width={845}
+            height={395}
+            className="w-full h-auto rounded-lg border border-obsidian-500/60"
+          />
+          <figcaption className="mt-3 font-sans text-xs text-oatmeal-500">
+            <span className="font-mono text-sage-400 mr-2">Fig. 1</span>
+            Before analysis: a data-readiness check and column detection on the uploaded file.
+          </figcaption>
+        </figure>
+        <figure>
+          <Image
+            src="/screenshots/je-memo-proof-summary.png"
+            alt="Page 2 of a Journal Entry Testing memo: scope, proof summary and the tests applied."
+            width={980}
+            height={1268}
+            className="w-full h-auto max-h-[28rem] object-cover object-top rounded-lg border border-obsidian-500/60"
+          />
+          <figcaption className="mt-3 font-sans text-xs text-oatmeal-500">
+            <span className="font-mono text-sage-400 mr-2">Fig. 2</span>
+            A Journal Entry Testing memo in its default layout (sign-off lines are optional, completed by the firm). Synthetic data.{' '}
+            <a href="/samples/paciolus-sample-je-testing-memo.pdf" className="text-sage-400 hover:text-sage-300 underline">
+              Download the sample memo (PDF)
+            </a>
+          </figcaption>
+        </figure>
+      </div>
     </section>
   )
 }

@@ -554,7 +554,7 @@ def compute_tb_diagnostic_score(
     # Minor observations: aggregate (each contributes 2 pts, below named threshold)
     minor_pts = minor_count * 2
     if minor_pts > 0:
-        factors.append((f"Minor observations ({minor_count} findings)", minor_pts))
+        factors.append((f"Minor observations ({minor_count} flagged)", minor_pts))
     score += minor_pts
 
     # Sprint 537: Informational notes — +1 each, capped at 5 (Sprint 538 F-002)

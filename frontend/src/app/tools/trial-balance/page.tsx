@@ -7,7 +7,7 @@ import { EngagementDetailsPanel, MaterialityControl, DEFAULT_ENGAGEMENT_METADATA
 import type { EngagementMetadata } from '@/components/diagnostic'
 import { ColumnMappingModal } from '@/components/mapping'
 import { PreFlightSummary } from '@/components/preflight/PreFlightSummary'
-import { GuestCTA, UnverifiedCTA, DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
+import { GuestCTA, UnverifiedCTA, DisclaimerBox, Citation, CitationFooter , UploadHandlingNotice } from '@/components/shared'
 import { PdfExtractionPreview } from '@/components/shared/PdfExtractionPreview'
 import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import { WorkbookInspector } from '@/components/workbook'
@@ -238,9 +238,7 @@ function HomeContent() {
                 )}
               </div>
 
-              <p className="text-center text-content-tertiary text-xs font-sans mt-4">
-                Your file is processed in memory and not kept after analysis. The summary totals are saved to your history.
-              </p>
+              <UploadHandlingNotice className="mt-4" />
             </section>
 
             {/* Disclaimer — shown after results */}

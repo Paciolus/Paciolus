@@ -201,6 +201,12 @@ function ReportsTab() {
   return (
     <div className="space-y-4">
       <p className="text-oatmeal-500 text-xs font-sans uppercase tracking-wide">Available Export Formats</p>
+      <p className="font-sans text-sm text-oatmeal-300">
+        <a href="/samples/paciolus-sample-je-testing-memo.pdf" className="text-sage-400 hover:text-sage-300 underline">
+          Download a sample Journal Entry Testing memo (PDF)
+        </a>{' '}
+        <span className="text-oatmeal-500">— default layout, synthetic data, marked SAMPLE on every page.</span>
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[

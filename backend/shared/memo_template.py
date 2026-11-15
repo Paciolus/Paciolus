@@ -262,7 +262,7 @@ def generate_testing_memo(
         fmt = format_finding or _default_format_finding
         if top_findings:
             section_label = _roman(section_counter)
-            story.append(Paragraph(f"{section_label}. Key Findings", styles["MemoSection"]))
+            story.append(Paragraph(f"{section_label}. Key Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             # BUG-001 fix: incorporate entity/filename into rotation seed so

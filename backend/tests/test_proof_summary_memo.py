@@ -22,6 +22,7 @@ from shared.memo_template import TestingMemoConfig, generate_testing_memo
 # FIXTURES
 # =============================================================================
 
+
 def _make_styles():
     return create_memo_styles()
 
@@ -45,13 +46,35 @@ def _make_result(
             "flags_by_severity": {"high": 1, "medium": 0, "low": 1},
             "top_findings": [],
         },
-        "test_results": test_results or [
-            {"test_key": "t1", "test_name": "Test 1", "test_tier": "structural",
-             "entries_flagged": 0, "flag_rate": 0.0, "severity": "low", "skipped": False},
-            {"test_key": "t2", "test_name": "Test 2", "test_tier": "statistical",
-             "entries_flagged": 2, "flag_rate": 0.02, "severity": "medium", "skipped": False},
-            {"test_key": "t3", "test_name": "Test 3", "test_tier": "advanced",
-             "entries_flagged": 0, "flag_rate": 0.0, "severity": "low", "skipped": True},
+        "test_results": test_results
+        or [
+            {
+                "test_key": "t1",
+                "test_name": "Test 1",
+                "test_tier": "structural",
+                "entries_flagged": 0,
+                "flag_rate": 0.0,
+                "severity": "low",
+                "skipped": False,
+            },
+            {
+                "test_key": "t2",
+                "test_name": "Test 2",
+                "test_tier": "statistical",
+                "entries_flagged": 2,
+                "flag_rate": 0.02,
+                "severity": "medium",
+                "skipped": False,
+            },
+            {
+                "test_key": "t3",
+                "test_name": "Test 3",
+                "test_tier": "advanced",
+                "entries_flagged": 0,
+                "flag_rate": 0.0,
+                "severity": "low",
+                "skipped": True,
+            },
         ],
         "data_quality": {
             "completeness_score": completeness,
@@ -73,8 +96,10 @@ def _make_config() -> TestingMemoConfig:
         test_descriptions={"t1": "Desc 1", "t2": "Desc 2", "t3": "Desc 3"},
         methodology_intro="Automated tests applied:",
         risk_assessments={
-            "low": "LOW risk.", "elevated": "ELEVATED risk.",
-            "moderate": "MODERATE risk.", "high": "HIGH risk.",
+            "low": "LOW risk.",
+            "elevated": "ELEVATED risk.",
+            "moderate": "MODERATE risk.",
+            "high": "HIGH risk.",
         },
         isa_reference="ISA 999",
     )
@@ -83,6 +108,7 @@ def _make_config() -> TestingMemoConfig:
 # =============================================================================
 # build_proof_summary_section — UNIT
 # =============================================================================
+
 
 class TestBuildProofSummarySection:
     """Unit tests for the proof summary section builder."""
@@ -106,6 +132,7 @@ class TestBuildProofSummarySection:
         # Verify by checking the Table flowable content
         table = None
         from reportlab.platypus import Table as RLTable
+
         for item in story:
             if isinstance(item, RLTable):
                 table = item
@@ -113,8 +140,8 @@ class TestBuildProofSummarySection:
         assert table is not None
         # Table data is stored in _cellvalues
         data = table._cellvalues
-        # Row with "Tests Clear" should have "1"
-        clear_row = [row for row in data if row[0] == "Tests Clear"]
+        # Row with "Tests With No Exceptions Flagged" should have "1" (Sprint 865: never "clear")
+        clear_row = [row for row in data if row[0] == "Tests With No Exceptions Flagged"]
         assert len(clear_row) == 1
         assert clear_row[0][1] == "1"
 
@@ -126,6 +153,7 @@ class TestBuildProofSummarySection:
         build_proof_summary_section(story, styles, 468.0, result)
         # Should still work — just shows 0%
         from reportlab.platypus import Table as RLTable
+
         table = [item for item in story if isinstance(item, RLTable)][0]
         conf_row = [row for row in table._cellvalues if row[0] == "Column Confidence"]
         assert len(conf_row) == 1
@@ -138,6 +166,7 @@ class TestBuildProofSummarySection:
         del result["data_quality"]
         build_proof_summary_section(story, styles, 468.0, result)
         from reportlab.platypus import Table as RLTable
+
         table = [item for item in story if isinstance(item, RLTable)][0]
         comp_row = [row for row in table._cellvalues if row[0] == "Data Completeness"]
         assert comp_row[0][1] == "0%"
@@ -148,6 +177,7 @@ class TestBuildProofSummarySection:
         result = _make_result(tests_run=3, total_flagged=1, test_results=[])
         build_proof_summary_section(story, styles, 468.0, result)
         from reportlab.platypus import Table as RLTable
+
         table = [item for item in story if isinstance(item, RLTable)][0]
         exec_row = [row for row in table._cellvalues if row[0] == "Tests Executed"]
         assert exec_row[0][1] == "3"
@@ -156,6 +186,7 @@ class TestBuildProofSummarySection:
 # =============================================================================
 # INTEGRATION — generate_testing_memo includes proof section
 # =============================================================================
+
 
 class TestProofInMemoTemplate:
     """Verify that generate_testing_memo includes the proof summary section."""
@@ -180,11 +211,13 @@ class TestProofInMemoTemplate:
 # INTEGRATION — bank reconciliation memo
 # =============================================================================
 
+
 class TestProofInBankRecMemo:
     """Verify bank reconciliation memo includes proof summary."""
 
     def test_bank_rec_memo_with_proof(self):
         from bank_reconciliation_memo_generator import generate_bank_rec_memo
+
         rec_result = {
             "summary": {
                 "matched_count": 90,

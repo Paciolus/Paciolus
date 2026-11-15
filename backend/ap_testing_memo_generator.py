@@ -75,7 +75,7 @@ _AP_CONFIG = TestingMemoConfig(
         "moderate": (
             "Based on the automated AP payment testing procedures applied, "
             "the AP payment register returned MODERATE flag density across the automated tests. "
-            "Flagged payments warrant focused review, particularly high-severity findings."
+            "Flagged payments warrant focused review, particularly high-severity items."
         ),
         "high": (
             "Based on the automated AP payment testing procedures applied, "

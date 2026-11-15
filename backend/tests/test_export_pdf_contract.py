@@ -88,7 +88,7 @@ JE_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Journal Entry Testing",  # title / cover page
     "Tier",  # risk-tier verdict ("elevated" / "moderate" / "high" sections)
     "Results",  # summary-of-results section (Sprint 843 — was "Conclusion")
-    "Findings",  # findings table or top-findings section
+    "Items Flagged",  # flagged-items section (Sprint 865: never "Findings")
     "Composite",  # composite score / summary band
 )
 
@@ -135,7 +135,7 @@ AP_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Vendor",  # vendor analysis section
     "Tier",  # risk tier
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 
@@ -160,7 +160,7 @@ PAYROLL_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Employee",  # employee testing section
     "Tier",
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 
@@ -185,7 +185,7 @@ REVENUE_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Contract",  # ASC 606 contract analysis section
     "Tier",
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 
@@ -210,7 +210,7 @@ AR_AGING_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Aging",
     "Tier",
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 
@@ -228,7 +228,7 @@ FIXED_ASSET_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Fixed Asset",
     "Tier",
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 
@@ -246,7 +246,7 @@ INVENTORY_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Inventory",
     "Tier",
     "Results",
-    "Findings",
+    "Items Flagged",
     "Composite",
 )
 

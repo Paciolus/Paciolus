@@ -46,6 +46,17 @@ BANNED: list[tuple[str, str]] = [
     (r"\b(?:clean|unqualified) opinion\b", "opinion language"),
     (r"(?-i:\b(?:PASS|FAIL)(?:ED)?\b)", "a verdict (M2: sampling uses UEL vs TM)"),
     (r"\bis an? (?:pass|fail)\b", "a verdict (M2: sampling uses UEL vs TM)"),
+    # Sprint 865 (CEO rule 2026-11-14: a claim we cannot prove is removed). Every
+    # memo ended with a "Zero-Storage Architecture ... no client financial data is
+    # retained" paragraph that the website had already retired as false.
+    (r"zero[- ]storage", "retired claim: summaries, engagement entries and backups are kept"),
+    (r"not persisted to any storage", "retired claim: see content/storage-statement.ts"),
+    (r"\bnever stored\b", "retired claim: see content/storage-statement.ts"),
+    (r"no client financial data is retained", "retired claim: see content/storage-statement.ts"),
+    (r"diagnostic intelligence", "generic-AI wording (WEBSITE_REVIEW.md G-10)"),
+    (r"\btests clear\b", "a 'clean' verdict; say 'no exceptions flagged'"),
+    (r"\bfindings\b", "results are flags for review, not findings"),
+    ("®", "the registered-trademark sign asserts a registration we have not confirmed"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]
 
@@ -127,7 +138,12 @@ def _string_literals(path: Path) -> list[tuple[int, str]]:
     return [
         (node.lineno, node.value)
         for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+        # Sprint 865: a bare identifier ("findings", "top_findings") is a data
+        # key, never rendered text.
+        and not re.fullmatch(r"[a-z_]+", node.value)
     ]
 
 

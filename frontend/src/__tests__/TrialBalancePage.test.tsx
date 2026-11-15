@@ -54,6 +54,7 @@ jest.mock('@/components/shared', () => ({
   DisclaimerBox: ({ children }: any) => <div data-testid="disclaimer-box">{children}</div>,
   Citation: ({ code }: any) => <span data-testid="citation">{code}</span>,
   CitationFooter: () => <div data-testid="citation-footer">Citations</div>,
+  UploadHandlingNotice: () => <div data-testid="upload-handling-notice">Your uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and anything you enter in an engagement.</div>,
 }))
 jest.mock('@/components/shared/PdfExtractionPreview', () => ({
   PdfExtractionPreview: () => null,

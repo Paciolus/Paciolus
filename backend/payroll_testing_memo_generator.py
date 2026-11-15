@@ -244,7 +244,7 @@ def _build_headcount_rollforward(
             Paragraph(
                 f"<i>Note: {abs(variance)}-employee variance between computed ending headcount "
                 f"and final pay period register count under investigation \u2014 see Ghost "
-                "Employee Indicators finding.</i>",
+                "Employee Indicators test.</i>",
                 styles["MemoBodySmall"],
             )
         )
