@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AUTHORITIES, authorityForCode } from '@/content/authorities'
 import { METHODOLOGY_SOURCES, type SourceKind } from '@/content/methodology-sources'
+import { TOOL_IO } from '@/content/tool-io'
+import { TOOL_LEDGER } from '@/content/tool-ledger'
 
 /**
  * Sources & Methodology — Sprint 835.
@@ -142,6 +144,44 @@ export default function SourcesPage() {
               </li>
             ))}
           </ul>
+        </section>
+
+        <section className="mb-16" aria-labelledby="io-heading">
+          <h2 id="io-heading" className="font-serif text-2xl text-oatmeal-100 mb-2">
+            What each tool takes, does and gives
+          </h2>
+          <p className="font-sans text-sm text-oatmeal-400 mb-6">
+            What you provide, what Paciolus computes, and the files you get back. The conclusions are yours.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-obsidian-500">
+                  <th className="font-serif font-normal text-oatmeal-100 py-2 pr-4 align-bottom">Tool</th>
+                  <th className="font-serif font-normal text-oatmeal-100 py-2 pr-4 align-bottom">You provide</th>
+                  <th className="font-serif font-normal text-oatmeal-100 py-2 pr-4 align-bottom">Paciolus</th>
+                  <th className="font-serif font-normal text-oatmeal-100 py-2 align-bottom">You get</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TOOL_LEDGER.map(tool => {
+                  const io = TOOL_IO.find(row => row.id === tool.id)
+                  if (!io) return null
+                  return (
+                    <tr key={tool.id} className="border-b border-obsidian-700 align-top">
+                      <td className="py-3 pr-4 font-serif text-oatmeal-100 whitespace-nowrap">
+                        <span className="font-mono text-xs text-sage-400 tabular-nums mr-2">{tool.number}.</span>
+                        {tool.name}
+                      </td>
+                      <td className="py-3 pr-4 font-sans text-oatmeal-300">{io.input}</td>
+                      <td className="py-3 pr-4 font-sans text-oatmeal-300">{io.does}</td>
+                      <td className="py-3 font-sans text-oatmeal-300">{io.outputs}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section aria-labelledby="tools-heading">

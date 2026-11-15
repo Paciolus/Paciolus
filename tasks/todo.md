@@ -140,9 +140,7 @@
 > - [x] **Sprint 861** — remove claims we cannot prove (copy + small components, all surfaces incl. the app). COMPLETE 2026-11-14.
 > - [x] **Sprint 862** — publish the compliance documents and rebuild the Trust page's proof. COMPLETE 2026-11-14.
 > - [~] **Sprint 863** — counsel draft DONE (`counsel-redline-863`, `reports/counsel-note-2026-11-14.md`); **waiting on CEO + counsel.**
-> - [ ] **Open from the website review (not yet filed as a sprint):** S-04, a per-tool table — input file and columns · what
->       Paciolus does (tests, by number) · what you get (memo sections, Excel tabs) — on `/sources` or a new page.
->       Sprint 864 only reshaped the card rows; it did not build this. Each row must be checked against the code.
+> - [x] **Sprint 866** — per-tool "takes, does, gives" table on `/sources` (WEBSITE_REVIEW.md S-04). COMPLETE 2026-11-15.
 > - [ ] **Sprint 865** — product screenshots and downloadable samples. **BLOCKED on the CEO signing in once** in the Chrome Claude uses (CEO approved production 2026-11-15; Claude cannot enter passwords).
 > - [x] **Sprint 864** — strip the decorative layer (glows, glass, stock photos, parallax, count-ups). COMPLETE 2026-11-15.
 >
@@ -566,6 +564,22 @@ shorten backup retention.** DPA left unchanged pending that decision.
 - [ ] Downloadable sample JE Testing memo (PDF) and sample workpaper (XLSX), "SAMPLE — synthetic data" on every page.
 - [ ] Tools without synthetic generators (Sprint 823: 7 of 18) are screenshotted only once a generator exists — no
       hand-made fake data.
+
+**Commit SHA:** TBD.
+
+### Sprint 866: What each tool takes, does and gives
+**Status:** COMPLETE 2026-11-15. **Source:** WEBSITE_REVIEW.md S-04 (left open by Sprint 864). **Owner:** C.
+
+- [x] `frontend/src/content/tool-io.ts`: one row per tool — what you provide, what Paciolus computes, what you get —
+      each established from the code (evidence comment per row; research by a background agent with file:line
+      citations, then spot-checked: JE minimum entries `je_testing/analysis.py:105`, revenue contract tests skipped
+      without contract columns `revenue_testing/analysis.py:1847`).
+- [x] Rendered on `/sources` above "Tool by tool"; `__tests__/ToolIO.test.ts` fails if a tool lacks a row or a stated
+      test count drifts from the catalog.
+- **Facts surfaced:** six tools (SoD, Intercompany, W-2, 1099, Book-to-Tax, Cash Flow Projector) have no PDF memo
+  and no Excel export — CSV only; the table says so. No customer-facing copy claimed otherwise (checked). The backend
+  accepts 11 upload formats (adds DOCX) where the site says ten — an understatement, left as is. `CLAUDE.md`'s
+  "18 memo PDFs" is an internal count, not customer-facing.
 
 **Commit SHA:** TBD.
 
