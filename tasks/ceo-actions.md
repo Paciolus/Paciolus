@@ -30,6 +30,8 @@ Three gates left between here and announcement. The code is launch-ready; the ga
 2. **[Phase 4.1](#41-stripe-production-cutover) + [4.2](#42-legal--policy-placeholders) — Stripe live cutover + legal placeholders (CEO + counsel).** Stripe live keys on Render/Vercel, real-money smoke test, legal counsel sign-off on Terms + Privacy.
 3. **[Phase 4.3](#43-custom-domain)–[4.5](#45-go-live-smoke-test) — Domain, backups, go-live (CEO provides creds, I run backups setup).** Custom domain + DNS, pg_dump cron to `paciolus-backups`, 24h go-live monitor, launch announcement.
 
+**Website claims (2026-11-14):** when Sprint 863's counsel draft is ready, send it with the Terms + Privacy package above — it corrects "not written to disk", the 24 h / 48 h share-link split, "encrypted", summary retention and the preview-cache scope in the Privacy Policy, Terms and Security Policy. Nothing merges without counsel sign-off. See `tasks/todo.md` Sprint 863.
+
 **DMARC tightening** (non-blocking): move `_dmarc.paciolus.com` from `p=none` to `p=quarantine` ~2 weeks after the first real-money Stripe transaction confirms deliverability holds. I'll flag.
 
 ---
