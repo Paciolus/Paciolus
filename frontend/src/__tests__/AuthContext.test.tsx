@@ -128,6 +128,23 @@ describe('useAuth', () => {
     expect(result.current.user).toBeNull()
   })
 
+  it('stops loading when the silent refresh hits a network error (no infinite spinner)', async () => {
+    // 2026-11-15: a refresh that failed at the network level (offline, proxy,
+    // CORS) left isLoading true, so every authenticated page spun forever
+    // instead of redirecting to /login.
+    const originalFetch = global.fetch
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+    expect(result.current.isAuthenticated).toBe(false)
+
+    global.fetch = originalFetch
+  })
+
   it('updateProfile returns error when not authenticated', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
