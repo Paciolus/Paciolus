@@ -643,7 +643,7 @@ Cash Flow Projector deliverables:
 Marketing flip ("12 → 18 tools"):
 - [x] `backend/shared/entitlements.py` — `CANONICAL_TOOL_COUNT: 12 → 18`; docstring + `tools_allowed` comments updated.
 - [x] Bulk `sed` across **34 live files**: frontend marketing components (BottomProof, EvidenceBand, EngravedStat, ProofStrip, ToolLedger, ToolShowcase, ToolSlideshow, MarketingFooter), pricing / about / demo / terms / register pages, shared UI (UpgradeGate, FeatureGate, GuestCTA, WelcomeModal, UpgradeModal), workspace progress indicator, `domain/pricing.ts`, `commandRegistry.ts`, and 5 test files (EngravedStat, EntitlementParity, EvidenceBand, PricingPage, ProofStrip) that assert on the live copy.
-- [x] Docs: `CLAUDE.md` (current-state line 140), `AGENTS.md` (tool list expanded with all 7 promoted tools + sprint 689 note), `docs/02-technical/ARCHITECTURE.md`, `docs/04-compliance/ACCESS_CONTROL_POLICY.md` + `TERMS_OF_SERVICE.md`, `docs/07-user-facing/USER_GUIDE.md`, `features/status.json`, `tasks/pricing-launch-qa.md`.
+- [x] Docs: `CLAUDE.md` (current-state line 140), `AGENTS.md` (tool list expanded with all 7 promoted tools + sprint 689 note), `docs/02-technical/ARCHITECTURE.md`, `docs/04-compliance/ACCESS_CONTROL_POLICY.md` + `TERMS_OF_SERVICE.md`, `docs/07-user-facing/USER_GUIDE.md`, `features/status.json`, `tasks/archive/pricing-launch-qa.md`.
 - [x] Historical rows preserved: `CLAUDE.md:111` (v1.5.0 era) restored to `12 tools, v1.5.0` after sed flipped it by mistake; archive files, `reports/`, and the `website-usability-analysis.md` snapshot all left untouched (point-in-time records). `backend/tests/test_tool_anomaly_detection.py` line 7 left at "113 generators across 12 tools" — that count refers to anomaly generators, not catalog tools, and the 7 promoted tools do not add generators.
 
 Validation (applies to all 689a–g cumulatively):
@@ -685,7 +685,7 @@ Implementation notes:
 - The portal-URL fallback to `/settings/billing` is deliberate — if Stripe's portal session creation fails (billing portal config missing, customer ID stale), we still want the CTA to land somewhere useful; the in-app settings page always works for authenticated users.
 - Commit SHA: `674c63c` (bundle commit covering Sprints 680/686/687/690/694).
 - [ ] Add a unit test (mock SendGrid) that verifies the send call + args; add an integration test that runs the webhook handler end-to-end.
-- [ ] Update `tasks/pricing-launch-readiness.md:48` acceptance note — trial email no longer deferred.
+- [ ] Update `tasks/archive/pricing-launch-readiness.md:48` acceptance note — trial email no longer deferred.
 
 ---
 
@@ -715,7 +715,7 @@ H-07 enum-collapse piece **rejected as obsolete**. H-08 seat-counting audit kept
 - [x] **Multi-org concern dismissed.** `OrganizationMember.user_id` has a UNIQUE constraint (`organization_model.py:108`) — a user can belong to at most one org, so "multi-org member" double-counting is architecturally impossible.
 - [x] **Terminated-user concern dismissed.** `OrganizationMember` has no soft-delete column; removal is a row delete. Counting `COUNT(*)` automatically excludes terminated users.
 - [x] **Enterprise seat-hit status code — documented as 403, not 402.** Sprint brief mentioned 402; reality (verified by `test_at_limit_raises_403`) is 403 `TIER_LIMIT_EXCEEDED` with `upgrade_url=/pricing` in the detail body. This is more semantically accurate (seat-limit exceeded is a forbidden-action, not a payment-required gating). Frontend UpgradeModal keyed off the `code` field, not the HTTP status.
-- [x] **`tasks/pricing-launch-readiness.md` reconciled** with current state:
+- [x] **`tasks/archive/pricing-launch-readiness.md` reconciled** with current state:
   - Limitation row 1 (Professional deprecated) — CLEARED as obsolete.
   - Limitation row 2 (trial expiry email) — CLEARED per Sprint 690.
   - Limitation row 3 (team member counting placeholder) — CLEARED per this sprint; test matrix cited.

@@ -195,5 +195,5 @@ default. Phase 3's exit-code flip is what stops the drift.
   pattern (Sprint 519).
 - `scripts/lint_engine_base_adoption.py` — the Phase 1 advisory lint.
 - `backend/tests/test_engine_base_lint.py` — lint script tests.
-- `tasks/sprint-plan-agent-sweep-2026-04-24.md` — the multi-sprint plan
+- `tasks/archive/sprint-plan-agent-sweep-2026-04-24.md` — the multi-sprint plan
   this ADR codifies.

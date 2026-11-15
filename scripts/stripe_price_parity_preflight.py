@@ -7,7 +7,7 @@ intends and the pricing page displays.
 **Why this exists.** `backend/billing/price_config.py` holds the canonical amounts and
 `tests/test_pricing_launch_validation.py` carries ~20 assertions over them — but those
 assertions only check the table *against itself*. Nothing had ever fetched a Stripe Price
-object. And the mismatch is not hypothetical: `tasks/pricing-launch-readiness.md` records
+object. And the mismatch is not hypothetical: `tasks/archive/pricing-launch-readiness.md` records
 that Stripe **test mode is still at the v2 price list** (Solo $50 against code and page
 $100) and is treated as abandoned. So displayed and charged price already disagree in the
 only environment where billing has ever run, and live mode is to be built fresh — meaning

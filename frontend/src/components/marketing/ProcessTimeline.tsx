@@ -3,7 +3,7 @@
  *
  * Three numbered steps on hairline rules. The icon tiles, glow shadows,
  * spin-in number badges, count-ups and drawn connector lines were removed
- * (WEBSITE_REVIEW.md G-02, G-06, G-07); the step numbers are static.
+ * (reports/website-review-2026-11-14.md G-02, G-06, G-07); the step numbers are static.
  */
 
 interface ProcessStep {

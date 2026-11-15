@@ -53,7 +53,7 @@ BANNED: list[tuple[str, str]] = [
     (r"not persisted to any storage", "retired claim: see content/storage-statement.ts"),
     (r"\bnever stored\b", "retired claim: see content/storage-statement.ts"),
     (r"no client financial data is retained", "retired claim: see content/storage-statement.ts"),
-    (r"diagnostic intelligence", "generic-AI wording (WEBSITE_REVIEW.md G-10)"),
+    (r"diagnostic intelligence", "generic-AI wording (reports/website-review-2026-11-14.md G-10)"),
     (r"\btests clear\b", "a 'clean' verdict; say 'no exceptions flagged'"),
     (r"\bfindings\b", "results are flags for review, not findings"),
     ("®", "the registered-trademark sign asserts a registration we have not confirmed"),

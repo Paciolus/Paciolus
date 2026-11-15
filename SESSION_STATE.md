@@ -6,41 +6,43 @@ _Format rule (Sprint 857, enforced in CI by `scripts/check_state_docs.py`): keep
 ``**Main SHA:** `<short sha>` `` naming the current `origin/main` commit (`git rev-parse --short origin/main`). It
 must be an ancestor of HEAD. Refresh it after every merge._
 
-**Main SHA:** `1435b0e4`
+**Main SHA:** `075a35e9`
 
 ## START HERE — what the next session should pick up
 
-**1. Work the 2026-10-28 action plan** — the "START HERE — ACTION PLAN 2026-10-28" block at the top of
-`## Active Phase` in `tasks/todo.md`. It was built from an 8-agent assessment (mean ~6/10: engineering strong,
-commercial side unstarted) and ratified by council majority vote. Order: Phase 0 state + alarms (Sprint 854) →
-Phase 1 buyer-facing truth (#235 → #236 → #237, Sprint 855 = old PR #254, Sprint 856) → Phase 2 backup (778b,
-**gates the first live checkout**) → Phase 3 Solo-only Stripe live (Sprint 858, then Phase 4.1) → Phase 4 firm
-tier (853). A **freeze** applies to every other refactor/feature sprint until Sprint 781 reports or 30 days after
-Phase 3, whichever is first.
+**1. The START HERE block at the top of `## Active Phase` in `tasks/todo.md`** (rewritten 2026-11-15). Launch is
+**2026-12-15**. P0 in order: Sprint 870 (rate limits never fire in production, #274) → Sprint 868 / Phase 4.3
+(`api.paciolus.com`; sessions die every 15 min in browsers that don't send the cross-site refresh cookie) →
+Sprint 867 (balance sheet "out of balance" on pre-closing TBs) → Sprint 871 (Stripe dispute webhooks, #273) →
+Sprint 860 (annual tax tables + CEO sign-off) → Phase 4.1 Stripe live (Solo). The freeze still applies to other
+refactor/feature work.
 
-**2. CEO track (parallel, blocks named items):** `waitlist_signups` count + 3 unguided CPA sessions by
-2026-11-07 (Sprint 781); `RENDER_API_KEY` repo secret; R2 backups token + Neon connection string (778b); refund
-policy, legal entity, repo visibility; custom domain `api.paciolus.com` (before Stripe); confirm or decline the
-council's counsel-timing recommendation (Q4); ISA 315 citation (H12).
+**2. Standing rule (CEO, 2026-11-14):** a claim we cannot prove from the code or a published document is removed,
+not reworded. Approved storage wording lives in `frontend/src/content/storage-statement.ts`; guards are
+`test_marketing_claims.py`, `test_memo_banned_phrases.py`, `test_storage_claims.py`.
 
-**3. Production.** `main` is `1435b0e4` and live on Render — deploy `dep-dbh0plavcj2c73e057bg` verified
-2026-10-28 (workspace `tea-d6ie7bngi27c738fa2ag`, service `srv-d6ie9l56ubrc73c7eq2g`; pass `workspaceId` to the
-Render MCP). `/health/ready` healthy (database + rate-limit storage).
+**3. Waiting on the CEO:** counsel sign-off on branch `counsel-redline-863` (do not merge before); backup retention
+vs the draft DPA's 30-day promise; confirm the four `R2_EXPORTS_*` env vars on Render; Sprint 781 demand validation.
 
-## This Session — 2026-10-28, council assessment → action plan
+**4. Production.** `main` `075a35e9` is live on Render (deploy `dep-dbt1semq1p3s73fd48pg`, verified 2026-11-15) and
+Vercel (status `success` on the commit). Render workspace `tea-d6ie7bngi27c738fa2ag`, service
+`srv-d6ie9l56ubrc73c7eq2g` — pass `workspaceId` to the Render MCP.
 
-- Ran all 8 agent personas; synthesised; drafted a plan; all 8 reviewed it and voted (7 questions; 21 of 23
-  amendments adopted). Plan written into `tasks/todo.md`, Sprints 854–858 filed.
-- The 2026-10-28 nightly was RED because `backend/venv` lagged `requirements.txt` (FastAPI 0.136 vs 0.162 →
-  99 collection errors). Shared venv re-synced from `requirements-dev.txt`; 10,297 tests collect. Sprint 854
-  makes the orchestrator self-heal.
-- Archived Sprints 813 and 848 (merged in `1435b0e4`); fixed `.claude/agents/designer.md` (asked for Inter /
-  navy / slate); CLAUDE.md phase table extended.
+## This Session — 2026-11-14/15, website claims review → Sprints 861–866
+
+- `reports/website-review-2026-11-14.md`: review of the marketing site and app wording; CEO approved every recommendation.
+- Merged: #313 (auth spinner fix) and #314 (Sprints 861–866: claims removed, compliance documents published at
+  `/security`, `/subprocessors`, `/data-handling`, backups disclosed, decorative layer removed, per-tool table on `/sources`).
+- Sprint 865 (screenshots, sample memo, false "Zero-Storage" paragraph removed from every memo PDF) and the
+  `tasks/` cleanup are on the open PR after #314.
+- `tasks/todo.md` and `tasks/lessons.md` cut to the open work and the standing rules; everything moved is in
+  `tasks/archive/` verbatim.
 
 ## Verification
 
-**Backend tests:** 10,297 collected on `main` 2026-10-28; 0 failed in the 2026-10-27 nightly.
-**Frontend tests:** 0 failed in the 2026-10-27 nightly (count in `CLAUDE.md`, Completed Phases).
+**Backend tests:** 10,634 collected 2026-11-15; the only local failure, `test_sprint819_route_snapshots::
+test_engagement_export_routes_unchanged` (`content_encoding` gzip vs null), is local-only and passes in CI.
+**Frontend tests:** all passing 2026-11-15 (count in `CLAUDE.md`, Completed Phases).
 
 ## Environment notes
 

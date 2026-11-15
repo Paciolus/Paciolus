@@ -1,7 +1,7 @@
 import { SHARE_RETENTION } from '@/content/storage-statement'
 
 /**
- * DataFlowDiagram — Sprint 862 (WEBSITE_REVIEW.md S-02).
+ * DataFlowDiagram — Sprint 862 (reports/website-review-2026-11-14.md S-02).
  *
  * The two paths customer data can take, drawn as numbered stages with hairline
  * arrows so a reader can cite them ("stage B2"). Static: no motion, no glow.

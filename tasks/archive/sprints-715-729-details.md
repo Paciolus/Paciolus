@@ -5,7 +5,7 @@
 ---
 
 ### Sprint 728: ISA 520 Expectation-Formation Workflow (parent — 728a/b/c)
-**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/sprint-plan-728-729.md`.
+**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/archive/sprint-plan-728-729.md`.
 **Priority:** P3 (post-launch product gap; differentiator).
 **Source:** Agent sweep 2026-04-24, punch list 4.1 + Accounting Methodology Audit.
 
@@ -60,7 +60,7 @@ Architecture decision (CEO-confirmed 2026-04-26): **snapshot model.** New entity
 ---
 
 ### Sprint 729: ISA 450 SUM Schedule (parent — 729a/b/c)
-**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/sprint-plan-728-729.md`.
+**Status:** COMPLETE 2026-04-26 — all three sub-sprints landed atomically per the CEO-approved plan `tasks/archive/sprint-plan-728-729.md`.
 **Priority:** P3 (post-launch product gap; differentiator).
 **Source:** Agent sweep 2026-04-24, punch list 4.2 + Accounting Methodology Audit.
 

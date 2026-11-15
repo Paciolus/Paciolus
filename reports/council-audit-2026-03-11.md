@@ -231,7 +231,7 @@ Files Changed Since Last Audit: 172 (across 24 commits, Sprints 516–530 + hotf
   - `.github/workflows/ci.yml:96` — `pytest tests/ -v --tb=short -q --cov=. --cov-report=term-missing` runs with coverage measurement but no minimum threshold.
   - `pytest-cov>=6.0.0` correctly added to `backend/requirements-dev.txt`.
   - DEC 2026-03-08 F-007 repair prompt explicitly said: "Do NOT add `--cov-fail-under` yet (establish baseline first)."
-  - Baseline has now been established (92.8% per `tasks/usage-metrics-review.md`).
+  - Baseline has now been established (92.8% per `tasks/archive/usage-metrics-review.md`).
 - **Impact**: Coverage can silently regress without CI failure. New features can ship with zero test coverage undetected.
 - **Recommendation**: Add `--cov-fail-under=60` to the pytest CI invocation now that baseline is established.
 - **Primary Agent**: Verification Marshal (I)

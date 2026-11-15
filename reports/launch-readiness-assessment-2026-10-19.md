@@ -96,7 +96,7 @@ The canonical table in `backend/billing/price_config.py` holds correct current p
 
 **But those assertions only check the table against itself.** No `stripe.` call, no `unit_amount` retrieval — nothing confirms the amount a customer is charged matches the amount the product intends and the page displays.
 
-Not hypothetical: `tasks/pricing-launch-readiness.md:105` records that Stripe **test mode is still at v2 prices** (Solo $50 vs code/page $100) and is "treated as abandoned". So displayed and charged price already disagree in the only environment where billing has ever run. Live mode is to be built fresh — meaning **the first real card is also the first end-to-end test of current pricing**.
+Not hypothetical: `tasks/archive/pricing-launch-readiness.md:105` records that Stripe **test mode is still at v2 prices** (Solo $50 vs code/page $100) and is "treated as abandoned". So displayed and charged price already disagree in the only environment where billing has ever run. Live mode is to be built fresh — meaning **the first real card is also the first end-to-end test of current pricing**.
 
 **Fix (~1h, before cutover):** a preflight that reads every `STRIPE_PRICE_*` object and asserts `unit_amount == TIER_PRICES[tier][interval]`, failing loudly on mismatch. Converts a silent mispricing risk into a startup error.
 
