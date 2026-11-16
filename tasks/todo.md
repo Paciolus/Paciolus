@@ -147,6 +147,25 @@ enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` bill
 
 **Commit SHA:** TBD.
 
+### Sprint 873: Coverage observations listed as "Material Risks"
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P1 (a CPA sees warning
+icons on non-anomalies on the first TB; carried from Sprint 856's browser pass). **Agents:** Executor, Critic.
+**Found:** Sprint 856's open item "TB 'Material Risks (9)' lists 5 'coverage observation, not an anomaly' rows with
+clay warning icons". Root cause is one layer down: concentration rows carry `coverage_analysis: True` (Sprint 668),
+but `AbnormalBalanceResponse` did not declare the field and uses `extra="ignore"`, so **every API response stripped
+it**. The app could not tell them apart, and the TB PDF — built from the app's payload — has never received the flag,
+so its Sprint 668 "Materiality Coverage Analysis" split could not fire from the product.
+
+- [x] `shared/diagnostic_response_schemas.py`: `coverage_analysis: Optional[bool]` declared; OpenAPI snapshot
+      regenerated (+1 optional field). `test_coverage_flag_in_response.py`: a route-level upload keeps the flag on
+      concentration rows and only there — fails on the old schema.
+- [x] `RiskDashboard`: coverage rows go to Informational Notes, not Material Risks. `RiskDashboardCoverageRows.test.tsx`
+      (2) fails on the old component.
+- [ ] **After merge:** on production, a TB with a dominant revenue account shows the concentration row under
+      Informational Notes, and the TB PDF shows "Materiality Coverage Analysis".
+
+**Commit SHA:** TBD.
+
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
 **Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 

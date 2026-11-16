@@ -87,6 +87,12 @@ export interface AbnormalBalanceExtended {
   severity?: Severity;
   // Sprint 31: Classification Intelligence suggestions
   suggestions?: ClassificationSuggestion[];
+  /**
+   * Sprint 873: concentration rows (`audit/rules/concentration.py`) are materiality
+   * coverage context — "coverage observation, not an anomaly" — and are excluded
+   * from risk scoring by the backend.
+   */
+  coverage_analysis?: boolean;
 }
 
 // Risk summary from API (Day 10, fixed Sprint 225: added medium_severity)
