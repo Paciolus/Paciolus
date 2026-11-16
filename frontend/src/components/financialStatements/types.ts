@@ -39,6 +39,8 @@ export interface StatementTotals {
   totalAssets: number
   totalLiabilities: number
   totalEquity: number
+  /** Sprint 867: current-period earnings presented in equity (0 when books are closed). */
+  unclosedEarnings: number
   isBalanced: boolean
   balanceDifference: number
   totalRevenue: number

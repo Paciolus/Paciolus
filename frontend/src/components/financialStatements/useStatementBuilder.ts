@@ -14,6 +14,34 @@ function getBalance(summaries: LeadSheetSummary[], letter: string): number {
   return summary?.net_balance ?? 0
 }
 
+/** Sprint 867: label of the balance-sheet equity line for a pre-closing TB's period result. */
+export const UNCLOSED_EARNINGS_LABEL = 'Current-Period Earnings (Not Yet Closed)'
+
+const BALANCE_TOLERANCE = 0.01
+
+/**
+ * Current-period earnings still open on the TB, i.e. not yet closed into equity.
+ *
+ * Mirrors the backend's shared rule (`ratio_engine.unclosed_earnings_adjustment`),
+ * which the ratios, the Key Metrics disclosure and the exported statements use:
+ * none when income-statement balances net to zero; none when the equity accounts
+ * already balance the sheet without them (earnings already closed); otherwise the
+ * period's net income. On a TB whose debits equal its credits, assets less
+ * liabilities less the equity accounts equals open net income exactly, so a
+ * balanced pre-closing TB balances once this line is added.
+ */
+export function unclosedEarnings(
+  totalAssets: number,
+  totalLiabilities: number,
+  equityAccounts: number,
+  netIncome: number,
+): number {
+  if (netIncome === 0) return 0
+  const gapWithoutEarnings = totalAssets - totalLiabilities - equityAccounts
+  if (Math.abs(gapWithoutEarnings) < BALANCE_TOLERANCE) return 0
+  return netIncome
+}
+
 function buildStatements(grouping: LeadSheetGrouping): {
   balanceSheet: StatementLineItem[]
   incomeStatement: StatementLineItem[]
@@ -73,8 +101,16 @@ function buildStatements(grouping: LeadSheetGrouping): {
   const totalLiabilities = totalCurrentLiabilities + totalNoncurrentLiabilities
   balanceSheet.push({ label: 'Total Liabilities', amount: totalLiabilities, indentLevel: 0, isSubtotal: true, isTotal: false, leadSheetRef: '' })
 
-  const equity = -bal('K')
-  balanceSheet.push({ label: "Stockholders' Equity", amount: equity, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: 'K' })
+  const equityAccounts = -bal('K')
+  balanceSheet.push({ label: "Stockholders' Equity", amount: equityAccounts, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: 'K' })
+
+  // Sprint 867: the period's result, when revenue and expenses are still open.
+  const openNetIncome = -bal('L') - bal('M') - bal('N') - bal('O')
+  const unclosed = unclosedEarnings(totalAssets, totalLiabilities, equityAccounts, openNetIncome)
+  if (Math.abs(unclosed) >= BALANCE_TOLERANCE) {
+    balanceSheet.push({ label: UNCLOSED_EARNINGS_LABEL, amount: unclosed, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: '' })
+  }
+  const equity = equityAccounts + unclosed
 
   const totalLE = totalLiabilities + equity
   balanceSheet.push({ label: 'TOTAL LIABILITIES & EQUITY', amount: totalLE, indentLevel: 0, isSubtotal: false, isTotal: true, leadSheetRef: '' })
@@ -114,6 +150,7 @@ function buildStatements(grouping: LeadSheetGrouping): {
       totalAssets,
       totalLiabilities,
       totalEquity: equity,
+      unclosedEarnings: unclosed,
       isBalanced,
       balanceDifference,
       totalRevenue: revenue,

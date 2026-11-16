@@ -29,6 +29,7 @@ Sign Conventions:
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -259,6 +260,10 @@ class EquityActivity:
     dividends: float = 0.0
 
 
+# Sprint 867: the balance-sheet equity line for a pre-closing TB's period result.
+UNCLOSED_EARNINGS_LABEL = "Current-Period Earnings (Not Yet Closed)"
+
+
 @dataclass
 class FinancialStatements:
     """Complete financial statements built from lead sheet groupings."""
@@ -418,6 +423,28 @@ class FinancialStatementBuilder:
         """Get prior period net_balance for a lead sheet letter, 0.0 if missing."""
         return self._prior_balance_map.get(letter, 0.0)
 
+    def _unclosed_earnings(self, balance: "Callable[[str], float]") -> float:
+        """Current-period earnings still open on the TB, i.e. not yet in equity.
+
+        Sprint 867: a pre-closing TB carries the period's revenue and expenses
+        on lead sheets L-O, so the equity accounts on K exclude the period's
+        result and a balanced TB showed "OUT OF BALANCE" by exactly its net
+        income. A balance sheet presents equity including the period's result,
+        so the statement adds it as its own equity line. Which TBs count as
+        "unclosed" is the shared rule the ratios and the Key Metrics
+        disclosure already use (``ratio_engine.unclosed_earnings_adjustment``):
+        none when income-statement balances are zero, none when equity already
+        balances the sheet without them (earnings already closed), otherwise
+        the period's net income.
+        """
+        from ratio_engine import unclosed_earnings_adjustment
+
+        assets = sum(balance(ls) for ls in ["A", "B", "C", "D", "E", "F"])
+        liabilities = sum(-balance(ls) for ls in ["G", "H", "I", "J"])
+        equity_accounts = -balance("K")
+        net_income = -balance("L") - balance("M") - balance("N") - balance("O")
+        return float(unclosed_earnings_adjustment(assets, liabilities, equity_accounts, net_income))
+
     def build(self) -> FinancialStatements:
         """Build complete financial statements."""
         balance_sheet = self._build_balance_sheet()
@@ -434,8 +461,11 @@ class FinancialStatementBuilder:
         noncurrent_liabilities = sum(-self._get_lead_sheet_balance(ls) for ls in ["I", "J"])
         total_liabilities = current_liabilities + noncurrent_liabilities
 
-        # Equity: K, negative net_balance → flip sign
-        total_equity = -self._get_lead_sheet_balance("K")
+        # Equity: K, negative net_balance → flip sign, plus current-period
+        # earnings not yet closed to retained earnings (Sprint 867).
+        equity_accounts = -self._get_lead_sheet_balance("K")
+        unclosed_earnings = self._unclosed_earnings(self._get_lead_sheet_balance)
+        total_equity = equity_accounts + unclosed_earnings
 
         # Balance check
         balance_difference = total_assets - (total_liabilities + total_equity)
@@ -470,7 +500,7 @@ class FinancialStatementBuilder:
             prior_cl = sum(-self._get_prior_balance(ls) for ls in ["G", "H"])
             prior_ncl = sum(-self._get_prior_balance(ls) for ls in ["I", "J"])
             prior_total_liabilities = prior_cl + prior_ncl
-            prior_total_equity = -self._get_prior_balance("K")
+            prior_total_equity = -self._get_prior_balance("K") + self._unclosed_earnings(self._get_prior_balance)
             prior_total_revenue = -self._get_prior_balance("L")
             prior_cogs = self._get_prior_balance("M")
             prior_gross_profit = prior_total_revenue - prior_cogs
@@ -483,22 +513,32 @@ class FinancialStatementBuilder:
         cash_flow = self._build_cash_flow_statement(net_income)
 
         # Statement of Changes in Equity (Sprint 638)
-        soce = self._build_soce(net_income, total_equity, prior_total_equity)
+        # Sprint 867: on a pre-closing TB the period's result is part of
+        # retained earnings' ending balance, so the rollforward reconciles and
+        # its ending equity equals the balance sheet's.
+        prior_unclosed = self._unclosed_earnings(self._get_prior_balance) if has_prior else 0.0
+        soce = self._build_soce(
+            net_income,
+            total_equity,
+            prior_total_equity,
+            unclosed_earnings=unclosed_earnings,
+            prior_unclosed_earnings=prior_unclosed,
+        )
 
         # Sprint 535 P2-3: Detect pre-closing TB imbalance
         # In a pre-closing TB, balance_difference ≈ net_income because
         # revenue/expense accounts haven't been closed to retained earnings.
-        is_pre_closing = False
+        # Sprint 867: the period's result is now presented in equity, so a
+        # pre-closing TB balances; the note says what was added and why.
+        is_pre_closing = abs(unclosed_earnings) > 0.01
         pre_closing_note = ""
-        if not is_balanced and abs(net_income) > 0.01:
-            if abs(balance_difference - net_income) < 0.01:
-                is_pre_closing = True
-                pre_closing_note = (
-                    "This trial balance appears to be pre-closing: the balance sheet "
-                    "difference equals net income. Revenue and expense accounts have "
-                    "not yet been closed to retained earnings. After closing entries, "
-                    "Total Assets should equal Total Liabilities & Equity."
-                )
+        if is_pre_closing:
+            result_word = "net loss" if unclosed_earnings < 0 else "net income"
+            pre_closing_note = (
+                "Revenue and expense accounts carry open balances on this trial balance, so "
+                f"Equity includes the period's {result_word} of ${abs(unclosed_earnings):,.2f}, "
+                "calculated from lead sheets L-O, as a separate line."
+            )
 
         statements = FinancialStatements(
             balance_sheet=balance_sheet,
@@ -739,10 +779,23 @@ class FinancialStatementBuilder:
             )
         )
 
-        total_le = total_liabilities + equity
+        # Sprint 867: current-period earnings not yet closed (see _unclosed_earnings).
+        unclosed = self._unclosed_earnings(self._get_lead_sheet_balance)
+        prior_unclosed = self._unclosed_earnings(self._get_prior_balance) if has_prior else 0.0
+        if abs(unclosed) > 0.01 or abs(prior_unclosed) > 0.01:
+            lines.append(
+                StatementLineItem(
+                    UNCLOSED_EARNINGS_LABEL,
+                    unclosed,
+                    indent_level=1,
+                    prior_amount=prior_unclosed if has_prior else None,
+                )
+            )
+
+        total_le = total_liabilities + equity + unclosed
         prior_tle = None
         if has_prior:
-            prior_tle = (prior_tl or 0.0) + (-self._get_prior_balance("K"))
+            prior_tle = (prior_tl or 0.0) + (-self._get_prior_balance("K")) + prior_unclosed
         lines.append(
             StatementLineItem(
                 "TOTAL LIABILITIES & EQUITY", total_le, indent_level=0, is_total=True, prior_amount=prior_tle
@@ -1262,6 +1315,24 @@ class FinancialStatementBuilder:
                 return component_type, label, True
         return "retained_earnings", "Retained Earnings (unmapped)", False
 
+    @staticmethod
+    def _account_name_and_net(acct: dict) -> tuple[str, float]:
+        """Name and debit-positive net balance of one lead-sheet account.
+
+        Sprint 867: serialized groupings (``lead_sheet_grouping_to_dict``, i.e.
+        every real upload and every export payload) key accounts as
+        ``account`` / ``debit`` / ``credit`` with no ``net_balance``. The SOCE
+        read only ``name`` / ``net_balance`` — the shape its unit fixtures used
+        — so on real data it skipped every equity account. Accept both, as
+        the depreciation and interest-expense readers already do.
+        """
+        name = str(acct.get("account") or acct.get("name") or "").strip()
+        if "net_balance" in acct and acct.get("net_balance") is not None:
+            net = float(acct.get("net_balance") or 0.0)
+        else:
+            net = float(acct.get("debit", 0.0) or 0.0) - float(acct.get("credit", 0.0) or 0.0)
+        return name, net
+
     def _collect_equity_accounts(self) -> list[dict]:
         """Return the K-lead-sheet account dicts from the current period."""
         for summary in self.grouping.get("summaries", []):
@@ -1284,6 +1355,8 @@ class FinancialStatementBuilder:
         net_income: float,
         total_equity: float,
         prior_total_equity: float,
+        unclosed_earnings: float = 0.0,
+        prior_unclosed_earnings: float = 0.0,
     ) -> StatementOfChangesInEquity:
         """Build the Statement of Changes in Equity rollforward.
 
@@ -1307,8 +1380,8 @@ class FinancialStatementBuilder:
         # Build prior-balance lookup by account name (case-insensitive).
         prior_by_name: dict[str, float] = {}
         for acct in prior_accounts:
-            name = str(acct.get("name", "")).strip().lower()
-            prior_by_name[name] = float(acct.get("net_balance", 0.0) or 0.0)
+            prior_name, prior_net = self._account_name_and_net(acct)
+            prior_by_name[prior_name.lower()] = prior_net
 
         # Equity accounts are credit-normal — flip sign so positive values
         # display as equity.
@@ -1321,13 +1394,13 @@ class FinancialStatementBuilder:
             activity_by_name[(act.account or "").strip().lower()] = act
 
         for acct in current_accounts:
-            name = str(acct.get("name", "")).strip()
+            name, account_net = self._account_name_and_net(acct)
             if not name:
                 continue
             component_type, label, is_explicit = self._classify_equity_account(name)
             if not is_explicit:
                 unmapped.append(name)
-            ending = -float(acct.get("net_balance", 0.0) or 0.0)  # flip sign
+            ending = -account_net  # flip sign
             beginning = -prior_by_name.get(name.lower(), 0.0)
             act = activity_by_name.get(name.lower())
             contributions = act.contributions if act else 0.0
@@ -1365,6 +1438,23 @@ class FinancialStatementBuilder:
                 ),
             )
             re.net_income_allocation += net_income
+
+        # Sprint 867: earnings not yet closed belong to retained earnings —
+        # this period's in its ending balance, an unclosed prior period's in
+        # its beginning balance — or the rollforward would plug them into
+        # other_movement and disagree with the balance sheet.
+        if abs(unclosed_earnings) > 0.01 or abs(prior_unclosed_earnings) > 0.01:
+            re = components.setdefault(
+                "retained_earnings",
+                EquityComponent(
+                    component_type="retained_earnings",
+                    label="Retained Earnings",
+                    beginning_balance=0.0,
+                    ending_balance=0.0,
+                ),
+            )
+            re.ending_balance += unclosed_earnings
+            re.beginning_balance += prior_unclosed_earnings
 
         # OCI movement — if an AOCI component exists, the movement is
         # beginning → ending less explicit contributions / distributions.

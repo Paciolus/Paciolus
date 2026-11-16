@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { useStatementBuilder } from '@/components/financialStatements/useStatementBuilder'
+import { useStatementBuilder, UNCLOSED_EARNINGS_LABEL } from '@/components/financialStatements/useStatementBuilder'
 import type { LeadSheetGrouping, LeadSheetSummary, LeadSheetAccount } from '@/types/leadSheet'
 
 // ---------------------------------------------------------------------------
@@ -422,9 +422,14 @@ describe('useStatementBuilder', () => {
     // ====================================================================
     // 6. isBalanced = false when they don't match
     // ====================================================================
+    // Sprint 867: these two use a post-closing TB (income accounts zeroed). With
+    // revenue and expenses still open, a gap is first explained by the period's
+    // unclosed earnings — see the 'pre-closing trial balance' block below.
+    const POST_CLOSING = { L: 0, M: 0, N: 0, O: 0 }
+
     it('isBalanced is false when there is a meaningful difference', () => {
       // Increase assets by $1000 without offsetting
-      const grouping = makeFullGrouping({ A: 51000 })
+      const grouping = makeFullGrouping({ ...POST_CLOSING, A: 51000 })
       const { result } = renderHook(() => useStatementBuilder(grouping))
 
       expect(result.current.totals.isBalanced).toBe(false)
@@ -433,11 +438,62 @@ describe('useStatementBuilder', () => {
 
     it('balanceDifference is negative when L&E exceeds assets', () => {
       // Decrease assets
-      const grouping = makeFullGrouping({ A: 49000 })
+      const grouping = makeFullGrouping({ ...POST_CLOSING, A: 49000 })
       const { result } = renderHook(() => useStatementBuilder(grouping))
 
       expect(result.current.totals.isBalanced).toBe(false)
       expect(result.current.totals.balanceDifference).toBe(-1000)
+    })
+  })
+
+  // ========================================================================
+  // Sprint 867: pre-closing trial balance
+  // ========================================================================
+  describe('pre-closing trial balance', () => {
+    // Default fixture with equity at its pre-closing amount: the period's
+    // 15,000 net income (revenue 100k + other 5k - COGS 60k - opex 30k) is still
+    // on the income accounts, so K is 95,000 - 15,000 = 80,000 and debits equal credits.
+    it('a balanced pre-closing TB balances, with the earnings shown in equity', () => {
+      const grouping = makeFullGrouping({ K: -80000 })
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+      const { totals, balanceSheet } = result.current
+
+      expect(totals.netIncome).toBe(15000)
+      expect(totals.unclosedEarnings).toBe(15000)
+      expect(totals.totalEquity).toBe(95000)
+      expect(totals.isBalanced).toBe(true)
+      expect(totals.balanceDifference).toBe(0)
+      const line = balanceSheet.find(item => item.label === UNCLOSED_EARNINGS_LABEL)
+      expect(line?.amount).toBe(15000)
+      expect(line?.leadSheetRef).toBe('')
+      const total = (label: string) => balanceSheet.find(item => item.label === label)?.amount
+      expect(total('TOTAL LIABILITIES & EQUITY')).toBe(total('TOTAL ASSETS'))
+    })
+
+    it('a pre-closing loss balances too', () => {
+      // Opex 50k instead of 30k: net loss of 5,000; equity accounts 100,000.
+      const grouping = makeFullGrouping({ N: 50000, K: -100000 })
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(-5000)
+      expect(result.current.totals.isBalanced).toBe(true)
+    })
+
+    it('closed books get no earnings line', () => {
+      const grouping = makeFullGrouping()
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(0)
+      expect(result.current.balanceSheet.some(item => item.label === UNCLOSED_EARNINGS_LABEL)).toBe(false)
+    })
+
+    it('a genuine difference beyond the open earnings is still reported', () => {
+      const grouping = makeFullGrouping({ K: -80000, A: 51000 })
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(15000)
+      expect(result.current.totals.isBalanced).toBe(false)
+      expect(result.current.totals.balanceDifference).toBe(1000)
     })
   })
 
