@@ -554,15 +554,39 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       episode's rows are re-read by primary key after that commit.
 
 ### Sprint 870: Rate limits never fire in production (#274)
-**Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
+**Status:** IN PROGRESS (2026-11-16) — part A (probe) in a PR awaiting CEO merge; part B (fix) waits on its log
+output. Filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
 website claims sprint on `main`. **Priority:** P0 security (freeze-exempt). **Source:** issue #274 (2026-10-27).
 **Agents:** Guardian (lead), Executor, Critic.
+
+**Diagnosis so far (2026-11-16, on `ef5e5676`, live):**
+- A burst of **300** GETs to `/benchmarks/industries` (60/minute default) from one client in ~10 s got **300 × 200**.
+  Boot log shows 4 workers, each `Rate-limit storage backend: redis`. Per-worker memory counters (hypothesis 3) would
+  have started 429ing near 240, so (3) is ruled out unless the instance runs more than 5 workers.
+- slowapi's fallback path was read (`extension.py` `_check_request_limit`): when storage is dead it still evaluates the
+  default limits on the in-memory limiter, so a silent fallback would still limit. Not the cause.
+- `TRUSTED_PROXY_IPS` has never been confirmed set on Render (open CEO action since Sprint 851). Unset, the key is the
+  TCP peer — Render's proxy. A single proxy address would put all traffic in one bucket and 429 constantly, which is
+  the opposite of what is seen, so the peer must vary per request: hypothesis (1), not yet proven.
+- Nothing logs the computed key, and Key Value `paciolus-ratelimit` has an empty IP allow-list (no outside access), so
+  neither (1) nor (2) can be observed without a deploy. Opening Key Value to the internet was rejected.
+
+**Part A — probe (this PR):** `shared/rate_limits._probe_key_derivation` logs the first 100 anonymous key derivations
+per worker (`rate_limit_key_probe …`): the peer, each `X-Forwarded-For` / `CF-Connecting-IP` / `True-Client-IP` /
+`X-Real-IP` entry and the key. Non-global addresses (RFC 1918, CGNAT, loopback) are logged raw — they are Render's
+proxies; global addresses only as `hash_ip_address()` digests. `/health/ready` → `rate_limit_storage.details` gains
+`trusted_proxies_configured` (a count, never values). **After deploy:** burst ~70 requests, then read the probe lines
+and compare the public hashes with `sha256(<your IP>)[:16]`.
 
 Production has returned **zero 429s since 2026-10-01**: 80 requests in 3 s to an undecorated route all got 200. The
 same commit run locally returns 60 × 200 then 429s, so the code works and the production environment differs. Every
 limit is affected — login, password reset, export-share passcode brute-force (Sprints 697/698), uploads — because
 they share the key function and storage.
 
+- [x] Part A probe + health count, with tests (`test_rate_limit_key_probe.py`, 10; watched 2 fail when public
+      addresses were logged raw). Caught on the way: Python treats TEST-NET `203.0.113.0/24` as `is_private`, so the
+      raw/hashed split is `is_global`, not `is_private`.
+- [ ] **CEO:** merge part A; confirm deploy SHA; then the burst + log read above (Claude can do the read).
 - [ ] **Diagnose on production first, don't guess.** Hypotheses from #274, in order:
       (1) rate-limit **key**: `security_middleware.get_client_ip` trusts `X-Forwarded-For` only from `TRUSTED_PROXY_IPS`;
       behind Cloudflare + Render the peer may differ per request, so every request gets its own bucket;

@@ -197,12 +197,82 @@ def _get_rate_limit_key(request: Request) -> str:
         return f"user:{user_id}"
 
     # Fall back to client IP (proxy-aware)
-    return _get_client_ip(request)
+    key = _get_client_ip(request)
+    _probe_key_derivation(request, key)
+    return key
 
 
 def _get_client_ip(request: Request) -> str:
     """Delegate to canonical get_client_ip() in security_middleware."""
     return _canonical_get_client_ip(request)
+
+
+# ---------------------------------------------------------------------------
+# Key-derivation probe (Sprint 870, issue #274)
+# ---------------------------------------------------------------------------
+# Production returned zero 429s since 2026-10-01 while the same commit limits
+# correctly locally. A 300-request burst on 2026-11-16 got 300 x 200, which
+# rules out per-worker memory counters and points at the key: if the anonymous
+# key changes per request, no bucket ever fills. Nothing in the logs records
+# the key, so this probe does — for the first _KEY_PROBE_LIMIT anonymous
+# derivations per worker process, then it goes quiet.
+#
+# Privacy: addresses that are not globally routable (RFC 1918, CGNAT
+# 100.64/10, loopback, link-local) are infrastructure — Render's proxies — and
+# are logged raw: that is the range TRUSTED_PROXY_IPS needs. Globally routable
+# addresses are customer addresses and are logged only as hash_ip_address()
+# digests, the same form the security-event log uses.
+
+_KEY_PROBE_LIMIT = 100
+_KEY_PROBE_HEADERS = ("x-forwarded-for", "cf-connecting-ip", "true-client-ip", "x-real-ip")
+_key_probe_count = 0
+
+
+def _describe_ip(value: str) -> str:
+    """Render one address for the probe: raw if infrastructure, hashed if public."""
+    import ipaddress
+
+    from security_middleware import hash_ip_address
+
+    candidate = value.strip()
+    try:
+        addr = ipaddress.ip_address(candidate)
+    except ValueError:
+        return "invalid"
+    if not addr.is_global:
+        return f"private:{candidate}"
+    return f"public:{hash_ip_address(candidate)}"
+
+
+def _probe_key_derivation(request: Request, key: str) -> None:
+    """Log how the anonymous rate-limit key was derived (bounded, never raises)."""
+    global _key_probe_count
+    if _key_probe_count >= _KEY_PROBE_LIMIT:
+        return
+    _key_probe_count += 1
+    try:
+        from config import TRUSTED_PROXY_IPS
+        from security_middleware import is_trusted_proxy
+
+        peer = request.client.host if request.client else "unknown"
+        headers = []
+        for name in _KEY_PROBE_HEADERS:
+            raw = request.headers.get(name)
+            if raw is None:
+                continue
+            entries = ",".join(_describe_ip(part) for part in raw.split(","))
+            headers.append(f"{name}=[{entries}]")
+        _logger.info(
+            "rate_limit_key_probe n=%d peer=%s peer_trusted=%s trusted_proxies=%d key=%s %s",
+            _key_probe_count,
+            _describe_ip(peer),
+            is_trusted_proxy(peer, TRUSTED_PROXY_IPS),
+            len(TRUSTED_PROXY_IPS),
+            _describe_ip(key),
+            " ".join(headers) or "no-forwarding-headers",
+        )
+    except Exception:  # noqa: BLE001 — a diagnostic must never fail a request
+        _logger.debug("rate_limit_key_probe failed", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -431,11 +501,16 @@ def get_storage_health() -> dict[str, object]:
     # it degrades to "not degraded" rather than breaking the health probe.
     storage_dead = bool(getattr(limiter, "_storage_dead", False))
     degraded = configured == "redis" and storage_dead
+    from config import TRUSTED_PROXY_IPS
+
     return {
         "configured_backend": configured,
         "active_backend": "memory" if (configured == "memory" or storage_dead) else "redis",
         "degraded": degraded,
         "reachable_at_boot": _storage_reachable_at_boot,
+        # Sprint 870 (#274): a count, never the values. Zero behind Render's
+        # proxy means every anonymous key is the proxy's address.
+        "trusted_proxies_configured": len(TRUSTED_PROXY_IPS),
     }
 
 
