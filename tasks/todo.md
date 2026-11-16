@@ -742,6 +742,30 @@ per 15-minute lockout instead of 5.
 
 **Commit SHA:** TBD.
 
+### Sprint 876: Industry-ratio evaluation could write to another client's engagement
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P2 (in-tenant data
+integrity; affects the ISA 520 completion gate). **Source:** tenant-isolation review 2026-11-16 (independent agent; no
+cross-tenant IDOR found), verified in `routes/trends.py`. **Agents:** Guardian, Executor.
+
+`GET /clients/{A}/industry-ratios?engagement_id={E}` checked client A, then evaluated A's ratios against E's ISA 520
+expectations without checking E belongs to A. E of client B (reachable through the org-wide fallback) had its
+expectations resolved with A's numbers — enough to satisfy B's completion gate.
+
+- [x] The route resolves E via `EngagementManager.get_engagement` and requires `E.client_id == A`; otherwise 404 before
+      any evaluation. Tests (4): another client's / unknown engagement refused and the evaluator never called (both fail
+      on the old route); own engagement evaluated; no `engagement_id` unchanged. No frontend caller passes
+      `engagement_id` today.
+- [ ] **CEO decision (same review, Low):** completed and archived engagements stay writable — materiality edits,
+      new misstatements / follow-up items / expectations, tool runs — after the completion gate passed once. Recommend an
+      `_ensure_mutable(engagement)` guard on every child write and on non-status fields of `update_engagement`, with an
+      explicit reopen transition. Changes workflow, so not done overnight.
+- [ ] Notes from the same review: `shared/intercompany_resolver.py:80` looks up an engagement unscoped — no caller
+      today; scope it before wiring it in. Workpaper index uses owner-only access while the ZIP export checks org-wide
+      access first (fails closed) — fold into Sprint 853. Admins can mint admins via invites (`routes/organization.py:70`)
+      — fold into Sprint 853 / L12.
+
+**Commit SHA:** TBD.
+
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
 **Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 

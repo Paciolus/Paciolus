@@ -219,7 +219,16 @@ def get_client_industry_ratios(
     # come from stored client summaries, so there is no tool run.
     proposed_actuals: list[dict[str, Any]] = []
     if engagement_id is not None:
+        from engagement_manager import EngagementManager
         from shared.expectation_evaluation import extract_ratio_measurements, propose_expectation_actuals
+
+        # Sprint 876: the engagement must belong to THIS client. Without the
+        # check, ?engagement_id= of another client's engagement (reachable via
+        # the org-wide fallback) recorded client A's ratios against client B's
+        # ISA 520 expectations, which can satisfy B's completion gate.
+        engagement = EngagementManager(db).get_engagement(current_user.id, engagement_id)
+        if engagement is None or engagement.client_id != client_id:
+            raise HTTPException(status_code=404, detail="Engagement not found for this client")
 
         proposed_actuals = propose_expectation_actuals(
             db,
