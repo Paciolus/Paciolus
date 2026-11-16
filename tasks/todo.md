@@ -130,7 +130,8 @@ they share the key function and storage.
 **Commit SHA:** TBD.
 
 ### Sprint 871: Stripe dispute webhooks never find the customer (#273)
-**Status:** PENDING — filed 2026-11-14 as "Sprint 862" in PR #312; renumbered 2026-11-15. **Priority:** P1 — **gates
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge; Stripe test-mode check open.
+Filed 2026-11-14 as "Sprint 862" in PR #312; renumbered 2026-11-15. **Priority:** P1 — **gates
 Sprint 447** (live Stripe). **Source:** issue #273 (found in the Stripe 15 → 16 upgrade, #272). **Agents:** Executor
 (lead), Guardian, Accounting Expert (dispute policy).
 
@@ -139,11 +140,16 @@ Sprint 447** (live Stripe). **Source:** issue #273 (found in the Stripe 15 → 1
 string). Both log `could not resolve customer_id` and return on every real dispute, so the AUDIT-08-F5 policy is never
 enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` billing events.
 
-- [ ] Resolve the customer from `dispute["charge"]` (or `payment_intent`) via the SDK client wrapper + `to_plain_dict()` (#272); keep the expanded-dict branch.
-- [ ] A failed Stripe lookup returns non-2xx so Stripe redelivers — never a silent drop.
-- [ ] Fix test fixtures to Stripe's real dispute shape (no `customer`, `charge` as a string) + a contract test in
-      `test_stripe_sdk_contract.py` built from a real `stripe.Dispute`.
-- [ ] Verify end to end in Stripe **test mode** (`stripe trigger charge.dispute.created`): account suspended + `DISPUTE_CREATED` recorded. Close #273.
+- [x] `_resolve_dispute_customer_id`: payload `customer` → expanded `charge` → `Charge.retrieve(charge)` →
+      `PaymentIntent.retrieve(payment_intent)`, via `get_stripe()` + `to_plain_dict()`; expanded `customer` objects
+      read by `id`. A guest charge (Stripe answers, no customer) is logged and ignored — retrying can't change it.
+- [x] A failed Stripe lookup is not caught: the route rolls back the dedup marker and answers 500, so Stripe
+      redelivers (route-level test asserts 500 + event unclaimed + the lookup was what failed).
+- [x] Fixtures in `test_webhook_handler_coverage.py` now use the real shape (`charge` as `ch_…`, no `customer`);
+      `test_unresolvable_customer_is_ignored` encoded the defect (a `ch_…` string ignored) and was replaced.
+      Contract tests live in `test_sprint_871_dispute_customer.py` (10) on real `stripe.Dispute` / `Charge` /
+      `PaymentIntent` objects rather than in `test_stripe_sdk_contract.py`. 13 tests fail on the old handler.
+- [ ] **CEO / needs Stripe test-mode access:** verify end to end in Stripe **test mode** (`stripe trigger charge.dispute.created`): account suspended + `DISPUTE_CREATED` recorded. Close #273.
 
 **Commit SHA:** TBD.
 
