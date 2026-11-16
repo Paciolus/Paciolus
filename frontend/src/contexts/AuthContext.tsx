@@ -20,21 +20,24 @@
 
 import { ReactNode, ReactElement } from 'react'
 import type { AuthContextType, User, LoginCredentials, RegisterCredentials } from '@/types/auth'
-import { AuthSessionProvider, useAuthSession } from './AuthSessionContext'
+import { AuthSessionProvider, SessionBoundary, useAuthSession } from './AuthSessionContext'
 import { UserProfileProvider, useUserProfile } from './UserProfileContext'
 import { VerificationProvider, useVerificationContext } from './VerificationContext'
 
 /**
  * AuthProvider — Nests all three focused providers in dependency order.
  * AuthSession is the outermost (no dependencies), then UserProfile and
- * Verification which both read from AuthSession.
+ * Verification which both read from AuthSession. Everything below is
+ * inside `SessionBoundary`, which remounts it when a signed-in session ends.
  */
 export function AuthProvider({ children }: { children: ReactNode }): ReactElement {
   return (
     <AuthSessionProvider>
       <UserProfileProvider>
         <VerificationProvider>
-          {children}
+          <SessionBoundary>
+            {children}
+          </SessionBoundary>
         </VerificationProvider>
       </UserProfileProvider>
     </AuthSessionProvider>

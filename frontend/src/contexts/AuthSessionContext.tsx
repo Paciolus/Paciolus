@@ -13,6 +13,10 @@
  * - Refresh tokens stored as HttpOnly Secure SameSite=Lax server-set cookies
  * - User metadata in-memory only (React state) — rehydrated via /auth/refresh on reload
  * - No financial/trial balance data ever touches storage
+ * - Sprint 872 (DH-01): the signed-in account id scopes the API cache
+ *   (`utils/sessionScope`); ending a signed-in session empties the private
+ *   cache and remounts everything under `SessionBoundary`, so contexts and
+ *   hooks holding the previous account's data start empty.
  */
 
 import {
@@ -22,6 +26,8 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useSyncExternalStore,
+  Fragment,
   ReactNode,
   ReactElement,
 } from 'react'
@@ -35,6 +41,12 @@ import type {
   AuthResult,
 } from '@/types/auth'
 import { API_URL } from '@/utils/constants'
+import {
+  beginSession,
+  endSession,
+  getSessionGeneration,
+  subscribeSessionGeneration,
+} from '@/utils/sessionScope'
 import { apiPost, apiGet, isAuthError, setTokenRefreshCallback, setCsrfToken, getCsrfToken } from '@/utils'
 
 /**
@@ -48,12 +60,22 @@ import { apiPost, apiGet, isAuthError, setTokenRefreshCallback, setCsrfToken, ge
 const COOKIE_AUTH_SENTINEL = 'cookie'
 
 /**
- * Clear session data on logout/auth failure.
- * User state is in-memory only — no browser storage to clear.
+ * Clear session data on logout, auth failure and account deletion: empties
+ * the private API cache and in-flight requests, and moves to a new session
+ * generation so `SessionBoundary` remounts data-holding contexts. User PII
+ * is never persisted to browser storage, so there is none to clear there.
  */
 function clearAuthSessionData(): void {
-  // Reserved for future session-scoped cleanup if needed.
-  // User PII is never persisted to browser storage.
+  endSession()
+}
+
+/**
+ * Record which account the session now belongs to. A different account than
+ * the current one (another tab signed in as someone else, or a login while
+ * signed in) ends the old session first — same cleanup as a logout.
+ */
+function startAuthSession(user: User): void {
+  beginSession(user.id)
 }
 
 /**
@@ -135,6 +157,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
         // Security Sprint: Read user-bound CSRF token from auth response
         if (data.csrf_token) setCsrfToken(data.csrf_token)
 
+        startAuthSession(data.user)
         setState({
           user: data.user,
           token: resolvedToken,
@@ -148,6 +171,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
         // session cannot be confirmed, so treat it as signed out — otherwise
         // isLoading stays true and every authenticated page spins forever
         // instead of redirecting to /login (found 2026-11-15).
+        clearAuthSessionData()
         tokenRef.current = null
         setState({
           user: null,
@@ -214,6 +238,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
       // Security Sprint: Read user-bound CSRF token from login response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
+      startAuthSession(data.user)
       setState({
         user: data.user,
         token: resolvedToken,
@@ -243,6 +268,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
       // Security Sprint: Read user-bound CSRF token from register response
       if (data.csrf_token) setCsrfToken(data.csrf_token)
 
+      startAuthSession(data.user)
       setState({
         user: data.user,
         token: resolvedToken,
@@ -299,6 +325,7 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
     const { data, status, ok } = await apiGet<User>('/auth/me', state.token)
 
     if (ok && data) {
+      startAuthSession(data)
       setState(prev => ({ ...prev, user: data }))
     } else if (isAuthError(status)) {
       // Try silent refresh before logging out
@@ -322,6 +349,21 @@ export function AuthSessionProvider({ children }: { children: ReactNode }): Reac
       {children}
     </AuthSessionContext.Provider>
   )
+}
+
+/**
+ * Remounts its children whenever a signed-in session ends (DH-01), so every
+ * context and hook below it — engagement, diagnostic, mapping, workspace,
+ * batch upload, page-level fetch state — drops the previous account's data.
+ * Signing in from signed-out does not remount.
+ */
+export function SessionBoundary({ children }: { children: ReactNode }): ReactElement {
+  const generation = useSyncExternalStore(
+    subscribeSessionGeneration,
+    getSessionGeneration,
+    getSessionGeneration,
+  )
+  return <Fragment key={generation}>{children}</Fragment>
 }
 
 /**

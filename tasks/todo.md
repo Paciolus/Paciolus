@@ -79,6 +79,8 @@
 >   session. Tracked risk: `slowapi==0.1.10` is unmaintained and sits on the rate-limit path (see Sprint 870).
 >
 > **P0 before 2026-12-15 — in order**
+> - [ ] **Sprint 872** — session and sign-in boundaries (cross-account cache, CSRF owner binding, unverified invite
+>       acceptance, impersonation token storage, error shape). Security; in progress.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -129,6 +131,46 @@
 > - [ ] Sprint 884 follow-up: should the TB response carry the currency conversion it computes (today it is dropped)?
 > - [ ] Sprint 887: review the PR-T12/PR-T13 drafts and `reports/sprint-887-wording.md`; decide where `57c79d91` lives
 >       and whether the anomaly summary gets a download button. Engineering follow-ups are listed under the sprint.
+
+### Sprint 872: Session and sign-in boundaries (DH-01, AZ-10, AZ-11, AZ-13, AZ-14)
+**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-872-session-boundaries` (off Sprint 853's branch;
+not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`.
+**Agents:** Guardian (lead), Executor, Critic.
+
+**872a — browser cache survives a change of account (DH-01, Critical)**
+- [x] Confirmed at `3c34926a`: cache key = endpoint + custom headers; the frontend "token" is the constant `'cookie'`
+      sentinel, so it carries no identity; `clearAuthSessionData()` was empty; in-flight dedup shared the same key.
+- [x] `utils/sessionScope.ts`: the signed-in account id prefixes every cache and in-flight key; ending a signed-in
+      session (logout, refresh failure/auth failure, network failure on refresh, account switch on refresh/login/`/auth/me`,
+      account deletion via logout) empties both stores and bumps a session generation.
+- [x] Generation guard: a response is cached only if its request's generation is still current (normal, 401-retry and
+      background-revalidation paths); a late in-flight cleanup no longer deletes a newer entry.
+- [x] `SessionBoundary` (inside `AuthProvider`) remounts everything below it when a signed-in session ends, so
+      Engagement/Diagnostic/Mapping/Workspace/BatchUpload contexts and page-level fetch state start empty. Signing in
+      from signed-out does not remount.
+- [x] Tests: `sessionCacheIsolation.test.tsx` (real AuthProvider + apiClient, fake server answering per cookie): A→logout→B
+      on clients/history/engagements; A's request held until after B signs in (no dedup onto it, no cache refill);
+      account switch on refresh; auth failure; remount on logout only.
+
+**872b — CSRF not bound to the refresh cookie's owner (AZ-10, High)**
+- [x] Confirmed: with no bearer/access cookie, `expected_user_id = None`; A's CSRF token + B's refresh cookie → 200 on
+      refresh and logout (also with A's expired access cookie).
+- [ ] Owner of the refresh token resolved in the auth service, in the request's transaction, and compared with the CSRF
+      token's user before rotate/revoke. CSRF tokens stay stateless.
+- [ ] Tests: `test_csrf_refresh_owner_binding.py`.
+
+**872c — invitation accepted by an unverified address (AZ-11, High)**
+- [ ] Confirm, then require a verified account whose address matches the invitation.
+
+**872d — impersonation token in sessionStorage (AZ-13, High)**
+- [ ] Confirm, then hold impersonation state in memory only; clear on end and on logout.
+
+**872e — middleware errors bypass the common error shape (AZ-14)**
+- [ ] Confirm, then one constructor for every error response (CSRF 403, 413, 429, 500 …) with request IDs.
+
+**Verification (872a):** frontend build green (all pages `ƒ`), 213 suites / 2,113 tests, `tsc`, eslint clean.
+
+**Commit SHA:** 872a (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

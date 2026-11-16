@@ -34,6 +34,7 @@ import {
   BASE_RETRY_DELAY,
   MAX_RETRIES,
 } from '@/utils/constants'
+import { getSessionGeneration } from '@/utils/sessionScope'
 import type { ApiResponse, ApiRequestOptions } from '@/utils/transport'
 import {
   performFetch,
@@ -120,6 +121,9 @@ export async function apiFetch<T>(
   }
 
   const isGetRequest = method === 'GET';
+  // Session generation this request belongs to (DH-01): its response is only
+  // cached if the same signed-in session is still current when it arrives.
+  const generation = getSessionGeneration();
   const cacheKey = isGetRequest ? getCacheKey(endpoint, options) : '';
 
   // --- Cache check for GET requests ---
@@ -130,7 +134,7 @@ export async function apiFetch<T>(
         if (!isStale) {
           return { data: staleData, status: 200, ok: true, cached: true, stale: false };
         }
-        performBackgroundRevalidation(endpoint, token, options, cacheKey, onRevalidate);
+        performBackgroundRevalidation(endpoint, token, options, cacheKey, onRevalidate, generation);
         return { data: staleData, status: 200, ok: true, cached: true, stale: true };
       }
     } else {
@@ -163,7 +167,7 @@ export async function apiFetch<T>(
       if (result.ok) {
         if (isGetRequest && cacheKey) {
           const ttl = cacheTtl ?? getEndpointTtl(endpoint);
-          setCached(cacheKey, result.data, ttl);
+          setCached(cacheKey, result.data, ttl, generation);
         }
         return result;
       }
@@ -198,7 +202,7 @@ export async function apiFetch<T>(
         const retryResult = await performFetch<T>(url, refreshedHeaders, method, requestBody, timeout);
         if (retryResult.ok && isGetRequest && cacheKey) {
           const ttl = cacheTtl ?? getEndpointTtl(endpoint);
-          setCached(cacheKey, retryResult.data, ttl);
+          setCached(cacheKey, retryResult.data, ttl, generation);
         }
         return retryResult;
       }
@@ -211,7 +215,10 @@ export async function apiFetch<T>(
   if (isGetRequest && cacheKey) {
     inflightRequests.set(cacheKey, fetchPromise as Promise<ApiResponse<unknown>>);
     fetchPromise.finally(() => {
-      inflightRequests.delete(cacheKey);
+      // Only remove our own entry — the map may have been cleared and reused.
+      if (inflightRequests.get(cacheKey) === fetchPromise) {
+        inflightRequests.delete(cacheKey);
+      }
     });
   }
 

@@ -3,6 +3,11 @@
  *
  * Owns: in-memory LRU cache, stale-while-revalidate, in-flight deduplication,
  * cache telemetry, periodic sweep.
+ *
+ * Sprint 872 (DH-01): every key is prefixed with the signed-in account
+ * (`sessionScope`), both stores are emptied when a signed-in session ends,
+ * and a response may only be cached by the session generation that asked
+ * for it.
  */
 
 import {
@@ -11,6 +16,7 @@ import {
   minutes,
   hours,
 } from '@/utils/constants'
+import { getSessionScope, getSessionGeneration, onSessionEnd } from '@/utils/sessionScope'
 import type { ApiResponse, ApiRequestOptions } from '@/utils/transport'
 import {
   performFetch,
@@ -41,6 +47,11 @@ let sweepTimerId: ReturnType<typeof setInterval> | null = null;
 /** Track in-flight requests to prevent duplicate concurrent calls */
 export const inflightRequests = new Map<string, Promise<ApiResponse<unknown>>>();
 
+onSessionEnd(() => {
+  queryCache.clear();
+  inflightRequests.clear();
+});
+
 /** Default cache TTL values by endpoint pattern (in milliseconds) */
 const ENDPOINT_TTL_CONFIG: Record<string, number> = {
   '/clients/industries': hours(1),
@@ -65,7 +76,8 @@ export function getCacheKey(endpoint: string, options: ApiRequestOptions = {}): 
   if (options.method && options.method !== 'GET') {
     return '';
   }
-  const keyParts = [endpoint];
+  // Account scope first: a key built for one account never matches another's.
+  const keyParts = [`@${getSessionScope() ?? 'anon'}`, endpoint];
   if (options.headers) {
     keyParts.push(JSON.stringify(options.headers));
   }
@@ -123,8 +135,10 @@ export function getCachedWithStale<T>(key: string): { data: T | null; isStale: b
   return { data: entry.data, isStale };
 }
 
-export function setCached<T>(key: string, data: T, ttl: number): void {
+export function setCached<T>(key: string, data: T, ttl: number, generation?: number): void {
   if (!key) return;
+  // A response requested under an earlier session must not refill the cache.
+  if (generation !== undefined && generation !== getSessionGeneration()) return;
 
   if (queryCache.has(key)) {
     queryCache.delete(key);
@@ -216,7 +230,8 @@ export async function performBackgroundRevalidation<T>(
   token: string | null,
   options: ApiRequestOptions,
   cacheKey: string,
-  onRevalidate?: (response: ApiResponse<unknown>) => void
+  onRevalidate?: (response: ApiResponse<unknown>) => void,
+  generation: number = getSessionGeneration()
 ): Promise<void> {
   const {
     headers: customHeaders = {},
@@ -241,7 +256,8 @@ export async function performBackgroundRevalidation<T>(
 
       if (result.ok) {
         const ttl = cacheTtl ?? getEndpointTtl(endpoint);
-        setCached(cacheKey, result.data, ttl);
+        setCached(cacheKey, result.data, ttl, generation);
+        if (generation !== getSessionGeneration()) return;
 
         if (onRevalidate) {
           onRevalidate({
