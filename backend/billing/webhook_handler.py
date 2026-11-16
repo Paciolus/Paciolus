@@ -865,6 +865,72 @@ def handle_invoice_payment_succeeded(db: Session, event_data: dict) -> None:
         )
 
 
+def _customer_id_of(value: object) -> str | None:
+    """A Stripe ``customer`` field as an ID, whether a string or an expanded object."""
+    if isinstance(value, str) and value:
+        return value
+    if isinstance(value, dict):
+        nested = value.get("id")
+        return nested if isinstance(nested, str) and nested else None
+    return None
+
+
+def _resolve_dispute_customer_id(event_data: dict, event_type: str) -> str | None:
+    """Find the customer a Dispute belongs to.
+
+    Sprint 871 (#273): Stripe's Dispute object has no ``customer`` field, and a
+    webhook delivers ``charge`` as a ``ch_...`` string, not an expanded object.
+    The handlers used to read ``customer`` and then ``charge`` only when it was
+    a dict, so every real dispute logged "could not resolve customer_id" and
+    the AUDIT-08-F5 policy (suspend on open, restore/cancel on close) never ran.
+
+    Order: a ``customer`` on the payload (test doubles, future API versions);
+    an expanded ``charge``; the ``charge`` ID via ``Charge.retrieve``; failing
+    that, the ``payment_intent`` ID via ``PaymentIntent.retrieve``.
+
+    A Stripe API error is **not** caught: it propagates to the webhook route,
+    which rolls back the dedup marker and answers 500 so Stripe redelivers.
+    Returns None only when Stripe answered and the payment has no customer
+    (a guest charge) — retrying cannot change that.
+    """
+    direct = _customer_id_of(event_data.get("customer"))
+    if direct:
+        return direct
+
+    charge = event_data.get("charge")
+    if isinstance(charge, dict):
+        from_expanded = _customer_id_of(charge.get("customer"))
+        if from_expanded:
+            return from_expanded
+        charge = charge.get("id")
+
+    payment_intent = event_data.get("payment_intent")
+    if isinstance(payment_intent, dict):
+        from_expanded = _customer_id_of(payment_intent.get("customer"))
+        if from_expanded:
+            return from_expanded
+        payment_intent = payment_intent.get("id")
+
+    if not (isinstance(charge, str) and charge) and not (isinstance(payment_intent, str) and payment_intent):
+        logger.warning("%s: dispute carries no charge or payment_intent to resolve a customer from", event_type)
+        return None
+
+    from billing.stripe_client import get_stripe, to_plain_dict
+
+    stripe = get_stripe()
+    if isinstance(charge, str) and charge:
+        found = _customer_id_of(to_plain_dict(stripe.Charge.retrieve(charge)).get("customer"))
+        if found:
+            return found
+    if isinstance(payment_intent, str) and payment_intent:
+        found = _customer_id_of(to_plain_dict(stripe.PaymentIntent.retrieve(payment_intent)).get("customer"))
+        if found:
+            return found
+
+    logger.warning("%s: the disputed payment has no customer (guest charge) — nothing to suspend", event_type)
+    return None
+
+
 def handle_dispute_created(db: Session, event_data: dict) -> None:
     """Handle charge.dispute.created — payment dispute opened.
 
@@ -872,15 +938,9 @@ def handle_dispute_created(db: Session, event_data: dict) -> None:
     (status → PAUSED, tier → FREE) pending resolution. This protects against
     fraud and forced payment reversals on a financial SaaS platform.
     """
-    customer_id = event_data.get("customer")
+    customer_id = _resolve_dispute_customer_id(event_data, "charge.dispute.created")
     if not customer_id:
-        # Try to derive from charge if customer not directly on dispute
-        charge = event_data.get("charge")
-        if isinstance(charge, dict):
-            customer_id = charge.get("customer")
-        if not customer_id:
-            logger.warning("charge.dispute.created: could not resolve customer_id")
-            return
+        return
 
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if not sub:
@@ -925,14 +985,9 @@ def handle_dispute_closed(db: Session, event_data: dict) -> None:
     - Lost (customer prevails): cancel subscription, downgrade permanently.
     - Other statuses: leave suspended, log for operator review.
     """
-    customer_id = event_data.get("customer")
+    customer_id = _resolve_dispute_customer_id(event_data, "charge.dispute.closed")
     if not customer_id:
-        charge = event_data.get("charge")
-        if isinstance(charge, dict):
-            customer_id = charge.get("customer")
-        if not customer_id:
-            logger.warning("charge.dispute.closed: could not resolve customer_id")
-            return
+        return
 
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if not sub:

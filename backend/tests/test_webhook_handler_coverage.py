@@ -182,14 +182,39 @@ class TestInvoicePaymentSucceeded:
 # ---------------------------------------------------------------------------
 # handle_dispute_created — suspend on dispute
 # ---------------------------------------------------------------------------
+# Sprint 871 (#273): Stripe's Dispute has no `customer`, and webhooks deliver
+# `charge` as a "ch_..." string. These fixtures use that shape; the handler
+# looks the charge up through the SDK, faked here with real stripe.Charge objects.
 
 
+def _charge_for(customer_id: str) -> str:
+    return f"ch_for_{customer_id}"
+
+
+@pytest.fixture()
+def real_shape_stripe():
+    from unittest.mock import MagicMock
+
+    import stripe as real_stripe
+
+    fake = MagicMock()
+
+    def _retrieve(charge_id: str):
+        customer = charge_id.removeprefix("ch_for_")
+        return real_stripe.Charge.construct_from({"id": charge_id, "object": "charge", "customer": customer}, None)
+
+    fake.Charge.retrieve.side_effect = _retrieve
+    with patch("billing.stripe_client.get_stripe", return_value=fake):
+        yield fake
+
+
+@pytest.mark.usefixtures("real_shape_stripe")
 class TestDisputeCreated:
     def test_suspends_subscription_and_downgrades_owner(self, db_session, make_user, make_subscription):
         user = make_user(email="disputed@example.com", tier=UserTier.ENTERPRISE)
         make_subscription(user, tier="enterprise")
 
-        handle_dispute_created(db_session, {"customer": CUSTOMER, "id": "dp_1", "reason": "fraudulent"})
+        handle_dispute_created(db_session, {"charge": _charge_for(CUSTOMER), "id": "dp_1", "reason": "fraudulent"})
 
         sub = db_session.query(Subscription).filter(Subscription.user_id == user.id).first()
         assert sub.status == SubscriptionStatus.PAUSED
@@ -206,7 +231,7 @@ class TestDisputeCreated:
         make_subscription(owner, tier="enterprise")
         make_org(owner, members=[member_a, member_b])
 
-        handle_dispute_created(db_session, {"customer": CUSTOMER, "id": "dp_2", "reason": "unrecognized"})
+        handle_dispute_created(db_session, {"charge": _charge_for(CUSTOMER), "id": "dp_2", "reason": "unrecognized"})
 
         assert member_a.tier == UserTier.FREE
         assert member_b.tier == UserTier.FREE
@@ -221,11 +246,13 @@ class TestDisputeCreated:
         sub = db_session.query(Subscription).filter(Subscription.user_id == user.id).first()
         assert sub.status == SubscriptionStatus.PAUSED
 
-    def test_unresolvable_customer_is_ignored(self, db_session):
-        handle_dispute_created(db_session, {"charge": "ch_not_a_dict", "id": "dp_4"})
+    def test_dispute_without_charge_or_payment_intent_is_ignored(self, db_session):
+        # Sprint 871: a "ch_..." string is no longer "unresolvable" — it is the
+        # shape every real webhook has, and is now looked up via Charge.retrieve.
+        handle_dispute_created(db_session, {"id": "dp_4"})
 
     def test_no_subscription_for_customer_is_ignored(self, db_session):
-        handle_dispute_created(db_session, {"customer": "cus_unknown_dispute", "id": "dp_5"})
+        handle_dispute_created(db_session, {"charge": _charge_for("cus_unknown_dispute"), "id": "dp_5"})
 
 
 # ---------------------------------------------------------------------------
@@ -233,12 +260,13 @@ class TestDisputeCreated:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("real_shape_stripe")
 class TestDisputeClosed:
     def test_won_restores_access_to_plan_tier(self, db_session, make_user, make_subscription):
         user = make_user(email="dispute_won@example.com", tier=UserTier.FREE)
         make_subscription(user, status=SubscriptionStatus.PAUSED, tier="professional")
 
-        handle_dispute_closed(db_session, {"customer": CUSTOMER, "id": "dp_w", "status": "won"})
+        handle_dispute_closed(db_session, {"charge": _charge_for(CUSTOMER), "id": "dp_w", "status": "won"})
 
         sub = db_session.query(Subscription).filter(Subscription.user_id == user.id).first()
         assert sub.status == SubscriptionStatus.ACTIVE
@@ -259,7 +287,9 @@ class TestDisputeClosed:
                 subscription_id=f"sub_won_{idx}",
             )
 
-            handle_dispute_closed(db_session, {"customer": f"{CUSTOMER}_{idx}", "id": f"dp_w{idx}", "status": "won"})
+            handle_dispute_closed(
+                db_session, {"charge": _charge_for(f"{CUSTOMER}_{idx}"), "id": f"dp_w{idx}", "status": "won"}
+            )
 
             assert user.tier == expected
 
@@ -269,7 +299,7 @@ class TestDisputeClosed:
         make_subscription(owner, status=SubscriptionStatus.PAUSED, tier="enterprise")
         make_org(owner, members=[member])
 
-        handle_dispute_closed(db_session, {"customer": CUSTOMER, "id": "dp_l", "status": "lost"})
+        handle_dispute_closed(db_session, {"charge": _charge_for(CUSTOMER), "id": "dp_l", "status": "lost"})
 
         sub = db_session.query(Subscription).filter(Subscription.user_id == owner.id).first()
         assert sub.status == SubscriptionStatus.CANCELED
@@ -282,7 +312,7 @@ class TestDisputeClosed:
         user = make_user(email="dispute_other@example.com", tier=UserTier.FREE)
         make_subscription(user, status=SubscriptionStatus.PAUSED, tier="solo")
 
-        handle_dispute_closed(db_session, {"customer": CUSTOMER, "id": "dp_o", "status": "warning_closed"})
+        handle_dispute_closed(db_session, {"charge": _charge_for(CUSTOMER), "id": "dp_o", "status": "warning_closed"})
 
         sub = db_session.query(Subscription).filter(Subscription.user_id == user.id).first()
         assert sub.status == SubscriptionStatus.PAUSED
@@ -303,7 +333,7 @@ class TestDisputeClosed:
         handle_dispute_closed(db_session, {"id": "dp_x", "status": "won"})
 
     def test_no_subscription_for_customer_is_ignored(self, db_session):
-        handle_dispute_closed(db_session, {"customer": "cus_unknown_closed", "id": "dp_y", "status": "won"})
+        handle_dispute_closed(db_session, {"charge": _charge_for("cus_unknown_closed"), "id": "dp_y", "status": "won"})
 
 
 # ---------------------------------------------------------------------------
