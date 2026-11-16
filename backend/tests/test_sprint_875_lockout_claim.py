@@ -86,3 +86,93 @@ def test_reset_after_lock_restores_claims(db_session, user):
     assert not claim_login_attempt(db_session, user.id)
     reset_failed_attempts(db_session, user.id)
     assert claim_login_attempt(db_session, user.id)
+
+
+# ---------------------------------------------------------------------------
+# Independent review of PR #328: real concurrency, lock expiry, unknown emails
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def file_db(tmp_path):
+    """A file-backed SQLite database so each thread gets its own connection."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from database import Base
+    from models import User
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'lockout.db'}", connect_args={"timeout": 30})
+    Base.metadata.create_all(engine)
+    make = sessionmaker(bind=engine)
+    with make() as s:
+        u = User(email="race875@example.com", hashed_password="x", is_active=True, is_verified=True)
+        s.add(u)
+        s.commit()
+        uid = u.id
+    yield make, uid
+    engine.dispose()
+
+
+def test_threads_racing_on_their_own_connections_get_exactly_the_limit(file_db):
+    import threading
+
+    make, uid = file_db
+    n = 20
+    barrier = threading.Barrier(n)
+    results: list[bool] = []
+    lock = threading.Lock()
+
+    def worker():
+        with make() as s:
+            barrier.wait()
+            granted = claim_login_attempt(s, uid)
+        with lock:
+            results.append(granted)
+
+    threads = [threading.Thread(target=worker) for _ in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results.count(True) == MAX_FAILED_ATTEMPTS
+
+
+def test_expired_lock_resets_and_a_stale_reset_cannot_wipe_new_claims(file_db):
+    from datetime import UTC, datetime, timedelta
+
+    from models import User
+    from security_middleware import check_lockout_status
+
+    make, uid = file_db
+    with make() as s:
+        u = s.get(User, uid)
+        u.failed_login_attempts = MAX_FAILED_ATTEMPTS
+        u.locked_until = datetime.now(UTC) - timedelta(minutes=1)
+        s.commit()
+
+    stale = make()
+    stale_user = stale.get(User, uid)  # reads the expired lock and keeps it in its identity map
+    assert stale_user.locked_until is not None
+
+    with make() as fresh:  # another request: resets the expired lock, then claims three slots
+        assert check_lockout_status(fresh, uid)[0] is False
+        for _ in range(3):
+            assert claim_login_attempt(fresh, uid)
+
+    assert check_lockout_status(stale, uid)[0] is False  # the stale request's reset matches nothing now
+    stale.close()
+    with make() as s:
+        u = s.get(User, uid)
+        assert u.locked_until is None
+        assert u.failed_login_attempts == 3  # the three claims survived
+
+
+def test_unknown_email_touches_no_account(db_session, user):
+    with pytest.raises(HTTPException) as exc:
+        authenticate_login(
+            db_session, email="nobody875@example.com", password="x", client_ip=IP, user_agent=None, request_host=None
+        )
+    assert exc.value.status_code == 401
+    db_session.refresh(user)
+    assert user.failed_login_attempts == 0

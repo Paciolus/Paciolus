@@ -729,6 +729,12 @@ per 15-minute lockout instead of 5.
       resets. Unknown emails unchanged.
 - [x] Tests `test_sprint_875_lockout_claim.py` (5): 25 claims → exactly 5 granted; with 5 slots in flight even the
       right password is refused (fails on the old flow); 5 sequential failures count 5, not 10; success resets.
+- [x] **Independent review of the PR** (agent, given the diff only): sound for its race, but the lock-expiry reset in
+      `check_lockout_status` was the same read-then-write class — a request holding a stale read of the expired lock
+      zeroed the counter after others had claimed slots. Now a conditional atomic `UPDATE … WHERE locked_until <= now`.
+      The legacy `record_failed_login(claimed=False)` path now increments atomically too. Added: 20 threads on their own
+      connections (file SQLite) → exactly 5 claims; stale reset cannot wipe new claims (fails on the old reset: 0 vs 3);
+      unknown email touches no account. Slots are not given back on a crash — documented as the conservative choice.
 - [ ] Not in this PR (same review, Low): re-entering the current password on email change / password change / account
       delete has no attempt limit (`auth.py:667,727`, `auth_routes.py:570`); a revoked impersonation token can stay
       valid if a worker's first Redis probe fails (`shared/impersonation_revocation.py`); refresh-token chains have no
