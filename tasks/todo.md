@@ -83,6 +83,8 @@
 >       acceptance, impersonation token storage, error shape). Security; code complete, local branch, not pushed.
 > - [ ] **Sprint 878** — plan features and upload allowances enforced on the server (workspace, CSV exports,
 >       preview-token format bypass, upload ledger, JE sampling). Security; code complete on a local branch, stacked on #331.
+> - [ ] **Sprint 879** — what we log, save and cache matches the published data statement (log values, saved
+>       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; in progress.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -221,7 +223,7 @@ eslint green; ruff clean; mypy adds no errors.
 
 ### Sprint 878: Plan features and upload allowances enforced on the server (AZ-02..06, ST-04)
 **Status:** IN REVIEW — code complete 2026-11-16 on local branch `sprint-878-plan-enforcement` (off Sprint 853's
-branch `sprint-firm-owned-records`; not pushed; merges after #331). **Priority:** P0/P1 security (freeze-exempt: security defects).
+branch `sprint-firm-owned-records`, rebased onto Sprint 872 2026-11-16; not pushed; merges after #331 and 872). **Priority:** P0/P1 security (freeze-exempt: security defects).
 **Source:** read-only review at `ef5e567`. **Agents:** Guardian (lead), Executor, Critic.
 
 **CEO decisions (2026-11-16):** the engagement workspace is Solo and above. An account that drops to Free keeps read
@@ -318,7 +320,60 @@ lease *analysis* routes (not their CSVs) carry no tool gate and are not registry
 a product call, not decided here. Ledger rows are kept until
 account deletion; no retention job prunes old months.
 
-**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d `197168d4` + test follow-up `455ad1e3` · 878e (this commit).
+**Commit SHA (rebased onto Sprint 872 on 2026-11-16; pre-rebase tip `b8a427d9`):** 878a `c9fea367` · 878b `621d3117` · 878c `d78a4a86` · 878d `7b67bd03` + test follow-up `02da4934` · 878e `e3998368`. After the rebase: backend suite and
+frontend 215 suites / 2,125 tests green; `alembic heads` = `d878a5c1e9b2` only.
+
+### Sprint 879: Logs, saved records and caches match the data statement (DH-03..07)
+**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-879-data-statement` (stacked on Sprint 878, which is
+stacked on 872 → #331; not pushed). **Priority:** P0/P1 (freeze-exempt: security defects). **Source:** read-only review at
+`ef5e567`. **Agents:** Guardian (lead), Executor, Critic.
+
+**The statement:** uploaded files are processed in memory and not kept after analysis (up to 10 minutes in memory);
+we save the account, client list, analysis summaries (totals, ratios, counts, flagged account names — never balances,
+transaction rows or file contents) and anything the user enters in an engagement.
+
+**CEO decisions (2026-11-16):** analysis no longer saves an account's actual balance into an expectation; the auditor
+captures it with an explicit action. The preview cache stays in each worker's memory (no Redis/disk); on a miss at
+analysis time the browser re-sends the file.
+
+**879a — uploaded values reach the application logs (DH-03, Critical)**
+- [x] Confirmed: the TB and file-tool rejection handlers logged the exception object (`%s`, `exc_info=True`); the OFX
+      parser logged currency, account suffix, account type and date range; DEBUG logged the upload's filename
+      (`upload_pipeline.validate_file_size`) and 422 inputs (`main.validation_exception_handler`); a PDF page failure
+      logged the filename. `TracebackRedactionFilter` ran on two handlers, only in production, and
+      `REDACT_LOG_TRACEBACKS=false` turned it off.
+- [x] `logging_config.install_safe_log_records()` — a log-record factory (installed on import and by `setup_logging`):
+      an exception object passed as the message or an argument becomes its type name; `exc_text` is pre-set to type +
+      innermost frame, so no formatter renders the message or traceback. `exc_info` stays on the record for Sentry
+      (its scrubber already blanks the message). The filter and the env opt-out are removed (Dockerfile, env docs).
+- [x] Call sites: fixed event + type name only in both rejection handlers; OFX logs dialect + counts; no filename in
+      the format-detection or PDF-page lines; the 422 debug line logs a count.
+- [x] Tests: `test_sprint_879_log_redaction.py` — OFX (SGML) and QBO (XML) bank statements with marker account
+      suffix/currency/type and filenames, a malformed OFX, an out-of-balance TB with marker cell and account name, parser
+      errors quoting a marker on both rejection handlers, a 422 carrying a marker; through the real `setup_logging()` at
+      INFO/DEBUG × production/development, with Loki's push and a Sentry transport captured (logging integration at
+      DEBUG, stricter than production). No marker anywhere. Failed first with 6 markers leaking.
+- Found, not fixed (out of scope): an out-of-balance TB returns a **500** — the `tb_out_of_balance` structural anomaly
+  lacks six fields `TrialBalanceResponse.abnormal_balances` requires (`debit`, `credit`, `category`,
+  `matched_keywords`, `requires_review`, `suggestions`). Needs its own sprint.
+
+**Verification (879a):** full backend suite 10,822 passed / 1 skipped / 1 failed — the failure
+(`test_cleanup_scheduler::test_failure_log_includes_traceback_exc_info`) caught the first version stripping `exc_info`,
+which would have cost Sentry its stack frames; fixed (pre-set `exc_text` instead), and the logging/Sentry/Loki/cleanup
+suites re-run green (103 passed). ruff clean; mypy 212 (gate 1,011), none in changed files.
+
+**879b — analysis saves account balances into expectations (DH-04, Critical)**
+- [ ] Confirm; return proposed actuals, save nothing; explicit capture (one / all from a run) recording the source run;
+      memos print "not captured".
+
+**879c — the activity summary accepts any content (DH-05, Critical)**
+- [ ] Confirm; per-tool aggregate schema shared by API and recorder; typed POST body; invalid stored summaries removed.
+
+**879d — previewed files outlive 10 minutes (DH-07, High)**
+- [ ] Confirm; timed sweep per process, byte budget, per-user cap, purge on logout/deletion; miss → re-send.
+
+**879e — XLSX exports write worksheet XML to temp files (DH-06, High)**
+- [ ] Confirm in installed openpyxl; one shared in-memory helper for all three generators (approach to CEO first).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

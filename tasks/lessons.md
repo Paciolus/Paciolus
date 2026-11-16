@@ -277,3 +277,8 @@
   `frontend/.husky/_`, which is generated and untracked. Copy it from the main checkout before the first commit. And
   `next build` (Turbopack) cannot resolve packages through a `node_modules` junction outside the worktree; run `npm ci`
   in the worktree instead of linking.
+- **2026-11-16 (Sprint 879):** to keep values out of logs, enforce it where the record is created (a log-record
+  factory), not in a handler filter — filters run only on the handlers they are attached to, and Sentry's logging hook
+  reads the record before any handler. But don't strip `exc_info` to do it: Sentry needs it for stack frames (its own
+  scrubber removes the message). Pre-set `record.exc_text` to the safe summary; `logging.Formatter` renders a pre-set
+  `exc_text` instead of the traceback. An existing test that asserted `exc_info` survived caught the first version.

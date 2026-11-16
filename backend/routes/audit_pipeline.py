@@ -253,14 +253,9 @@ async def audit_trial_balance(
             return analysis_result  # type: ignore[return-value]
 
         except (ValueError, KeyError, TypeError) as e:
-            # Sprint 713: these map to user-facing HTTP 400 (malformed upload).
-            # logger.exception would escalate to Sentry as an ERROR event;
-            # WARNING keeps the traceback in Render logs without the noise.
-            logger.warning(
-                "Trial balance analysis rejected [%s]: %s",
-                type(e).__name__,
-                e,
-                exc_info=True,
-            )
+            # Sprint 713: these map to user-facing HTTP 400 (malformed upload),
+            # so WARNING, not an ERROR event. Sprint 879 (DH-03): the message
+            # quotes the upload, so only the type is logged.
+            logger.warning("Trial balance analysis rejected [%s]", type(e).__name__)
             maybe_record_tool_run(db, engagement_id, current_user.id, "trial_balance", False)
             raise HTTPException(status_code=400, detail=sanitize_error(e, "upload", "audit_error"))

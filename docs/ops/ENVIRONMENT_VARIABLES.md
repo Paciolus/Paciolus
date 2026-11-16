@@ -129,7 +129,6 @@ These are non-sensitive configuration values. They can live in a repo-tracked
 | Variable | Default | Description |
 |---|---|---|
 | `SENTRY_TRACES_SAMPLE_RATE` | `0.1` | Fraction of transactions sent to Sentry (0.0–1.0) |
-| `REDACT_LOG_TRACEBACKS` | `true` | Redact full tracebacks from logs in production |
 
 ### Cleanup Scheduler
 

@@ -80,13 +80,8 @@ async def execute_file_tool(
             # (incl. ConversionSyntax) raised by unguarded Decimal() calls
             # on malformed numeric input. Log level is WARNING — these are
             # user-facing 400s, not Sentry-worthy ERROR events.
-            logger.warning(
-                "%s rejected [%s]: %s",
-                tool_name,
-                type(e).__name__,
-                e,
-                exc_info=True,
-            )
+            # Sprint 879 (DH-03): the message quotes the upload — type only.
+            logger.warning("%s rejected [%s]", tool_name, type(e).__name__)
             await asyncio.to_thread(_record_failure, session_scope, engagement_id, user_id, tool_name)
             raise HTTPException(
                 status_code=400,

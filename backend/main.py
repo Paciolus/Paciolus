@@ -354,7 +354,8 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 # Custom 422 handler — prevents Pydantic loc paths and field names from leaking
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.debug("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
+    # Sprint 879 (DH-03): the errors carry the submitted values — count only.
+    logger.debug("Validation error on %s %s (%d errors)", request.method, request.url.path, len(exc.errors()))
     # Sprint 872: the legacy `error_code` alias is gone — `code` carries the
     # same value and the frontend reads `code` first.
     return error_response(

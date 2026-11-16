@@ -253,11 +253,10 @@ def _check_upload_headers(file: UploadFile) -> tuple[str, str]:
 
     detected = detect_format(filename=file.filename, content_type=file.content_type)
     logger.debug(
-        "File format detection: %s (confidence=%s, source=%s) for '%s'",
+        "File format detection: %s (confidence=%s, source=%s)",
         detected.format,
         detected.confidence,
         detected.source,
-        file.filename,
     )
     if ext and ext not in ALLOWED_EXTENSIONS:
         log_secure_operation("file_type_rejected", f"Rejected file with extension: {ext}")

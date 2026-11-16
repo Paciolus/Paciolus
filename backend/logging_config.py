@@ -17,13 +17,20 @@ PII/Token Log Sanitization (Sprint 300):
   (first 8 chars + SHA-256 prefix) instead of raw values.
 - Historical disk logs (if any from pre-Sprint 211 before structured
   logging was introduced) should be rotated/purged in production.
+- Sprint 879 (DH-03): every record is scrubbed where it is created
+  (``install_safe_log_records``) — exception objects become type names and
+  tracebacks become type + innermost frame, at every level and in every
+  environment. Upload routes and parsers log fixed event names, exception type
+  names and counts only — never filenames, cell values or file metadata.
 """
 
 import json
 import logging
 import sys
+from collections.abc import Mapping
 from contextvars import ContextVar
 from datetime import UTC, datetime
+from typing import Any
 
 from config import DEBUG, ENV_MODE, LOKI_ENABLED, LOKI_TOKEN, LOKI_URL, LOKI_USER
 
@@ -39,24 +46,85 @@ class RequestIdFilter(logging.Filter):
         return True
 
 
-class TracebackRedactionFilter(logging.Filter):
-    """Strip full tracebacks from log records, keeping only exception type.
+def _exception_summary(exc: BaseException) -> str:
+    """Type name and the innermost frame — never the exception's message.
 
-    Prevents internal file paths, line numbers, and stack traces from
-    appearing in production log aggregation systems. The exception type
-    is appended to the log message for diagnostic value.
-
-    Active by default in production (ENV_MODE=production).
-    Opt out via REDACT_LOG_TRACEBACKS=false.
+    Exception messages routinely quote the input that broke them ("could not
+    convert 'Acme Holdings 4,210.55' to float"), so the text is never logged.
     """
+    frame = ""
+    tb = exc.__traceback__
+    while tb is not None and tb.tb_next is not None:
+        tb = tb.tb_next
+    if tb is not None:
+        code = tb.tb_frame.f_code
+        module = tb.tb_frame.f_globals.get("__name__", "?")
+        frame = f" at {module}:{code.co_name}:{tb.tb_lineno}"
+    return f"{type(exc).__name__}{frame}"
 
-    def filter(self, record: logging.LogRecord) -> bool:
-        if record.exc_info and record.exc_info[0] is not None:
-            exc_type = record.exc_info[0]
-            record.msg = f"{record.msg} [{exc_type.__name__}]"
+
+def _scrub_value(value: object) -> object:
+    if isinstance(value, BaseException):
+        return f"[{type(value).__name__}]"
+    return value
+
+
+def _scrub_record(record: logging.LogRecord) -> None:
+    """Sprint 879 (DH-03): applied to every record when it is created."""
+    if isinstance(record.msg, BaseException):
+        record.msg = f"[{type(record.msg).__name__}]"
+    elif not isinstance(record.msg, str):
+        record.msg = f"[{type(record.msg).__name__}]"
+        record.args = None
+    if isinstance(record.args, tuple):
+        record.args = tuple(_scrub_value(a) for a in record.args)
+    elif isinstance(record.args, Mapping):
+        record.args = {k: _scrub_value(v) for k, v in record.args.items()}
+    if record.exc_info:
+        # Keep exc_info (Sentry reads it for stack frames; its scrubber blanks the
+        # message) but pre-fill exc_text: logging.Formatter renders a pre-set
+        # exc_text instead of formatting the traceback, so no log line carries
+        # the exception message.
+        exc = record.exc_info[1] if isinstance(record.exc_info, tuple) else None
+        if exc is None:
             record.exc_info = None
-            record.exc_text = None
-        return True
+        else:
+            record.exc_text = f"exception: {_exception_summary(exc)}"
+
+
+def install_safe_log_records() -> None:
+    """Scrub every log record where it is made (Sprint 879, DH-03).
+
+    The data statement says uploads are not kept; a log line is kept. Handler
+    filters only run on the handlers they are attached to, and Sentry's logging
+    hook reads records before any handler — so the rule is enforced in the
+    record factory, which every logger, level, handler and environment shares:
+
+    - an exception object passed as the message or an argument becomes its type
+      name; any other non-string message becomes its type name;
+    - for ``exc_info`` (``logger.exception``, ``exc_info=True``) the rendered text
+      is the type and the innermost frame, never the message or the traceback.
+      ``exc_info`` itself stays on the record for Sentry, whose scrubber
+      (``shared/sentry_scrubber.py``) removes the message and frame variables.
+
+    Call sites must still log only fixed event names, type names and counts —
+    a value formatted into a string before logging cannot be recognised here.
+    Idempotent.
+    """
+    current = logging.getLogRecordFactory()
+    if getattr(current, "_paciolus_safe", False):
+        return
+
+    def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
+        record = current(*args, **kwargs)
+        _scrub_record(record)
+        return record
+
+    factory._paciolus_safe = True  # type: ignore[attr-defined]
+    logging.setLogRecordFactory(factory)
+
+
+install_safe_log_records()
 
 
 class JSONFormatter(logging.Formatter):
@@ -70,8 +138,8 @@ class JSONFormatter(logging.Formatter):
             "message": record.getMessage(),
             "request_id": getattr(record, "request_id", "-"),
         }
-        if record.exc_info and record.exc_info[1] is not None:
-            log_entry["exception"] = self.formatException(record.exc_info)
+        if record.exc_text:
+            log_entry["exception"] = record.exc_text
         if hasattr(record, "extra_data"):
             log_entry["data"] = record.extra_data
         return json.dumps(log_entry)
@@ -91,6 +159,7 @@ def setup_logging() -> None:
 
     Call once at startup before any loggers are used.
     """
+    install_safe_log_records()
     root_logger = logging.getLogger()
 
     # Clear any existing handlers (prevents duplicate logs on reload)
@@ -105,13 +174,6 @@ def setup_logging() -> None:
 
     if ENV_MODE == "production":
         handler.setFormatter(JSONFormatter())
-        # Strip full tracebacks from production logs to prevent internal file
-        # paths leaking to log aggregation systems.  Enabled by default in
-        # production; opt-out via REDACT_LOG_TRACEBACKS=false.
-        import os
-
-        if os.environ.get("REDACT_LOG_TRACEBACKS", "true").lower() != "false":
-            handler.addFilter(TracebackRedactionFilter())
     else:
         handler.setFormatter(DevFormatter())
 
@@ -139,8 +201,6 @@ def _attach_loki_handler(root_logger: logging.Logger) -> None:
     Structured JSON body identical to the stdout handler in production so
     Render's log tail and Loki present the same records.
     """
-    import os
-
     from loki_handler import LokiHandler
 
     handler = LokiHandler(
@@ -151,6 +211,4 @@ def _attach_loki_handler(root_logger: logging.Logger) -> None:
     )
     handler.addFilter(RequestIdFilter())
     handler.setFormatter(JSONFormatter())
-    if os.environ.get("REDACT_LOG_TRACEBACKS", "true").lower() != "false":
-        handler.addFilter(TracebackRedactionFilter())
     root_logger.addHandler(handler)
