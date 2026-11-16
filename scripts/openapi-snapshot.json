@@ -1801,6 +1801,17 @@
             "title": "Confidence",
             "type": "number"
           },
+          "coverage_analysis": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage Analysis"
+          },
           "credit": {
             "title": "Credit",
             "type": "number"

@@ -48,7 +48,10 @@ export function RiskDashboard({
     const info: AbnormalBalanceExtended[] = []
 
     anomalies.forEach((a) => {
-      if (a.severity === 'informational') {
+      // Sprint 873: coverage observations are context, not risks — the backend
+      // labels them "not an anomaly" and leaves them out of the risk score, but
+      // they carried a material severity and were listed under "Material Risks".
+      if (a.severity === 'informational' || a.coverage_analysis === true) {
         info.push(a)
       } else if (a.severity === 'high' || a.materiality === 'material') {
         high.push(a)
