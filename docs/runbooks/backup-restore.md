@@ -216,3 +216,61 @@ Pick the mechanism by what was lost.
 Data written between the dump and the outage is lost under B — at most ~24 h
 with the daily schedule. Record the incident per
 `docs/04-compliance/INCIDENT_RESPONSE_PLAN.md`.
+
+---
+
+## 6. Credentials inventory
+
+Names, scope, where each is created and when it expires — **never values**. Compiled 2026-11-16 from the
+repository (`.github/workflows/*.yml`, `backend/config.py`, `backend/shared/export_share_storage.py`) and
+`gh secret list`. Where the repository cannot establish a fact (a value set only in a provider console, an expiry
+only the issuer knows) the cell says **unknown**; check it at the issuer and fill it in here.
+
+### GitHub Actions repository secrets
+
+All eight were set on 2026-11-14 (`gh secret list`).
+
+| Secret | Used by | Scope | Created at | Expires |
+|---|---|---|---|---|
+| `NEON_BACKUP_DATABASE_URL` | `backup-pg-dump.yml` | Neon role `backup_ro` (read-only), direct (non-pooler) host | Neon Console → Connect | Role password: no expiry unless rotated |
+| `NEON_API_KEY` | `backup-integrity-check.yml`, `dr-test-monthly.yml` | Read project + branch metadata | Neon → Account settings → API keys | unknown |
+| `NEON_PROJECT_ID` | same as above | Identifier, not a credential | Neon → Settings → General | — |
+| `R2_BACKUPS_ACCESS_KEY_ID` / `R2_BACKUPS_SECRET_ACCESS_KEY` | all four backup / DR workflows | R2 token `github-actions-backups`, Object Read & Write on `paciolus-backups` only | Cloudflare → R2 → Manage R2 API Tokens | **~2027-11-14** |
+| `R2_BACKUPS_ENDPOINT` / `R2_BACKUPS_BUCKET` | same | Identifiers, not credentials | — | — |
+| `RENDER_API_KEY` | `uptime-check.yml` (deploy-SHA drift probe) | Render account API key — Render keys are account-wide, not per service | Render → Account settings → API keys | unknown |
+
+Referenced but **not set**: `SMOKE_USER`, `SMOKE_PASS` (`ci.yml`, job *E2E Smoke Tests*). Without them the job's
+test step is skipped and the job still reports success, so that green check has never run a test. Setting the
+two secrets would not be enough on its own: the job starts a fresh SQLite backend with no users, so the login
+would fail. See the finding in `tasks/todo.md`.
+
+### Render `paciolus-api` environment (production)
+
+Values live only in Render → `paciolus-api` → Environment. Expiries are **unknown** unless stated.
+
+| Variable | What it protects | Issuer / where created | Rotation impact |
+|---|---|---|---|
+| `JWT_SECRET_KEY` | Signs access tokens | Generated locally | Outstanding access tokens stop verifying; refresh tokens are opaque database rows, not JWTs |
+| `CSRF_SECRET_KEY` | Stateless HMAC CSRF tokens | Generated locally | Outstanding CSRF tokens stop validating |
+| `AUDIT_CHAIN_SECRET_KEY` | HMAC on the audit chain and the daily TLS evidence | Generated locally | Production refuses to boot without it (Sprint 768). Rotating breaks verification of earlier signatures, so keep the old key with the evidence it signed |
+| `DATABASE_URL` | Neon app role, pooled host, `sslmode=require` | Neon Console | Role password |
+| `REDIS_URL` | Render Key Value `paciolus-ratelimit` (internal URL) | Render | Render-managed |
+| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Billing | Stripe Dashboard → Developers | Webhook secret is per endpoint. It changes when the endpoint moves to `api.paciolus.com` (Sprint 868) |
+| `SENDGRID_API_KEY` | Transactional email | SendGrid → Settings → API Keys | unknown |
+| `SENTRY_DSN` | Error reporting (a DSN is not a secret in the usual sense, but treat it as private) | Sentry project settings | — |
+| `R2_EXPORTS_ACCESS_KEY_ID` / `R2_EXPORTS_SECRET_ACCESS_KEY` (+ `_BUCKET`, `_ENDPOINT`) | Export-share bytes in `paciolus-exports` | Cloudflare R2 token, scoped to that bucket | unknown — confirm all four are set (open CEO ask) |
+| `R2_BACKUPS_*` (four) | Same names as the GitHub secrets; on Render since 2026-04-23 | Cloudflare R2 | unknown |
+| `LOKI_URL` / `LOKI_USER` / `LOKI_TOKEN` | Optional log shipping (off by default) | Grafana Cloud | Only if enabled |
+| `ANALYTICS_WRITE_KEY` | Optional analytics | — | Only if set |
+
+### Yearly rotation and sign-off — **November 1**
+
+One day a year, shared with the Sprint 860 tax-table sign-off:
+
+1. Walk both tables above. Rotate anything expiring within the next 13 months, starting with the R2
+   `github-actions-backups` token (~2027-11-14), and fill in every **unknown** expiry from the issuer.
+2. After rotating a GitHub secret, run *Backup — pg_dump to R2* and *DR Test (Monthly)* by hand. After rotating a
+   Render variable, confirm the deploy is live on `main`'s SHA and `/health/ready` is healthy.
+3. Confirm no scheduled workflow shows "disabled" in the Actions tab (GitHub disables them after 60 idle days;
+   see §2).
+4. Record the date and what was rotated in `tasks/todo.md`.
