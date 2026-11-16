@@ -633,6 +633,14 @@ class AbnormalBalanceResponse(BaseModel):
     has_rounding_anomaly: Optional[bool] = None
     rounding_pattern: Optional[str] = None
     rounding_divisor: Optional[int] = None
+    # Sprint 873: concentration rows are materiality-coverage context, not
+    # anomalies (Sprint 668). Undeclared, `extra="ignore"` stripped the flag, so
+    # the app listed them under "Material Risks" and the PDF built from the app's
+    # payload never split them into its coverage section.
+    coverage_analysis: Optional[bool] = None
+    # Sprint 873: emitted by the equity / intercompany rules and rendered by the
+    # TB PDF (pdf/sections/diagnostic.py), but stripped here like coverage_analysis.
+    cross_reference_note: Optional[str] = None
 
     # Optional: multi-sheet only
     sheet_name: Optional[str] = None
