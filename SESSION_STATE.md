@@ -28,8 +28,8 @@ vs the draft DPA's 30-day promise; confirm the four `R2_EXPORTS_*` env vars on R
 2026-11-16) and Vercel (status `success`; homepage headline and `/samples/paciolus-sample-je-testing-memo.pdf` 200).
 Render workspace `tea-d6ie7bngi27c738fa2ag`, service `srv-d6ie9l56ubrc73c7eq2g` — pass `workspaceId` to the Render MCP.
 
-**5. Open PRs from the 2026-11-16 overnight session — none merged; each needs CEO review.** Merge order that avoids
-conflicts: #316 (Main SHA) → #317 (870 probe) → the rest in any order. Every one touches `tasks/todo.md`, so expect
+**5. Open PRs from the 2026-11-16 overnight session — none merged; each needs CEO review.** Merge order: **#327 first if
+approved** (it changes what 868 is for), #316 → #317 → the rest in any order. Every one touches `tasks/todo.md`, so expect
 small rebases.
 | PR | What | After merge |
 |---|---|---|
@@ -42,7 +42,10 @@ small rebases.
 | #322 | Sprint 869: JE count says "GL lines"; calibration left as a CEO decision | regenerate the public sample memo |
 | #323 | Sprint 872: TB recalculation within 5 min no longer "duplicate" | move the materiality slider on production |
 | #325 | Sprint 873: coverage rows not "Material Risks"; API keeps `coverage_analysis` / `cross_reference_note`; class gate | check TB PDF coverage section |
-| this | lessons + this file | — |
+| #327 | **Sprint 874 (CEO decision): every reload signed production users out** — CSRF rule on `/auth/refresh` could not be satisfied; reverses the 2026-04-20 rule | reload twice + 20-min idle stays signed in; re-scope 868 |
+| #328 | Sprint 875: concurrent wrong passwords no longer bypass the 5-attempt lockout | — |
+| #329 | Sprint 876: industry-ratio evaluation only against the same client's engagement | — |
+| #326 | lessons + this file | — |
 
 ## This Session — 2026-11-16 (overnight, CEO away; nothing merged except #315)
 
@@ -57,6 +60,11 @@ small rebases.
 - CEO decisions written up with recommendations: JE unusual-combinations minimum (300); E2E smoke check (CI, freeze);
   "Fraud Indicators" tier label left as is; scheduled-workflow alarm needs an external heartbeat (an Actions
   workflow cannot report Actions being disabled) — e.g. a Sentry cron monitor, which needs a DSN secret.
+- Audits (two independent read-only agents, every finding verified against the code before acting): auth/session/CSRF
+  → Sprints 874 (P0) and 875; tenant isolation → no cross-tenant IDOR, Sprint 876 + notes. Remaining auth Lows and the
+  "completed engagements stay writable" decision are listed under Sprints 875/876 in `tasks/todo.md`.
+- **Sprint 874 changes the plan:** the sign-outs blamed on the third-party cookie (868) are mostly a CSRF bootstrap
+  defect; merge 874 first, then re-scope 868.
 - Lessons: 7 new entries in `tasks/lessons.md` → Recent lessons.
 
 ## Verification
