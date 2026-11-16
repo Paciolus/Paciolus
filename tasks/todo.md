@@ -240,7 +240,16 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
       structural guard that every write route on the five workspace routers carries the gate.
 
 **878b — four CSV exports skip the export gate (AZ-03, High)**
-- [ ] Confirm, gate, and widen the export-route coverage test to every download route by suffix.
+- [x] Confirmed at `3c34926a`: `/audit/account-risk-heatmap/export.csv`, `/audit/depreciation/export.csv`,
+      `/audit/lease-accounting/export.csv` and `/export/csv/bank-rec` depended only on `require_verified_user`; a
+      verified Free account (and a PAST_DUE Solo) got the CSV. The coverage test scanned six export modules only.
+- [x] `Depends(check_export_access)` on those four. An app-wide scan by suffix also found six CSV downloads with only
+      the in-body tool gate (cash-flow projector, book-to-tax, 1099, SoD, W-2, intercompany): already closed to Free by
+      the tool gate, but given the export gate too so every download carries it.
+- [x] Tests: `test_sprint_878_export_gates.py` — Free and lapsed Solo → 403 with the generator never called; active
+      Solo → 200 `text/csv` attachment, for all four. `TestEveryExportRouteIsGated` gains an app-wide scan (paths ending
+      `.csv`/`.xlsx`/`.pdf` or with an `export` segment), with two reasoned exemptions: the GDPR account export and the
+      admin team-activity CSV (behind the stricter admin-dashboard gate).
 
 **878c — a preview token gets a PDF past the Free format limit (AZ-04, High)**
 - [ ] Confirm, enforce at preview, and check the cached/detected format at analysis.
@@ -254,7 +263,9 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
 **Verification (878a):** workspace/engagement/firm/entitlement suites 822 passed + new file 97 passed; ruff clean;
 mypy 212 errors (baseline 1,011), none in changed files.
 
-**Commit SHA:** 878a (this commit).
+**Verification (878b):** tool/export/route-snapshot suites 882 passed; new tests 26 passed; ruff clean; mypy 212 (baseline 1,011).
+
+**Commit SHA:** 878a `69ae78b5` · 878b (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

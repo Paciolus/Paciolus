@@ -32,6 +32,7 @@ from account_risk_heatmap_engine import (
     heatmap_to_csv,
 )
 from auth import User, require_verified_user
+from shared.entitlement_checks import check_export_access
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -151,7 +152,7 @@ def generate_heatmap(
     return _result_to_response(result)
 
 
-@router.post("/audit/account-risk-heatmap/export.csv")
+@router.post("/audit/account-risk-heatmap/export.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_heatmap_csv(
     request: Request,

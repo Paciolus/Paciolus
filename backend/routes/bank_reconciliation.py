@@ -30,6 +30,7 @@ from bank_reconciliation import (
 from database import get_db
 from models import User
 from security_utils import log_secure_operation
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.export_helpers import csv_response
 from shared.export_schemas import BankRecExportResult
@@ -162,7 +163,7 @@ class BankRecExportInput(BankRecExportResult):
     filename: str = "bank_reconciliation"
 
 
-@router.post("/export/csv/bank-rec")
+@router.post("/export/csv/bank-rec", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_csv_bank_rec(
     request: Request,

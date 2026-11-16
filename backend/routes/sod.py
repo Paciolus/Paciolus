@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from database import get_db
+from shared.entitlement_checks import check_export_access
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -189,7 +190,7 @@ def analyze_sod(
     return SodAnalysisResponse(**result.to_dict())
 
 
-@router.post("/audit/sod/analyze.csv")
+@router.post("/audit/sod/analyze.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def analyze_sod_csv(
     request: Request,

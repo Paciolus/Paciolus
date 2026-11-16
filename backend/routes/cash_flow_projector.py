@@ -28,6 +28,7 @@ from cash_flow_projector_engine import (
     project_cash_flow,
 )
 from database import get_db
+from shared.entitlement_checks import check_export_access
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
 from shared.promoted_tool_response_schemas import CashFlowForecastResponse
@@ -121,7 +122,7 @@ def run_projection(
     return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
-@router.post("/audit/cash-flow-projector/export.csv")
+@router.post("/audit/cash-flow-projector/export.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_projection_csv(
     request: Request,

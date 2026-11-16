@@ -423,6 +423,54 @@ class TestEveryExportRouteIsGated:
             f"whatever took its place."
         )
 
+    # Sprint 878 (review AZ-03): the module list above missed downloads that
+    # live beside their tool — four CSV exports in account_risk_heatmap,
+    # depreciation, lease_accounting and bank_reconciliation had no gate. The
+    # app-wide scan below selects a download by what its path says it is, not
+    # by which module defines it.
+    DOWNLOAD_SUFFIXES = (".csv", ".xlsx", ".pdf")
+
+    # App-wide downloads that carry no export gate, each with the reason. The
+    # share-link surface above is included.
+    APP_EXEMPT = EXEMPT | {
+        # The data-subject export (GDPR Art. 15/20). Every account, Free
+        # included, must be able to download what we hold about it.
+        ("GET", "/auth/account/export"),
+        # The team activity CSV is behind check_admin_dashboard_access
+        # (Professional+, owner/admin) in _get_admin_org — stricter than the
+        # export gate, which every paid tier passes.
+        ("GET", "/admin/export-activity-csv"),
+    }
+
+    @classmethod
+    def _is_download(cls, path: str) -> bool:
+        import re
+
+        return path.lower().endswith(cls.DOWNLOAD_SUFFIXES) or re.search(r"(^|/)export([/.\-]|$)", path) is not None
+
+    def test_every_download_route_in_the_app_carries_a_tier_gate(self):
+        from main import app
+
+        downloads, ungated = [], []
+        exempt_seen: set[tuple[str, str]] = set()
+        for route in all_routes(app):
+            if not hasattr(route, "methods") or not self._is_download(route.path):
+                continue
+            downloads.append(route.path)
+            exempt = {(m, route.path) for m in route.methods} & self.APP_EXEMPT
+            if exempt:
+                exempt_seen |= exempt
+                continue
+            if not self._route_is_gated(route):
+                ungated.append(f"{route.endpoint.__module__} {sorted(route.methods)} {route.path}")
+
+        suffixed = [p for p in downloads if p.lower().endswith(self.DOWNLOAD_SUFFIXES)]
+        assert len(suffixed) >= 12, f"only {len(suffixed)} suffix-named downloads found: {suffixed}"
+        assert "/export/csv/bank-rec" in downloads
+        assert not ungated, f"{len(ungated)} download routes have no tier gate:\n  " + "\n  ".join(ungated)
+        stale = self.APP_EXEMPT - exempt_seen
+        assert not stale, f"APP_EXEMPT names {sorted(stale)}, which no longer exist"
+
     def test_in_body_gate_allowlist_still_names_real_functions(self):
         import importlib
 

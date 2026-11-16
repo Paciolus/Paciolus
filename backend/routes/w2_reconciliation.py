@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from auth import User, require_verified_user
 from database import get_db
+from shared.entitlement_checks import check_export_access
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
 from shared.promoted_tool_response_schemas import W2ReconciliationResponse
@@ -276,7 +277,7 @@ def run_reconciliation(
     return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
-@router.post("/audit/w2-reconciliation/export.csv")
+@router.post("/audit/w2-reconciliation/export.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_reconciliation_csv(
     request: Request,

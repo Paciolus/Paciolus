@@ -29,6 +29,7 @@ from form_1099_engine import (
     VendorRecord,
     prepare_1099s,
 )
+from shared.entitlement_checks import check_export_access
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
 from shared.promoted_tool_response_schemas import Form1099Response
@@ -147,7 +148,7 @@ def prepare_1099_candidates(
     return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
-@router.post("/audit/form-1099/export.csv")
+@router.post("/audit/form-1099/export.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_1099_csv(
     request: Request,

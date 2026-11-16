@@ -24,6 +24,7 @@ from depreciation_engine import (
     MacrsSystem,
     generate_depreciation_schedule,
 )
+from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
@@ -128,7 +129,7 @@ def calculate_depreciation(
     return DepreciationResponse(**result.to_dict())  # type: ignore[arg-type]
 
 
-@router.post("/audit/depreciation/export.csv")
+@router.post("/audit/depreciation/export.csv", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_AUDIT)
 def export_depreciation_csv(
     request: Request,
