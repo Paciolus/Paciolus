@@ -161,6 +161,15 @@ so its Sprint 668 "Materiality Coverage Analysis" split could not fire from the 
       concentration rows and only there — fails on the old schema.
 - [x] `RiskDashboard`: coverage rows go to Informational Notes, not Material Risks. `RiskDashboardCoverageRows.test.tsx`
       (2) fails on the old component.
+- [x] **Class audit** (lessons: gate the class): every TB anomaly generator run through the real pipeline, row keys
+      diffed against the model. Also stripped: `cross_reference_note` — emitted by the equity / intercompany rules and
+      rendered by the TB PDF (`pdf/sections/diagnostic.py:657`), so the PDF has never shown it from the app → declared.
+      Harmless drops (nothing downstream reads them): `is_equity_signal`, `rounding_tier`, `detection_method`,
+      `mapping_source`, top-level `coverage_finding_count`, `totals_rows_excluded`. Dead reads (the PDF reads them, no
+      rule emits them): `transaction_count`, `per_transaction_amount` — left alone.
+      Gate: `test_tb_response_keeps_consumed_keys.py` parses every `ab.get("…")` key the TB PDF reads, runs every
+      generator, and fails on any emitted+read key the model does not declare; parser and generator self-checks;
+      injected removal of either field fails it by name.
 - [ ] **After merge:** on production, a TB with a dominant revenue account shows the concentration row under
       Informational Notes, and the TB PDF shows "Materiality Coverage Analysis".
 
