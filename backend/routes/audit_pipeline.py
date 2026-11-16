@@ -90,7 +90,17 @@ async def audit_trial_balance(
     # and against the caller's plan now, not the plan they had at preview.
     enforce_format_access(current_user, db, input_filename, file_bytes=raw_bytes)
 
-    file_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
+    # Sprint 872: the key covers the request's settings as well as the bytes.
+    # The TB page re-posts the same file when the auditor changes materiality,
+    # confirms a column mapping or re-runs after account-type overrides; keyed
+    # on bytes alone, every such re-run within 5 minutes answered 409. Only an
+    # identical request is a duplicate. Same 16-hex digest, so the key's format
+    # and length are unchanged.
+    request_settings = json.dumps(
+        [materiality_threshold, account_type_overrides, column_mapping, selected_sheets],
+        separators=(",", ":"),
+    ).encode()
+    file_hash = hashlib.sha256(raw_bytes + b"\x00" + request_settings).hexdigest()[:16]
     dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"
     now = datetime.now(UTC)
     expires_at = now + timedelta(minutes=5)
