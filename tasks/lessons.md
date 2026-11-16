@@ -146,3 +146,29 @@
 ## Recent lessons
 
 *(New entries go here, newest last. Earlier entries, including the three from 2026-11-14/15, are in the archive and in the rules above.)*
+
+- **2026-11-16 — A response model with `extra="ignore"` deletes what the producer adds, and nothing notices** (Sprint 873).
+  Concentration rows carried `coverage_analysis` and the TB PDF branched on it, but `AbnormalBalanceResponse` did not
+  declare it, so every API response stripped it and the PDF (built from the app's payload) never saw it. A frontend
+  test that fed the flag in directly passed while production stayed broken. Rule: for any flag a consumer branches
+  on, test it through the real response model; gate the class by diffing emitted keys against declared fields
+  (`test_tb_response_keeps_consumed_keys.py`). The audit found a second victim (`cross_reference_note`).
+- **2026-11-16 — Investigate the reported symptom down to its key** (Sprint 872). "Re-uploading within 5 minutes shows
+  raw API text" was really "every recalculation within 5 minutes fails": the dedup key omitted the request's
+  settings. A guard against duplicate requests must key on everything that makes two requests different.
+- **2026-11-16 — TruffleHog in CI scans every commit since the PR base, on every fetched branch** (PRs #315, #320).
+  A flagged string fixed at the branch tip still fails the scan (the earlier commit is in range), and one flagged
+  commit on any open branch fails the scan on *every* open PR. Fix by rewriting the unmerged commit, then re-run the
+  other PRs' failed jobs. Never put a connection URL with a user-and-password part in tests or docs, not even as a placeholder;
+  `construct_from(..., None)` instead of `"sk_test_…"` keys (the pre-commit hook blocks those).
+- **2026-11-16 — `ipaddress.is_private` is true for documentation ranges** (Sprint 870). TEST-NET `203.0.113.0/24` is
+  "private" to Python, so a raw-vs-hashed split on `is_private` would have logged customer-shaped addresses raw in
+  tests and hidden the bug. Split on `is_global`; test with a globally routable address.
+- **2026-11-16 — A fixture shape the serializer never produces hides real-data bugs** (Sprint 867). The SOCE read
+  accounts as `name` / `net_balance` — the unit fixtures' shape — while every real grouping carries `account` /
+  `debit` / `credit`, so exported SOCEs dropped every equity account. Build fixtures through
+  `lead_sheet_grouping_to_dict(group_by_lead_sheet(...))`.
+- **2026-11-16 — A green check that never ran is a failing check reporting success.** "E2E Smoke Tests" passes on every
+  PR because its secrets are unset and the step is skipped (filed in `tasks/todo.md`).
+- **2026-11-16 — On Windows, `--basetemp` must point inside an existing directory**; a missing parent turned 203
+  `tmp_path` tests into setup errors that looked like failures.
