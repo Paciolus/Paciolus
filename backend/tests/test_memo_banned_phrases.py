@@ -57,6 +57,9 @@ BANNED: list[tuple[str, str]] = [
     (r"\btests clear\b", "a 'clean' verdict; say 'no exceptions flagged'"),
     (r"\bfindings\b", "results are flags for review, not findings"),
     ("®", "the registered-trademark sign asserts a registration we have not confirmed"),
+    # Sprint 869: JE testing counts GL lines, not journal entries; a 204-entry,
+    # 408-line file printed "Total Journal Entries Tested 408".
+    (r"total journal entries tested", "the JE count is GL lines (Sprint 869)"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]
 
@@ -171,6 +174,7 @@ def test_banned_list_catches_known_bad_wording():
         "The accounts are fairly stated.",
         "Evaluation: FAIL",
         "The conclusion is a fail if either limit exceeds TM.",
+        "Total Journal Entries Tested .... 408",
     ]:
         assert _hits(bad), bad
     for fine in ["LLC pass-through status", "UEL > TM", "Summary of Results", "no misstatement is found"]:

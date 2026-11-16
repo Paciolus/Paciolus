@@ -90,7 +90,7 @@ export function extractJEProof(result: JETestingResult): ProofSummary {
     columnConfidence: result.column_detection?.overall_confidence ?? 0,
     totalEntries: result.composite_score.total_entries,
     testsLabel: String(result.composite_score.tests_run),
-    entriesLabel: 'journal entries',
+    entriesLabel: 'GL lines', // Sprint 869: total_entries counts lines, not journal entries
   }))
 }
 
