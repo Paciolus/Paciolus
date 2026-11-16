@@ -26,6 +26,7 @@ from je_testing_engine import (
 from models import User
 from security_utils import log_secure_operation
 from shared.account_extractors import extract_je_accounts
+from shared.entitlement_checks import check_upload_limit
 from shared.error_messages import sanitize_error
 from shared.helpers import (
     parse_json_list,
@@ -35,7 +36,8 @@ from shared.holiday_calendar import us_federal_holiday_names
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.saved_testing_config import JE_SPEC, load_saved_testing_config
 from shared.testing_response_schemas import JETestingResponse, SamplingResultResponse
-from shared.testing_route import run_single_file_testing
+from shared.testing_route import enforce_tool_access, run_single_file_testing
+from shared.tool_run_recorder import consume_upload
 from shared.upload_pipeline import (
     memory_cleanup,
     parse_uploaded_file,
@@ -147,8 +149,22 @@ async def sample_journal_entries(
     fixed_per_stratum: Optional[int] = Form(default=None),
     column_mapping: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, Any]:
-    """Run stratified random sampling on a General Ledger extract."""
+    """Run stratified random sampling on a General Ledger extract.
+
+    Sprint 878 (review AZ-06): part of the journal-entry tool, so it carries
+    the same tool gate, and a run uses one upload of the allowance (CEO
+    decision) - checked here, consumed on success. Database work runs in a
+    worker thread with its own session (Sprint 890, 15E).
+    """
+
+    def _gate() -> None:
+        with session_scope() as db:
+            enforce_tool_access(current_user, "journal_entry_testing", db)
+            check_upload_limit(current_user, db)
+
+    await asyncio.to_thread(_gate)
     stratify_list = parse_json_list(stratify_by, "je_stratify", field="stratify_by", item_type=str)
     if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid JSON in stratify_by")
@@ -187,6 +203,11 @@ async def sample_journal_entries(
 
             sampling_result = await asyncio.to_thread(_sample)
 
+            def _consume() -> None:
+                with session_scope() as db:
+                    consume_upload(db, current_user.id, "journal_entry_testing")
+
+            await asyncio.to_thread(_consume)
             return sampling_result.to_dict()  # type: ignore[no-any-return]
 
         except (ValueError, KeyError, TypeError) as e:
@@ -202,8 +223,18 @@ async def preview_sampling(
     stratify_by: str = Form(default='["account","amount_range"]'),
     column_mapping: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, Any]:
-    """Preview stratum counts without running sampling."""
+    """Preview stratum counts without running sampling.
+
+    Sprint 878 (review AZ-06): tool-gated like the run; uses no upload (CEO decision).
+    """
+
+    def _gate() -> None:
+        with session_scope() as db:
+            enforce_tool_access(current_user, "journal_entry_testing", db)
+
+    await asyncio.to_thread(_gate)
     stratify_list = parse_json_list(stratify_by, "je_preview_stratify", field="stratify_by", item_type=str)
     if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")

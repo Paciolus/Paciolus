@@ -107,7 +107,7 @@ def maybe_record_tool_run(
     )
 
     if success and consumes_upload:
-        _consume_upload(db, user_id, tool_name)
+        consume_upload(db, user_id, tool_name)
 
     if engagement is None or manager is None:
         return
@@ -125,8 +125,13 @@ def maybe_record_tool_run(
     )
 
 
-def _consume_upload(db: Session, user_id: int, tool_name: str) -> None:
+def consume_upload(db: Session, user_id: int, tool_name: str) -> None:
     """Advance the upload counter for one successful run.
+
+    The one place metering happens. Called from ``maybe_record_tool_run``'s
+    success path, and directly by a gated route that has no tool run to record
+    (Sprint 878: a JE sampling run, which must not appear as a JE test run in
+    the activity feed).
 
     A failure here must not turn a finished analysis into a 500: the user has
     their result, and an under-count can only ever let a run through, never

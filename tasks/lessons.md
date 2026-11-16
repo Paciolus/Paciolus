@@ -265,3 +265,15 @@
 - **2026-11-16 (Sprint 872):** changing an error body's `message` can change what the UI shows: the frontend passes only
   allowlisted backend strings and otherwise shows a generic fallback. When moving an error into the common shape, check
   the allowlist (`SAFE_PASSTHROUGH`) — the 429 text had to be added.
+- **2026-11-16 (Sprint 878):** a quota is only as strong as the thing it counts. The Free allowance counted
+  ActivityLog rows the browser writes and the user can clear, so the meter was client-controlled. Count usage from a
+  record the server writes on its own success path and no user route can touch; and make the check and the increment
+  resolve the same source in one function, so they cannot drift (firm members were checked against the firm's
+  allowance but counted alone).
+- **2026-11-16 (Sprint 878):** check the input you will process, not the input you were handed. The analysis
+  format-checked the new upload's name and then analysed a cached file from a preview token. Resolve the real input
+  first, then gate it (by detected format when the name has no extension, as the parser does).
+- **2026-11-16 (Sprint 878):** a fresh `git worktree` runs **no** commit hooks — `core.hooksPath` points at
+  `frontend/.husky/_`, which is generated and untracked. Copy it from the main checkout before the first commit. And
+  `next build` (Turbopack) cannot resolve packages through a `node_modules` junction outside the worktree; run `npm ci`
+  in the worktree instead of linking.

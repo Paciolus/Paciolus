@@ -822,7 +822,9 @@ def _meters_directly(fn) -> bool:
         if not isinstance(node, ast.Call):
             continue
         name = _name(node.func)
-        if name == "increment_upload_count":
+        # Sprint 878: consume_upload is the recorder's metering entry point,
+        # called directly by a gated route with no tool run to record.
+        if name in ("increment_upload_count", "consume_upload"):
             return True
         if name == "maybe_record_tool_run" and _recorder_success(node) and _consumes(node):
             return True

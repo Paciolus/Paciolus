@@ -82,7 +82,7 @@
 > - [ ] **Sprint 872** — session and sign-in boundaries (cross-account cache, CSRF owner binding, unverified invite
 >       acceptance, impersonation token storage, error shape). Security; code complete, local branch, not pushed.
 > - [ ] **Sprint 878** — plan features and upload allowances enforced on the server (workspace, CSV exports,
->       preview-token format bypass, upload ledger, JE sampling). Security; in progress.
+>       preview-token format bypass, upload ledger, JE sampling). Security; code complete on a local branch, stacked on #331.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -220,8 +220,8 @@ eslint green; ruff clean; mypy adds no errors.
 **Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d `caf05f5a` · 872e `c9622ce2`.
 
 ### Sprint 878: Plan features and upload allowances enforced on the server (AZ-02..06, ST-04)
-**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-878-plan-enforcement` (off Sprint 853's branch
-`sprint-firm-owned-records`; not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects).
+**Status:** IN REVIEW — code complete 2026-11-16 on local branch `sprint-878-plan-enforcement` (off Sprint 853's
+branch `sprint-firm-owned-records`; not pushed; merges after #331). **Priority:** P0/P1 security (freeze-exempt: security defects).
 **Source:** read-only review at `ef5e567`. **Agents:** Guardian (lead), Executor, Critic.
 
 **CEO decisions (2026-11-16):** the engagement workspace is Solo and above. An account that drops to Free keeps read
@@ -285,7 +285,15 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
       rows; the unit test that pinned "no subscription = no-op" now asserts one ledger row.
 
 **878e — JE sampling skips the tool gate and the allowance (AZ-06, High)**
-- [ ] Confirm, gate both routes, meter successful runs.
+- [x] Confirmed at `3c34926a`: a Free account got 200 from both `/audit/journal-entries/sample` and `/sample/preview`;
+      a Solo account at 100/100 could still sample; a run did not move the counter.
+- [x] Both routes call `enforce_tool_access(..., "journal_entry_testing", db)`. The run also calls
+      `check_upload_limit` and, on success, `tool_run_recorder.consume_upload` (made public: the one metering entry
+      point; no ToolActivity row, so sampling does not show as a JE test run). The preview uses no allowance.
+      `test_sprint_790_upload_metering.py`'s symmetry scan recognises `consume_upload` (watched it fail with the call removed).
+- [x] Tests: `test_sprint_878_je_sampling_gate.py` — Free and lapsed Solo → 403 on both routes, nothing parsed; Solo at
+      its cap → 403 `uploads` on the run, counter unchanged; a successful run +1; a failed run +0; the preview at the
+      cap → 200, counter unchanged.
 
 **Verification (878a):** workspace/engagement/firm/entitlement suites 822 passed + new file 97 passed; ruff clean;
 mypy 212 errors (baseline 1,011), none in changed files.
@@ -299,7 +307,18 @@ passed; ruff clean; mypy 212 (baseline 1,011).
 metering + JE suites 580 passed; policy-doc guards 13 passed; new tests 6 passed; ruff clean; mypy 212 (baseline 1,011);
 frontend build green (pages `ƒ`), jest 212 suites / 2,107 tests.
 
-**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d `197168d4` + test follow-up (this commit).
+**Verification (878e, whole sprint):** full backend suite 10,798 passed, 1 skipped (the first full run found 6
+failures: the five ActivityLog-seeded tests fixed in `455ad1e3`, and the "only the recorder calls
+`increment_upload_count`" guard, resolved by metering sampling through `consume_upload`); new tests 8 passed; ruff
+clean; mypy 212 (baseline 1,011). Frontend unchanged since 878d's green build + jest.
+
+**Not changed (noted):** the engagement pages have no plan gate in the UI — a Free account now gets a 403 when it
+tries to create or change workspace records, with no upgrade prompt (frontend follow-up). The heatmap, depreciation and
+lease *analysis* routes (not their CSVs) carry no tool gate and are not registry tools, so Free can run them on screen —
+a product call, not decided here. Ledger rows are kept until
+account deletion; no retention job prunes old months.
+
+**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d `197168d4` + test follow-up `455ad1e3` · 878e (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
