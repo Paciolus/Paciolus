@@ -175,7 +175,15 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 - Note: no frontend page or email link calls the accept endpoint today.
 
 **872d — impersonation token in sessionStorage (AZ-13, High)**
-- [ ] Confirm, then hold impersonation state in memory only; clear on end and on logout.
+- [x] Confirmed: the admin customer page wrote the impersonation token, customer email and expiry to sessionStorage;
+      the banner read them (only on mount, so it never noticed a session started without a reload).
+- [x] `lib/impersonationState.ts`: in-memory store (`useSyncExternalStore`); the page calls `startImpersonation`, the
+      banner subscribes; End Session still revokes server-side first and keeps the token if that fails; any end of the
+      admin's signed-in session (logout, auth failure) clears it via `sessionScope.onSessionEnd`. A reload loses it.
+- [x] Tests: `impersonationMemoryOnly.test.tsx` — start + end writes no token/email/key to any browser storage
+      (`Storage.prototype.setItem` spy + storage scan), revocation called with the in-memory token, failure keeps it,
+      logout clears it, source guard on page/banner/store; `ImpersonationBanner.test.tsx` seeds the store instead.
+- Not changed: logout does not revoke a live impersonation token server-side; it expires within its 15 minutes.
 
 **872e — middleware errors bypass the common error shape (AZ-14)**
 - [ ] Confirm, then one constructor for every error response (CSRF 403, 413, 429, 500 …) with request IDs.
@@ -185,9 +193,11 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 **Verification (872b):** backend 10,673 passed, 1 skipped (the pre-existing `main` failure
 `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` deselected); ruff clean; mypy adds no errors.
 
+**Verification (872d):** frontend build green (pages `ƒ`), 215 suites / 2,125 tests, `tsc`, eslint clean.
+
 **Verification (872c):** invite/org/firm-record/role-gate/access-log tests 50 passed; ruff clean.
 
-**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c (this commit).
+**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

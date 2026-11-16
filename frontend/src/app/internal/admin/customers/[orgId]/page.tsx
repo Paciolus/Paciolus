@@ -13,6 +13,7 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Reveal } from '@/components/ui/Reveal'
 import { useInternalAdmin } from '@/hooks/useInternalAdmin'
+import { startImpersonation } from '@/lib/impersonationState'
 
 export default function CustomerDetailPage() {
   const params = useParams()
@@ -367,12 +368,12 @@ export default function CustomerDetailPage() {
                         const result = await impersonate(orgId, d.user_id)
                         success('Impersonation token generated')
                         setActiveModal(null)
-                        // Store impersonation state
-                        if (typeof window !== 'undefined') {
-                          sessionStorage.setItem('impersonation_token', result.access_token)
-                          sessionStorage.setItem('impersonation_email', result.target_email)
-                          sessionStorage.setItem('impersonation_expires', result.expires_at)
-                        }
+                        // Sprint 872 (AZ-13): in memory only — never browser storage.
+                        startImpersonation({
+                          token: result.access_token,
+                          email: result.target_email,
+                          expiresAt: result.expires_at,
+                        })
                       } catch (e) {
                         toastError('Failed', e instanceof Error ? e.message : 'Unknown error')
                       } finally {
