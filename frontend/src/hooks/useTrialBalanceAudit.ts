@@ -64,6 +64,8 @@ export function useTrialBalanceAudit() {
     auditStatus: upload.auditStatus,
     auditResult: upload.auditResult,
     auditError: upload.auditError,
+    isDuplicate: upload.isDuplicate,
+    forceRerunAudit: upload.forceRerunAudit,
     selectedFile: upload.selectedFile,
     isRecalculating: upload.isRecalculating,
     scanningRows: upload.scanningRows,

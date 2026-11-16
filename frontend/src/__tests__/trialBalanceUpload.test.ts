@@ -176,3 +176,26 @@ describe('uploadTrialBalance', () => {
     )
   })
 })
+
+// Sprint 872: a refused identical re-run is its own outcome, in plain English.
+describe('duplicate submissions', () => {
+  it('sends force_resubmit only when asked', () => {
+    expect(buildTrialBalanceFormData({ file: makeFile(), materialityThreshold: 0 }).get('force_resubmit')).toBeNull()
+    expect(
+      buildTrialBalanceFormData({ file: makeFile(), materialityThreshold: 0, forceResubmit: true }).get('force_resubmit'),
+    ).toBe('true')
+  })
+
+  it('maps a 409 to a duplicate outcome without the API wording', () => {
+    const outcome = classifyTrialBalanceFailure({
+      ok: false,
+      status: 409,
+      error: 'This file matches a previous submission ... re-submit with force_resubmit=true.',
+      errorCode: 'CONFLICT',
+    })
+    expect(outcome.kind).toBe('duplicate')
+    expect(outcome.message).not.toMatch(/force_resubmit/)
+    expect(outcome.message).toMatch(/same settings in the last 5 minutes/)
+  })
+})
+

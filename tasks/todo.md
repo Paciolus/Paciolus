@@ -147,6 +147,27 @@ enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` bill
 
 **Commit SHA:** TBD.
 
+### Sprint 872: Re-running a trial balance with new settings answered "duplicate"
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P1 (a CPA hits it on
+the first threshold change; carried from Sprint 856's browser pass). **Agents:** Executor (lead), Critic.
+**Found:** Sprint 856's open item "re-uploading the same TB within 5 min shows the raw API text `re-submit with
+force_resubmit=true` and offers no button". Investigating it showed the guard's key was user + engagement + **file
+bytes only**, while the TB page re-posts the same file for every recalculation — materiality change, column-mapping
+confirm, account-type override re-run. So each of those failed within 5 minutes of the upload, not just re-uploads.
+
+- [x] Backend (`routes/audit_pipeline.py`): the dedup key hashes the request's settings (materiality, overrides,
+      column mapping, sheets) with the bytes; same 16-hex digest, so key format and length are unchanged. Only an
+      identical request is a duplicate. `test_tb_dedup_key.py` (5): identical → 409; threshold / overrides / mapping
+      changes → 200 (all three failed before the fix); `force_resubmit` → 200.
+- [x] Frontend: a 409 is its own `duplicate` outcome with plain text ("You ran this file with the same settings in
+      the last 5 minutes, so it was not run again."); the TB page offers **Run it again** (resends with
+      `force_resubmit`, single-use preflight token not resent) and **Upload a different file**. Tests: helper (2),
+      hook (2), page (1).
+- [ ] **After merge:** on production, upload a TB, move the materiality slider → results update (no error); upload
+      the identical file again → the new message and button.
+
+**Commit SHA:** TBD.
+
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
 **Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 
