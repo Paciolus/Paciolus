@@ -45,6 +45,7 @@ small rebases.
 | #327 | **Sprint 874 (CEO decision): every reload signed production users out** — CSRF rule on `/auth/refresh` could not be satisfied; reverses the 2026-04-20 rule | reload twice + 20-min idle stays signed in; re-scope 868 |
 | #328 | Sprint 875: concurrent wrong passwords no longer bypass the 5-attempt lockout | — |
 | #329 | Sprint 876: industry-ratio evaluation only against the same client's engagement | — |
+| #330 | Sprint 877: impersonation revocation fails closed when Redis cannot confirm | — |
 | #326 | lessons + this file | — |
 
 ## This Session — 2026-11-16 (overnight, CEO away; nothing merged except #315)
