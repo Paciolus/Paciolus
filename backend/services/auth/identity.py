@@ -40,6 +40,7 @@ from models import User
 from security_middleware import (
     check_ip_blocked,
     check_lockout_status,
+    claim_login_attempt,
     generate_csrf_token,
     record_failed_login,
     record_ip_failure,
@@ -99,17 +100,21 @@ def authenticate_login(
 
     if existing_user is not None:
         is_locked, _locked_until, _remaining = check_lockout_status(db, existing_user.id)
-        if is_locked:
+        # Sprint 875: take the attempt slot atomically *before* bcrypt, so
+        # concurrent guesses cannot all pass the check before any is counted.
+        if is_locked or not claim_login_attempt(db, existing_user.id):
             # Sprint 840: same bcrypt cost as a real check, so a locked
             # account is not distinguishable by response time.
             _burn_password_check(password)
+            if not is_locked:
+                record_failed_login(db, existing_user.id, claimed=True)  # applies the lock at the limit
             record_ip_failure(client_ip)
             raise_invalid_credentials()
 
     user = authenticate_user(db, email, password)
     if user is None:
         if existing_user is not None:
-            record_failed_login(db, existing_user.id)
+            record_failed_login(db, existing_user.id, claimed=True)
         record_ip_failure(client_ip)
         raise_invalid_credentials()
 
