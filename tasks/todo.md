@@ -253,7 +253,7 @@ this (`tls=pooler-skip`, Sprint 673), so the connection itself is fine.
 
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)
-**Status:** IN PROGRESS — unblocked 2026-11-16 by the CEO decision below. **Priority:** P2 security (freeze-exempt:
+**Status:** IN REVIEW — code complete 2026-11-16 on a local branch (not pushed); unblocked by the CEO decision below. **Priority:** P2 security (freeze-exempt:
 security defect). **Source:** security review M7, L12; read-only review at `ef5e567` (AZ-01, DH-02, AZ-15, TQ-05).
 **Agents:** Guardian (lead), Executor, Critic.
 
@@ -281,10 +281,15 @@ Only the owner can remove an admin.
       shared links, personal client, warm analytics cache), `test_sprint_853_client_org_backfill.py` (real chain).
 
 **853b — role gates (AZ-15)**
-- [ ] One shared check beside the firm check: delete client, archive engagement (route *and* `status=archived`
-      update), archive expectation, archive misstatement → owner/admin (403 for a member, 404 for another firm).
-- [ ] Owner-only removal of an admin.
-- [ ] Tests: role × action matrix (`test_firm_role_gates.py`).
+- [x] Confirmed at `ef5e5676`: members could delete clients and archive engagements (also via `PUT status=archived`),
+      expectations and misstatements; one admin could remove another.
+- [x] One shared check beside the firm check, `shared.client_access.require_destructive_role` (`FirmRoleRequired`,
+      403): delete client, archive engagement (DELETE *and* `status=archived` update), archive expectation, archive
+      misstatement → owner/admin. Another firm still gets 404 from the firm check first; personal clients need no role.
+- [x] Owner-only removal of an admin (`remove_member` → `require_owner` when the target is an admin).
+- [x] Tests: `test_firm_role_gates.py` — role (owner/admin/member/other firm) × each action separately (20 cells,
+      record state checked after each), members still edit every record, solo user deletes/archives own records,
+      admin-removal matrix, admin still removes a member.
 
 **Verification (853a):** backend 10,628 passed / 6 failed before test updates; 5 of the 6 were tests asserting the
 old rule (firm clients built without `organization_id`, a 400 that is now 404) and were updated. The 6th,
@@ -292,10 +297,13 @@ old rule (firm clients built without `organization_id`, a 400 that is now 404) a
 **fails on unmodified `main` too** — pre-existing, not touched here. Frontend build + 2,107 tests green; OpenAPI
 snapshot unchanged; ruff clean; mypy adds no errors in changed modules.
 
+**Verification (853b):** backend 10,660 passed, 1 failed — the same pre-existing `main` failure above; ruff clean;
+frontend untouched since its green run.
+
 **Not changed (noted):** client-count quotas (`usage_service`, `entitlement_checks`, `activity`) still count by
 creator — a quota, not access.
 
-**Commit SHA:** 853a TBD · 853b TBD.
+**Commit SHA:** 853a `16ba3989` · 853b (this commit). Local branch `sprint-firm-owned-records`, not pushed.
 
 Full history: [`archive/open-sprint-history-2026-11.md`](archive/open-sprint-history-2026-11.md) (Sprint 853).
 

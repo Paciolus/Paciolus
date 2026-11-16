@@ -430,6 +430,11 @@ def remove_member(
     if member.role == OrgRole.OWNER:
         raise HTTPException(status_code=400, detail="Cannot remove the organization owner.")
 
+    # Sprint 853 (AZ-15): an admin may remove members, but only the owner may
+    # remove an admin — otherwise one admin can remove the other.
+    if member.role == OrgRole.ADMIN:
+        require_owner(db, user, org)
+
     # Revert user tier: restore from personal subscription if one exists,
     # otherwise default to FREE.
     removed_user = db.query(User).filter(User.id == member.user_id).first()

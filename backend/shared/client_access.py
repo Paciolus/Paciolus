@@ -85,6 +85,48 @@ def can_access_client(db: Session, user_id: int, client: Client) -> bool:
     return client.organization_id == caller_organization_id(db, user_id)
 
 
+class FirmRoleRequired(HTTPException):
+    """403: the record is in reach but the caller's firm role is too low."""
+
+    def __init__(self) -> None:
+        super().__init__(status_code=403, detail="Only the firm's owner or an admin can do this.")
+
+
+def require_destructive_role(db: Session, user_id: int, client: Client) -> None:
+    """Gate a destructive action on a client or one of its records (Sprint 853, AZ-15).
+
+    CEO decision (2026-11-16): deleting a client, or archiving an engagement,
+    expectation or misstatement, needs the firm's owner or an admin; members
+    still create and edit. A personal client has only its creator in reach,
+    so it needs nothing more.
+
+    This sits *beside* the firm check, not instead of it: callers first load
+    the record through :func:`client_scope` (404 if out of reach), then call
+    this (403 if in reach but the role is too low).
+    """
+    if client.organization_id is None:
+        return
+
+    from organization_model import OrganizationMember, OrgRole
+
+    role = (
+        db.query(OrganizationMember.role)
+        .filter(
+            OrganizationMember.user_id == user_id,
+            OrganizationMember.organization_id == client.organization_id,
+        )
+        .scalar()
+    )
+    if role not in (OrgRole.OWNER, OrgRole.ADMIN):
+        raise FirmRoleRequired()
+
+
+def require_destructive_role_for_engagement(db: Session, user_id: int, engagement_client_id: int) -> None:
+    """:func:`require_destructive_role` for a record reached through an engagement."""
+    client = db.query(Client).filter(Client.id == engagement_client_id).one()
+    require_destructive_role(db, user_id, client)
+
+
 def is_authorized_for_client(user: User, client: Client, db: Session) -> bool:
     """Check whether ``user`` may access ``client`` (see :func:`client_scope`)."""
     return can_access_client(db, user.id, client)
