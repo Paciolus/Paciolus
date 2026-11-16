@@ -42,6 +42,7 @@ removed before they are sent.
 | **Analysis summaries** | Neon | 365 days, then archived; deleted with the account |
 | **Tool Run Records** | Neon | Run status, score and the flagged account names (no amounts) for each tool run in an engagement |
 | **Engagement entries** (materiality, follow-ups, intercompany mappings, analytical expectations, uncorrected misstatements) | Neon | Until you delete them or the account |
+| **Upload allowance usage** (Free and lapsed plans) | Neon | One row per successful analysis: tool name and time, nothing from the file. Not affected by "Clear history"; deleted with the account |
 | **Sessions and security events** | Neon | Session tokens hashed, until expiry; security events (hashed IP) 365 days |
 | **Shared report files** | Cloudflare R2 `paciolus-exports`, keyed by a hash of the share token | 24 h (Professional) / 48 h (Enterprise); the DB row is removed only after R2 confirms deletion |
 | **Rate-limit and security counters** — request counts by user or IP address, failed sign-ins by IP address, revoked admin-impersonation tokens | Render Key Value | Short-lived |

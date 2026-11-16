@@ -340,6 +340,7 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
             "export_shares",
             "team_activity_logs",
             "organization_members",
+            "upload_usage_events",
         ):
             _del(table, _t(table).c.user_id == user_id)
         if c_ids:
@@ -431,6 +432,7 @@ def export_account(db: Session, user: Any) -> dict[str, Any]:
         "diagnostic_summaries": _rows(db, "diagnostic_summaries", _t("diagnostic_summaries").c.user_id == user_id),
         "activity_logs": _rows(db, "activity_logs", _t("activity_logs").c.user_id == user_id),
         "tool_activities": _rows(db, "tool_activities", _t("tool_activities").c.user_id == user_id),
+        "upload_usage": _rows(db, "upload_usage_events", _t("upload_usage_events").c.user_id == user_id),
         "export_shares": _rows(db, "export_shares", _t("export_shares").c.user_id == user_id),
         "sessions": _rows(db, "refresh_tokens", _t("refresh_tokens").c.user_id == user_id),
         # PR #236 review: saved adjusting-entry and currency-rate sessions are

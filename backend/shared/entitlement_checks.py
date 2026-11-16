@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from auth import require_current_user
 from database import get_db
-from models import ActivityLog, Client, User, UserTier
+from models import Client, User, UserTier
 from shared.entitlements import TierEntitlements, get_entitlements
 
 logger = logging.getLogger(__name__)
@@ -235,6 +235,37 @@ def _metered_subscription(sub: object) -> bool:
     return getattr(sub, "status", None) in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING)
 
 
+def _meter_subscription(db: Session, user_id: int) -> object | None:
+    """The subscription whose counter meters ``user_id``, or None for the usage ledger.
+
+    Mirrors ``get_effective_entitlements``, so the allowance a user is held to
+    and the counter it is checked against come from the same subscription:
+
+    - the user's own ACTIVE/TRIALING subscription;
+    - else, for a non-owner firm member with no subscription row of their own,
+      the firm's ACTIVE/TRIALING subscription - one allowance shared by the
+      firm (Sprint 878, CEO decision; review AZ-05). Before, a member was
+      counted alone, from ActivityLog, against the firm's allowance;
+    - else None: Free, or a lapsed plan, metered on ``upload_usage_events``.
+    """
+    sub = _user_subscription(db, user_id)
+    if _metered_subscription(sub):
+        return sub
+    if sub is not None:
+        return None
+    from organization_model import Organization
+
+    user = db.get(User, user_id)
+    org_id = getattr(user, "organization_id", None)
+    if not isinstance(org_id, int):
+        return None
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org is None or org.owner_user_id == user_id:
+        return None
+    firm_sub = _resolve_subscription_for_org(db, org)[0]
+    return firm_sub if _metered_subscription(firm_sub) else None
+
+
 def uploads_used_this_period(db: Session, user_id: int) -> int:
     """Uploads consumed in the current period - the number the quota compares against.
 
@@ -245,16 +276,18 @@ def uploads_used_this_period(db: Session, user_id: int) -> int:
     ``shared.tool_run_recorder.maybe_record_tool_run(..., consumes_upload=True)``
     and nowhere else. Bulk upload consumes nothing: it runs no engine yet.
 
-    Source of the count:
-    - an ACTIVE/TRIALING subscription -> ``Subscription.uploads_used_current_period``,
+    Source of the count (``_meter_subscription`` decides which):
+    - an ACTIVE/TRIALING subscription - the user's own, or for a firm member
+      without one, the firm's -> ``Subscription.uploads_used_current_period``,
       counted only while ``uploads_window_start`` is the current monthly window
       (see ``upload_window_start``) - a count from a closed window reads as 0;
-    - otherwise (Free, or a lapsed subscription) -> this calendar month's
-      ``ActivityLog`` rows. Exactly one source is ever read, so a user is never
-      counted twice.
+    - otherwise (Free, or a lapsed subscription) -> this calendar month's rows in
+      the server-side usage ledger ``upload_usage_events`` (Sprint 878). It used
+      to be ``ActivityLog``, which the browser writes and "Clear history"
+      archives. Exactly one source is ever read, so a user is never counted twice.
     """
-    sub = _user_subscription(db, user_id)
-    if _metered_subscription(sub):
+    sub = _meter_subscription(db, user_id)
+    if sub is not None:
         stored = _naive_utc(getattr(sub, "uploads_window_start", None))
         if stored is None or stored < upload_window_start(sub):
             # The count belongs to an allowance window that has closed (or was
@@ -262,15 +295,12 @@ def uploads_used_this_period(db: Session, user_id: int) -> int:
             return 0
         return int(sub.uploads_used_current_period or 0)  # type: ignore[attr-defined]
 
-    now = datetime.now(UTC)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    from upload_usage_model import UploadUsageEvent
+
+    month_start = _naive_utc(datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0))
     return (
-        db.query(func.count(ActivityLog.id))
-        .filter(
-            ActivityLog.user_id == user_id,
-            ActivityLog.timestamp >= month_start,
-            ActivityLog.archived_at.is_(None),
-        )
+        db.query(func.count(UploadUsageEvent.id))
+        .filter(UploadUsageEvent.user_id == user_id, UploadUsageEvent.consumed_at >= month_start)
         .scalar()
     ) or 0
 
@@ -310,12 +340,17 @@ def check_upload_limit(
 check_diagnostic_limit = check_upload_limit
 
 
-def increment_upload_count(db: Session, user_id: int) -> None:
-    """Advance the upload counter on the user's subscription by one.
+def increment_upload_count(db: Session, user_id: int, tool_name: str | None = None) -> None:
+    """Consume one unit of the user's upload allowance.
 
-    Called after a successful analysis run (see ``uploads_used_this_period``).
-    No-op if the user has no subscription row: Free is metered from ActivityLog,
-    so there is nothing to advance and nothing is counted twice.
+    Called after a successful analysis run (see ``uploads_used_this_period``),
+    and advances exactly the source that function reads:
+
+    - metered on a subscription (their own, or their firm's) -> the counter
+      below;
+    - otherwise (Free, lapsed) -> one row in ``upload_usage_events``, committed
+      here. Sprint 878 (review AZ-05): this used to return early, leaving Free
+      metered by ActivityLog rows the browser writes and can clear.
 
     One atomic ``UPDATE``, so concurrent runs cannot lose an increment, which
     also rolls the monthly window over in the same statement: if the stored
@@ -340,8 +375,12 @@ def increment_upload_count(db: Session, user_id: int) -> None:
 
     from subscription_model import Subscription
 
-    sub = _user_subscription(db, user_id)
+    sub = _meter_subscription(db, user_id)
     if sub is None:
+        from upload_usage_model import UploadUsageEvent
+
+        db.add(UploadUsageEvent(user_id=user_id, tool_name=tool_name))
+        db.commit()
         return
     window = upload_window_start(sub)
 
@@ -351,7 +390,8 @@ def increment_upload_count(db: Session, user_id: int) -> None:
     )
     result = db.execute(
         update(Subscription)
-        .where(Subscription.user_id == user_id)
+        # By id, not user_id: a firm member's run advances the firm's row.
+        .where(Subscription.id == sub.id)  # type: ignore[attr-defined]
         .values(
             uploads_used_current_period=case(
                 (rolled_over, 1),

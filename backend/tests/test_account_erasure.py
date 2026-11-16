@@ -25,6 +25,7 @@ from services.account_erasure import (
     export_account,
 )
 from subscription_model import BillingEvent, BillingEventType
+from upload_usage_model import UploadUsageEvent
 
 PASSWORD = "Correct-Horse-Battery-9"
 
@@ -69,6 +70,7 @@ def populated(
         )
     )
     db_session.add(BillingEvent(user_id=user.id, event_type=BillingEventType.SUBSCRIPTION_CREATED))
+    db_session.add(UploadUsageEvent(user_id=user.id, tool_name="trial_balance"))
     db_session.commit()
     return {"user": user, "bystander": bystander, "client": client, "engagement": engagement}
 
@@ -79,7 +81,14 @@ class TestErase:
         engagement_id = populated["engagement"].id
         erase_account(db_session, populated["user"])
         assert _count(db_session, "users", id=user_id) == 0
-        for table in ("clients", "diagnostic_summaries", "activity_logs", "refresh_tokens", "tool_activities"):
+        for table in (
+            "clients",
+            "diagnostic_summaries",
+            "activity_logs",
+            "refresh_tokens",
+            "tool_activities",
+            "upload_usage_events",
+        ):
             assert _count(db_session, table, user_id=user_id) == 0, table
         for table in ("tool_runs", "follow_up_items", "analytical_expectations", "uncorrected_misstatements"):
             assert _count(db_session, table, engagement_id=engagement_id) == 0, table

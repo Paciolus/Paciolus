@@ -135,7 +135,7 @@ def _consume_upload(db: Session, user_id: int, tool_name: str) -> None:
     from shared.entitlement_checks import increment_upload_count
 
     try:
-        increment_upload_count(db, user_id)
+        increment_upload_count(db, user_id, tool_name)
     except Exception:
         logger.exception("Failed to advance upload counter for user %d, tool %s", user_id, tool_name)
         db.rollback()

@@ -167,19 +167,25 @@ class TestRecorderMeters:
         maybe_record_tool_run(db_session, None, user.id, "preflight", True)
         assert _counter(db_session, user.id) == 4
 
-    def test_free_user_without_a_subscription_is_not_double_counted(self, make_user, db_session):
-        """Free is metered from ActivityLog; the recorder must neither error nor create a row."""
+    def test_free_user_without_a_subscription_is_counted_once_on_the_ledger(self, make_user, db_session):
+        """Sprint 878: Free is metered on the server-side usage ledger, one row per run.
+
+        It used to be metered from ActivityLog, which the browser writes and can
+        clear, and this test asserted the recorder left the count unchanged.
+        """
         from models import ActivityLog, UserTier
         from shared.entitlement_checks import uploads_used_this_period
         from shared.tool_run_recorder import maybe_record_tool_run
         from subscription_model import Subscription
+        from upload_usage_model import UploadUsageEvent
 
         user = make_user(email="m790-d@example.com", tier=UserTier.FREE)
         before = uploads_used_this_period(db_session, user.id)
         maybe_record_tool_run(db_session, None, user.id, "flux_analysis", True, consumes_upload=True)
         assert db_session.query(Subscription).filter_by(user_id=user.id).count() == 0
         assert db_session.query(ActivityLog).filter_by(user_id=user.id).count() == 0
-        assert uploads_used_this_period(db_session, user.id) == before
+        assert db_session.query(UploadUsageEvent).filter_by(user_id=user.id, tool_name="flux_analysis").count() == 1
+        assert uploads_used_this_period(db_session, user.id) == before + 1
 
     def test_a_counter_failure_does_not_fail_the_run(self, make_user, db_session):
         from shared.tool_run_recorder import maybe_record_tool_run

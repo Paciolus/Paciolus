@@ -263,7 +263,23 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
       Solo preview → analysis reaches the engine with `tb.pdf`; extensionless PDF bytes on Free → 403; Free CSV still runs.
 
 **878d — the upload allowance depends on history the user can skip or clear (AZ-05, High)**
-- [ ] Confirm, then a server-side usage ledger independent of activity history; firm usage shared.
+- [x] Confirmed at `3c34926a`: a Free account ran 11 analyses with no `/activity/log` call, all 200; with the browser's
+      log calls the 11th was refused, and after `DELETE /activity/clear` the count read 0 again; a firm member with no
+      subscription row ran against the firm's allowance without moving its counter (`increment_upload_count` returned
+      early with no row of their own).
+- [x] New table `upload_usage_events` (model `upload_usage_model.py`, Alembic `d878a5c1e9b2`, no backfill): one row per
+      successful metered run for users without an active metered subscription; no route reads or writes it directly
+      (structural test). `_meter_subscription` mirrors `get_effective_entitlements`: own ACTIVE/TRIALING subscription →
+      its counter; non-owner firm member with no row of their own → the firm's subscription counter (one shared
+      allowance, updated by subscription id); otherwise the ledger. `uploads_used_this_period` and
+      `increment_upload_count` both use it, so check and consume read one source. ActivityLog no longer meters anything.
+- [x] Account erasure deletes the ledger rows; the account export includes them. Data Handling Architecture §2.1 lists
+      the table (regenerated `policies.generated.ts`).
+- [x] Tests: `test_sprint_878_upload_ledger.py` — 10 Free runs without log calls accepted, 11th refused; clearing
+      history after logging leaves the count at 10 and the 11th refused; a failed run consumes nothing; a lapsed plan
+      meters on the ledger, not its frozen counter; a firm member's run moves the firm's counter, owner and member share
+      500. `test_sprint_790_upload_metering.py` Free test now asserts one ledger row per run (it asserted no count before).
+      `test_account_erasure.py` seeds and checks a ledger row.
 
 **878e — JE sampling skips the tool gate and the allowance (AZ-06, High)**
 - [ ] Confirm, gate both routes, meter successful runs.
@@ -276,7 +292,11 @@ mypy 212 errors (baseline 1,011), none in changed files.
 **Verification (878c):** upload/format/preflight/entitlement/pricing suites 1,391 passed, 1 skipped; new tests 6
 passed; ruff clean; mypy 212 (baseline 1,011).
 
-**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c (this commit).
+**Verification (878d):** metering/billing/usage/activity/admin/org/migration/erasure suites 450 passed; Sprint 790
+metering + JE suites 580 passed; policy-doc guards 13 passed; new tests 6 passed; ruff clean; mypy 212 (baseline 1,011);
+frontend build green (pages `ƒ`), jest 212 suites / 2,107 tests.
+
+**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
