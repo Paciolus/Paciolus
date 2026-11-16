@@ -27,6 +27,7 @@ from engagement_model import (
 from follow_up_items_model import FollowUpDisposition, FollowUpItem
 from models import Client
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound, client_scope
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
@@ -101,47 +102,28 @@ class EngagementManager:
     # Ownership helpers
     # ------------------------------------------------------------------
 
-    def _get_accessible_user_ids(self, user_id: int) -> list[int]:
-        """Get all user IDs whose clients should be visible to this user."""
-        from models import User as UserModel
-
-        user = self.db.query(UserModel).filter(UserModel.id == user_id).first()
-        if not user or not user.organization_id:
-            return [user_id]
-
-        from organization_model import OrganizationMember
-
-        member_ids = (
-            self.db.query(OrganizationMember.user_id)
-            .filter(OrganizationMember.organization_id == user.organization_id)
-            .all()
-        )
-        return [m[0] for m in member_ids] if member_ids else [user_id]
-
     def _validate_client_ownership(self, user_id: int, client_id: int) -> Client:
-        """Validate that the client exists and user has access (direct or org-based)."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
+        """Validate that the client exists and user has access (firm or personal client — see client_scope)."""
         client = (
             self.db.query(Client)
             .filter(
                 Client.id == client_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
             )
             .first()
         )
         if not client:
-            raise ValueError("Client not found or access denied")
+            raise RecordNotFound("Client not found or access denied")
         return client
 
     def _get_engagement_with_ownership(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        """Get engagement, verifying access through client join (direct or org-based)."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
+        """Get engagement, verifying access through client join (firm or personal client — see client_scope)."""
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 Engagement.id == engagement_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
             )
             .first()
         )
@@ -214,11 +196,10 @@ class EngagementManager:
         offset: int = 0,
     ) -> tuple[list[Engagement], int]:
         """Get paginated engagements for a user with optional filters."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
         query = (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
-            .filter(Client.user_id.in_(accessible_ids))
+            .filter(client_scope(self.db, user_id))
         )
 
         if client_id is not None:

@@ -18,6 +18,7 @@ from follow_up_items_model import (
 )
 from models import Client, User
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound, client_scope
 from shared.soft_delete import soft_delete, soft_delete_bulk
 
 
@@ -31,44 +32,27 @@ class FollowUpItemsManager:
     # Ownership helpers
     # ------------------------------------------------------------------
 
-    def _get_accessible_user_ids(self, user_id: int) -> list[int]:
-        """Get all user IDs whose clients should be visible to this user."""
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not user.organization_id:
-            return [user_id]
-
-        from organization_model import OrganizationMember
-
-        member_ids = (
-            self.db.query(OrganizationMember.user_id)
-            .filter(OrganizationMember.organization_id == user.organization_id)
-            .all()
-        )
-        return [m[0] for m in member_ids] if member_ids else [user_id]
-
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        """Verify engagement exists and user has access (direct or org-based)."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
+        """Verify engagement exists and user has access (firm or personal client — see client_scope)."""
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 Engagement.id == engagement_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
             )
             .first()
         )
 
     def _verify_item_access(self, user_id: int, item_id: int) -> Optional[FollowUpItem]:
-        """Verify follow-up item exists, is active, and user has access (direct or org-based)."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
+        """Verify follow-up item exists, is active, and user has access (firm or personal client — see client_scope)."""
         return (
             self.db.query(FollowUpItem)
             .join(Engagement, FollowUpItem.engagement_id == Engagement.id)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 FollowUpItem.id == item_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
                 FollowUpItem.archived_at.is_(None),
             )
             .first()
@@ -91,7 +75,7 @@ class FollowUpItemsManager:
         """Create a follow-up item. Validates engagement ownership."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         if not description or not description.strip():
             raise ValueError("Description is required")
@@ -149,7 +133,7 @@ class FollowUpItemsManager:
         """
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         query = self.db.query(FollowUpItem).filter(
             FollowUpItem.engagement_id == engagement_id,
@@ -268,7 +252,7 @@ class FollowUpItemsManager:
         """Get follow-up items assigned to the current user."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         return (
             self.db.query(FollowUpItem)
@@ -289,7 +273,7 @@ class FollowUpItemsManager:
         """Get follow-up items with no assignee."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         return (
             self.db.query(FollowUpItem)
@@ -314,7 +298,7 @@ class FollowUpItemsManager:
         """
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         base_filter = (
             FollowUpItem.engagement_id == engagement_id,
@@ -414,8 +398,7 @@ class FollowUpItemsManager:
     # ------------------------------------------------------------------
 
     def _verify_comment_access(self, user_id: int, comment_id: int) -> Optional[FollowUpItemComment]:
-        """Verify comment exists, is active, and user has access (direct or org-based)."""
-        accessible_ids = self._get_accessible_user_ids(user_id)
+        """Verify comment exists, is active, and user has access (firm or personal client — see client_scope)."""
         return (
             self.db.query(FollowUpItemComment)
             .join(FollowUpItem, FollowUpItemComment.follow_up_item_id == FollowUpItem.id)
@@ -423,7 +406,7 @@ class FollowUpItemsManager:
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 FollowUpItemComment.id == comment_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
                 FollowUpItemComment.archived_at.is_(None),
             )
             .first()
@@ -439,7 +422,7 @@ class FollowUpItemsManager:
         """Create a comment on a follow-up item. Validates item ownership."""
         item = self._verify_item_access(user_id, item_id)
         if not item:
-            raise ValueError("Follow-up item not found or access denied")
+            raise RecordNotFound("Follow-up item not found or access denied")
 
         if not comment_text or not comment_text.strip():
             raise ValueError("Comment text is required")
@@ -483,7 +466,7 @@ class FollowUpItemsManager:
         """Get all comments for a follow-up item, ordered by creation time."""
         item = self._verify_item_access(user_id, item_id)
         if not item:
-            raise ValueError("Follow-up item not found or access denied")
+            raise RecordNotFound("Follow-up item not found or access denied")
 
         return (
             self.db.query(FollowUpItemComment)
@@ -563,7 +546,7 @@ class FollowUpItemsManager:
         """Get all comments across all follow-up items for an engagement."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         return (
             self.db.query(FollowUpItemComment)

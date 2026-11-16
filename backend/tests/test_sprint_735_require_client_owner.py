@@ -40,7 +40,8 @@ def _make_org(db, owner, name: str = "Sprint 735 Org"):
 
 
 def _make_client(db, owner, name: str = "Sprint 735 Client"):
-    client = Client(name=name, user_id=owner.id)
+    # Sprint 853: a client belongs to the firm its creator was in when it was made.
+    client = Client(name=name, user_id=owner.id, organization_id=owner.organization_id)
     db.add(client)
     db.flush()
     return client

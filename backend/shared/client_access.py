@@ -3,8 +3,10 @@
 Hosts the four client-access helpers that govern who can read/write a
 `Client` record:
 
-  - `is_authorized_for_client(user, client, db)` — predicate combining
-    direct ownership + organization-scoped sharing.
+  - `client_scope(db, user_id)` — the SQL filter every manager uses
+    (Sprint 853: firm clients belong to the firm, personal clients to
+    their creator); `can_access_client` is its Python form.
+  - `is_authorized_for_client(user, client, db)` — predicate form.
   - `get_accessible_client(user, client_id, db)` — `Client | None`.
   - `require_client(...)` — FastAPI dependency raising 404 if access is
     denied. Org-scoped (broader auth surface).
@@ -25,6 +27,7 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException
 from fastapi import Path as PathParam
+from sqlalchemy import ColumnElement, and_, or_
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
@@ -32,32 +35,59 @@ from database import get_db
 from models import Client, User
 
 
-def is_authorized_for_client(user: User, client: Client, db: Session) -> bool:
-    """Check whether ``user`` may access ``client``.
+class RecordNotFound(ValueError):
+    """A record is missing or out of the caller's reach (Sprint 853).
 
-    Returns True if:
-      (a) ``client.user_id == user.id`` (direct ownership), or
-      (b) both ``user`` and the client's owner are active members of the
-          same organization (organization-scoped sharing).
+    A ``ValueError`` subclass so existing callers that catch ``ValueError``
+    keep working; routes map it to 404 ahead of their 400 validation branch,
+    so "not yours" and "does not exist" look the same from outside.
     """
-    if client.user_id == user.id:
-        return True
 
-    if user.organization_id:
-        from organization_model import OrganizationMember
 
-        owner_membership = (
-            db.query(OrganizationMember)
-            .filter(
-                OrganizationMember.user_id == client.user_id,
-                OrganizationMember.organization_id == user.organization_id,
-            )
-            .first()
-        )
-        if owner_membership:
-            return True
+def caller_organization_id(db: Session, user_id: int) -> int | None:
+    """The firm ``user_id`` belongs to right now, from the membership row.
 
-    return False
+    ``OrganizationMember`` is the record of membership (``get_user_org`` reads
+    it too); ``User.organization_id`` is a convenience copy kept beside it.
+    """
+    from organization_model import OrganizationMember
+
+    row = db.query(OrganizationMember.organization_id).filter(OrganizationMember.user_id == user_id).first()
+    return row[0] if row else None
+
+
+def client_scope(db: Session, user_id: int) -> ColumnElement[bool]:
+    """SQL filter on ``Client`` for every client ``user_id`` may reach.
+
+    Sprint 853 (review AZ-01 / DH-02): a client belongs to the firm recorded
+    on it (``Client.organization_id``), not to whoever created it.
+
+      * a firm client is reachable by the firm's current members only;
+      * a personal client (no firm) is reachable by its creator only.
+
+    Joining or leaving a firm never moves a record, so a removed member loses
+    the firm's clients and a new firm never gains them. Every manager and
+    route that scopes clients or their child records (engagements, follow-up
+    items and comments, expectations, misstatements, tool runs, saved
+    summaries, exports, the workpaper index) goes through this filter.
+    """
+    personal = and_(Client.organization_id.is_(None), Client.user_id == user_id)
+    org_id = caller_organization_id(db, user_id)
+    if org_id is None:
+        return personal
+    return or_(personal, Client.organization_id == org_id)
+
+
+def can_access_client(db: Session, user_id: int, client: Client) -> bool:
+    """Python form of :func:`client_scope` for an already-loaded client."""
+    if client.organization_id is None:
+        return client.user_id == user_id
+    return client.organization_id == caller_organization_id(db, user_id)
+
+
+def is_authorized_for_client(user: User, client: Client, db: Session) -> bool:
+    """Check whether ``user`` may access ``client`` (see :func:`client_scope`)."""
+    return can_access_client(db, user.id, client)
 
 
 def get_accessible_client(user: User, client_id: int, db: Session) -> Client | None:
@@ -77,9 +107,8 @@ def require_client(
 ) -> Client:
     """FastAPI dependency: resolve a ``Client`` by id or raise 404.
 
-    Org-scoped — grants access to the direct owner *and* to any active
-    member of the same organization. Use this for routes where the client
-    is shared across an org (metadata, settings).
+    Firm-scoped — a firm client is open to the firm's current members, a
+    personal client to its creator (see :func:`client_scope`).
     """
     client = get_accessible_client(current_user, client_id, db)
     if not client:
@@ -111,6 +140,8 @@ def require_client_owner(
     customer comms — don't merge the two helpers silently.
     """
     client = db.query(Client).filter(Client.id == client_id, Client.user_id == current_user.id).first()
-    if not client:
+    # Sprint 853: being the creator is no longer enough on its own. A firm
+    # client stays with the firm, so a creator who has left it gets a 404.
+    if not client or not can_access_client(db, current_user.id, client):
         raise HTTPException(status_code=404, detail="Client not found")
     return client

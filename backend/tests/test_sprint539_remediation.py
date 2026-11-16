@@ -432,7 +432,7 @@ class TestOrgMemberSharedAccess:
         member = make_user(email="shared_member@example.com", tier=UserTier.PROFESSIONAL)
         _add_org_member(db_session, org, member, tier="professional")
 
-        client = Client(user_id=owner.id, name="Shared Client")
+        client = Client(user_id=owner.id, organization_id=org.id, name="Shared Client")  # Sprint 853: a firm client
         db_session.add(client)
         db_session.flush()
 
@@ -451,7 +451,9 @@ class TestOrgMemberSharedAccess:
         admin = make_user(email="admin_access@example.com", tier=UserTier.PROFESSIONAL)
         _add_org_member(db_session, org, admin, role=OrgRole.ADMIN, tier="professional")
 
-        client = Client(user_id=owner.id, name="Admin Access Client")
+        client = Client(
+            user_id=owner.id, organization_id=org.id, name="Admin Access Client"
+        )  # Sprint 853: a firm client
         db_session.add(client)
         db_session.flush()
 
@@ -487,7 +489,7 @@ class TestOrgMemberSharedAccess:
         member = make_user(email="eng_member@example.com", tier=UserTier.PROFESSIONAL)
         _add_org_member(db_session, org, member, tier="professional")
 
-        client = Client(user_id=owner.id, name="Engagement Client")
+        client = Client(user_id=owner.id, organization_id=org.id, name="Engagement Client")  # Sprint 853: a firm client
         db_session.add(client)
         db_session.flush()
 

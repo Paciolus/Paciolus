@@ -28,8 +28,6 @@ from analytical_expectations_model import (
     ExpectationResultStatus,
     ExpectationTargetType,
 )
-from engagement_model import Engagement
-from models import Client
 
 
 def _normalize_label(label: str) -> str:
@@ -57,19 +55,10 @@ def evaluate_expectations_against_measurements(
     Returns a list of {expectation_id, target_type, target_label, actual,
     variance, status} dicts in the order they were evaluated.
     """
-    # Verify ownership before any DB mutations
-    accessible_engagement = (
-        db.query(Engagement)
-        .join(Client, Engagement.client_id == Client.id)
-        .filter(Engagement.id == engagement_id, Client.user_id == user_id)
-        .first()
-    )
-    if accessible_engagement is None:
-        # Org-based access path mirrors the manager helper
-        from analytical_expectations_manager import AnalyticalExpectationsManager as _Mgr
-
-        if _Mgr(db)._verify_engagement_access(user_id, engagement_id) is None:
-            return []
+    # Verify access before any DB mutations — the manager's rule, the same
+    # one every engagement route uses (Sprint 853).
+    if AnalyticalExpectationsManager(db)._verify_engagement_access(user_id, engagement_id) is None:
+        return []
 
     # Pull all NOT_EVALUATED expectations for this engagement once
     open_expectations = (

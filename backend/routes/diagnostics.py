@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import Client, DiagnosticSummary, PeriodType, User
-from shared.client_access import require_client_owner
+from shared.client_access import can_access_client, require_client_owner
 from shared.filenames import (
     get_filename_display,
     hash_filename,
@@ -212,7 +212,9 @@ def save_diagnostic_summary(
 
     client = db.query(Client).filter(Client.id == summary_data.client_id, Client.user_id == current_user.id).first()
 
-    if not client:
+    # Sprint 853: the creator of a firm client who has since left the firm
+    # no longer reaches it (same rule as ``require_client_owner``).
+    if not client or not can_access_client(db, current_user.id, client):
         raise HTTPException(status_code=404, detail="Client not found")
 
     period_date = None

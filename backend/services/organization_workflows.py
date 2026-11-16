@@ -9,6 +9,7 @@ and turns ``OrganizationError`` into a response. The reusable policy pieces stay
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -30,8 +31,11 @@ from shared.organization_policy import (
     get_user_org,
     require_admin,
     revert_user_tier_after_removal,
+    revoke_member_firm_shares,
     unique_slug,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class OrganizationError(Exception):
@@ -199,5 +203,15 @@ def remove_member(db: Session, user: User, member_id: int) -> None:
     if removed_user:
         revert_user_tier_after_removal(db, removed_user)
 
+    # Sprint 853: the firm's clients stay with the firm (their
+    # ``organization_id`` does not change), so deleting the membership is what
+    # takes them out of the member's reach. Share links the member made for
+    # firm records are revoked with it.
+    revoked = revoke_member_firm_shares(db, member.user_id, org.id)
+
     db.delete(member)
     db.commit()
+
+    logger.info(
+        "Member removed: org_id=%s user_id=%s by=%s shares_revoked=%d", org.id, member.user_id, user.id, revoked
+    )

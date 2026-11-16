@@ -81,16 +81,11 @@ class WorkpaperIndexGenerator:
         self.db = db
 
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        """Verify engagement exists and user has access through client ownership."""
-        return (
-            self.db.query(Engagement)
-            .join(Client, Engagement.client_id == Client.id)
-            .filter(
-                Engagement.id == engagement_id,
-                Client.user_id == user_id,
-            )
-            .first()
-        )
+        """Same rule as every engagement route (Sprint 853): the firm's members
+        reach a firm engagement, the creator reaches a personal one."""
+        from engagement_manager import EngagementManager
+
+        return EngagementManager(self.db).get_engagement(user_id, engagement_id)
 
     def generate(self, user_id: int, engagement_id: int) -> dict:
         """
@@ -106,14 +101,7 @@ class WorkpaperIndexGenerator:
         if not engagement:
             raise ValueError("Engagement not found or access denied")
 
-        client = (
-            self.db.query(Client)
-            .filter(
-                Client.id == engagement.client_id,
-                Client.user_id == user_id,
-            )
-            .first()
-        )
+        client = self.db.query(Client).filter(Client.id == engagement.client_id).first()
         if not client:
             raise ValueError("Client not found or access denied")
         client_name = client.name
