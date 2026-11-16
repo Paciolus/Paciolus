@@ -193,6 +193,7 @@ class TestStorageHealthReporting:
             "active_backend",
             "degraded",
             "reachable_at_boot",
+            "trusted_proxies_configured",
         }
         assert health["configured_backend"] in ("redis", "memory")
         assert health["active_backend"] in ("redis", "memory")
