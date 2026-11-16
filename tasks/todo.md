@@ -190,10 +190,23 @@ token expires — mid-analysis ("Please sign in to run diagnostics"). The API on
 this was fixed in PR #313.
 
 ### Sprint 869: JE Testing calibration and the entries count
-**Status:** PENDING. **Priority:** P2. **Owner:** C.
-- "Unusual account combinations" flagged 52 of 58 entries on a small synthetic ledger (flag rate 100%); on 204
-  entries it flagged 2. Consider a minimum population, like Benford's 300.
-- The memo's "Total Journal Entries Tested" printed 408 for a file of 204 entries (408 lines) — label or count.
+**Status:** IN PROGRESS (2026-11-16) — the count label is fixed in a PR awaiting CEO merge; the calibration half is a
+CEO decision (recommendation below). **Priority:** P2. **Owner:** C.
+- [ ] **CEO decision — "Unusual account combinations" minimum population.** It flagged 52 of 58 entries on a small
+      synthetic ledger; on 204 entries it flagged 2. The test runs once 20 entries have an entry ID
+      (`unusual_combo_min_total_entries`, `services/audit/je_testing/analysis.py:166`) and flags pairings seen ≤ 2
+      times. In a small ledger almost every pairing is rare, so the flag rate measures size, not risk.
+      **Recommendation:** raise the minimum to 300 entries (the Benford convention already used in this tool),
+      report "not run — fewer than 300 entries" below it, and label 300 a Paciolus convention in the methodology
+      text. Not changed overnight: it revises a methodology default.
+- [x] The memo's "Total Journal Entries Tested" printed 408 for a file of 204 entries (408 lines). The **count was
+      right** (the engine counts GL lines, one per row); the **noun was wrong**. Now "Total GL Lines Tested" /
+      "Total GL Lines Flagged" in the memo, "Total GL Lines" in the CSV, and "GL lines" on the score card and proof
+      summary. "Total Journal Entries Tested" added to `test_memo_banned_phrases.py` (fails on the old generator).
+      Snapshots re-recorded (`memo_render_snapshot.json` JE cases, `route_testing_exports`): text diff is the labels
+      only.
+- [ ] **After merge:** the public sample `/samples/paciolus-sample-je-testing-memo.pdf` (Sprint 865) still prints
+      "Total Journal Entries Tested" — regenerate it the Sprint 865 way, and check `je-memo-proof-summary.png`.
 
 ### Sprint 856: First run, public-page accessibility, and one look in a browser
 **Status:** PENDING. **Priority:** P1 (Phase 1 — before the first Sprint 781 CPA session). **Source:** 2026-10-28 council (Designer, Accounting Expert, Executor).

@@ -51,8 +51,10 @@ TEST_DESCRIPTIONS = {
 _JE_CONFIG = TestingMemoConfig(
     title="Journal Entry Testing Memo",
     ref_prefix="JET",
-    entry_label="Total Journal Entries Tested",
-    flagged_label="Total Entries Flagged",
+    # Sprint 869: the engine counts GL lines (one per row), not journal entries —
+    # a 204-entry file of 408 lines printed "Total Journal Entries Tested 408".
+    entry_label="Total GL Lines Tested",
+    flagged_label="Total GL Lines Flagged",
     log_prefix="je_memo",
     domain="journal entry testing",
     test_descriptions=TEST_DESCRIPTIONS,
