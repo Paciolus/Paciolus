@@ -147,6 +147,20 @@ enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` bill
 
 **Commit SHA:** TBD.
 
+### Sprint 877: A revoked impersonation token could stay valid when Redis misbehaved
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P3 security (superadmin,
+read-only tokens, ≤15 min). **Source:** auth/session review 2026-11-16 (Low), verified in
+`shared/impersonation_revocation.py`.
+
+A worker's first failed Redis probe pinned it to a private in-memory store for life, so revocations posted to other
+workers were invisible; a failing `EXISTS` fell back to that empty store and answered "not revoked".
+
+- [x] In production with `REDIS_URL` set, an unconfirmable check answers "revoked"; a failed probe is retried after
+      30 s instead of being cached forever. Development without Redis keeps the memory store. Only impersonation tokens
+      reach `is_revoked` (`auth.py:316`), so no ordinary sign-in depends on Redis. Tests (5); three fail on the old module.
+
+**Commit SHA:** TBD.
+
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
 **Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 
