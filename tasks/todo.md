@@ -703,6 +703,9 @@ every refresh/logout call", which is false after a reload. Production request lo
       without the proof, and the proof on any other path. A stale (> 30 min) token no longer blocks logout or refresh.
 - [x] Tests: `TestRefreshLogoutBrowserProofSprint874` (11); the three "passes" cases fail on the old middleware.
       The 2026-04-20 test (header without Origin → 403) still holds unchanged.
+- [x] Independent review of the PR (agent, given the diff): sound — cross-site, `Origin: null`, look-alike, extension
+      and non-browser cases checked. Added its three suggested tests: `Origin: null` rejected, a valid token without
+      Origin still passes, development behaviour unchanged.
 - [ ] **CEO:** approve reversing the 2026-04-20 rule, then merge. After deploy: sign in, reload twice, wait 20 minutes,
       act — still signed in. Then re-scope Sprint 868 to what remains (browsers that block the third-party refresh
       cookie, e.g. Safari).

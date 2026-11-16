@@ -552,12 +552,51 @@ class TestRefreshLogoutBrowserProofSprint874:
             {"Origin": "https://paciolus.com.evil.example", "X-Requested-With": "XMLHttpRequest"},
             {"Origin": "https://paciolus.com", "X-Requested-With": "fetch"},
             {"X-CSRF-Token": "a:1:2:invalid"},  # bad token, no proof
+            {"Origin": "null", "X-Requested-With": "XMLHttpRequest"},  # sandboxed iframe / file://
         ],
-        ids=["no-origin", "referer-only", "no-header", "evil-origin", "lookalike-origin", "wrong-header", "bad-token"],
+        ids=[
+            "no-origin",
+            "referer-only",
+            "no-header",
+            "evil-origin",
+            "lookalike-origin",
+            "wrong-header",
+            "bad-token",
+            "null-origin",
+        ],
     )
     async def test_everything_else_is_still_rejected(self, headers):
         resp = await self._dispatch("/auth/refresh", headers)
         assert resp.status_code == 403
+
+    @pytest.mark.anyio
+    async def test_a_valid_token_without_origin_still_passes(self):
+        """Non-browser clients keep working with a real token (independent review)."""
+        from security_middleware import generate_csrf_token
+
+        token = generate_csrf_token(user_id="42")
+        resp = await self._dispatch("/auth/refresh", {"X-CSRF-Token": token})
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_development_behaviour_is_unchanged(self):
+        mw = CSRFMiddleware(app=None)
+
+        async def _call_next(_req):
+            from starlette.responses import Response as _R
+
+            return _R(status_code=200, content="ok")
+
+        with (
+            patch("config.ENV_MODE", "development"),
+            patch("security_middleware.validate_csrf_token", _REAL_VALIDATE_CSRF_TOKEN),
+        ):
+            header_only = await mw.dispatch(
+                _FakeRequest("POST", "/auth/refresh", headers={"X-Requested-With": "XMLHttpRequest"}), _call_next
+            )
+            nothing = await mw.dispatch(_FakeRequest("POST", "/auth/refresh", headers={}), _call_next)
+        assert header_only.status_code == 200
+        assert nothing.status_code == 403
 
     @pytest.mark.anyio
     async def test_the_proof_does_not_extend_to_other_paths(self):
