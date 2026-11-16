@@ -106,7 +106,7 @@
 > - [ ] Confirm the four `R2_EXPORTS_*` env vars on Render (sharing now refuses rather than falling back to the database).
 > - [ ] Refund policy · registered address / agent / EU-rep + DPO decisions · Stripe Billing Portal: no plan switching to
 >       Professional/Enterprise (Sprint 858 note) · H12: verify or relabel the ISA 315 "Appendix 1 matrix" citation.
-> - [ ] Sprint 853 (firm-owned client data) is blocked on a CEO decision.
+> - [x] Sprint 853 (firm-owned client data) — CEO decided 2026-11-16; in progress (see Sprint 853).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
@@ -253,24 +253,57 @@ this (`tls=pooler-skip`, Sprint 673), so the connection itself is fine.
 
 
 ### Sprint 853: Firm-owned client data and role gates (M7, L12)
-**Status:** BLOCKED on CEO decision. **Priority:** P2 (largest change; data-model migration). **Source:** security review M7, L12.
+**Status:** IN REVIEW — code complete 2026-11-16 on a local branch (not pushed); unblocked by the CEO decision below. **Priority:** P2 security (freeze-exempt:
+security defect). **Source:** security review M7, L12; read-only review at `ef5e567` (AZ-01, DH-02, AZ-15, TQ-05).
+**Agents:** Guardian (lead), Executor, Critic.
 
-Still open:
-- [ ] Alembic migration: add a nullable `Client.organization_id` (FK `organizations.id`, `ondelete=RESTRICT`).
-      Backfill it from the creating user's current `organization_id`. Run the migration-drift checks from Sprint 738.
-- [ ] Switch the access computation in the three managers to: `Client.user_id == me` (personal, no org) OR
-      `Client.organization_id == my current org`. Do it in **one** shared helper; the IDOR reviewer noted that
-      these checks are copy-pasted.
-- [ ] Unify `workpaper_index_generator.py:83-118` and `shared/expectation_evaluation.py:61-67`. They filter
-      `Client.user_id == user_id` only, so org teammates get a 400 on `/export/package` and `/workpaper-index`.
-      Move them onto the same helper deliberately.
-- [ ] Join flow: opt-in "bring my N clients into <Firm>" when an invite is accepted (backend flag plus frontend
-      prompt).
-- [ ] Interim, if the migration slips: in `remove_member`, reassign the departing member's clients to the org owner
-      (`Client.user_id = org.owner_user_id`) and log it.
-- [ ] Role gates: `require_admin` on client delete/update-destructive paths, engagement archive, misstatement and
-      expectation archive. Owner-only for removing an admin (`organization.py:413`).
-- [ ] Tests:
+**CEO decision (2026-11-16):** a client whose creator belongs to a firm today becomes that firm's client; a client
+whose creator has no firm stays personal. Joining or leaving a firm never moves records (so the opt-in "bring my
+clients" join flow and the interim reassign-to-owner fallback are dropped). Deleting a client, or archiving an
+engagement, expectation or misstatement, needs the firm's owner or an admin; members can still create and edit.
+Only the owner can remove an admin.
+
+**853a — records follow the firm (AZ-01, DH-02, TQ-05)**
+- [x] Confirmed at `ef5e5676`: access came from `Client.user_id` + the creator's *current* membership in five
+      copy-pasted helpers; removal cleared the membership only; a firm-B owner read a firm-A client (200).
+- [x] `Client.organization_id` (FK `organizations.id`, `RESTRICT`), set from the creator's firm when the client is
+      created; Alembic `c853a1f0e2d4` adds it and backfills per the decision, logging the firm/personal split.
+- [x] One rule, `shared.client_access.client_scope` (firm client → the firm's current members; personal client →
+      its creator), used by the client, engagement, follow-up item/comment, expectation and misstatement managers,
+      `require_client`, `require_client_owner` (saved summaries, trends, prior periods) and the summary save route.
+- [x] Workpaper index and expectation evaluation moved onto the same rule (firm teammates got a 400 before).
+- [x] Member removal revokes the member's live share links made inside the firm. No cache holds an authorization:
+      the user is reloaded per request and the engagement analytics cache is read only after the access check —
+      a test pins that.
+- [x] "Not yours" answers 404 everywhere (`RecordNotFound`); five engagement child-list routes and the workpaper
+      index used to answer 400.
+- [x] Tests: `test_firm_owned_records.py` (API-level, real tokens: removal, re-join to firm B, lists, exports,
+      shared links, personal client, warm analytics cache), `test_sprint_853_client_org_backfill.py` (real chain).
+
+**853b — role gates (AZ-15)**
+- [x] Confirmed at `ef5e5676`: members could delete clients and archive engagements (also via `PUT status=archived`),
+      expectations and misstatements; one admin could remove another.
+- [x] One shared check beside the firm check, `shared.client_access.require_destructive_role` (`FirmRoleRequired`,
+      403): delete client, archive engagement (DELETE *and* `status=archived` update), archive expectation, archive
+      misstatement → owner/admin. Another firm still gets 404 from the firm check first; personal clients need no role.
+- [x] Owner-only removal of an admin (`remove_member` → `require_owner` when the target is an admin).
+- [x] Tests: `test_firm_role_gates.py` — role (owner/admin/member/other firm) × each action separately (20 cells,
+      record state checked after each), members still edit every record, solo user deletes/archives own records,
+      admin-removal matrix, admin still removes a member.
+
+**Verification (853a):** backend 10,628 passed / 6 failed before test updates; 5 of the 6 were tests asserting the
+old rule (firm clients built without `organization_id`, a 400 that is now 404) and were updated. The 6th,
+`test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` (`content_encoding` gzip vs null),
+**fails on unmodified `main` too** — pre-existing, not touched here. Frontend build + 2,107 tests green; OpenAPI
+snapshot unchanged; ruff clean; mypy adds no errors in changed modules.
+
+**Verification (853b):** backend 10,660 passed, 1 failed — the same pre-existing `main` failure above; ruff clean;
+frontend untouched since its green run.
+
+**Not changed (noted):** client-count quotas (`usage_service`, `entitlement_checks`, `activity`) still count by
+creator — a quota, not access.
+
+**Commit SHA:** 853a `16ba3989` · 853b (this commit). Local branch `sprint-firm-owned-records`, not pushed.
 
 Full history: [`archive/open-sprint-history-2026-11.md`](archive/open-sprint-history-2026-11.md) (Sprint 853).
 

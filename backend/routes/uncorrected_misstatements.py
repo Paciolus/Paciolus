@@ -21,6 +21,7 @@ from schemas.uncorrected_misstatement_schemas import (
     UncorrectedMisstatementUpdate,
 )
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound
 from shared.error_messages import sanitize_error
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -90,6 +91,8 @@ def create_misstatement(
             cpa_notes=data.cpa_notes,
         )
         return _to_response(m)
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -132,6 +135,8 @@ def list_misstatements(
             page=pagination.page,
             page_size=pagination.page_size,
         )
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -239,6 +244,8 @@ def update_misstatement(
         if m is None:
             raise HTTPException(status_code=404, detail="Misstatement not found")
         return _to_response(m)
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,

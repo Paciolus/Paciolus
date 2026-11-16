@@ -3,7 +3,7 @@ Analytical Expectations management — Sprint 728a (ISA 520).
 
 CRUD operations for AnalyticalExpectation entities with engagement-scoped
 multi-tenant isolation. Mirrors the FollowUpItemsManager pattern: ownership
-flows through engagement → client.user_id (direct or org-based).
+flows through engagement → client (shared.client_access.client_scope).
 
 ZERO-STORAGE EXCEPTION: This module persists only auditor expectation
 metadata + comparison results. Underlying tool data stays ephemeral.
@@ -22,8 +22,9 @@ from analytical_expectations_model import (
     ExpectationTargetType,
 )
 from engagement_model import Engagement
-from models import Client, User
+from models import Client
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound, client_scope, require_destructive_role_for_engagement
 from shared.monetary import quantize_monetary
 from shared.soft_delete import soft_delete
 
@@ -156,41 +157,25 @@ class AnalyticalExpectationsManager:
     # Ownership helpers — mirrored from FollowUpItemsManager
     # ------------------------------------------------------------------
 
-    def _get_accessible_user_ids(self, user_id: int) -> list[int]:
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not user.organization_id:
-            return [user_id]
-
-        from organization_model import OrganizationMember
-
-        member_ids = (
-            self.db.query(OrganizationMember.user_id)
-            .filter(OrganizationMember.organization_id == user.organization_id)
-            .all()
-        )
-        return [m[0] for m in member_ids] if member_ids else [user_id]
-
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 Engagement.id == engagement_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
             )
             .first()
         )
 
     def _verify_expectation_access(self, user_id: int, expectation_id: int) -> Optional[AnalyticalExpectation]:
-        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(AnalyticalExpectation)
             .join(Engagement, AnalyticalExpectation.engagement_id == Engagement.id)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 AnalyticalExpectation.id == expectation_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
                 AnalyticalExpectation.archived_at.is_(None),
             )
             .first()
@@ -218,7 +203,7 @@ class AnalyticalExpectationsManager:
         """Create a new analytical expectation. Validates ownership + XOR rules."""
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         if not procedure_target_label or not procedure_target_label.strip():
             raise ValueError("procedure_target_label is required")
@@ -271,7 +256,7 @@ class AnalyticalExpectationsManager:
     ) -> tuple[list[AnalyticalExpectation], int]:
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         query = self.db.query(AnalyticalExpectation).filter(
             AnalyticalExpectation.engagement_id == engagement_id,
@@ -412,6 +397,7 @@ class AnalyticalExpectationsManager:
         expectation = self._verify_expectation_access(user_id, expectation_id)
         if expectation is None:
             return None
+        require_destructive_role_for_engagement(self.db, user_id, expectation.engagement.client_id)
         soft_delete(self.db, expectation, user_id=user_id, reason=reason or "")
         log_secure_operation(
             "analytical_expectation_archived",

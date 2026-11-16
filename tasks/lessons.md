@@ -146,3 +146,10 @@
 ## Recent lessons
 
 *(New entries go here, newest last. Earlier entries, including the three from 2026-11-14/15, are in the archive and in the rules above.)*
+
+- **2026-11-16 (Sprint 853):** a destructive action can have more than one door. Engagement archive was reachable
+  through `DELETE /engagements/{id}` *and* `PUT /engagements/{id}` with `status=archived`; a gate on the archive method
+  alone would have left the PUT open. Put the gate where the state changes (the manager), and test every door.
+- **2026-11-16 (Sprint 853):** an access rule derived from someone's *current* membership moves with them. Record the
+  owning firm on the record itself, and scope every child record through that one column via a single shared filter
+  (`client_scope`), never a per-manager copy.

@@ -36,6 +36,7 @@ from shared.organization_policy import (
     require_admin,
     require_owner,
     revert_user_tier_after_removal,
+    revoke_member_firm_shares,
     unique_slug,
 )
 from shared.organization_schemas import (
@@ -429,13 +430,28 @@ def remove_member(
     if member.role == OrgRole.OWNER:
         raise HTTPException(status_code=400, detail="Cannot remove the organization owner.")
 
+    # Sprint 853 (AZ-15): an admin may remove members, but only the owner may
+    # remove an admin — otherwise one admin can remove the other.
+    if member.role == OrgRole.ADMIN:
+        require_owner(db, user, org)
+
     # Revert user tier: restore from personal subscription if one exists,
     # otherwise default to FREE.
     removed_user = db.query(User).filter(User.id == member.user_id).first()
     if removed_user:
         revert_user_tier_after_removal(db, removed_user)
 
+    # Sprint 853: the firm's clients stay with the firm (their
+    # ``organization_id`` does not change), so deleting the membership is what
+    # takes them out of the member's reach. Share links the member made for
+    # firm records are revoked with it.
+    revoked = revoke_member_firm_shares(db, member.user_id, org.id)
+
     db.delete(member)
     db.commit()
+
+    logger.info(
+        "Member removed: org_id=%s user_id=%s by=%s shares_revoked=%d", org.id, member.user_id, user.id, revoked
+    )
 
     return {"detail": "Member removed from organization."}

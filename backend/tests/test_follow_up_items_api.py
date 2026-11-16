@@ -143,13 +143,14 @@ class TestCreateFollowUpItem:
 
     @pytest.mark.asyncio
     async def test_create_invalid_engagement(self, override_auth):
-        """POST with non-existent engagement returns 400 (ValueError from manager)."""
+        """POST with non-existent engagement returns 404 (Sprint 853: "missing" and
+        "not yours" answer the same way)."""
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post(
                 "/engagements/999999/follow-up-items",
                 json={"description": "Test", "tool_source": "trial_balance"},
             )
-            assert response.status_code == 400
+            assert response.status_code == 404
 
 
 # =============================================================================

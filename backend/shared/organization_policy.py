@@ -180,3 +180,31 @@ def revert_user_tier_after_removal(db: Session, user: User) -> None:
         user.tier = UserTier(personal_sub.tier)
     else:
         user.tier = UserTier.FREE
+
+
+def revoke_member_firm_shares(db: Session, user_id: int, organization_id: int) -> int:
+    """Revoke the departing member's live share links made inside the firm.
+
+    Sprint 853 (review AZ-01): a share link carries a copy of a firm export
+    and keeps working for whoever holds the token, so it must not outlive the
+    member's place in the firm. Shares the user made outside any firm
+    (``organization_id`` NULL) are theirs and are left alone. Returns the
+    number revoked. The caller commits.
+    """
+    from datetime import UTC, datetime
+
+    from export_share_model import ExportShare
+
+    shares = (
+        db.query(ExportShare)
+        .filter(
+            ExportShare.user_id == user_id,
+            ExportShare.organization_id == organization_id,
+            ExportShare.revoked_at.is_(None),
+        )
+        .all()
+    )
+    now = datetime.now(UTC)
+    for share in shares:
+        share.revoked_at = now
+    return len(shares)

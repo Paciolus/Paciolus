@@ -24,6 +24,7 @@ from models import User
 from routes.engagements_analytics import router as analytics_router
 from routes.engagements_exports import router as exports_router
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
@@ -161,6 +162,8 @@ def create_engagement(
 
         return _engagement_to_response(engagement)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -256,6 +259,8 @@ def update_engagement(
 
     except InvalidEngagementTransitionError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,

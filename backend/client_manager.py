@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from models import Client, EntityType, Industry, ReportingFramework, User
 from security_utils import log_secure_operation
+from shared.client_access import caller_organization_id, client_scope, require_destructive_role
 from shared.filenames import escape_like_wildcards
 
 
@@ -48,6 +49,7 @@ class ClientManager:
 
         client = Client(
             user_id=user_id,
+            organization_id=caller_organization_id(self.db, user_id),
             name=name.strip(),
             industry=industry,
             fiscal_year_end=fiscal_year_end,
@@ -67,87 +69,26 @@ class ClientManager:
         return client
 
     def get_client(self, user_id: int, client_id: int) -> Optional[Client]:
-        """
-        Get a specific client by ID, with org-aware access check.
-
-        Returns Client if the user is the direct owner or an org co-member
-        of the client owner.
-        """
-        client = self.db.query(Client).filter(Client.id == client_id).first()
-        if not client:
-            return None
-
-        # Direct owner — fast path
-        if client.user_id == user_id:
-            return client
-
-        # Org-based access: user and client owner in same org
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if user and user.organization_id:
-            from organization_model import OrganizationMember
-
-            owner_in_org = (
-                self.db.query(OrganizationMember)
-                .filter(
-                    OrganizationMember.user_id == client.user_id,
-                    OrganizationMember.organization_id == user.organization_id,
-                )
-                .first()
-            )
-            if owner_in_org:
-                return client
-
-        return None
-
-    def _accessible_user_ids(self, user_id: int) -> list[int]:
-        """Get all user IDs whose clients should be visible to this user.
-
-        Returns [user_id] for solo users, or all org member user_ids for org members.
-        """
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not user.organization_id:
-            return [user_id]
-
-        from organization_model import OrganizationMember
-
-        member_ids = (
-            self.db.query(OrganizationMember.user_id)
-            .filter(OrganizationMember.organization_id == user.organization_id)
-            .all()
-        )
-        return [m[0] for m in member_ids] if member_ids else [user_id]
+        """Get a client if ``user_id`` may reach it (see ``client_scope``)."""
+        return self.db.query(Client).filter(Client.id == client_id, client_scope(self.db, user_id)).first()
 
     def get_clients_for_user(self, user_id: int, limit: int = 100, offset: int = 0) -> list[Client]:
-        """Get all clients accessible to a user (own + org co-members') with pagination."""
-        accessible_ids = self._accessible_user_ids(user_id)
-        return (
-            self.db.query(Client)
-            .filter(Client.user_id.in_(accessible_ids))
-            .order_by(Client.name.asc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        """Get all clients the user may reach (their firm's + their personal ones), paginated."""
+        scope = client_scope(self.db, user_id)
+        return self.db.query(Client).filter(scope).order_by(Client.name.asc()).offset(offset).limit(limit).all()
 
     def get_client_count(self, user_id: int) -> int:
-        accessible_ids = self._accessible_user_ids(user_id)
-        return self.db.query(Client).filter(Client.user_id.in_(accessible_ids)).count()
+        scope = client_scope(self.db, user_id)
+        return self.db.query(Client).filter(scope).count()
 
     def get_clients_with_count(self, user_id: int, limit: int = 100, offset: int = 0) -> tuple[list[Client], int]:
         """Get paginated clients with total count using two queries (no cartesian join)."""
-        accessible_ids = self._accessible_user_ids(user_id)
+        scope = client_scope(self.db, user_id)
 
         # Separate count query — avoids window function + subquery cartesian product
-        total_count = (self.db.query(func.count(Client.id)).filter(Client.user_id.in_(accessible_ids)).scalar()) or 0
+        total_count = (self.db.query(func.count(Client.id)).filter(scope).scalar()) or 0
 
-        clients = (
-            self.db.query(Client)
-            .filter(Client.user_id.in_(accessible_ids))
-            .order_by(Client.name.asc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        clients = self.db.query(Client).filter(scope).order_by(Client.name.asc()).offset(offset).limit(limit).all()
 
         return clients, total_count
 
@@ -163,9 +104,9 @@ class ClientManager:
 
         from engagement_model import Engagement, EngagementStatus, ToolRun
 
-        accessible_ids = self._accessible_user_ids(user_id)
+        scope = client_scope(self.db, user_id)
 
-        total_count = (self.db.query(func.count(Client.id)).filter(Client.user_id.in_(accessible_ids)).scalar()) or 0
+        total_count = (self.db.query(func.count(Client.id)).filter(scope).scalar()) or 0
 
         # Subquery: engagement summary per client
         eng_summary = (
@@ -200,7 +141,7 @@ class ClientManager:
             )
             .outerjoin(eng_summary, Client.id == eng_summary.c.client_id)
             .outerjoin(run_count_sq, Client.id == run_count_sq.c.client_id)
-            .filter(Client.user_id.in_(accessible_ids))
+            .filter(scope)
             .order_by(Client.name.asc())
             .offset(offset)
             .limit(limit)
@@ -283,10 +224,12 @@ class ClientManager:
         return client
 
     def delete_client(self, user_id: int, client_id: int) -> bool:
-        """Delete client. Returns True if deleted, False if not found."""
+        """Delete client. Returns False if not found; raises ``FirmRoleRequired`` for a firm member
+        who is not the owner or an admin."""
         client = self.get_client(user_id, client_id)
         if not client:
             return False
+        require_destructive_role(self.db, user_id, client)
 
         client_name = client.name
         self.db.delete(client)
@@ -299,13 +242,13 @@ class ClientManager:
         return True
 
     def search_clients(self, user_id: int, query: str, limit: int = 20) -> list[Client]:
-        """Search clients by name (case-insensitive), including org co-members' clients."""
-        accessible_ids = self._accessible_user_ids(user_id)
+        """Search the clients the user may reach by name (case-insensitive)."""
+        scope = client_scope(self.db, user_id)
         pattern = f"%{escape_like_wildcards(query)}%"
         return (
             self.db.query(Client)
             .filter(
-                Client.user_id.in_(accessible_ids),
+                scope,
                 Client.name.ilike(pattern, escape="\\"),
             )
             .order_by(Client.name.asc())
