@@ -241,12 +241,18 @@ no process behind it.
 **Commit SHA:** TBD.
 
 ### Sprint 859: daily DB TLS check is not pooler-aware — false "unencrypted" evidence
-**Status:** PENDING. **Priority:** P2 (security evidence integrity; freeze-exempt). Filed as "Sprint 847" on 2026-10-26, lost in a rebase, re-filed 2026-10-29. Found 2026-10-26 in Render logs. `_job_verify_database_tls` (`backend/cleanup_scheduler.py:520`)
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge; after deploy, confirm the next
+daily Render log line reads `tls=pooler-skip, sslmode=require`. **Priority:** P2 (security evidence integrity; freeze-exempt). Filed as "Sprint 847" on 2026-10-26, lost in a rebase, re-filed 2026-10-29. Found 2026-10-26 in Render logs. `_job_verify_database_tls` (`backend/cleanup_scheduler.py:520`)
 reads `pg_stat_ssl`, which Neon's pooled endpoint does not populate, so it logs `tls=INACTIVE — database
 connection is unencrypted` daily **and signs that into its evidence artifact**. The startup check already handles
 this (`tls=pooler-skip`, Sprint 673), so the connection itself is fine.
-- [ ] Reuse the startup check's pooler detection in the daily job; record `pooler-skip` (plus the enforced
-      `sslmode`) instead of INACTIVE. Test both branches.
+- [x] Reuse the startup check's pooler detection in the daily job; record `pooler-skip` (plus the enforced
+      `sslmode`) instead of INACTIVE. A pooled host whose `sslmode` is not require / verify-ca / verify-full records
+      `pooler-skip-UNENFORCED` at WARNING, so the evidence never claims more than the configuration. The signed
+      payload now includes `sslmode`. Tests: pooled+require, pooled+prefer, direct host still reads `pg_stat_ssl`;
+      both pooled tests fail on the old job.
+      Test URLs carry no `user:password@` part: TruffleHog's Postgres detector flagged the first version, and the
+      scan covers every fetched branch, so it failed every open PR.
 
 **Commit SHA:** TBD.
 

@@ -47,6 +47,16 @@ def _is_pooled_hostname(database_url: str) -> bool:
     return "-pooler" in host
 
 
+SECURE_SSL_MODES = frozenset({"require", "verify-ca", "verify-full"})
+
+
+def _database_sslmode(database_url: str) -> str:
+    """The ``sslmode`` DATABASE_URL asks for ("disable" when absent, libpq's effective floor here)."""
+    from urllib.parse import parse_qs, urlparse
+
+    return (parse_qs(urlparse(database_url).query).get("sslmode") or ["disable"])[0]
+
+
 # Create engine with dialect-specific configuration
 _is_sqlite = DATABASE_URL.startswith("sqlite")
 
