@@ -1816,6 +1816,17 @@
             "title": "Credit",
             "type": "number"
           },
+          "cross_reference_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Reference Note"
+          },
           "debit": {
             "title": "Debit",
             "type": "number"

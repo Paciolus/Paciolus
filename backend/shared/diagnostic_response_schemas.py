@@ -659,6 +659,9 @@ class AbnormalBalanceResponse(BaseModel):
     # the app listed them under "Material Risks" and the PDF built from the app's
     # payload never split them into its coverage section.
     coverage_analysis: Optional[bool] = None
+    # Sprint 873: emitted by the equity / intercompany rules and rendered by the
+    # TB PDF (pdf/sections/diagnostic.py), but stripped here like coverage_analysis.
+    cross_reference_note: Optional[str] = None
 
     # Optional: multi-sheet only
     sheet_name: Optional[str] = None
