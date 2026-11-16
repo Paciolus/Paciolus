@@ -611,41 +611,65 @@ def _job_verify_database_tls() -> None:
 
     Queries pg_stat_ssl to confirm the database connection is encrypted,
     then emits a signed structured security event as continuous audit evidence.
+
+    Sprint 859: on a transparent pooler (Neon's ``-pooler`` hosts) pg_stat_ssl
+    describes the pooler-to-backend hop, not ours, and reads ssl=false. The
+    job used to sign ``tls=INACTIVE — database connection is unencrypted``
+    into its evidence every day on production. It now applies the startup
+    check's rule (``database._is_pooled_hostname``): on a pooled host it
+    records ``pooler-skip`` with the ``sslmode`` DATABASE_URL enforces, or
+    ``pooler-skip-UNENFORCED`` at WARNING when that sslmode is not a secure
+    one — the evidence never claims more than the configuration does.
     """
     import hashlib
     import hmac
 
     from sqlalchemy import text
 
-    from database import SessionLocal, engine
+    from config import DATABASE_URL
+    from database import SECURE_SSL_MODES, SessionLocal, _database_sslmode, _is_pooled_hostname, engine
     from security_utils import log_secure_operation
 
     if engine.dialect.name != "postgresql":
         return  # SQLite in dev — nothing to verify
 
+    pooled = _is_pooled_hostname(DATABASE_URL)
+    sslmode = _database_sslmode(DATABASE_URL)
+
     db = SessionLocal()
     try:
-        ssl_row = db.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
-        ssl_active = bool(ssl_row and ssl_row[0])
+        if pooled:
+            status = "pooler-skip" if sslmode in SECURE_SSL_MODES else "pooler-skip-UNENFORCED"
+            secure = sslmode in SECURE_SSL_MODES
+        else:
+            ssl_row = db.execute(text("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")).fetchone()
+            secure = bool(ssl_row and ssl_row[0])
+            status = "active" if secure else "INACTIVE"
 
         timestamp = datetime.now(UTC).isoformat()
-        status = "active" if ssl_active else "INACTIVE"
 
         # HMAC-sign the evidence using audit chain secret for tamper evidence
         from config import AUDIT_CHAIN_SECRET_KEY
 
-        evidence_payload = f"db_tls_check|{status}|{timestamp}"
+        evidence_payload = f"db_tls_check|{status}|sslmode={sslmode}|{timestamp}"
         signature = hmac.new(AUDIT_CHAIN_SECRET_KEY.encode(), evidence_payload.encode(), hashlib.sha256).hexdigest()[
             :16
         ]
 
         log_secure_operation(
             "db_tls_daily_check",
-            f"tls={status}, timestamp={timestamp}, sig={signature}",
+            f"tls={status}, sslmode={sslmode}, timestamp={timestamp}, sig={signature}",
         )
 
-        if ssl_active:
-            logger.info("Daily DB TLS check: tls=active, sig=%s", signature)
+        if secure:
+            logger.info("Daily DB TLS check: tls=%s, sslmode=%s, sig=%s", status, sslmode, signature)
+        elif pooled:
+            logger.warning(
+                "Daily DB TLS check: tls=%s — pooled host and DATABASE_URL sslmode=%s does not require TLS. sig=%s",
+                status,
+                sslmode,
+                signature,
+            )
         else:
             logger.warning(
                 "Daily DB TLS check: tls=INACTIVE — database connection is unencrypted. sig=%s",
