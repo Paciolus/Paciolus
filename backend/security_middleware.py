@@ -592,45 +592,65 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Cookie-auth mutation paths (refresh/logout).
         #
-        # Policy (2026-04-20 hardening):
-        #   * In production, a valid X-CSRF-Token is MANDATORY — the old
-        #     X-Requested-With-only fallback is removed.  The frontend has
-        #     been minting CSRF tokens for every refresh/logout call for
-        #     months so this is a no-op for legitimate traffic.
-        #   * In development/test, X-Requested-With is still accepted as a
-        #     bootstrap convenience for local tooling.  This mirrors the
-        #     "fail-closed in production, permissive in dev" pattern used
-        #     elsewhere (rate limits, DB TLS, …).
+        # Policy history: the 2026-04-20 hardening made a valid X-CSRF-Token
+        #   mandatory in production on the premise that "the frontend mints a
+        #   CSRF token for every refresh/logout call". It does not survive a
+        #   reload, so that premise was false in production (Sprint 874). Now:
+        #   * Production: a valid token OR (allowed Origin present +
+        #     X-Requested-With). X-Requested-With without an Origin is still
+        #     rejected.
+        #   * Development/test: X-Requested-With alone is still accepted as a
+        #     bootstrap convenience for local tooling.
         if path in CSRF_CUSTOM_HEADER_PATHS:
             from config import ENV_MODE
 
-            if csrf_token:
-                # Token provided — validate it
-                if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
-                    log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid CSRF token")
-                    return csrf_failed_response(request)
-            else:
-                if ENV_MODE == "production":
+            # Sprint 874: in production these two paths pass with EITHER a valid
+            # CSRF token OR a same-site browser proof. The browser cannot hold
+            # a token across a reload (it lives in page memory) or past its
+            # 30-minute expiry, and /auth/csrf needs a live access cookie —
+            # which after 15 minutes needs this very refresh. Token-only
+            # therefore signed every user out on every reload and ended every
+            # session when the access token expired.
+            #
+            # The proof: an Origin header that is PRESENT and on the allow-list
+            # (a missing Origin does not qualify, unlike the non-browser escape
+            # in _validate_request_origin) plus X-Requested-With, which a
+            # cross-site page cannot attach without a CORS preflight that the
+            # allow-list refuses.
+            header_proof = (
+                bool(request.headers.get("Origin"))
+                and request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                and self._validate_request_origin(request)
+            )
+            token_ok = bool(csrf_token) and validate_csrf_token(csrf_token, expected_user_id=expected_user_id)
+
+            if ENV_MODE == "production":
+                if not (token_ok or header_proof):
+                    reason = "invalid CSRF token" if csrf_token else "no CSRF token"
                     log_secure_operation(
                         "csrf_blocked",
-                        f"Blocked {method} to {path} - missing CSRF token in production (X-Requested-With fallback removed)",
+                        f"Blocked {method} to {path} - {reason} and no allowed Origin + X-Requested-With",
                     )
                     return csrf_failed_response(request)
-                # Dev/test: X-Requested-With fallback still accepted.
-                xrw = request.headers.get("X-Requested-With")
-                if xrw != "XMLHttpRequest":
-                    log_secure_operation(
-                        "csrf_blocked", f"Blocked {method} to {path} - missing CSRF token and X-Requested-With header"
-                    )
-                    return csrf_failed_response(request)
+            elif csrf_token and not token_ok:
+                log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid CSRF token")
+                return csrf_failed_response(request)
+            elif not csrf_token and request.headers.get("X-Requested-With") != "XMLHttpRequest":
+                # Dev/test: X-Requested-With alone is still accepted as a bootstrap convenience.
+                log_secure_operation(
+                    "csrf_blocked", f"Blocked {method} to {path} - missing CSRF token and X-Requested-With header"
+                )
+                return csrf_failed_response(request)
             # Sprint 872 (AZ-10): with no access token there is no identity
             # to bind the CSRF token to here, and the refresh cookie's owner
-            # is only known after a database lookup. Hand the token's user to
-            # the handler; the auth service compares it with the refresh
+            # is only known after a database lookup. Hand a *valid* token's user
+            # to the handler; the auth service compares it with the refresh
             # token's owner, in the request's own transaction, before it
-            # rotates or revokes anything. (Dev/test X-Requested-With
-            # fallback carries no CSRF identity, so nothing is recorded.)
-            if csrf_token:
+            # rotates or revokes anything. A request that passed on the
+            # Origin + X-Requested-With proof alone (Sprint 874) carries no
+            # token identity, so nothing is recorded — as for the dev/test
+            # X-Requested-With fallback.
+            if token_ok:
                 request.state.csrf_user_id = csrf_token_user_id(csrf_token)
             # Passed validation — proceed
             final_response = await call_next(request)
