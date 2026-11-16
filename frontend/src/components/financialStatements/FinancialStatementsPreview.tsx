@@ -256,6 +256,16 @@ export function FinancialStatementsPreview({
                   </div>
                 )}
 
+                {/* Sprint 867: pre-closing TB — the period's result is presented in equity */}
+                {Math.abs(totals.unclosedEarnings) >= 0.01 && (
+                  <p className="text-xs text-content-secondary font-sans" data-testid="unclosed-earnings-note">
+                    Revenue and expense accounts carry open balances on this trial balance, so Equity
+                    includes the period&apos;s {totals.unclosedEarnings < 0 ? 'net loss' : 'net income'} of{' '}
+                    <span className="font-mono">{formatCurrency(Math.abs(totals.unclosedEarnings))}</span>,
+                    calculated from lead sheets L–O, as a separate line.
+                  </p>
+                )}
+
                 {/* Balance difference warning */}
                 {!totals.isBalanced && (
                   <div className="flex items-center gap-2 p-3 bg-clay-500/10 border border-clay-500/30 rounded-lg">

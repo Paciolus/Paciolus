@@ -174,12 +174,37 @@ shorten backup retention.** DPA left unchanged pending that decision.
 **Commit SHA:** TBD (redline merges only after sign-off).
 
 ### Sprint 867: Balance sheet out of balance for a balanced, pre-closing trial balance
-**Status:** PENDING. **Priority:** P0 (before launch — auditors upload pre-closing TBs). **Owner:** C.
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge; then re-test on production with the
+2026-11-15 TB. **Priority:** P0 (before launch — auditors upload pre-closing TBs). **Owner:** C.
+**Agents:** Accounting Expert (presentation), Executor, Critic.
 Reproduced 2026-11-15 on production with a balanced synthetic TB (debits = credits = $1,253,800.25): Financial
 Statements shows "OUT OF BALANCE by -$4,699.50" and blames "a mapping or sign issue". -$4,699.50 is the period's net
 income, which the balance sheet leaves out of equity; the Key Metrics panel on the same page already says "Equity
 includes -$4,699.50 of unclosed current-period earnings". Fix: present current-period earnings in equity on the
 balance sheet (and the Excel/PDF exports); test with a pre-closing TB.
+
+- [x] Backend builder: equity gets a "Current-Period Earnings (Not Yet Closed)" line when income-statement balances
+      are still open, using the shared rule `ratio_engine.unclosed_earnings_adjustment` (same rule as the ratios and
+      the Key Metrics disclosure); `total_equity` / `prior_total_equity` include it; balance check and note follow.
+      The PDF D/E ratio does not double count (the shared rule returns 0 once equity balances the sheet).
+- [x] Frontend `useStatementBuilder` mirrors the rule (the page builds its own statements); preview note.
+- [x] Excel + PDF render the line from `statements.balance_sheet` (tests extract both).
+- [x] Tests: `test_sprint_867_preclosing_equity.py` (12) + 4 hook + 2 preview. Six of the backend tests fail on the
+      old builder. Two frontend tests that encoded the old contract (an imbalance on a TB with open income) now use a
+      post-closing fixture. `route_export_pipeline` snapshot re-recorded: its only change is `$-0.00` → `$0.00` on
+      TOTAL LIABILITIES & EQUITY (−0.0 + 0.0).
+- [x] **Accounting-expert review** (independent, given the code): presentation and label fine; two fixes taken —
+      (1) the SOCE plugged −NI into retained earnings' other movement on exactly these TBs, so its ending equity
+      disagreed with the balance sheet → unclosed earnings now go into retained earnings' ending (and an unclosed
+      prior period's into its beginning); (2) the note said accounts "have not been closed", which the code infers
+      rather than knows → now "carry open balances", with net income / net loss by sign and one 0.01 tolerance.
+      Rejected: changing the rule for a TB unbalanced by exactly −NI — the TB debit/credit check
+      (`audit/ingestion.py:58`) reports that independently.
+- [x] **Found on the way (pre-existing, Sprint 638):** the SOCE read accounts as `name` / `net_balance`, but every
+      real grouping (`lead_sheet_grouping_to_dict`, and so every export payload) carries `account` / `debit` /
+      `credit`. Every exported SOCE silently dropped all equity accounts. Fixed via `_account_name_and_net` (the
+      depreciation and interest readers already accepted both); a test through the real serializer fails on the old
+      reader (`KeyError: 'common_stock'`).
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
