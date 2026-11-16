@@ -80,8 +80,11 @@
 >
 > **P0 before 2026-12-15 — in order**
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
+> - [ ] **Sprint 874 (new, 2026-11-16)** — every reload signs production users out: the CSRF rule on `/auth/refresh`
+>       cannot be satisfied after a reload. CEO decision (reverses the 2026-04-20 rule); PR ready. Fix this before 868.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
->       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
+>       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target. **Re-scope after
+>       874:** most of the observed sign-outs are 874's, not the third-party cookie's.
 > - [ ] **Sprint 867** — balance sheet shows "OUT OF BALANCE" for a balanced, pre-closing trial balance.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
@@ -144,6 +147,35 @@ enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` bill
 - [ ] Fix test fixtures to Stripe's real dispute shape (no `customer`, `charge` as a string) + a contract test in
       `test_stripe_sdk_contract.py` built from a real `stripe.Dispute`.
 - [ ] Verify end to end in Stripe **test mode** (`stripe trigger charge.dispute.created`): account suspended + `DISPUTE_CREATED` recorded. Close #273.
+
+**Commit SHA:** TBD.
+
+### Sprint 874: Every reload signs production users out — the CSRF rule on /auth/refresh cannot be satisfied
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR. **CEO decision needed:** it reverses the 2026-04-20
+hardening (token mandatory on refresh/logout in production). **Priority:** P0 (every signed-in user, every reload).
+**Source:** auth/session review 2026-11-16 (independent agent), each step verified against the code.
+**Agents:** Guardian (lead), Critic.
+
+The page keeps its CSRF token in memory (`frontend/src/utils/authMiddleware.ts`), so after a reload it is `null`. On
+load the app calls `POST /auth/refresh` (`AuthSessionContext.tsx:184`), and production rejects a refresh without a
+token (`security_middleware.py`). `/auth/csrf` cannot bootstrap it: it needs a live access cookie, which after 15
+minutes needs this refresh. So **every reload or new tab signs the user out, and every session ends when the access
+token expires** (15–30 min). That is Sprint 868's symptom — attributed to the third-party refresh cookie — and moving
+to `api.paciolus.com` would **not** have fixed it. The 2026-04-20 rule rested on "the frontend mints a CSRF token for
+every refresh/logout call", which is false after a reload. Production request logs on 2026-11-16 show
+`POST /auth/refresh 403` with a `csrf_blocked` event in the same second.
+
+- [x] Production `/auth/refresh` and `/auth/logout` pass with a valid token **or** an allowed `Origin` that is present
+      plus `X-Requested-With: XMLHttpRequest` (a cross-site page cannot add the header without a preflight the CORS
+      allow-list refuses). Still rejected: no Origin, Referer-only, no header, wrong or look-alike Origin, a bad token
+      without the proof, and the proof on any other path. A stale (> 30 min) token no longer blocks logout or refresh.
+- [x] Tests: `TestRefreshLogoutBrowserProofSprint874` (11); the three "passes" cases fail on the old middleware.
+      The 2026-04-20 test (header without Origin → 403) still holds unchanged.
+- [ ] **CEO:** approve reversing the 2026-04-20 rule, then merge. After deploy: sign in, reload twice, wait 20 minutes,
+      act — still signed in. Then re-scope Sprint 868 to what remains (browsers that block the third-party refresh
+      cookie, e.g. Safari).
+- [ ] Related, not changed: `CORSMiddleware` is added first in `main.py`, so it sits inside `CSRFMiddleware` and CSRF
+      403s carry no CORS headers — the browser reports them as network errors (how the PR #313 spinner presented).
 
 **Commit SHA:** TBD.
 

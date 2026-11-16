@@ -488,6 +488,79 @@ class TestCSRFRefreshLogout:
         assert resp.status_code == 200
 
 
+from security_middleware import validate_csrf_token as _REAL_VALIDATE_CSRF_TOKEN  # noqa: E402
+
+
+class TestRefreshLogoutBrowserProofSprint874:
+    """Sprint 874: production refresh/logout must work after a reload.
+
+    The CSRF token lives in page memory, so the first refresh after a reload has
+    none, and /auth/csrf needs the access cookie that this refresh renews.
+    Token-only signed every user out on every reload. The replacement accepts a
+    valid token OR an allowed Origin (present) + X-Requested-With.
+    """
+
+    ALLOWED = "https://paciolus.com"
+
+    async def _dispatch(self, path, headers):
+        mw = CSRFMiddleware(app=None)
+
+        async def _call_next(_req):
+            from starlette.responses import Response as _R
+
+            return _R(status_code=200, content="ok")
+
+        # conftest's session-scoped `bypass_csrf` replaces validate_csrf_token for
+        # the rest of the run once any test uses it; pin the real one, captured
+        # at import (collection precedes every fixture).
+        with (
+            patch("config.ENV_MODE", "production"),
+            patch("config.CORS_ORIGINS", [self.ALLOWED]),
+            patch("security_middleware.validate_csrf_token", _REAL_VALIDATE_CSRF_TOKEN),
+        ):
+            return await mw.dispatch(_FakeRequest("POST", path, headers=headers), _call_next)
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize("path", ["/auth/refresh", "/auth/logout"])
+    async def test_allowed_origin_plus_header_passes_without_token(self, path):
+        resp = await self._dispatch(path, {"Origin": self.ALLOWED, "X-Requested-With": "XMLHttpRequest"})
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_stale_token_with_browser_proof_passes(self):
+        resp = await self._dispatch(
+            "/auth/refresh",
+            {"Origin": self.ALLOWED, "X-Requested-With": "XMLHttpRequest", "X-CSRF-Token": "a:1:2:expired"},
+        )
+        assert resp.status_code == 200
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "headers",
+        [
+            {"X-Requested-With": "XMLHttpRequest"},  # no Origin: the non-browser escape does not apply here
+            {
+                "Referer": "https://paciolus.com/dashboard",
+                "X-Requested-With": "XMLHttpRequest",
+            },  # Referer is not Origin
+            {"Origin": "https://paciolus.com"},  # no custom header
+            {"Origin": "https://evil.example.com", "X-Requested-With": "XMLHttpRequest"},
+            {"Origin": "https://paciolus.com.evil.example", "X-Requested-With": "XMLHttpRequest"},
+            {"Origin": "https://paciolus.com", "X-Requested-With": "fetch"},
+            {"X-CSRF-Token": "a:1:2:invalid"},  # bad token, no proof
+        ],
+        ids=["no-origin", "referer-only", "no-header", "evil-origin", "lookalike-origin", "wrong-header", "bad-token"],
+    )
+    async def test_everything_else_is_still_rejected(self, headers):
+        resp = await self._dispatch("/auth/refresh", headers)
+        assert resp.status_code == 403
+
+    @pytest.mark.anyio
+    async def test_the_proof_does_not_extend_to_other_paths(self):
+        resp = await self._dispatch("/clients", {"Origin": self.ALLOWED, "X-Requested-With": "XMLHttpRequest"})
+        assert resp.status_code == 403
+
+
 # ---------------------------------------------------------------------------
 # Objective 4 — security headers gated by ENV_MODE
 # ---------------------------------------------------------------------------
