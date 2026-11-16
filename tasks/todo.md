@@ -16,6 +16,7 @@
 >
 > Pre-April 2026 entries archived to [`tasks/archive/hotfix-log-pre-april-2026.md`](archive/hotfix-log-pre-april-2026.md).
 
+- [2026-11-16] (this PR): credentials inventory + Nov 1 rotation checklist in `docs/runbooks/backup-restore.md` §6; E2E smoke check finding filed (docs/runbooks, tasks/todo.md)
 - [2026-11-15] (this PR): tasks/ cleanup — `todo.md` restructured (old plan blocks, completed/superseded sprints and long sprint histories archived verbatim; every unchecked item kept; PR #312's two bugs carried in as Sprints 870/871), `lessons.md` replaced by standing rules (original archived), older hotfix entries archived, eight one-off `tasks/` reports archived, `WEBSITE_REVIEW.md` moved to `reports/`, `SESSION_STATE.md` brought current (tasks/, reports/, SESSION_STATE.md, CLAUDE.md, audit-journal.md)
 - [2026-11-15] 016be822 (PR #313): signed-in pages spun forever when the session refresh failed at the network level — `AuthSessionContext` now clears the session so the page redirects to /login; regression test added. Found while trying to take Sprint 865 screenshots; production API was healthy (Render logs: 403, not 503) (frontend/src/contexts/AuthSessionContext.tsx, frontend/src/__tests__/AuthContext.test.tsx)
 - [2026-11-14] 29cb4c29: website claims review — `reports/website-review-2026-11-14.md` written, CEO approved all 19 recommendations, Sprints 861–865 filed with a START HERE block; live-site check found `/security` and `/subprocessors` 404 and a public `/status` page with hard-coded "Passed" results. No site code changed (reports/website-review-2026-11-14.md, tasks/todo.md, tasks/ceo-actions.md)
@@ -91,9 +92,16 @@
 >
 > **Then (C)**
 > - [ ] Sprint 869 (JE calibration) · Sprint 859 (pooler-aware TLS check) · Dependabot batch (open: #297–#306, #311).
-> - [ ] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` (names, scope, where created, expiry —
->       never values) + one yearly **Nov 1** rotation/sign-off day shared with Sprint 860 + an alarm for GitHub
->       disabling scheduled workflows after 60 idle days. (Carried from PR #312.)
+> - [x] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` §6 (names, scope, where created, expiry —
+>       never values) + the yearly **Nov 1** rotation/sign-off day shared with Sprint 860 (2026-11-16). Expiries the
+>       repo cannot know are marked **unknown** for the CEO to fill in at each issuer.
+> - [ ] Alarm for GitHub disabling scheduled workflows after 60 idle days (the other half of the PR #312 item; the
+>       Nov 1 checklist covers it manually until then).
+> - [ ] **Finding 2026-11-16 — the "E2E Smoke Tests (Playwright)" check has never run a test.** `SMOKE_USER` /
+>       `SMOKE_PASS` are not set, so `ci.yml` skips the test step and the job reports success on every PR. Setting
+>       them would not help: the job starts a fresh SQLite backend with no users. Recommendation: seed a throwaway
+>       verified user inside the job (no secrets needed) and fail the job when the suite does not run. Not done
+>       overnight — CI work, freeze status for the CEO to call.
 > - [ ] Neon point-in-time restore drill (Sprint 778 remainder): the R2 restore drill passed 2026-11-14; a PITR restore
 >       has not been drilled — only its 7-day window is checked.
 > - Partial sprints parked by the freeze are listed below with their open items.
