@@ -280,6 +280,9 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
       meters on the ledger, not its frozen counter; a firm member's run moves the firm's counter, owner and member share
       500. `test_sprint_790_upload_metering.py` Free test now asserts one ledger row per run (it asserted no count before).
       `test_account_erasure.py` seeds and checks a ledger row.
+- [x] Follow-up (full-suite run): five older tests simulated Free usage with ActivityLog rows
+      (`test_audit_api.py` ×2, `test_audit_flux_routes.py`, `test_entitlement_checks_unit.py` ×2) and now seed ledger
+      rows; the unit test that pinned "no subscription = no-op" now asserts one ledger row.
 
 **878e — JE sampling skips the tool gate and the allowance (AZ-06, High)**
 - [ ] Confirm, gate both routes, meter successful runs.
@@ -296,7 +299,7 @@ passed; ruff clean; mypy 212 (baseline 1,011).
 metering + JE suites 580 passed; policy-doc guards 13 passed; new tests 6 passed; ruff clean; mypy 212 (baseline 1,011);
 frontend build green (pages `ƒ`), jest 212 suites / 2,107 tests.
 
-**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d (this commit).
+**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c `2a46f301` · 878d `197168d4` + test follow-up (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

@@ -11,7 +11,6 @@ Tests cover:
 
 import io
 import sys
-from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -21,7 +20,7 @@ sys.path.insert(0, "..")
 from auth import require_current_user, require_verified_user
 from database import get_db
 from main import app
-from models import ActivityLog, User, UserTier
+from models import User, UserTier
 
 # =============================================================================
 # Fixtures
@@ -172,21 +171,18 @@ Revenue,,10000
 
 
 def _make_activity_log(user_id, db_session):
-    """Insert one ActivityLog row for the given user_id in the current month."""
-    log = ActivityLog(
-        user_id=user_id,
-        filename_hash="b" * 64,
-        filename_display="test_limit.csv",
-        timestamp=datetime.now(UTC),
-        record_count=10,
-        total_debits=1000.00,
-        total_credits=1000.00,
-        materiality_threshold=500.00,
-        was_balanced=True,
-    )
-    db_session.add(log)
+    """Consume one unit of the user's allowance in the current month.
+
+    Sprint 878: Free usage is counted on the server-side ledger
+    ``upload_usage_events``, not ActivityLog. (For a paid user with no
+    subscription row, as here, the ledger is the meter too.)
+    """
+    from upload_usage_model import UploadUsageEvent
+
+    event = UploadUsageEvent(user_id=user_id, tool_name="trial_balance")
+    db_session.add(event)
     db_session.flush()
-    return log
+    return event
 
 
 @pytest.mark.usefixtures("bypass_csrf")
@@ -194,7 +190,7 @@ class TestDiagnosticLimitEnforcement:
     """Tests for monthly diagnostic limit on POST /audit/trial-balance (Sprint LXIII-1)."""
 
     def _setup_user_with_logs(self, db_session, tier, email, log_count):
-        """Create a verified user of the given tier with log_count ActivityLog entries."""
+        """Create a verified user of the given tier with log_count uploads used this month."""
         user = User(
             email=email,
             name="Limit Test User",

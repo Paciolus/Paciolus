@@ -248,29 +248,19 @@ class TestFluxGates:
     PDF/OFX/QBO here though every TB route refuses them."""
 
     async def _post(self, db_session, tier, prior_name="prior.xlsx", activity_logs=0):
-        from datetime import UTC, datetime
 
         from database import get_db
         from main import app
-        from models import ActivityLog, User
+        from models import User
 
         user = User(email=f"flux-{tier.value}@test.com", hashed_password="$2b$12$fakehash", is_verified=True, tier=tier)
         db_session.add(user)
         db_session.commit()
+        # Sprint 878: usage is metered on the server-side ledger, not ActivityLog.
+        from upload_usage_model import UploadUsageEvent
+
         for _ in range(activity_logs):
-            db_session.add(
-                ActivityLog(
-                    user_id=user.id,
-                    filename_hash="c" * 64,
-                    filename_display="tb.csv",
-                    timestamp=datetime.now(UTC),
-                    record_count=1,
-                    total_debits=1,
-                    total_credits=1,
-                    materiality_threshold=1,
-                    was_balanced=True,
-                )
-            )
+            db_session.add(UploadUsageEvent(user_id=user.id, tool_name="trial_balance"))
         db_session.commit()
 
         xlsx = _make_xlsx_bytes()

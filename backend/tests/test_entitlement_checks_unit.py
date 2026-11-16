@@ -3,7 +3,7 @@ Phase LXII: Unit tests for shared/entitlement_checks.py.
 
 Tests all entitlement dependency functions:
 - _raise_or_log           — soft vs hard enforcement mode
-- check_upload_limit      — DB-backed monthly ActivityLog count + subscription path
+- check_upload_limit      — monthly usage-ledger count (Sprint 878) + subscription path
 - check_client_limit      — DB-backed active Client count
 - enforce_tool_access     — tier-based tool access gate (shared.testing_route)
 - check_format_access     — factory: tier-based format access gate
@@ -33,7 +33,7 @@ from fastapi import HTTPException
 # Import subscription_model at module level so Base.metadata includes the
 # subscriptions table before the session-scoped db_engine fixture calls create_all().
 import subscription_model  # noqa: F401 — side-effect import to register ORM model
-from models import ActivityLog, UserTier
+from models import UserTier
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -41,22 +41,19 @@ from models import ActivityLog, UserTier
 
 
 def _make_activity_log(user_id, db_session, timestamp=None):
-    """Insert one ActivityLog row for the given user_id."""
-    ts = timestamp or datetime.now(UTC)
-    log = ActivityLog(
-        user_id=user_id,
-        filename_hash="a" * 64,
-        filename_display="test.csv",
-        timestamp=ts,
-        record_count=10,
-        total_debits=1000.00,
-        total_credits=1000.00,
-        materiality_threshold=500.00,
-        was_balanced=True,
-    )
-    db_session.add(log)
+    """Consume one unit of a Free/lapsed user's allowance.
+
+    Sprint 878: the meter is the server-side ledger ``upload_usage_events``, not
+    ActivityLog (which the browser writes and "Clear history" archives). The
+    helper keeps its name so the tests below read as before.
+    """
+    from upload_usage_model import UploadUsageEvent
+
+    ts = (timestamp or datetime.now(UTC)).astimezone(UTC).replace(tzinfo=None)
+    event = UploadUsageEvent(user_id=user_id, tool_name="trial_balance", consumed_at=ts)
+    db_session.add(event)
     db_session.flush()
-    return log
+    return event
 
 
 # ---------------------------------------------------------------------------
@@ -698,13 +695,14 @@ class TestIncrementUploadCount:
         db_session.refresh(sub)
         assert sub.uploads_used_current_period == 6
 
-    def test_no_op_without_subscription(self, make_user, db_session):
-        """No subscription = no-op (free tier uses ActivityLog counting)."""
+    def test_without_subscription_writes_one_ledger_row(self, make_user, db_session):
+        """No subscription: one row in the usage ledger (Sprint 878; was a no-op metered from ActivityLog)."""
         from shared.entitlement_checks import increment_upload_count
+        from upload_usage_model import UploadUsageEvent
 
         user = make_user(tier=UserTier.FREE, email="incr_free@example.com")
-        # Should not raise
         increment_upload_count(db_session, user.id)
+        assert db_session.query(UploadUsageEvent).filter_by(user_id=user.id).count() == 1
 
     def test_handles_none_initial_value(self, make_user, db_session):
         """If uploads_used_current_period is None, starts from 0."""
