@@ -12,6 +12,7 @@ Covers:
 8. Config-level sslmode enforcement in connection string
 """
 
+import logging
 import os
 import sys
 from datetime import date, timedelta
@@ -319,6 +320,57 @@ class TestDailyTLSVerificationJob:
             call_args = mock_log.call_args
             assert "tls=INACTIVE" in call_args[0][1]
             assert "sig=" in call_args[0][1]
+
+    # Sprint 859: Neon's pooled endpoint does not populate pg_stat_ssl for our
+    # hop, so the job signed "tls=INACTIVE — unencrypted" into its evidence
+    # daily on production. Pooled hosts now follow the startup check's rule.
+    _POOLED_URL = "postgresql://ep-cool-name-123456-pooler.us-east-1.aws.neon.tech/db?sslmode={mode}"
+
+    def _run_daily(self, database_url, ssl_value=False):
+        mock_db = MagicMock()
+        mock_db.execute.return_value.fetchone.return_value = (ssl_value,)
+        mock_engine = MagicMock()
+        mock_engine.dialect.name = "postgresql"
+        with (
+            patch("database.SessionLocal", return_value=mock_db),
+            patch("database.engine", mock_engine),
+            patch("config.DATABASE_URL", database_url),
+            patch("security_utils.log_secure_operation") as mock_log,
+            patch("config.JWT_SECRET_KEY", "test-secret-key-for-hmac-signing"),
+        ):
+            from cleanup_scheduler import _job_verify_database_tls
+
+            _job_verify_database_tls()
+        return mock_db, mock_log
+
+    def test_pooled_host_with_required_sslmode_records_pooler_skip(self, caplog):
+        with caplog.at_level(logging.INFO, logger="cleanup_scheduler"):
+            mock_db, mock_log = self._run_daily(self._POOLED_URL.format(mode="require"))
+
+        mock_db.execute.assert_not_called()  # pg_stat_ssl describes the pooler's hop, not ours
+        detail = mock_log.call_args[0][1]
+        assert mock_log.call_args[0][0] == "db_tls_daily_check"
+        assert "tls=pooler-skip," in detail
+        assert "sslmode=require" in detail
+        assert "INACTIVE" not in detail
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING and "TLS" in r.getMessage()]
+
+    def test_pooled_host_without_secure_sslmode_is_flagged_unenforced(self, caplog):
+        with caplog.at_level(logging.INFO, logger="cleanup_scheduler"):
+            _mock_db, mock_log = self._run_daily(self._POOLED_URL.format(mode="prefer"))
+
+        detail = mock_log.call_args[0][1]
+        assert "tls=pooler-skip-UNENFORCED" in detail
+        assert "sslmode=prefer" in detail
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("pooler-skip-UNENFORCED" in m and "sslmode=prefer" in m for m in warnings)
+
+    def test_direct_host_still_reads_pg_stat_ssl(self):
+        mock_db, mock_log = self._run_daily(
+            "postgresql://ep-cool-name-123456.us-east-1.aws.neon.tech/db?sslmode=require", ssl_value=False
+        )
+        mock_db.execute.assert_called_once()
+        assert "tls=INACTIVE" in mock_log.call_args[0][1]
 
     def test_daily_check_skips_sqlite(self):
         """Daily job is a no-op for SQLite (dev/test)."""
