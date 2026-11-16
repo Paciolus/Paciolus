@@ -7,6 +7,7 @@ interface JEScoreCardProps {
   score: JECompositeScore
 }
 
+// Sprint 869: total_entries counts GL lines (one per row), not journal entries.
 export function JEScoreCard({ score }: JEScoreCardProps) {
   return (
     <TestingScoreCard
@@ -19,7 +20,7 @@ export function JEScoreCard({ score }: JEScoreCardProps) {
       flags_by_severity={score.flags_by_severity}
       top_findings={score.top_findings}
       score_basis={score.score_basis}
-      entity_label="journal entries"
+      entity_label="GL lines"
     />
   )
 }

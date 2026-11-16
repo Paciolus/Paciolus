@@ -232,7 +232,7 @@ def export_csv_je_testing(
         composite_score=je_input.composite_score,
         filename_raw=je_input.filename,
         filename_suffix="JETesting_Flagged",
-        entry_label="Entries",
+        entry_label="GL Lines",  # Sprint 869: total_entries counts lines, not journal entries
         error_log_prefix="JE",
         error_code="je_csv_export_error",
     )
