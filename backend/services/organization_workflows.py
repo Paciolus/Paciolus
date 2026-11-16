@@ -141,7 +141,8 @@ def accept_invite(db: Session, user: User, token: str) -> None:
         raise OrganizationError(404, "Invite not found or already used.")
 
     # A leaked or intercepted token must not work for an unintended account.
-    if invite.invitee_email and user.email.lower() != invite.invitee_email.lower():
+    # Sprint 872 (AZ-11): always compared — an invite with no address matches nobody.
+    if user.email.strip().lower() != (invite.invitee_email or "").strip().lower():
         raise OrganizationError(403, "This invite was sent to a different email address.")
 
     if invite.is_expired:

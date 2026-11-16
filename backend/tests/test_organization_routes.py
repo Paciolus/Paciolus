@@ -167,7 +167,7 @@ class TestBug01InviteAcceptSeatCount:
     @pytest.mark.anyio
     async def test_accept_invite_route_at_capacity(self, db_session, make_user):
         """Full HTTP integration: accept invite at exact capacity via the route."""
-        from auth import require_current_user
+        from auth import require_verified_user
         from database import get_db
         from main import app
 
@@ -181,8 +181,9 @@ class TestBug01InviteAcceptSeatCount:
         invitee = make_user(email="invitee_bug01c@example.com", tier=UserTier.FREE)
         raw_token, invite = _make_invite(db_session, org, invitee.email, owner)
 
-        # Override auth to be the invitee
-        app.dependency_overrides[require_current_user] = lambda: invitee
+        # Override auth to be the (verified) invitee — Sprint 872: the accept
+        # route requires a verified account.
+        app.dependency_overrides[require_verified_user] = lambda: invitee
         app.dependency_overrides[get_db] = lambda: db_session
 
         try:

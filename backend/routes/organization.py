@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from auth import require_current_user
+from auth import require_current_user, require_verified_user
 from database import get_db
 from models import User
 from organization_model import (
@@ -193,10 +193,17 @@ def revoke_invite(
 def accept_invite(
     token: str,
     request: Request,
-    user: User = Depends(require_current_user),
+    user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    """Accept an organization invite. Links the current user to the org."""
+    """Accept an organization invite. Links the current user to the org.
+
+    Sprint 872 (AZ-11): the account must be verified, and its address — which
+    only changes once a new address is verified (``pending_email`` holds an
+    unverified change) — must match the invitation. Registration issues a
+    session before verification, so without this anyone holding a leaked
+    invitation could register the invited address and join the firm.
+    """
     try:
         organization_workflows.accept_invite(db, user, token)
     except organization_workflows.OrganizationError as e:

@@ -164,7 +164,15 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
       access cookie and with A's expired access cookie; B's token untouched; B's own CSRF works on both.
 
 **872c — invitation accepted by an unverified address (AZ-11, High)**
-- [ ] Confirm, then require a verified account whose address matches the invitation.
+- [x] Confirmed: `accept_invite` depended on `require_current_user`; an unverified account registered with the
+      invited address joined the firm (200). The address check was also skipped when `invitee_email` was empty.
+- [x] Now `require_verified_user`, and the account's address (which only changes once a new address is verified —
+      `pending_email` holds unverified changes) must equal the invitation's, always compared. Expiry, org lock, seat
+      check and the single-membership rule unchanged.
+- [x] Tests: `test_invite_accept_verified.py` (real tokens) — unverified matching → 403, invite still PENDING, no
+      membership; verified matching → accepted; verified other address → 403; unverified pending change to the invited
+      address → 403. `test_organization_routes.py` capacity test now overrides `require_verified_user`.
+- Note: no frontend page or email link calls the accept endpoint today.
 
 **872d — impersonation token in sessionStorage (AZ-13, High)**
 - [ ] Confirm, then hold impersonation state in memory only; clear on end and on logout.
@@ -177,7 +185,9 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 **Verification (872b):** backend 10,673 passed, 1 skipped (the pre-existing `main` failure
 `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` deselected); ruff clean; mypy adds no errors.
 
-**Commit SHA:** 872a `9f66d506` · 872b (this commit).
+**Verification (872c):** invite/org/firm-record/role-gate/access-log tests 50 passed; ruff clean.
+
+**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
