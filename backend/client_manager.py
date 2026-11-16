@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from models import Client, EntityType, Industry, ReportingFramework, User
 from security_utils import log_secure_operation
-from shared.client_access import caller_organization_id, client_scope
+from shared.client_access import caller_organization_id, client_scope, require_destructive_role
 from shared.filenames import escape_like_wildcards
 
 
@@ -224,10 +224,12 @@ class ClientManager:
         return client
 
     def delete_client(self, user_id: int, client_id: int) -> bool:
-        """Delete client. Returns True if deleted, False if not found."""
+        """Delete client. Returns False if not found; raises ``FirmRoleRequired`` for a firm member
+        who is not the owner or an admin."""
         client = self.get_client(user_id, client_id)
         if not client:
             return False
+        require_destructive_role(self.db, user_id, client)
 
         client_name = client.name
         self.db.delete(client)

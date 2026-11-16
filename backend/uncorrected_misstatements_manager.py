@@ -21,7 +21,7 @@ from engagement_manager import EngagementManager
 from engagement_model import Engagement
 from models import Client
 from security_utils import log_secure_operation
-from shared.client_access import RecordNotFound, client_scope
+from shared.client_access import RecordNotFound, client_scope, require_destructive_role_for_engagement
 from shared.monetary import quantize_monetary
 from shared.soft_delete import soft_delete
 from uncorrected_misstatements_model import (
@@ -278,6 +278,7 @@ class UncorrectedMisstatementsManager:
         m = self._verify_misstatement_access(user_id, misstatement_id)
         if m is None:
             return None
+        require_destructive_role_for_engagement(self.db, user_id, m.engagement.client_id)
         soft_delete(self.db, m, user_id=user_id, reason=reason or "")
         log_secure_operation(
             "uncorrected_misstatement_archived",

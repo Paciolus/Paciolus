@@ -27,7 +27,7 @@ from engagement_model import (
 from follow_up_items_model import FollowUpDisposition, FollowUpItem
 from models import Client
 from security_utils import log_secure_operation
-from shared.client_access import RecordNotFound, client_scope
+from shared.client_access import RecordNotFound, client_scope, require_destructive_role_for_engagement
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
@@ -231,6 +231,11 @@ class EngagementManager:
         engagement = self._get_engagement_with_ownership(user_id, engagement_id)
         if not engagement:
             return None
+
+        # Archiving is destructive whichever route asks for it (DELETE, or a
+        # PUT with status=archived): owner or admin only on a firm client.
+        if status == EngagementStatus.ARCHIVED and engagement.status != EngagementStatus.ARCHIVED:
+            require_destructive_role_for_engagement(self.db, user_id, engagement.client_id)
 
         if period_start is not None:
             engagement.period_start = period_start

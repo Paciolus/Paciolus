@@ -24,7 +24,7 @@ from analytical_expectations_model import (
 from engagement_model import Engagement
 from models import Client
 from security_utils import log_secure_operation
-from shared.client_access import RecordNotFound, client_scope
+from shared.client_access import RecordNotFound, client_scope, require_destructive_role_for_engagement
 from shared.monetary import quantize_monetary
 from shared.soft_delete import soft_delete
 
@@ -397,6 +397,7 @@ class AnalyticalExpectationsManager:
         expectation = self._verify_expectation_access(user_id, expectation_id)
         if expectation is None:
             return None
+        require_destructive_role_for_engagement(self.db, user_id, expectation.engagement.client_id)
         soft_delete(self.db, expectation, user_id=user_id, reason=reason or "")
         log_secure_operation(
             "analytical_expectation_archived",

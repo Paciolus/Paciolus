@@ -30,6 +30,7 @@ from shared.organization_policy import (
     apply_org_subscription_to_user,
     get_user_org,
     require_admin,
+    require_owner,
     revert_user_tier_after_removal,
     revoke_member_firm_shares,
     unique_slug,
@@ -197,6 +198,11 @@ def remove_member(db: Session, user: User, member_id: int) -> None:
 
     if member.role == OrgRole.OWNER:
         raise OrganizationError(400, "Cannot remove the organization owner.")
+
+    # Sprint 853 (AZ-15): an admin may remove members, but only the owner may
+    # remove an admin — otherwise one admin can remove the other.
+    if member.role == OrgRole.ADMIN:
+        require_owner(db, user, org)
 
     # Restore the tier from a personal subscription if there is one, otherwise FREE.
     removed_user = db.query(User).filter(User.id == member.user_id).first()

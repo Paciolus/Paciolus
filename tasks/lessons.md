@@ -248,3 +248,10 @@
 - **Replace a whole function by its boundaries, not by searching for its last statement (Sprint 890).** Twice an edit
   stopped at an earlier `return Response(...)` and left the old body behind; cut from `def` to the next decorator.
 
+
+- **2026-11-16 (Sprint 853):** a destructive action can have more than one door. Engagement archive was reachable
+  through `DELETE /engagements/{id}` *and* `PUT /engagements/{id}` with `status=archived`; a gate on the archive method
+  alone would have left the PUT open. Put the gate where the state changes (the manager), and test every door.
+- **2026-11-16 (Sprint 853):** an access rule derived from someone's *current* membership moves with them. Record the
+  owning firm on the record itself, and scope every child record through that one column via a single shared filter
+  (`client_scope`), never a per-manager copy.
