@@ -440,6 +440,17 @@ def validate_csrf_token(token: Optional[str], expected_user_id: Optional[str] = 
     return True
 
 
+def csrf_token_user_id(token: Optional[str]) -> Optional[str]:
+    """Return the user id a CSRF token was issued for (no validation).
+
+    Only meaningful after ``validate_csrf_token`` has accepted the token.
+    """
+    if not token:
+        return None
+    parts = token.split(":")
+    return parts[2] if len(parts) == 4 and parts[2] else None
+
+
 class CSRFMiddleware(BaseHTTPMiddleware):
     """
     Middleware for CSRF protection using stateless HMAC-signed tokens.
@@ -562,10 +573,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Sprint 653: /auth/refresh and /auth/logout historically ran a
         # per-request DB lookup to recover the user_id from the refresh
-        # cookie for CSRF binding. Those paths are now handled by the
-        # custom-header branch below (signature + origin + X-Requested-With
-        # proof), which avoids opening a fresh SessionLocal() outside the
-        # `get_db()` lifecycle and bypassing connection-pool accounting.
+        # cookie for CSRF binding, opening a SessionLocal() outside the
+        # `get_db()` lifecycle. Sprint 872 (AZ-10) restores the binding
+        # without that: the token's user is passed to the handler and the
+        # auth service checks it against the refresh token's owner.
 
         # Cookie-auth mutation paths (refresh/logout).
         #
@@ -612,6 +623,15 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                         status_code=403,
                         media_type="application/json",
                     )
+            # Sprint 872 (AZ-10): with no access token there is no identity
+            # to bind the CSRF token to here, and the refresh cookie's owner
+            # is only known after a database lookup. Hand the token's user to
+            # the handler; the auth service compares it with the refresh
+            # token's owner, in the request's own transaction, before it
+            # rotates or revokes anything. (Dev/test X-Requested-With
+            # fallback carries no CSRF identity, so nothing is recorded.)
+            if csrf_token:
+                request.state.csrf_user_id = csrf_token_user_id(csrf_token)
             # Passed validation — proceed
             final_response = await call_next(request)
             return final_response

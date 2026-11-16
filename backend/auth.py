@@ -781,7 +781,20 @@ def create_refresh_token(
     return raw_token, db_token
 
 
-def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
+def _require_csrf_owner(db_token: RefreshToken, csrf_user_id: Optional[str]) -> None:
+    """Sprint 872 (AZ-10): the CSRF token must belong to the refresh token's owner.
+
+    ``csrf_user_id`` is the user the request's (already signature-checked)
+    CSRF token was issued for, or None when no CSRF identity was presented
+    (dev/test X-Requested-With fallback; production requires the token).
+    Checked before any rotation, revocation or reuse-detection side effect.
+    """
+    if csrf_user_id is not None and csrf_user_id != str(db_token.user_id):
+        log_secure_operation("csrf_blocked", "CSRF token user does not own the refresh token")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
+
+
+def rotate_refresh_token(db: Session, raw_token: str, csrf_user_id: Optional[str] = None) -> tuple[str, str, User]:
     """
     Validate a refresh token, revoke it, and issue a new pair.
 
@@ -807,6 +820,8 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
+
+    _require_csrf_owner(db_token, csrf_user_id)
 
     # Reuse detection: revoked token was presented → compromise detected
     if db_token.is_revoked:
@@ -896,7 +911,7 @@ def rotate_refresh_token(db: Session, raw_token: str) -> tuple[str, str, User]:
     return access_token, new_raw_token, user
 
 
-def revoke_refresh_token(db: Session, raw_token: str) -> bool:
+def revoke_refresh_token(db: Session, raw_token: str, csrf_user_id: Optional[str] = None) -> bool:
     """
     Revoke a single refresh token (logout).
 
@@ -908,6 +923,8 @@ def revoke_refresh_token(db: Session, raw_token: str) -> bool:
 
     if db_token is None:
         return False
+
+    _require_csrf_owner(db_token, csrf_user_id)
 
     if db_token.is_revoked:
         return False

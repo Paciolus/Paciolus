@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -141,6 +142,7 @@ def refresh_session(
     db: Session,
     *,
     raw_refresh_token: str,
+    csrf_user_id: Optional[str] = None,
 ) -> IdentityIssuance:
     """
     Rotate the refresh token and mint a fresh access + refresh pair.
@@ -149,11 +151,15 @@ def refresh_session(
     revoke-old + issue-new sequence. Generates a new CSRF token tied to
     the user.
 
+    ``csrf_user_id`` (Sprint 872, AZ-10) is the user the request's CSRF
+    token was issued for; a token belonging to anyone else is refused with
+    403 before the refresh token is touched.
+
     Raises:
         HTTPException: as raised by `rotate_refresh_token` for invalid /
-            expired / revoked tokens.
+            expired / revoked tokens, or a CSRF owner mismatch.
     """
-    access_token, new_refresh_token, user = rotate_refresh_token(db, raw_refresh_token)
+    access_token, new_refresh_token, user = rotate_refresh_token(db, raw_refresh_token, csrf_user_id=csrf_user_id)
     expires_in = JWT_EXPIRATION_MINUTES * 60
     csrf_token_value = generate_csrf_token(user_id=str(user.id))
 
@@ -166,12 +172,14 @@ def refresh_session(
     )
 
 
-def revoke_session_token(db: Session, raw_refresh_token: str) -> bool:
+def revoke_session_token(db: Session, raw_refresh_token: str, csrf_user_id: Optional[str] = None) -> bool:
     """
     Revoke a refresh token (logout).
 
     Idempotent — returns `False` if the token was unknown or already revoked.
     The caller is responsible for clearing the cookies regardless of the
-    result, so logout always succeeds from the client's perspective.
+    result, so logout always succeeds from the client's perspective — except
+    when the CSRF token belongs to someone other than the refresh token's
+    owner (Sprint 872, AZ-10), which raises 403 and leaves the session alone.
     """
-    return revoke_refresh_token(db, raw_refresh_token)
+    return revoke_refresh_token(db, raw_refresh_token, csrf_user_id=csrf_user_id)

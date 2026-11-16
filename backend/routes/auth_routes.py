@@ -422,7 +422,11 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
     if not raw_token:
         raise HTTPException(status_code=401, detail="No refresh token")
 
-    issuance = refresh_session(db, raw_refresh_token=raw_token)
+    issuance = refresh_session(
+        db,
+        raw_refresh_token=raw_token,
+        csrf_user_id=getattr(request.state, "csrf_user_id", None),
+    )
 
     # Always issue a session cookie on rotation (security best-practice)
     _set_refresh_cookie(response, issuance.raw_refresh_token, remember_me=False)
@@ -443,7 +447,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     """Revoke the HttpOnly refresh cookie (logout)."""
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
-        revoke_session_token(db, raw_token)
+        revoke_session_token(db, raw_token, csrf_user_id=getattr(request.state, "csrf_user_id", None))
     _clear_refresh_cookie(response)
     _clear_access_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")

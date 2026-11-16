@@ -155,9 +155,13 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 **872b — CSRF not bound to the refresh cookie's owner (AZ-10, High)**
 - [x] Confirmed: with no bearer/access cookie, `expected_user_id = None`; A's CSRF token + B's refresh cookie → 200 on
       refresh and logout (also with A's expired access cookie).
-- [ ] Owner of the refresh token resolved in the auth service, in the request's transaction, and compared with the CSRF
-      token's user before rotate/revoke. CSRF tokens stay stateless.
-- [ ] Tests: `test_csrf_refresh_owner_binding.py`.
+- [x] The CSRF middleware hands the (signature-checked) token's user to the handler (`request.state.csrf_user_id`);
+      `auth.rotate_refresh_token` / `revoke_refresh_token` look up the refresh token in the request's own session and
+      refuse a different owner with 403 before any rotation, revocation or reuse-detection side effect. CSRF tokens stay
+      stateless; no extra `SessionLocal()`. Dev/test X-Requested-With fallback (no CSRF token) carries no identity —
+      production requires the token.
+- [x] Tests: `test_csrf_refresh_owner_binding.py` — A's CSRF + B's refresh cookie → 403 on refresh and logout, with no
+      access cookie and with A's expired access cookie; B's token untouched; B's own CSRF works on both.
 
 **872c — invitation accepted by an unverified address (AZ-11, High)**
 - [ ] Confirm, then require a verified account whose address matches the invitation.
@@ -170,7 +174,10 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 
 **Verification (872a):** frontend build green (all pages `ƒ`), 213 suites / 2,113 tests, `tsc`, eslint clean.
 
-**Commit SHA:** 872a (this commit).
+**Verification (872b):** backend 10,673 passed, 1 skipped (the pre-existing `main` failure
+`test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` deselected); ruff clean; mypy adds no errors.
+
+**Commit SHA:** 872a `9f66d506` · 872b (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
