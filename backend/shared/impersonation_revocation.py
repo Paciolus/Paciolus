@@ -6,11 +6,12 @@ from sessions an admin has explicitly ended.
 
 Backend selection:
 - If ``REDIS_URL`` is configured and reachable, use a Redis SET keyed by jti.
-- Otherwise fall back to an in-process dict with expiry metadata.
-
-The in-memory fallback is **not cluster-safe**. Production deployments
-running multiple workers must set ``REDIS_URL``; otherwise a revocation
-posted to worker A will not be visible to worker B.
+- Without ``REDIS_URL`` (development, tests), use an in-process dict with expiry.
+- Production with ``REDIS_URL`` set but Redis unreachable or erroring: a check
+  that cannot be confirmed answers "revoked" (Sprint 877), and the probe is
+  retried every 30 s. The in-memory store is **not cluster-safe** — a
+  revocation posted to worker A is invisible to worker B — so it must never be
+  the answer where revocation is meant to be shared.
 """
 
 from __future__ import annotations
@@ -29,6 +30,21 @@ _memory_store: dict[str, float] = {}
 _memory_lock = threading.Lock()
 _redis_client: object | None = None
 _redis_checked = False
+# Sprint 877: a failed probe is retried after this many seconds instead of
+# pinning the worker to its private in-memory store for life.
+_REDIS_RETRY_SECONDS = 30.0
+_redis_retry_at = 0.0
+
+
+def _redis_required() -> bool:
+    """Production with REDIS_URL set: revocation must be shared, so an unconfirmable
+    check is treated as revoked (fail closed). Only impersonation tokens — superadmin,
+    read-only — ever reach is_revoked(), so no ordinary sign-in depends on this."""
+    try:
+        from config import ENV_MODE, REDIS_URL
+    except Exception:  # noqa: BLE001
+        return False
+    return bool(REDIS_URL) and ENV_MODE == "production"
 
 
 def _get_redis():
@@ -36,9 +52,11 @@ def _get_redis():
 
     Returns the client or ``None`` if Redis is not configured or unreachable.
     """
-    global _redis_client, _redis_checked
-    if _redis_checked:
+    global _redis_client, _redis_checked, _redis_retry_at
+    if _redis_client is not None:
         return _redis_client
+    if _redis_checked and time.time() < _redis_retry_at:
+        return None
     _redis_checked = True
 
     try:
@@ -57,10 +75,12 @@ def _get_redis():
         _logger.info("Impersonation revocation store: Redis")
     except Exception as exc:  # noqa: BLE001
         _logger.warning(
-            "Impersonation revocation store: Redis unreachable (%s) — using in-memory fallback",
+            "Impersonation revocation store: Redis unreachable (%s) — retrying in %.0fs",
             exc,
+            _REDIS_RETRY_SECONDS,
         )
         _redis_client = None
+        _redis_retry_at = time.time() + _REDIS_RETRY_SECONDS
     return _redis_client
 
 
@@ -100,7 +120,12 @@ def is_revoked(jti: Optional[str]) -> bool:
         try:
             return bool(client.exists(_KEY_PREFIX + jti))
         except Exception as exc:  # noqa: BLE001
-            _logger.warning("Redis revocation EXISTS failed, falling back to memory: %s", exc)
+            _logger.warning("Redis revocation EXISTS failed: %s", exc)
+    # Sprint 877: a worker's private memory cannot see a revocation posted to
+    # another worker. Where revocation is meant to be shared, "cannot confirm"
+    # must mean "revoked", not "valid".
+    if _redis_required():
+        return True
 
     now = time.time()
     with _memory_lock:
@@ -111,8 +136,9 @@ def is_revoked(jti: Optional[str]) -> bool:
 
 def _reset_for_tests() -> None:
     """Clear both the memory store and cached Redis probe (test helper)."""
-    global _redis_client, _redis_checked
+    global _redis_client, _redis_checked, _redis_retry_at
     with _memory_lock:
         _memory_store.clear()
     _redis_client = None
     _redis_checked = False
+    _redis_retry_at = 0.0
