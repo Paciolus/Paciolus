@@ -714,6 +714,28 @@ every refresh/logout call", which is false after a reload. Production request lo
 
 **Commit SHA:** TBD.
 
+### Sprint 875: Concurrent wrong passwords bypassed the 5-attempt lockout
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P1 security
+(freeze-exempt; with rate limits not firing (#274) the lockout is the main brute-force guard). **Source:** auth/session
+review 2026-11-16, verified against `services/auth/identity.py`. **Agents:** Guardian (lead), Critic.
+
+`authenticate_login` read the lockout state, ran bcrypt (~250 ms), then added one to the counter in Python. N
+concurrent guesses all passed the check before any was counted and lost increments to each other: hundreds of guesses
+per 15-minute lockout instead of 5.
+
+- [x] `security_middleware.claim_login_attempt`: one conditional `UPDATE … SET failed_login_attempts + 1 WHERE
+      unlocked AND below the limit` before bcrypt; no slot → refused exactly like a locked account (same bcrypt cost,
+      same 401) and the lock is applied. Failures are counted once (`record_failed_login(claimed=True)`); a success
+      resets. Unknown emails unchanged.
+- [x] Tests `test_sprint_875_lockout_claim.py` (5): 25 claims → exactly 5 granted; with 5 slots in flight even the
+      right password is refused (fails on the old flow); 5 sequential failures count 5, not 10; success resets.
+- [ ] Not in this PR (same review, Low): re-entering the current password on email change / password change / account
+      delete has no attempt limit (`auth.py:667,727`, `auth_routes.py:570`); a revoked impersonation token can stay
+      valid if a worker's first Redis probe fails (`shared/impersonation_revocation.py`); refresh-token chains have no
+      absolute maximum and remember-me is lost after the first rotation (`auth.py:886`).
+
+**Commit SHA:** TBD.
+
 ### Sprint 863: Privacy Policy, Terms and Security Policy — counsel draft
 **Status:** DRAFTED 2026-11-14 — awaiting CEO + counsel. **Priority:** P0 (legal pages before launch). **Owner:** C drafts; **CEO + counsel approve. Nothing merges without counsel sign-off.**
 
