@@ -80,7 +80,7 @@
 >
 > **P0 before 2026-12-15 — in order**
 > - [ ] **Sprint 872** — session and sign-in boundaries (cross-account cache, CSRF owner binding, unverified invite
->       acceptance, impersonation token storage, error shape). Security; in progress.
+>       acceptance, impersonation token storage, error shape). Security; code complete, local branch, not pushed.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -133,8 +133,8 @@
 >       and whether the anomaly summary gets a download button. Engineering follow-ups are listed under the sprint.
 
 ### Sprint 872: Session and sign-in boundaries (DH-01, AZ-10, AZ-11, AZ-13, AZ-14)
-**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-872-session-boundaries` (off Sprint 853's branch;
-not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`.
+**Status:** IN REVIEW — code complete 2026-11-16 on local branch `sprint-872-session-boundaries` (off Sprint 853's
+branch; not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`.
 **Agents:** Guardian (lead), Executor, Critic.
 
 **872a — browser cache survives a change of account (DH-01, Critical)**
@@ -186,18 +186,36 @@ not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects). **S
 - Not changed: logout does not revoke a live impersonation token server-side; it expires within its 15 minutes.
 
 **872e — middleware errors bypass the common error shape (AZ-14)**
-- [ ] Confirm, then one constructor for every error response (CSRF 403, 413, 429, 500 …) with request IDs.
+- [x] Confirmed: CSRF and body-size middleware returned `{"detail": ...}`; impersonation 403 had no `request_id`;
+      429s came from SlowAPI's `{"error": "Rate limit exceeded: ..."}`; 500s and default-limit 429s are rendered outside
+      `RequestIdMiddleware`, so they could not carry the request ID.
+- [x] `shared/error_responses.py`: one constructor (`error_response`, raw-ASGI `send_error`) → `{code, message,
+      request_id, detail}` + `X-Request-ID`. Request ID resolved from the scope (`RequestIdMiddleware` now stores it
+      there), the context var, a valid client `X-Request-ID`, or a new one. Used by every `main.py` handler, the CSRF,
+      impersonation and body-size middleware, and a new sync rate-limit handler (slowapi's middleware path calls it
+      synchronously). 422 `error_code` alias dropped (`code` carries it; frontend reads `code` first).
+- [x] Frontend: parser unchanged; the 429 text added to `SAFE_PASSTHROUGH` (the old body had no `message`, so the UI
+      fell back to its own 429 text — without this it would have shown the generic error).
+- [x] Tests: `test_error_envelope.py` through the real stack — 401, CSRF 403, impersonation 403, 400/413 body size, 422,
+      429 (default-limit and decorated paths), unhandled 500, client request-ID echo; exact key set, ID = header, no
+      internals. `errorEnvelopeParsing.test.ts`. Two Sprint 819 route snapshots re-recorded — the diff is only
+      `HTTP_500`→`INTERNAL_ERROR` (29×) and the removed `error_code` (2×).
 
 **Verification (872a):** frontend build green (all pages `ƒ`), 213 suites / 2,113 tests, `tsc`, eslint clean.
 
 **Verification (872b):** backend 10,673 passed, 1 skipped (the pre-existing `main` failure
 `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` deselected); ruff clean; mypy adds no errors.
 
+**Verification (872e / final tree):** backend 10,684 passed, 1 skipped, 4 failed → after fixes, the only failure is the
+pre-existing `main` failure `test_engagement_export_routes_unchanged` (gzip vs null); the other three were this
+sprint's (order-dependent CSRF test, two snapshots) and are fixed. Frontend 215 suites / 2,125 tests, build, `tsc`,
+eslint green; ruff clean; mypy adds no errors.
+
 **Verification (872d):** frontend build green (pages `ƒ`), 215 suites / 2,125 tests, `tsc`, eslint clean.
 
 **Verification (872c):** invite/org/firm-record/role-gate/access-log tests 50 passed; ruff clean.
 
-**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d (this commit).
+**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d `caf05f5a` · 872e (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

@@ -17,7 +17,6 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from config import (
@@ -33,7 +32,7 @@ from config import (
 )
 from database import init_db
 from http_metrics_middleware import HttpMetricsMiddleware
-from logging_config import request_id_var, setup_logging
+from logging_config import setup_logging
 from routes import all_routers
 from security_middleware import (
     CSRFMiddleware,
@@ -44,10 +43,10 @@ from security_middleware import (
     SecurityHeadersMiddleware,
 )
 from security_utils import log_secure_operation
+from shared.error_responses import error_response, resolve_request_id
 from shared.exact_json import ExactNumberMiddleware
 from shared.monetary import AmountTooLargeError
 from shared.rate_limits import DefaultLimitMiddleware, get_storage_backend, limiter
-from shared.schemas import ErrorResponse
 from version import __version__
 
 # Initialize logging before anything else
@@ -298,47 +297,44 @@ app.add_middleware(RateLimitIdentityMiddleware)
 
 # Rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
+
+# Sprint 872 (AZ-14): every error below is built by shared.error_responses, so
+# handler, middleware and rate-limit errors share one shape and a request ID.
+#
+# Sync on purpose: slowapi's DefaultLimitMiddleware path calls this handler
+# synchronously (a coroutine handler is silently swapped for slowapi's own,
+# which returns {"error": ...}). Starlette runs sync handlers in a thread.
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    response = error_response(429, "Too many requests. Please try again later.", scope=request.scope)
+    view_rate_limit = getattr(request.state, "view_rate_limit", None)
+    if view_rate_limit is not None:
+        response = request.app.state.limiter._inject_headers(response, view_rate_limit)
+    return response
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
 # Global catch-all for unhandled exceptions — prevents stack trace leakage
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    rid = request_id_var.get("-")
+    rid = resolve_request_id(request.scope)
     logger.exception("Unhandled exception on %s %s [request_id=%s]", request.method, request.url.path, rid)
-    body = ErrorResponse(
-        code="INTERNAL_ERROR",
-        message="Internal server error",
-        request_id=rid,
-        detail="Internal server error",
-    )
-    return JSONResponse(status_code=500, content=body.model_dump())
+    return error_response(500, "Internal server error", scope=request.scope)
 
 
 # Sprint 884 (TQ-12): an amount above MAX_SUPPORTED_AMOUNT is a clear 400,
 # wherever it is found — on upload or when a result is serialized.
 @app.exception_handler(AmountTooLargeError)
 async def amount_too_large_handler(request: Request, exc: AmountTooLargeError) -> JSONResponse:
-    rid = request_id_var.get("-")
-    body = ErrorResponse(code="AMOUNT_TOO_LARGE", message=str(exc), request_id=rid, detail=str(exc))
-    return JSONResponse(status_code=400, content=body.model_dump())
+    return error_response(400, str(exc), scope=request.scope, code="AMOUNT_TOO_LARGE", detail=str(exc))
 
 
-# HTTPException handler — wraps FastAPI's default with the unified error envelope
-# while preserving the `detail` field that many callers and tests rely on.
+# HTTPException handler — the unified error envelope, keeping `detail` (str or
+# dict, e.g. {"code": "EMAIL_NOT_VERIFIED", ...}) that callers and tests rely on.
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    rid = request_id_var.get("-")
-    # Derive a machine-readable code from the status
-    code_map: dict[int, str] = {
-        400: "BAD_REQUEST",
-        401: "UNAUTHORIZED",
-        403: "FORBIDDEN",
-        404: "NOT_FOUND",
-        409: "CONFLICT",
-        429: "RATE_LIMITED",
-    }
-    code = code_map.get(exc.status_code, f"HTTP_{exc.status_code}")
     # Extract a string message from detail (detail can be str or dict)
     if isinstance(exc.detail, str):
         message = exc.detail
@@ -346,32 +342,27 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         message = exc.detail.get("message", str(exc.detail))
     else:
         message = str(exc.detail)
-    body = ErrorResponse(
-        code=code,
-        message=message,
-        request_id=rid,
-        detail=exc.detail if isinstance(exc.detail, str) else None,
+    return error_response(
+        exc.status_code,
+        message,
+        scope=request.scope,
+        detail=exc.detail,
+        headers=getattr(exc, "headers", None),
     )
-    # Build content dict — keep `detail` at top level for backward compatibility
-    content = body.model_dump()
-    content["detail"] = exc.detail
-    return JSONResponse(status_code=exc.status_code, content=content, headers=getattr(exc, "headers", None))
 
 
 # Custom 422 handler — prevents Pydantic loc paths and field names from leaking
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    rid = request_id_var.get("-")
     logger.debug("Validation error on %s %s: %s", request.method, request.url.path, exc.errors())
-    body = ErrorResponse(
-        code="VALIDATION_ERROR",
-        message="The request could not be processed. Please check your input.",
-        request_id=rid,
+    # Sprint 872: the legacy `error_code` alias is gone — `code` carries the
+    # same value and the frontend reads `code` first.
+    return error_response(
+        422,
+        "The request could not be processed. Please check your input.",
+        scope=request.scope,
+        detail=None,
     )
-    # Keep legacy `error_code` alias for any clients still reading it
-    content = body.model_dump()
-    content["error_code"] = "VALIDATION_ERROR"
-    return JSONResponse(status_code=422, content=content)
 
 
 # Register all route modules

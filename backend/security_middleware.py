@@ -28,6 +28,7 @@ from starlette.responses import Response
 
 from logging_config import request_id_var
 from security_utils import log_secure_operation
+from shared.error_responses import error_response, send_error
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         client_rid = request.headers.get("X-Request-ID")
         rid = client_rid if client_rid and _REQUEST_ID_RE.match(client_rid) else uuid.uuid4().hex[:12]
         request_id_var.set(rid)
+        # Sprint 872 (AZ-14): also on the scope, so error responses rendered
+        # outside this middleware (unhandled 500s) carry the same ID.
+        request.state.request_id = rid
         response: Response = await call_next(request)
         response.headers["X-Request-ID"] = rid
         return response
@@ -166,21 +170,21 @@ class MaxBodySizeMiddleware:
                     "malformed_content_length",
                     f"Rejected {method} {path}: non-numeric Content-Length {content_length!r}",
                 )
-                await self._send_json(send, 400, '{"detail":"Invalid Content-Length header"}')
+                await send_error(send, scope, 400, "Invalid Content-Length header")
                 return
             if length < 0:
                 log_secure_operation(
                     "negative_content_length",
                     f"Rejected {method} {path}: negative Content-Length {length}",
                 )
-                await self._send_json(send, 400, '{"detail":"Invalid Content-Length header"}')
+                await send_error(send, scope, 400, "Invalid Content-Length header")
                 return
             if length > self.max_bytes:
                 log_secure_operation(
                     "request_body_too_large",
                     f"Rejected {method} {path}: Content-Length {content_length} exceeds {self.max_bytes}",
                 )
-                await self._send_json(send, 413, '{"detail":"Request body too large"}')
+                await send_error(send, scope, 413, "Request body too large")
                 return
 
         # --- Layer 2: Streaming byte counter ---
@@ -210,25 +214,9 @@ class MaxBodySizeMiddleware:
             await self.app(scope, checked_receive, send)
         except HTTPException as exc:
             if exc.status_code == 413 and exceeded:
-                await self._send_json(send, 413, '{"detail":"Request body too large"}')
+                await send_error(send, scope, 413, "Request body too large")
             else:
                 raise
-
-    @staticmethod
-    async def _send_json(send: Any, status: int, body: str) -> None:
-        """Send a complete JSON error response via raw ASGI."""
-        body_bytes = body.encode("utf-8")
-        await send(
-            {
-                "type": "http.response.start",
-                "status": status,
-                "headers": [
-                    [b"content-type", b"application/json"],
-                    [b"content-length", str(len(body_bytes)).encode()],
-                ],
-            }
-        )
-        await send({"type": "http.response.body", "body": body_bytes})
 
 
 # =============================================================================
@@ -451,6 +439,11 @@ def csrf_token_user_id(token: Optional[str]) -> Optional[str]:
     return parts[2] if len(parts) == 4 and parts[2] else None
 
 
+def csrf_failed_response(request: Request) -> Response:
+    """The CSRF rejection, in the common error shape (Sprint 872, AZ-14)."""
+    return error_response(403, "CSRF validation failed", scope=request.scope, code="CSRF_FAILED")
+
+
 class CSRFMiddleware(BaseHTTPMiddleware):
     """
     Middleware for CSRF protection using stateless HMAC-signed tokens.
@@ -560,11 +553,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Origin/Referer enforcement — blocks cross-origin mutation requests
         if not self._validate_request_origin(request):
             log_secure_operation("csrf_blocked", f"Origin mismatch for {method} {path}")
-            return Response(
-                content='{"detail":"CSRF validation failed"}',
-                status_code=403,
-                media_type="application/json",
-            )
+            return csrf_failed_response(request)
 
         # Validate CSRF token for state-changing requests
         csrf_token = request.headers.get("X-CSRF-Token")
@@ -596,33 +585,21 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 # Token provided — validate it
                 if not validate_csrf_token(csrf_token, expected_user_id=expected_user_id):
                     log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid CSRF token")
-                    return Response(
-                        content='{"detail":"CSRF validation failed"}',
-                        status_code=403,
-                        media_type="application/json",
-                    )
+                    return csrf_failed_response(request)
             else:
                 if ENV_MODE == "production":
                     log_secure_operation(
                         "csrf_blocked",
                         f"Blocked {method} to {path} - missing CSRF token in production (X-Requested-With fallback removed)",
                     )
-                    return Response(
-                        content='{"detail":"CSRF validation failed"}',
-                        status_code=403,
-                        media_type="application/json",
-                    )
+                    return csrf_failed_response(request)
                 # Dev/test: X-Requested-With fallback still accepted.
                 xrw = request.headers.get("X-Requested-With")
                 if xrw != "XMLHttpRequest":
                     log_secure_operation(
                         "csrf_blocked", f"Blocked {method} to {path} - missing CSRF token and X-Requested-With header"
                     )
-                    return Response(
-                        content='{"detail":"CSRF validation failed"}',
-                        status_code=403,
-                        media_type="application/json",
-                    )
+                    return csrf_failed_response(request)
             # Sprint 872 (AZ-10): with no access token there is no identity
             # to bind the CSRF token to here, and the refresh cookie's owner
             # is only known after a database lookup. Hand the token's user to
@@ -640,11 +617,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             log_secure_operation("csrf_blocked", f"Blocked {method} to {path} - invalid/missing CSRF token")
             # Return a Response instead of raising HTTPException
             # (BaseHTTPMiddleware doesn't propagate exceptions cleanly)
-            return Response(
-                content='{"detail":"CSRF validation failed"}',
-                status_code=403,
-                media_type="application/json",
-            )
+            return csrf_failed_response(request)
 
         final_response: Response = await call_next(request)
         return final_response
@@ -938,15 +911,11 @@ class ImpersonationMiddleware(BaseHTTPMiddleware):
             # which turned "end the session" into "grant write access".
             # Revocation now ends the session outright (the auth dependency
             # rejects a revoked jti on every method).
-            from starlette.responses import JSONResponse
-
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "code": "IMPERSONATION_READ_ONLY",
-                    "message": "Impersonation sessions are read-only.",
-                    "detail": "Impersonation sessions are read-only.",
-                },
+            return error_response(
+                403,
+                "Impersonation sessions are read-only.",
+                scope=request.scope,
+                code="IMPERSONATION_READ_ONLY",
             )
 
         return await call_next(request)

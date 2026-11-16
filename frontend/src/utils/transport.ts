@@ -165,6 +165,8 @@ const SAFE_PASSTHROUGH = [
   'Cannot remove the organization owner.',
   // General
   'Access denied.',
+  // Rate limit (Sprint 872: the 429 now arrives in the common error shape)
+  'Too many requests. Please try again later.',
 ];
 
 /**

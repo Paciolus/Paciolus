@@ -398,6 +398,8 @@ class _FakeRequest:
         # empty dict so existing call sites exercise the
         # no-Authorization, no-cookie branch (no user_id binding required).
         self.cookies = cookies or {}
+        # Sprint 872: error responses read the request ID from the scope.
+        self.scope: dict = {"type": "http", "headers": [], "state": {}}
 
 
 class TestCSRFOriginPolicy:

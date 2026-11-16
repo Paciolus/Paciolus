@@ -255,3 +255,13 @@
 - **2026-11-16 (Sprint 853):** an access rule derived from someone's *current* membership moves with them. Record the
   owning firm on the record itself, and scope every child record through that one column via a single shared filter
   (`client_scope`), never a per-manager copy.
+- **2026-11-16 (Sprint 872):** `bypass_csrf` is session-scoped — once any test uses it, CSRF stays bypassed for every
+  later test in the run. A test that needs a *real* CSRF rejection passed alone and failed in the full suite. Force the
+  path you test (`monkeypatch` the validator) instead of assuming fixture state; prove order-independence by running it
+  after a bypassing test file.
+- **2026-11-16 (Sprint 872):** in cookie-auth mode the frontend `token` is a constant sentinel, so anything keyed or
+  compared on it (caches, de-dup, "did the user change?") cannot tell accounts apart. Key private client state on the
+  signed-in account id.
+- **2026-11-16 (Sprint 872):** changing an error body's `message` can change what the UI shows: the frontend passes only
+  allowlisted backend strings and otherwise shows a generic fallback. When moving an error into the common shape, check
+  the allowlist (`SAFE_PASSTHROUGH`) — the 429 text had to be added.
