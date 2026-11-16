@@ -23,6 +23,7 @@ from schemas.follow_up_schemas import (  # noqa: F401 — backward compat re-exp
     FollowUpSummaryResponse,
 )
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound
 from shared.error_messages import sanitize_error
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -94,6 +95,8 @@ def create_follow_up_item(
 
         return _item_to_response(item)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -142,6 +145,8 @@ def list_follow_up_items(
             page_size=pagination.page_size,
         )
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -172,6 +177,8 @@ def get_follow_up_summary(
         )
         return FollowUpSummaryResponse(**summary)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -218,6 +225,8 @@ def update_follow_up_item(
 
         return _item_to_response(item)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -274,6 +283,8 @@ def get_my_items(
         )
         return [_item_to_response(item) for item in items]
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -304,6 +315,8 @@ def get_unassigned_items(
         )
         return [_item_to_response(item) for item in items]
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -364,6 +377,8 @@ def create_comment(
         )
         return _comment_to_response(comment)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -394,6 +409,8 @@ def list_comments(
         )
         return [_comment_to_response(c) for c in comments]
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -436,6 +453,8 @@ def update_comment(
 
         return _comment_to_response(comment)
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,
@@ -468,6 +487,8 @@ def delete_comment(
         if not success:
             raise HTTPException(status_code=404, detail="Comment not found")
 
+    except RecordNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(
             status_code=400,

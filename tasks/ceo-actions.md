@@ -54,9 +54,9 @@ The legal-and-security claims review (https://claude.ai/artifact/MFTYHezjA4zakoi
 **Verify in your consoles:** Neon region and PITR window; Render service region; an R2 lifecycle rule deleting `shares/` after ≤2 days; Sentry DSN set in production and its retention; whether Loki is enabled (Grafana Labs would be an unlisted processor); Render log retention; MFA on GitHub, Render, Vercel, Stripe, Sentry, Neon, Cloudflare and SendGrid; whether provider DPAs/SCCs were accepted; `JWT_EXPIRATION_MINUTES` on Render; after Sprint 851 deploys, set `TRUSTED_PROXY_IPS` to the range Render's proxy connects from (ask Render support) and never set `FORWARDED_ALLOW_IPS='*'` (the 851 code fix itself shipped without this); TLS minimum on Vercel/Render; whether help@, privacy@ and security@ mailboxes exist.
 
 **Security review 2026-10-27 — decisions** (detail: Sprint 853 in `tasks/todo.md`; tracker: https://claude.ai/artifact/6A6odNhC1hZSS5BM1WbcdN):
-1. Do clients belong to the firm or the individual? [recommend: the firm] (M7)
-2. When joining a firm, does a user choose whether to bring their existing clients? [recommend: yes, opt-in] (M7)
-3. Should deleting and archiving be owner/admin-only, and removing an admin owner-only? [recommend: yes] (L12)
+1. ~~Do clients belong to the firm or the individual?~~ **Decided 2026-11-16: the firm** — a client whose creator belongs to a firm today becomes that firm's; one whose creator has no firm stays personal. (M7)
+2. ~~When joining a firm, does a user choose whether to bring their existing clients?~~ **Decided 2026-11-16: no — joining or leaving a firm never moves records.** (M7)
+3. ~~Should deleting and archiving be owner/admin-only, and removing an admin owner-only?~~ **Decided 2026-11-16: yes** (members still create and edit). (L12)
 4. Logout window: add `sessions_revoked_at`, or accept up to 15 minutes of access-token life after logout? [recommend: add it] (L3, Sprint 847)
 
 **At website-final:** one counsel review of the Terms, Privacy Policy and DPA as contracts (liability, arbitration, governing law, refunds, auto-renewal disclosure for your state), plus any founder-CPA marketing copy against your state board's rules.

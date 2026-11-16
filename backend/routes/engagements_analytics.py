@@ -16,7 +16,6 @@ from database import get_db
 from domain_config.tool_taxonomy import CONVERGENCE_EXCLUDED, CONVERGENCE_TOOLS
 from engagement_manager import EngagementManager
 from models import User
-from shared.error_messages import sanitize_error
 from workpaper_index_generator import WorkpaperIndexGenerator
 
 router = APIRouter(tags=["engagements"])
@@ -170,11 +169,10 @@ def get_workpaper_index(
     try:
         index = generator.generate(current_user.id, engagement_id)
         return index  # type: ignore[return-value]
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=sanitize_error(e, log_label="engagement_validation", allow_passthrough=True),
-        )
+    except ValueError:
+        # The generator raises only when the engagement is missing or out of
+        # reach; answer like every other engagement read (Sprint 853).
+        raise HTTPException(status_code=404, detail="Engagement not found")
 
 
 @router.get(

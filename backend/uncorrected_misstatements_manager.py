@@ -19,8 +19,9 @@ from sqlalchemy.orm import Session
 
 from engagement_manager import EngagementManager
 from engagement_model import Engagement
-from models import Client, User
+from models import Client
 from security_utils import log_secure_operation
+from shared.client_access import RecordNotFound, client_scope
 from shared.monetary import quantize_monetary
 from shared.soft_delete import soft_delete
 from uncorrected_misstatements_model import (
@@ -113,41 +114,25 @@ class UncorrectedMisstatementsManager:
     # Ownership helpers
     # ------------------------------------------------------------------
 
-    def _get_accessible_user_ids(self, user_id: int) -> list[int]:
-        user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not user.organization_id:
-            return [user_id]
-
-        from organization_model import OrganizationMember
-
-        member_ids = (
-            self.db.query(OrganizationMember.user_id)
-            .filter(OrganizationMember.organization_id == user.organization_id)
-            .all()
-        )
-        return [m[0] for m in member_ids] if member_ids else [user_id]
-
     def _verify_engagement_access(self, user_id: int, engagement_id: int) -> Optional[Engagement]:
-        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(Engagement)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 Engagement.id == engagement_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
             )
             .first()
         )
 
     def _verify_misstatement_access(self, user_id: int, misstatement_id: int) -> Optional[UncorrectedMisstatement]:
-        accessible_ids = self._get_accessible_user_ids(user_id)
         return (
             self.db.query(UncorrectedMisstatement)
             .join(Engagement, UncorrectedMisstatement.engagement_id == Engagement.id)
             .join(Client, Engagement.client_id == Client.id)
             .filter(
                 UncorrectedMisstatement.id == misstatement_id,
-                Client.user_id.in_(accessible_ids),
+                client_scope(self.db, user_id),
                 UncorrectedMisstatement.archived_at.is_(None),
             )
             .first()
@@ -173,7 +158,7 @@ class UncorrectedMisstatementsManager:
     ) -> UncorrectedMisstatement:
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         if not source_reference or not source_reference.strip():
             raise ValueError("source_reference is required")
@@ -220,7 +205,7 @@ class UncorrectedMisstatementsManager:
     ) -> tuple[list[UncorrectedMisstatement], int]:
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         query = self.db.query(UncorrectedMisstatement).filter(
             UncorrectedMisstatement.engagement_id == engagement_id,
@@ -313,7 +298,7 @@ class UncorrectedMisstatementsManager:
         """
         engagement = self._verify_engagement_access(user_id, engagement_id)
         if not engagement:
-            raise ValueError("Engagement not found or access denied")
+            raise RecordNotFound("Engagement not found or access denied")
 
         items, _ = self.list_misstatements(user_id, engagement_id, limit=10_000)
 

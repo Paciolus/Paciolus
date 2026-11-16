@@ -36,6 +36,7 @@ from shared.organization_policy import (
     require_admin,
     require_owner,
     revert_user_tier_after_removal,
+    revoke_member_firm_shares,
     unique_slug,
 )
 from shared.organization_schemas import (
@@ -435,7 +436,17 @@ def remove_member(
     if removed_user:
         revert_user_tier_after_removal(db, removed_user)
 
+    # Sprint 853: the firm's clients stay with the firm (their
+    # ``organization_id`` does not change), so deleting the membership is what
+    # takes them out of the member's reach. Share links the member made for
+    # firm records are revoked with it.
+    revoked = revoke_member_firm_shares(db, member.user_id, org.id)
+
     db.delete(member)
     db.commit()
+
+    logger.info(
+        "Member removed: org_id=%s user_id=%s by=%s shares_revoked=%d", org.id, member.user_id, user.id, revoked
+    )
 
     return {"detail": "Member removed from organization."}

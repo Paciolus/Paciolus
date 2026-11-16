@@ -267,9 +267,19 @@ class Client(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
-    # Multi-tenant: Client belongs to a specific user
+    # Who created the client. For a personal client (no firm) this is also
+    # who may reach it; for a firm client it is history only.
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     user: Mapped["User"] = relationship("User", back_populates="clients")
+
+    # Sprint 853: the firm that owns the client, fixed when the client is
+    # created (the creator's firm at that moment, or NULL for a personal
+    # client). It does not follow the creator in or out of a firm. Access is
+    # decided by ``shared.client_access.client_scope``. RESTRICT: a firm
+    # that still owns clients cannot be deleted out from under them.
+    organization_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
 
     # Reverse relationships (Sprint 280: backref → back_populates)
     diagnostic_summaries: Mapped[list["DiagnosticSummary"]] = relationship("DiagnosticSummary", back_populates="client")
