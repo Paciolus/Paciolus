@@ -27,6 +27,8 @@ export interface UseTrialBalanceUploadReturn {
   auditStatus: UploadStatus
   auditResult: AuditResult | null
   auditError: string
+  /** Sprint 872: the last run was refused as an identical re-run within 5 minutes. */
+  isDuplicate: boolean
   selectedFile: File | null
   isRecalculating: boolean
   scanningRows: number
@@ -38,6 +40,8 @@ export interface UseTrialBalanceUploadReturn {
   // Actions
   resetAudit: () => void
   handleRerunAudit: () => void
+  /** Sprint 872: re-run the refused request anyway (sends force_resubmit). */
+  forceRerunAudit: () => void
   // Internal controls (exposed for preflight hook)
   runAudit: (
     file: File,
@@ -46,6 +50,7 @@ export interface UseTrialBalanceUploadReturn {
     columnMapping?: ColumnMapping | null,
     sheets?: string[] | null,
     preflightToken?: string | null,
+    forceResubmit?: boolean,
   ) => Promise<void>
   setSelectedFile: (file: File | null) => void
   setAuditStatus: (status: UploadStatus) => void
@@ -70,6 +75,15 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   const [auditStatus, setAuditStatus] = useState<UploadStatus>('idle')
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [auditError, setAuditError] = useState('')
+  const [isDuplicate, setIsDuplicate] = useState(false)
+  // Sprint 872: the arguments of the last run, so a refused duplicate can be re-run as-is.
+  const lastRunRef = useRef<{
+    file: File
+    threshold: number
+    isRecalc: boolean
+    columnMapping: ColumnMapping | null
+    sheets: string[] | null
+  } | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isRecalculating, setIsRecalculating] = useState(false)
 
@@ -149,7 +163,16 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     columnMapping?: ColumnMapping | null,
     sheets?: string[] | null,
     preflightToken?: string | null,
+    forceResubmit: boolean = false,
   ) => {
+    lastRunRef.current = {
+      file,
+      threshold,
+      isRecalc,
+      columnMapping: columnMapping ?? null,
+      sheets: sheets ?? null,
+    }
+    setIsDuplicate(false)
     if (isRecalc) {
       setIsRecalculating(true)
     } else {
@@ -170,6 +193,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
           selectedSheets: sheets ?? null,
           engagementId: engagement?.engagementId ?? null,
           preflightToken: preflightToken ?? null,
+          forceResubmit,
         },
         token ?? null,
       )
@@ -177,6 +201,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
       if (outcome.kind !== 'success') {
         setAuditStatus('error')
         setAuditError(outcome.message)
+        setIsDuplicate(outcome.kind === 'duplicate')
         return
       }
 
@@ -302,6 +327,13 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     setSelectedFile(null)
   }, [])
 
+  const forceRerunAudit = useCallback(() => {
+    const last = lastRunRef.current
+    if (!last) return
+    // The preflight token is single-use, so it is not resent; the file is still in memory.
+    runAudit(last.file, last.threshold, false, last.columnMapping, last.sheets, null, true)
+  }, [runAudit])
+
   const handleRerunAudit = useCallback(() => {
     if (selectedFile) {
       runAudit(selectedFile, materialityThreshold, true, userColumnMapping)
@@ -310,11 +342,11 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
 
   return {
     user, isAuthenticated, token, isVerified,
-    auditStatus, auditResult, auditError,
+    auditStatus, auditResult, auditError, isDuplicate,
     selectedFile, isRecalculating, scanningRows,
     materialityThreshold, setMaterialityThreshold,
     displayMode, handleDisplayModeChange,
-    resetAudit, handleRerunAudit,
+    resetAudit, handleRerunAudit, forceRerunAudit,
     // Internal controls
     runAudit, setSelectedFile, setAuditStatus,
     startProgressIndicator, stopProgressIndicator,

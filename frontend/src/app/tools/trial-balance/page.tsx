@@ -40,7 +40,7 @@ function HomeContent() {
     // Accrual Completeness (Sprint 290)
     handleAccrualCompletenessExportPDF, handleAccrualCompletenessExportCSV,
     // Audit state
-    auditStatus, auditResult, auditError,
+    auditStatus, auditResult, auditError, isDuplicate, forceRerunAudit,
     selectedFile, isRecalculating, scanningRows,
     // Materiality
     materialityThreshold, setMaterialityThreshold,
@@ -228,12 +228,29 @@ function HomeContent() {
                       </svg>
                     </div>
                     <p className="text-theme-error-text font-sans font-medium">{auditError}</p>
-                    <button
-                      onClick={resetAudit}
-                      className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"
-                    >
-                      Try again
-                    </button>
+                    {isDuplicate ? (
+                      <div className="flex items-center justify-center gap-6">
+                        <button
+                          onClick={forceRerunAudit}
+                          className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"
+                        >
+                          Run it again
+                        </button>
+                        <button
+                          onClick={resetAudit}
+                          className="text-content-secondary hover:text-content-primary text-sm font-sans"
+                        >
+                          Upload a different file
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={resetAudit}
+                        className="text-sage-600 hover:text-sage-700 text-sm font-sans font-medium"
+                      >
+                        Try again
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

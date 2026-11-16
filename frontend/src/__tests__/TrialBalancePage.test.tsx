@@ -6,7 +6,7 @@
  * a unified drop zone layout.
  */
 import TrialBalancePage from '@/app/tools/trial-balance/page'
-import { render, screen } from '@/test-utils'
+import { fireEvent, render, screen } from '@/test-utils'
 
 const mockResetAudit = jest.fn()
 const mockHandleFileSelect = jest.fn()
@@ -163,6 +163,22 @@ describe('TrialBalancePage', () => {
     render(<TrialBalancePage />)
     expect(screen.getByText('Invalid file format')).toBeInTheDocument()
     expect(screen.getByText('Try again')).toBeInTheDocument()
+  })
+
+  it('offers to run a refused duplicate again (Sprint 872)', () => {
+    const forceRerunAudit = jest.fn()
+    mockUseTrialBalanceAudit.mockReturnValue({
+      ...defaultHookReturn,
+      auditStatus: 'error',
+      auditError: 'You ran this file with the same settings in the last 5 minutes, so it was not run again.',
+      isDuplicate: true,
+      forceRerunAudit,
+    })
+    render(<TrialBalancePage />)
+    expect(screen.queryByText(/force_resubmit/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Run it again' }))
+    expect(forceRerunAudit).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Upload a different file' })).toBeInTheDocument()
   })
 
   it('shows loading state with progress', () => {

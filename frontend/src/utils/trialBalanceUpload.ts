@@ -30,6 +30,8 @@ export interface TrialBalanceUploadArgs {
   selectedSheets?: string[] | null
   engagementId?: number | null
   preflightToken?: string | null
+  /** Sprint 872: bypass the 5-minute duplicate guard for an identical re-run the user asked for. */
+  forceResubmit?: boolean
 }
 
 /** Build the FormData body expected by POST /audit/trial-balance. */
@@ -53,6 +55,9 @@ export function buildTrialBalanceFormData(args: TrialBalanceUploadArgs): FormDat
   if (args.preflightToken) {
     fd.append('preflight_token', args.preflightToken)
   }
+  if (args.forceResubmit) {
+    fd.append('force_resubmit', 'true')
+  }
   return fd
 }
 
@@ -62,7 +67,11 @@ export type TrialBalanceUploadOutcome =
   | { kind: 'auth'; message: string }
   | { kind: 'email_not_verified'; message: string }
   | { kind: 'forbidden'; message: string }
+  | { kind: 'duplicate'; message: string }
   | { kind: 'transport'; status: number; message: string }
+
+export const DUPLICATE_MSG =
+  'You ran this file with the same settings in the last 5 minutes, so it was not run again.'
 
 const EMAIL_NOT_VERIFIED_MSG =
   'Please verify your email address before running diagnostics. Check your inbox for the verification link.'
@@ -79,6 +88,12 @@ export function classifyTrialBalanceFailure(
   }
   if (raw.status === 403) {
     return { kind: 'forbidden', message: 'Access denied.' }
+  }
+  // Sprint 872: /audit/trial-balance answers 409 only for an identical request
+  // (same file and settings) within 5 minutes. Its own text tells API clients to
+  // "re-submit with force_resubmit=true", which means nothing to an auditor.
+  if (raw.status === 409) {
+    return { kind: 'duplicate', message: DUPLICATE_MSG }
   }
   return {
     kind: 'transport',
