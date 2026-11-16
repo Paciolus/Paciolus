@@ -680,9 +680,41 @@ def reset_ip_failures(ip: str) -> None:
     _ip_tracker.reset(ip)
 
 
-def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[datetime]]:
+def claim_login_attempt(db: Session, user_id: int) -> bool:
+    """Atomically take one password-check slot before bcrypt runs (Sprint 875).
+
+    The old order — read the lockout state, run bcrypt (~250 ms), then add one
+    to the counter in Python — let concurrent requests all pass the check
+    before any recorded a failure, and lost increments to each other: hundreds
+    of guesses per lockout window instead of MAX_FAILED_ATTEMPTS. This UPDATE
+    increments in the database and only while the account is unlocked and
+    below the limit, so at most MAX_FAILED_ATTEMPTS password checks can be in
+    flight or completed per window, however many arrive at once.
+
+    Returns False when no slot is left; the caller must treat that as locked.
+    A successful login resets the counter (``reset_failed_attempts``).
+    """
+    from sqlalchemy import func, update
+
+    from models import User
+
+    attempts = func.coalesce(User.failed_login_attempts, 0)
+    result = db.execute(
+        update(User)
+        .where(User.id == user_id, User.locked_until.is_(None), attempts < MAX_FAILED_ATTEMPTS)
+        .values(failed_login_attempts=attempts + 1)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    return bool(result.rowcount)  # type: ignore[attr-defined]
+
+
+def record_failed_login(db: Session, user_id: int, *, claimed: bool = False) -> tuple[int, Optional[datetime]]:
     """
     Record a failed login attempt for a user (DB-backed).
+
+    ``claimed=True`` means the attempt was already counted by
+    ``claim_login_attempt``; only the lock is applied here.
 
     Returns:
         Tuple of (failed_count, locked_until or None)
@@ -694,11 +726,12 @@ def record_failed_login(db: Session, user_id: int) -> tuple[int, Optional[dateti
         # Should not happen — caller should verify user exists
         return (1, None)
 
-    failed_count = (user.failed_login_attempts or 0) + 1
+    db.refresh(user)  # the claim UPDATE bypassed the session
+    failed_count = (user.failed_login_attempts or 0) + (0 if claimed else 1)
     user.failed_login_attempts = failed_count
     locked_until = None
 
-    if failed_count >= MAX_FAILED_ATTEMPTS:
+    if failed_count >= MAX_FAILED_ATTEMPTS and user.locked_until is None:
         locked_until = datetime.now(UTC) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
         user.locked_until = locked_until
         db.commit()
