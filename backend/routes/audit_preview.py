@@ -8,10 +8,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from auth import require_verified_user
+from database import get_db
 from models import User
 from security_utils import log_secure_operation
+from shared.entitlement_checks import enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.upload_pipeline import (
@@ -45,6 +48,7 @@ async def preview_pdf_endpoint(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
 ) -> PdfPreviewResponse:
     """Preview PDF table extraction with quality metrics before full parse."""
     from shared.pdf_parser import CONFIDENCE_THRESHOLD, PREVIEW_PAGE_LIMIT, extract_pdf_tables
@@ -58,6 +62,10 @@ async def preview_pdf_endpoint(
         try:
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
+
+            # Sprint 878 (AZ-04): the preview parses the file and caches it
+            # for the analysis, so it is held to the same format limit.
+            enforce_format_access(current_user, db, filename, file_bytes=file_bytes)
 
             def _preview() -> Any:
                 return extract_pdf_tables(file_bytes, filename, max_pages=PREVIEW_PAGE_LIMIT)

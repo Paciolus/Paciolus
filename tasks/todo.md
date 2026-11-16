@@ -252,7 +252,15 @@ against one allowance shared by the firm. A JE sampling preview uses no upload; 
       admin team-activity CSV (behind the stricter admin-dashboard gate).
 
 **878c — a preview token gets a PDF past the Free format limit (AZ-04, High)**
-- [ ] Confirm, enforce at preview, and check the cached/detected format at analysis.
+- [x] Confirmed at `3c34926a`: a Free account's PDF preview returned 200 with a token; the analysis checked the
+      placeholder upload's name and processed the cached PDF; a Solo preview followed by a lapse also analysed the PDF.
+      A second path: a PDF uploaded with no extension skipped the check entirely (the parser detects PDF from the bytes).
+- [x] `enforce_format_access` takes the bytes and, when the name has no extension, uses `detect_format` as the parser
+      does. The preview checks before parsing or caching. The analysis resolves its real input first (cached file or
+      upload) and checks that, against the plan at analysis time.
+- [x] Tests: `test_sprint_878_preview_format_gate.py` — Free preview → 403, nothing parsed; Free preview-then-analysis
+      with a cached PDF token + `placeholder.csv` → 403, engine never runs; Solo preview → lapse → analysis → 403;
+      Solo preview → analysis reaches the engine with `tb.pdf`; extensionless PDF bytes on Free → 403; Free CSV still runs.
 
 **878d — the upload allowance depends on history the user can skip or clear (AZ-05, High)**
 - [ ] Confirm, then a server-side usage ledger independent of activity history; firm usage shared.
@@ -265,7 +273,10 @@ mypy 212 errors (baseline 1,011), none in changed files.
 
 **Verification (878b):** tool/export/route-snapshot suites 882 passed; new tests 26 passed; ruff clean; mypy 212 (baseline 1,011).
 
-**Commit SHA:** 878a `69ae78b5` · 878b (this commit).
+**Verification (878c):** upload/format/preflight/entitlement/pricing suites 1,391 passed, 1 skipped; new tests 6
+passed; ruff clean; mypy 212 (baseline 1,011).
+
+**Commit SHA:** 878a `69ae78b5` · 878b `f55c59c7` · 878c (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

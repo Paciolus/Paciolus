@@ -65,10 +65,6 @@ async def audit_trial_balance(
 ) -> TrialBalanceResponse:
     """Analyze a trial balance file for balance validation using streaming processing."""
 
-    # Sprint 678: tier-gate the upload by file extension. Free tier is limited
-    # to csv/xlsx/xls/tsv/txt; paid tiers accept ofx/qbo/iif/pdf/ods too.
-    enforce_format_access(current_user, db, file.filename)
-
     # Check preflight cache — reuse file bytes from a prior preview/inspect call
     from shared.preflight_cache import preflight_cache
 
@@ -79,10 +75,20 @@ async def audit_trial_balance(
     from sqlalchemy import text
 
     # Read file bytes early for both dedup hash and analysis
+    input_filename: str | None
     if cached_entry:
         raw_bytes = cached_entry.file_bytes
+        input_filename = cached_entry.filename
     else:
         raw_bytes = await file.read()  # Sprint 892 (17A): read once; validated below without re-reading
+        input_filename = file.filename
+
+    # Sprint 678: tier-gate the upload by file format. Free tier is limited
+    # to csv/xlsx/xls/tsv/txt; paid tiers accept ofx/qbo/iif/pdf/ods too.
+    # Sprint 878 (AZ-04): checked against the input that is analysed - with a
+    # preflight token that is the cached file, not the (placeholder) upload -
+    # and against the caller's plan now, not the plan they had at preview.
+    enforce_format_access(current_user, db, input_filename, file_bytes=raw_bytes)
 
     file_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
     dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"

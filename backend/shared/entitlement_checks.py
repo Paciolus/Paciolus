@@ -414,7 +414,7 @@ def check_format_access(format_name: str) -> object:
     return _dependency
 
 
-def enforce_format_access(user: User, db: Session, filename: str | None) -> None:
+def enforce_format_access(user: User, db: Session, filename: str | None, file_bytes: bytes | None = None) -> None:
     """Programmatic format-access check for upload routes.
 
     Sprint 678: format is determined from the uploaded file at request time,
@@ -423,15 +423,26 @@ def enforce_format_access(user: User, db: Session, filename: str | None) -> None
     filename and extracts the extension without the leading dot, lower-cased,
     matching ``TierEntitlements.formats_allowed``.
 
-    Invoked from ``routes/audit_pipeline.py`` and ``routes/audit_upload.py``
-    after the file is received but before heavy processing.
-    """
-    if not filename:
-        return
+    Sprint 878 (review AZ-04): when the name carries no extension, the parser
+    detects the format from the bytes (``shared.file_formats.detect_format``),
+    so a PDF named ``trial_balance`` was parsed as a PDF while this check
+    returned early. Pass ``file_bytes`` and the same detection decides here.
+    Callers must pass the name and bytes of the input they will actually
+    process - for a preflight token, the cached file, not the new upload.
 
+    Invoked from ``routes/audit_pipeline.py``, ``routes/audit_preview.py`` and
+    ``routes/audit_upload.py`` after the file is received but before heavy
+    processing.
+    """
     import os
 
-    ext = os.path.splitext(filename)[1].lower().lstrip(".")
+    ext = os.path.splitext(filename or "")[1].lower().lstrip(".")
+    if not ext and file_bytes:
+        from shared.file_formats import FileFormat, detect_format
+
+        detected = detect_format(file_bytes=file_bytes).format
+        if detected != FileFormat.UNKNOWN:
+            ext = detected.value
     if not ext:
         return
 
