@@ -22,6 +22,7 @@ from schemas.uncorrected_misstatement_schemas import (
 )
 from security_utils import log_secure_operation
 from shared.client_access import RecordNotFound
+from shared.entitlement_checks import check_workspace_access
 from shared.error_messages import sanitize_error
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -60,6 +61,7 @@ def _to_response(m: Any) -> UncorrectedMisstatementResponse:
     "/engagements/{engagement_id}/uncorrected-misstatements",
     response_model=UncorrectedMisstatementResponse,
     status_code=201,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_misstatement(
@@ -212,6 +214,7 @@ def get_misstatement(
 @router.patch(
     "/uncorrected-misstatements/{misstatement_id}",
     response_model=UncorrectedMisstatementResponse,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def update_misstatement(
@@ -254,8 +257,7 @@ def update_misstatement(
 
 
 @router.delete(
-    "/uncorrected-misstatements/{misstatement_id}",
-    status_code=204,
+    "/uncorrected-misstatements/{misstatement_id}", status_code=204, dependencies=[Depends(check_workspace_access)]
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def archive_misstatement(

@@ -24,6 +24,7 @@ from schemas.follow_up_schemas import (  # noqa: F401 — backward compat re-exp
 )
 from security_utils import log_secure_operation
 from shared.client_access import RecordNotFound
+from shared.entitlement_checks import check_workspace_access
 from shared.error_messages import sanitize_error
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -65,6 +66,7 @@ def _item_to_response(item: Any) -> FollowUpItemResponse:
     "/engagements/{engagement_id}/follow-up-items",
     response_model=FollowUpItemResponse,
     status_code=201,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_follow_up_item(
@@ -191,8 +193,7 @@ def get_follow_up_summary(
 
 
 @router.put(
-    "/follow-up-items/{item_id}",
-    response_model=FollowUpItemResponse,
+    "/follow-up-items/{item_id}", response_model=FollowUpItemResponse, dependencies=[Depends(check_workspace_access)]
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def update_follow_up_item(
@@ -238,7 +239,7 @@ def update_follow_up_item(
         )
 
 
-@router.delete("/follow-up-items/{item_id}", status_code=204)
+@router.delete("/follow-up-items/{item_id}", status_code=204, dependencies=[Depends(check_workspace_access)])
 @limiter.limit(RATE_LIMIT_WRITE)
 def delete_follow_up_item(
     request: Request,
@@ -351,6 +352,7 @@ def _comment_to_response(comment: Any) -> CommentResponse:
     "/follow-up-items/{item_id}/comments",
     response_model=CommentResponse,
     status_code=201,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_comment(
@@ -422,10 +424,7 @@ def list_comments(
         )
 
 
-@router.patch(
-    "/comments/{comment_id}",
-    response_model=CommentResponse,
-)
+@router.patch("/comments/{comment_id}", response_model=CommentResponse, dependencies=[Depends(check_workspace_access)])
 @limiter.limit(RATE_LIMIT_WRITE)
 def update_comment(
     request: Request,
@@ -466,7 +465,7 @@ def update_comment(
         )
 
 
-@router.delete("/comments/{comment_id}", status_code=204)
+@router.delete("/comments/{comment_id}", status_code=204, dependencies=[Depends(check_workspace_access)])
 @limiter.limit(RATE_LIMIT_WRITE)
 def delete_comment(
     request: Request,

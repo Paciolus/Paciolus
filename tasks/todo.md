@@ -81,6 +81,8 @@
 > **P0 before 2026-12-15 — in order**
 > - [ ] **Sprint 872** — session and sign-in boundaries (cross-account cache, CSRF owner binding, unverified invite
 >       acceptance, impersonation token storage, error shape). Security; code complete, local branch, not pushed.
+> - [ ] **Sprint 878** — plan features and upload allowances enforced on the server (workspace, CSV exports,
+>       preview-token format bypass, upload ledger, JE sampling). Security; in progress.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -215,7 +217,44 @@ eslint green; ruff clean; mypy adds no errors.
 
 **Verification (872c):** invite/org/firm-record/role-gate/access-log tests 50 passed; ruff clean.
 
-**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d `caf05f5a` · 872e (this commit).
+**Commit SHA:** 872a `9f66d506` · 872b `89f752c2` · 872c `f866d242` · 872d `caf05f5a` · 872e `c9622ce2`.
+
+### Sprint 878: Plan features and upload allowances enforced on the server (AZ-02..06, ST-04)
+**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-878-plan-enforcement` (off Sprint 853's branch
+`sprint-firm-owned-records`; not pushed). **Priority:** P0/P1 security (freeze-exempt: security defects).
+**Source:** read-only review at `ef5e567`. **Agents:** Guardian (lead), Executor, Critic.
+
+**CEO decisions (2026-11-16):** the engagement workspace is Solo and above. An account that drops to Free keeps read
+access to its existing engagements and workpapers but cannot create or change them. A firm subscription's usage counts
+against one allowance shared by the firm. A JE sampling preview uses no upload; a sampling run does.
+
+**878a — workspace routes never check the workspace entitlement (AZ-02, ST-04, High)**
+- [x] Confirmed at `3c34926a`: `check_workspace_access` had no caller; all 15 workspace writes (engagement
+      create/update/archive; follow-up item create/update/delete; comment create/update/delete; expectation and
+      misstatement create/update/archive) answered 2xx for a Free and a lapsed-Solo account.
+- [x] `Depends(check_workspace_access)` on all 15 writes (route-level, runs before the handler). Reads unchanged, so a
+      downgraded account still reads its own records; the firm check and role gates are unchanged.
+- [x] Tests: `test_sprint_878_workspace_entitlement.py` — 15 writes × {active Solo, lapsed Solo, Free} on records the
+      owner made while on Solo (state compared before/after); the same writes against another firm's ids (404 for Solo,
+      403 for Free/lapsed, nothing moves); 17 reads of own records → 200 in all three states; another firm's → 404;
+      structural guard that every write route on the five workspace routers carries the gate.
+
+**878b — four CSV exports skip the export gate (AZ-03, High)**
+- [ ] Confirm, gate, and widen the export-route coverage test to every download route by suffix.
+
+**878c — a preview token gets a PDF past the Free format limit (AZ-04, High)**
+- [ ] Confirm, enforce at preview, and check the cached/detected format at analysis.
+
+**878d — the upload allowance depends on history the user can skip or clear (AZ-05, High)**
+- [ ] Confirm, then a server-side usage ledger independent of activity history; firm usage shared.
+
+**878e — JE sampling skips the tool gate and the allowance (AZ-06, High)**
+- [ ] Confirm, gate both routes, meter successful runs.
+
+**Verification (878a):** workspace/engagement/firm/entitlement suites 822 passed + new file 97 passed; ruff clean;
+mypy 212 errors (baseline 1,011), none in changed files.
+
+**Commit SHA:** 878a (this commit).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

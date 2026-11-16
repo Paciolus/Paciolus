@@ -23,6 +23,7 @@ from schemas.analytical_expectation_schemas import (
 )
 from security_utils import log_secure_operation
 from shared.client_access import RecordNotFound
+from shared.entitlement_checks import check_workspace_access
 from shared.error_messages import sanitize_error
 from shared.pagination import PaginatedResponse, PaginationParams
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
@@ -63,6 +64,7 @@ def _to_response(expectation: Any) -> AnalyticalExpectationResponse:
     "/engagements/{engagement_id}/analytical-expectations",
     response_model=AnalyticalExpectationResponse,
     status_code=201,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_expectation(
@@ -165,6 +167,7 @@ def get_expectation(
 @router.patch(
     "/analytical-expectations/{expectation_id}",
     response_model=AnalyticalExpectationResponse,
+    dependencies=[Depends(check_workspace_access)],
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def update_expectation(
@@ -210,8 +213,7 @@ def update_expectation(
 
 
 @router.delete(
-    "/analytical-expectations/{expectation_id}",
-    status_code=204,
+    "/analytical-expectations/{expectation_id}", status_code=204, dependencies=[Depends(check_workspace_access)]
 )
 @limiter.limit(RATE_LIMIT_WRITE)
 def archive_expectation(

@@ -25,6 +25,7 @@ from routes.engagements_analytics import router as analytics_router
 from routes.engagements_exports import router as exports_router
 from security_utils import log_secure_operation
 from shared.client_access import RecordNotFound
+from shared.entitlement_checks import check_workspace_access
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
@@ -131,7 +132,9 @@ def _engagement_to_response(eng: Any) -> EngagementResponse:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/engagements", response_model=EngagementResponse, status_code=201)
+@router.post(
+    "/engagements", response_model=EngagementResponse, status_code=201, dependencies=[Depends(check_workspace_access)]
+)
 @limiter.limit(RATE_LIMIT_WRITE)
 def create_engagement(
     request: Request,
@@ -221,7 +224,9 @@ def get_engagement(
     return _engagement_to_response(engagement)
 
 
-@router.put("/engagements/{engagement_id}", response_model=EngagementResponse)
+@router.put(
+    "/engagements/{engagement_id}", response_model=EngagementResponse, dependencies=[Depends(check_workspace_access)]
+)
 @limiter.limit(RATE_LIMIT_WRITE)
 def update_engagement(
     request: Request,
@@ -268,7 +273,7 @@ def update_engagement(
         )
 
 
-@router.delete("/engagements/{engagement_id}", status_code=204)
+@router.delete("/engagements/{engagement_id}", status_code=204, dependencies=[Depends(check_workspace_access)])
 @limiter.limit(RATE_LIMIT_WRITE)
 def archive_engagement(
     request: Request,
