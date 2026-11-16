@@ -217,10 +217,19 @@ def get_client_industry_ratios(
     # Sprint 728c: ISA 520 evaluation against industry ratios
     expectations_evaluated: list[dict[str, Any]] = []
     if engagement_id is not None:
+        from engagement_manager import EngagementManager
         from shared.expectation_evaluation import (
             evaluate_expectations_against_measurements,
             extract_ratio_measurements,
         )
+
+        # Sprint 876: the engagement must belong to THIS client. Without the
+        # check, ?engagement_id= of another client's engagement (reachable via
+        # the org-wide fallback) recorded client A's ratios against client B's
+        # ISA 520 expectations, which can satisfy B's completion gate.
+        engagement = EngagementManager(db).get_engagement(current_user.id, engagement_id)
+        if engagement is None or engagement.client_id != client_id:
+            raise HTTPException(status_code=404, detail="Engagement not found for this client")
 
         measurements = extract_ratio_measurements(industry_result["ratios"])
         expectations_evaluated = evaluate_expectations_against_measurements(
