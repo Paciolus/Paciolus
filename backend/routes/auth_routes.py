@@ -43,6 +43,7 @@ from security_middleware import (
 from services.auth.identity import (
     authenticate_login,
     refresh_session,
+    refresh_token_owner,
     revoke_session_token,
 )
 from services.auth.recovery import (
@@ -448,6 +449,14 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
     raw_token = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw_token:
         revoke_session_token(db, raw_token, csrf_user_id=getattr(request.state, "csrf_user_id", None))
+        # Sprint 879d (DH-07): the owner's previewed files leave memory now, in
+        # this worker and (via a purge request) every other. Reached only once
+        # the CSRF owner check passed, so it is the caller's own session.
+        owner_id = refresh_token_owner(db, raw_token)
+        if owner_id is not None:
+            from shared.preflight_purge import request_purge
+
+            request_purge(db, owner_id)
     _clear_refresh_cookie(response)
     _clear_access_cookie(response)
     return SuccessResponse(success=True, message="Logged out successfully")

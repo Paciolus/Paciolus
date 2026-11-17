@@ -366,6 +366,11 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
         raise
 
     db.expunge_all()
+    # Sprint 879d (DH-07): the user's previewed files leave memory too.
+    from shared.preflight_purge import request_purge
+
+    request_purge(db, user_id)
+
     from security_utils import log_secure_operation
 
     log_secure_operation("account_erased", f"Account erased; {sum(counts.values())} rows removed", db=db, user_id=None)

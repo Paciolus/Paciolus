@@ -172,6 +172,15 @@ def refresh_session(
     )
 
 
+def refresh_token_owner(db: Session, raw_refresh_token: str) -> Optional[int]:
+    """The user a refresh token belongs to (revoked or not), or None if unknown."""
+    from auth import hash_token
+    from models import RefreshToken
+
+    owner = db.query(RefreshToken.user_id).filter(RefreshToken.token_hash == hash_token(raw_refresh_token)).scalar()
+    return int(owner) if owner is not None else None
+
+
 def revoke_session_token(db: Session, raw_refresh_token: str, csrf_user_id: Optional[str] = None) -> bool:
     """
     Revoke a refresh token (logout).

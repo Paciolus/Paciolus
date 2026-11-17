@@ -408,7 +408,27 @@ frontend `tsc` + eslint clean, 4 suites / 32 tests.
 ruff clean; mypy 212.
 
 **879d — previewed files outlive 10 minutes (DH-07, High)**
-- [ ] Confirm; timed sweep per process, byte budget, per-user cap, purge on logout/deletion; miss → re-send.
+- [x] Confirmed: `_evict_expired()` ran only inside `put()`; `get`/`take` expired only the token read; cap 100 entries,
+      no byte limit; per-process cache × 4 Gunicorn workers.
+- [x] `shared/preflight_cache.py`: a daemon sweeper per process (started by the first `put`, again after a fork) removes
+      expired entries every 15 s, so a preview is gone within 10 min + 15 s with no other cache call; 256 MiB byte
+      budget per process (oldest evicted; a file over the budget is not cached → no token); 2 previews per user
+      (their oldest evicted). Owner binding and single use unchanged.
+- [x] Logout and account deletion: `shared/preflight_purge.request_purge` drops the user's previews in the handling
+      worker at once and writes `preview_purge_requests` (user id + time, migration `a879d4f6c8e3`); every other
+      worker's sweeper applies it on its next tick (DB read only when that worker holds previews) and deletes requests
+      older than the lifetime. Logout purges only after 872's CSRF-owner check has passed.
+- [x] Miss path — **already handled, no new response**: the browser always sends the file with the token
+      (`buildTrialBalanceFormData` appends `file`), and the route falls back to it on a miss. Pinned by a test.
+- [x] Tests: `test_sprint_879_preview_cache.py` — abandoned preview swept with no cache calls (fake clock); fork starts a
+      new sweeper; byte budget under six large previews; over-budget file not cached; per-user limit; wrong owner;
+      single use; purge_owner; another worker's purge request; logout and deletion through the app; miss completes.
+      11 of 12 failed before the fix (the miss test passes on the old code by design).
+- Observation for the CEO: because the browser always re-sends the file, the cache saves a re-parse at most, never a
+  re-upload. Removing it would retire DH-07 entirely; kept per the 2026-11-16 decision.
+
+**Verification (879d):** preview-cache + preflight/preview/workbook/auth/erasure/CSRF/parity suites 12 + 191 passed;
+ruff clean; mypy 212.
 
 **879e — XLSX exports write worksheet XML to temp files (DH-06, High)**
 - [ ] Confirm in installed openpyxl; one shared in-memory helper for all three generators (approach to CEO first).
