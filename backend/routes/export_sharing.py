@@ -183,6 +183,7 @@ def _resolve_share_or_404(token: str, db: Session) -> ExportShare:
         .filter(
             ExportShare.share_token_hash == token_hash,
             ExportShare.revoked_at.is_(None),
+            ExportShare.upload_pending.is_(False),  # Sprint 880: a pending row is not a link yet
         )
         .first()
     )
@@ -203,6 +204,27 @@ def _retire_share(share: ExportShare, db: Session) -> bool:
     db.delete(share)
     db.commit()
     return True
+
+
+def _abandon_pending_share(db: Session, share_id: int, object_key: str) -> None:
+    """Clean up after a share creation that failed once its pending row was committed.
+
+    Sprint 880 (DH-09): delete the (possibly stored) file, then the pending row.
+    If the delete is not confirmed — or the row delete cannot be committed — the
+    pending row stays and the purge finishes the job after its grace period, so
+    no file is ever left without a record. Logs fixed event names only.
+    """
+    if not export_share_storage.delete(object_key):
+        logger.warning("export_share_create_cleanup_deferred: share_id=%s reason=delete_unconfirmed", share_id)
+        return
+    try:
+        db.query(ExportShare).filter(ExportShare.id == share_id, ExportShare.upload_pending.is_(True)).delete(
+            synchronize_session=False
+        )
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("export_share_create_cleanup_deferred: share_id=%s reason=%s", share_id, type(exc).__name__)
 
 
 def _enforce_not_expired(share: ExportShare, db: Session) -> datetime:
@@ -440,8 +462,6 @@ def create_share(
     # Sprint 611: store the bytes in R2 when configured; fall back to the
     # inline DB column otherwise (dev / test).  Exactly one of
     # ``object_key`` / ``export_data`` is set on each row.
-    object_key: str | None = None
-    inline_bytes: bytes | None = export_bytes
     # Sprint 862: in production a share is stored with the storage provider or
     # not at all. The Subprocessor List, Security Policy and website say shared
     # reports live in Cloudflare R2 — a silent fallback to the database blob
@@ -452,49 +472,59 @@ def create_share(
             status_code=503,
             detail="Export storage is temporarily unavailable. Please try again.",
         )
-    if export_share_storage.is_configured():
-        content_type = _CONTENT_TYPES.get(body.export_format, "application/octet-stream")
-        try:
-            object_key = export_share_storage.upload(token_hash, export_bytes, content_type)
-        except Exception as exc:
-            # Sprint 840 (S2/S6): type only — no traceback, whose frames hold export_bytes.
-            logger.error("R2 upload failed: %s", type(exc).__name__)
-            raise HTTPException(
-                status_code=503,
-                detail="Export storage is temporarily unavailable. Please try again.",
-            ) from exc
-        if object_key is None:
-            # is_configured() said yes but upload returned None — treat as
-            # transient and 503 rather than silently falling back to the
-            # DB blob (which would re-introduce the capacity risk).
-            raise HTTPException(
-                status_code=503,
-                detail="Export storage is temporarily unavailable. Please try again.",
-            )
-        inline_bytes = None
+    use_r2 = export_share_storage.is_configured()
+    object_key = export_share_storage.object_key_for(token_hash) if use_r2 else None
 
+    # Sprint 880 (DH-09): the row is committed BEFORE the bytes are stored, as a
+    # pending record (``upload_pending``) naming the object key. A failure at any
+    # later point — upload, commit, process crash — leaves a row the purge
+    # follows to the file. Inline-blob rows are complete in this one commit.
     share = ExportShare(
         user_id=user.id,
         organization_id=getattr(user, "organization_id", None),
         share_token_hash=token_hash,
         tool_name=body.tool_name,
         export_format=body.export_format,
-        export_data=inline_bytes,
+        export_data=None if use_r2 else export_bytes,
         object_key=object_key,
         passcode_hash=passcode_hash,
         single_use=body.single_use,
         shared_by_name=user.name or user.email,
         expires_at=datetime.now(UTC) + timedelta(hours=ttl_hours),
+        upload_pending=use_r2,
     )
     db.add(share)
-    try:
-        db.commit()
-    except Exception:
-        # DB write failed after R2 upload succeeded — best-effort delete
-        # the orphan object so we don't leak bytes into the bucket.
-        if object_key:
-            export_share_storage.delete(object_key)
-        raise
+    db.commit()
+    share_id = share.id
+
+    if object_key is not None:
+        content_type = _CONTENT_TYPES.get(body.export_format, "application/octet-stream")
+        try:
+            stored_key = export_share_storage.upload(token_hash, export_bytes, content_type)
+        except Exception as exc:
+            # Sprint 840 (S2/S6): type only — no traceback, whose frames hold export_bytes.
+            logger.error("R2 upload failed: %s", type(exc).__name__)
+            _abandon_pending_share(db, share_id, object_key)
+            raise HTTPException(
+                status_code=503,
+                detail="Export storage is temporarily unavailable. Please try again.",
+            ) from exc
+        if stored_key is None:
+            # is_configured() said yes but upload returned None — treat as
+            # transient and 503 rather than silently falling back to the
+            # DB blob (which would re-introduce the capacity risk).
+            _abandon_pending_share(db, share_id, object_key)
+            raise HTTPException(
+                status_code=503,
+                detail="Export storage is temporarily unavailable. Please try again.",
+            )
+        share.upload_pending = False
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            _abandon_pending_share(db, share_id, object_key)
+            raise
     db.refresh(share)
 
     # Log share creation for abuse monitoring
@@ -671,6 +701,7 @@ def list_shares(
             ExportShare.user_id == user.id,
             ExportShare.revoked_at.is_(None),
             ExportShare.expires_at > now,
+            ExportShare.upload_pending.is_(False),
         )
         .order_by(ExportShare.created_at.desc())
         .all()

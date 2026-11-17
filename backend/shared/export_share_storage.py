@@ -20,6 +20,7 @@ delete on revoke/expire.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -95,14 +96,42 @@ def is_configured() -> bool:
     return _get_client() is not None
 
 
-def _object_key(share_token_hash: str) -> str:
+SHARE_PREFIX = "shares/"
+
+
+def object_key_for(share_token_hash: str) -> str:
     """Build the bucket object key from the SHA-256 share-token hash.
 
     The hash is already a high-entropy 64-char hex string, so no extra
-    salt/prefix is needed.  A ``shares/`` prefix keeps the bucket
-    human-scannable if an operator ever needs to list objects.
+    salt is needed. Every shared file lives under ``shares/`` — the prefix a
+    bucket lifecycle rule targets as the retention backstop, and the prefix
+    the reconciliation pass lists (Sprint 880). Public so the route can write
+    the pending row, key included, before the upload.
     """
-    return f"shares/{share_token_hash}"
+    return f"{SHARE_PREFIX}{share_token_hash}"
+
+
+def list_objects(prefix: str = SHARE_PREFIX) -> list[tuple[str, datetime]] | None:
+    """List ``(key, last_modified)`` for every object under ``prefix``.
+
+    Sprint 880 (DH-09): used by the reconciliation pass to find stored files no
+    share row points at. Returns ``None`` when R2 is not configured or the
+    listing failed — never a partial list, which would read as "these are all
+    the files" to a caller deciding what to keep.
+    """
+    client = _get_client()
+    if client is None or _bucket_name is None:
+        return None
+    found: list[tuple[str, datetime]] = []
+    try:
+        paginator = client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=_bucket_name, Prefix=prefix):
+            for obj in page.get("Contents", []) or []:
+                found.append((str(obj["Key"]), obj["LastModified"]))
+    except Exception as exc:
+        logger.warning("R2 export-share list failed: err=%s", type(exc).__name__)
+        return None
+    return found
 
 
 def upload(share_token_hash: str, data: bytes, content_type: str) -> str | None:
@@ -116,7 +145,7 @@ def upload(share_token_hash: str, data: bytes, content_type: str) -> str | None:
     if client is None or _bucket_name is None:
         return None
 
-    key = _object_key(share_token_hash)
+    key = object_key_for(share_token_hash)
     client.put_object(
         Bucket=_bucket_name,
         Key=key,

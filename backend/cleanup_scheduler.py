@@ -56,6 +56,7 @@ _EXPECTED_INTERVALS: dict[str, timedelta] = {
     "retention_cleanup": timedelta(hours=CLEANUP_RETENTION_INTERVAL_HOURS),
     "verify_database_tls": timedelta(hours=24),
     "expired_export_shares": timedelta(minutes=10),
+    "reconcile_export_share_objects": timedelta(hours=1),
 }
 
 # Sprint 880 (DH-08): a dead share link's file must be gone within one hour of
@@ -63,6 +64,11 @@ _EXPECTED_INTERVALS: dict[str, timedelta] = {
 # retried; past one hour the purge warns.
 EXPORT_SHARE_PURGE_INTERVAL_MINUTES = 10
 EXPORT_SHARE_DELETE_DEADLINE = timedelta(hours=1)
+# Sprint 880 (DH-09): a share row is committed "pending" before its upload. A
+# pending row older than this belongs to a create that failed or died; the purge
+# removes its file and then the row. The reconciliation pass leaves bucket
+# objects younger than this alone, since their create may still be in flight.
+EXPORT_SHARE_PENDING_GRACE = timedelta(minutes=10)
 
 WATCHDOG_INTERVAL_MINUTES = 5
 
@@ -435,8 +441,16 @@ def purge_expired_export_shares(db: Any) -> int:
     now = datetime.now(UTC)
     expired = db.query(ExportShare).filter(ExportShare.expires_at <= now).all()
     revoked = db.query(ExportShare).filter(ExportShare.revoked_at.isnot(None)).all()
+    # Sprint 880 (DH-09): creates that committed their pending row and never
+    # confirmed the upload.
+    abandoned = (
+        db.query(ExportShare)
+        .filter(ExportShare.upload_pending.is_(True), ExportShare.created_at <= now - EXPORT_SHARE_PENDING_GRACE)
+        .all()
+    )
     doomed = {s.id: s for s in expired}
     doomed.update({s.id: s for s in revoked})
+    doomed.update({s.id: s for s in abandoned})
     if not doomed:
         _record_overdue_share_files(now, [])
         return 0
@@ -490,6 +504,46 @@ def _record_overdue_share_files(now: datetime, kept: list[Any]) -> None:
 def _job_expired_export_shares() -> None:
     """Scheduler entry-point wrapping ``purge_expired_export_shares``."""
     _run_cleanup_job("expired_export_shares", purge_expired_export_shares)
+
+
+def reconcile_export_share_objects(db: Any) -> int:
+    """Delete stored share files that no share row (live or pending) points at.
+
+    Sprint 880 (DH-09): a backstop. Every create commits its row before the
+    upload and every delete removes the file before the row, so an untracked
+    file means a bug or an out-of-band write; it is deleted and counted in a
+    warning. The bucket is listed BEFORE the rows are read: any file in the
+    listing had its row committed first, so a create racing this pass is still
+    seen as tracked. Files younger than the pending grace period are left alone
+    anyway. Returns the number deleted.
+    """
+    from export_share_model import ExportShare
+    from shared import export_share_storage
+
+    listing = export_share_storage.list_objects(export_share_storage.SHARE_PREFIX)
+    if not listing:
+        return 0
+    tracked = {k for (k,) in db.query(ExportShare.object_key).filter(ExportShare.object_key.isnot(None))}
+    cutoff = datetime.now(UTC) - EXPORT_SHARE_PENDING_GRACE
+    deleted = 0
+    failed = 0
+    for key, modified in listing:
+        if key in tracked:
+            continue
+        if (modified if modified.tzinfo else modified.replace(tzinfo=UTC)) > cutoff:
+            continue
+        if export_share_storage.delete(key):
+            deleted += 1
+        else:
+            failed += 1
+    if deleted or failed:
+        logger.warning("export_share_untracked_objects: deleted=%d delete_failed=%d", deleted, failed)
+    return deleted
+
+
+def _job_reconcile_export_share_objects() -> None:
+    """Scheduler entry-point wrapping ``reconcile_export_share_objects``."""
+    _run_cleanup_job("reconcile_export_share_objects", reconcile_export_share_objects)
 
 
 def _job_team_activity_cleanup() -> None:
@@ -706,6 +760,13 @@ def init_scheduler() -> None:
         minutes=EXPORT_SHARE_PURGE_INTERVAL_MINUTES,
         id="expired_export_shares",
         jitter=30,
+    )
+    _scheduler.add_job(
+        _job_reconcile_export_share_objects,
+        "interval",
+        hours=1,
+        id="reconcile_export_share_objects",
+        jitter=60,
     )
     _scheduler.add_job(
         _job_team_activity_cleanup,

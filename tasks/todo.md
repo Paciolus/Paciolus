@@ -475,8 +475,10 @@ shared.
       `paciolus_export_share_oldest_undeleted_seconds` + `export_share_file_overdue` warning past one hour; member
       removal deletes the revoked files at once; every download rechecks the creator is still in the firm and the
       account is open.
-- [ ] **5B (DH-09)** — durable pending record written before the bytes are stored; reconciliation of stored objects
-      with no live or pending record.
+- [x] **5B (DH-09)** — durable pending record (`export_shares.upload_pending`, migration `b880e5a7d9f1`) committed
+      before the bytes are stored; cleared once the upload lands; pending rows never served or listed; the purge
+      removes a pending row's file then the row after 10 min; hourly `reconcile_export_share_objects` deletes
+      `shares/` objects no row points at (warns `export_share_untracked_objects`).
 - [ ] **5C (OUT-03)** — shared PDF/XLSX/CSV must match a signed, short-lived digest the server issued to that user
       when it produced the export.
 

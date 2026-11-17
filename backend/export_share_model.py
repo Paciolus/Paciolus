@@ -11,7 +11,7 @@ NOT source financial data. All records auto-expire within 24–48 hours.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import Boolean, DateTime, Integer, LargeBinary, String, func
+from sqlalchemy import Boolean, DateTime, Integer, LargeBinary, String, false, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.schema import ForeignKey
 
@@ -51,6 +51,13 @@ class ExportShare(Base):
     # the bytes live in the ``paciolus-exports`` R2 bucket at
     # ``shares/<share_token_hash>``; this column stores only the key.
     object_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    # Sprint 880 (DH-09): True from the moment the row is committed until the
+    # upload is confirmed. A share is committed pending *before* its file is
+    # uploaded, so a crash or failed commit at any point still leaves a row that
+    # leads to the file. Pending rows are never served or listed; the purge
+    # deletes their file and then the row after a short grace period.
+    upload_pending: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false(), nullable=False)
 
     # Security: optional passcode protection.
     # Historically a 64-char SHA-256 hex hash; as of 2026-04-20 this column
