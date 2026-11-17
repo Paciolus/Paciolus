@@ -84,7 +84,8 @@
 > - [ ] **Sprint 878** — plan features and upload allowances enforced on the server (workspace, CSV exports,
 >       preview-token format bypass, upload ledger, JE sampling). Security; code complete on a local branch, stacked on #331.
 > - [ ] **Sprint 879** — what we log, save and cache matches the published data statement (log values, saved
->       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; in progress.
+>       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; code complete,
+      local branch stacked on 878, not pushed.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -324,7 +325,7 @@ account deletion; no retention job prunes old months.
 frontend 215 suites / 2,125 tests green; `alembic heads` = `d878a5c1e9b2` only.
 
 ### Sprint 879: Logs, saved records and caches match the data statement (DH-03..07)
-**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-879-data-statement` (stacked on Sprint 878, which is
+**Status:** COMPLETE — 2026-11-16 on local branch `sprint-879-data-statement` (stacked on Sprint 878, which is
 stacked on 872 → #331; not pushed). **Priority:** P0/P1 (freeze-exempt: security defects). **Source:** read-only review at
 `ef5e567`. **Agents:** Guardian (lead), Executor, Critic.
 
@@ -449,6 +450,14 @@ ruff clean; mypy 212.
 
 **Verification (879e):** 879e + export/excel/leadsheet/loan/financial-statement/memo-render + every XLSX-fixture suite
 640 passed; ruff clean; mypy 212.
+
+**Commit SHA:** 879a `a8970d8a` · 879b `918037d9` · 879c `925fcc05` · 879d `59497810` · 879e `88d3776d`.
+**Final verification (2026-11-16, on `88d3776d`, detached check worktree):** full backend suite **10,897 passed /
+1 skipped / 0 failed** (18m29s). Alembic single head `a879d4f6c8e3`. Migrations to apply on deploy: `e879b2d4a6c1`,
+`f879c3e5b7d2`, `a879d4f6c8e3`.
+**Open (CEO):** pre-879 auto-saved actuals with NULL `actual_source` (clear or keep); flux proposals have no UI (the
+flux page sends no engagement id); the preview cache never saves an upload (the browser re-sends the file), so removing
+it would retire DH-07 — kept per CEO decision; remove `REDACT_LOG_TRACEBACKS` on Render if set (now a no-op).
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
