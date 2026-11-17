@@ -182,14 +182,18 @@ def revert_user_tier_after_removal(db: Session, user: User) -> None:
         user.tier = UserTier.FREE
 
 
-def revoke_member_firm_shares(db: Session, user_id: int, organization_id: int) -> int:
+def revoke_member_firm_shares(db: Session, user_id: int, organization_id: int) -> list[str]:
     """Revoke the departing member's live share links made inside the firm.
 
     Sprint 853 (review AZ-01): a share link carries a copy of a firm export
     and keeps working for whoever holds the token, so it must not outlive the
     member's place in the firm. Shares the user made outside any firm
-    (``organization_id`` NULL) are theirs and are left alone. Returns the
-    number revoked. The caller commits.
+    (``organization_id`` NULL) are theirs and are left alone. The caller commits.
+
+    Sprint 880 (DH-08): returns the revoked shares' stored-file keys (one entry
+    per revoked share; ``""`` for a share with no stored file), so the caller can
+    delete the files once the revocation is committed instead of waiting for the
+    purge.
     """
     from datetime import UTC, datetime
 
@@ -207,4 +211,4 @@ def revoke_member_firm_shares(db: Session, user_id: int, organization_id: int) -
     now = datetime.now(UTC)
     for share in shares:
         share.revoked_at = now
-    return len(shares)
+    return [share.object_key or "" for share in shares]

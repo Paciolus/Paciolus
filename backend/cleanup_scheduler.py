@@ -55,7 +55,14 @@ _EXPECTED_INTERVALS: dict[str, timedelta] = {
     "tool_sessions": timedelta(minutes=CLEANUP_TOOL_SESSION_INTERVAL_MINUTES),
     "retention_cleanup": timedelta(hours=CLEANUP_RETENTION_INTERVAL_HOURS),
     "verify_database_tls": timedelta(hours=24),
+    "expired_export_shares": timedelta(minutes=10),
 }
+
+# Sprint 880 (DH-08): a dead share link's file must be gone within one hour of
+# the link stopping. A 10-minute pass leaves 50 minutes for failed deletes to be
+# retried; past one hour the purge warns.
+EXPORT_SHARE_PURGE_INTERVAL_MINUTES = 10
+EXPORT_SHARE_DELETE_DEADLINE = timedelta(hours=1)
 
 WATCHDOG_INTERVAL_MINUTES = 5
 
@@ -431,25 +438,53 @@ def purge_expired_export_shares(db: Any) -> int:
     doomed = {s.id: s for s in expired}
     doomed.update({s.id: s for s in revoked})
     if not doomed:
+        _record_overdue_share_files(now, [])
         return 0
 
     purgeable: list[int] = []
-    retained = 0
+    kept: list[Any] = []
     for share_id, share in doomed.items():
         key = share.object_key
         if key and not export_share_storage.delete(key):
-            retained += 1
+            kept.append(share)
             continue
         purgeable.append(share_id)
 
-    if retained:
-        logger.warning("Export-share purge: %d row(s) kept for retry — R2 delete not confirmed", retained)
+    if kept:
+        logger.warning("Export-share purge: %d row(s) kept for retry — R2 delete not confirmed", len(kept))
+    _record_overdue_share_files(now, kept)
     if not purgeable:
         return 0
 
     db.query(ExportShare).filter(ExportShare.id.in_(purgeable)).delete(synchronize_session=False)
     db.commit()
     return len(purgeable)
+
+
+def _dead_since(share: Any) -> datetime:
+    """When a share link stopped working: its revocation or its expiry, whichever came first."""
+    moments: list[datetime] = [share.expires_at] + ([share.revoked_at] if share.revoked_at is not None else [])
+    return min(m if m.tzinfo else m.replace(tzinfo=UTC) for m in moments)
+
+
+def _record_overdue_share_files(now: datetime, kept: list[Any]) -> None:
+    """Sprint 880 (DH-08): measure how long the oldest dead link's file has outlived it.
+
+    ``kept`` are the dead shares whose file this pass could not delete. Sets the
+    gauge every pass (0 when none are left) and warns once the oldest passes the
+    one-hour deadline. Logs counts and ages only.
+    """
+    from shared.parser_metrics import export_share_oldest_undeleted_seconds
+
+    ages = [(now - _dead_since(s)).total_seconds() for s in kept if s.object_key or s.export_data is not None]
+    oldest = max(ages, default=0.0)
+    export_share_oldest_undeleted_seconds.set(max(oldest, 0.0))
+    if oldest > EXPORT_SHARE_DELETE_DEADLINE.total_seconds():
+        logger.warning(
+            "export_share_file_overdue: oldest_seconds=%d files_overdue=%d",
+            int(oldest),
+            sum(1 for a in ages if a > EXPORT_SHARE_DELETE_DEADLINE.total_seconds()),
+        )
 
 
 def _job_expired_export_shares() -> None:
@@ -668,7 +703,7 @@ def init_scheduler() -> None:
     _scheduler.add_job(
         _job_expired_export_shares,
         "interval",
-        hours=1,
+        minutes=EXPORT_SHARE_PURGE_INTERVAL_MINUTES,
         id="expired_export_shares",
         jitter=30,
     )

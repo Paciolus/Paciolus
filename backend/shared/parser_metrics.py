@@ -133,3 +133,17 @@ http_request_duration_seconds = Histogram(
     buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0],
     registry=PARSER_REGISTRY,
 )
+
+# ---------------------------------------------------------------------------
+# Shared-link retention (Sprint 880: DH-08)
+# ---------------------------------------------------------------------------
+
+# Seconds since the oldest dead share link (expired or revoked) stopped working
+# while its stored file still exists. Set on every purge pass; 0 when every dead
+# link's file is gone. The promise is "deleted within one hour", so a value past
+# 3600 means deletes are failing.
+export_share_oldest_undeleted_seconds = Gauge(
+    "paciolus_export_share_oldest_undeleted_seconds",
+    "Age of the oldest expired or revoked share whose stored file has not been deleted",
+    registry=PARSER_REGISTRY,
+)

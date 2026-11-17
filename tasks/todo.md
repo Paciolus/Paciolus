@@ -85,7 +85,9 @@
 >       preview-token format bypass, upload ledger, JE sampling). Security; code complete on a local branch, stacked on #331.
 > - [ ] **Sprint 879** — what we log, save and cache matches the published data statement (log values, saved
 >       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; code complete,
-      local branch stacked on 878, not pushed.
+>       local branch stacked on 878, not pushed.
+> - [ ] **Sprint 880** — shared export links: file deleted within an hour of the link ending, no untracked files after a
+>       failed create, only Paciolus-generated files can be shared. Security; in progress, stacked on 879.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -458,6 +460,25 @@ ruff clean; mypy 212.
 **Open (CEO):** pre-879 auto-saved actuals with NULL `actual_source` (clear or keep); flux proposals have no UI (the
 flux page sends no engagement id); the preview cache never saves an upload (the browser re-sends the file), so removing
 it would retire DH-07 — kept per CEO decision; remove `REDACT_LOG_TRACEBACKS` on Render if set (now a no-op).
+
+### Sprint 880: Shared export links — retention, cleanup and file provenance (DH-08, DH-09, OUT-03)
+**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-880-share-links` (stacked on Sprint 879; not pushed).
+**Priority:** P0/P1 (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`.
+**Agents:** Guardian (lead), Executor, Critic.
+
+**Decisions (CEO, 2026-11-16):** a link stops working after 24 h (Professional) / 48 h (Enterprise) and its stored
+file is deleted within one hour after that. A link is revoked when its creator is removed from the firm or closes
+the account; a downgrade or cancellation does not revoke — links run to expiry. Only files Paciolus generated can be
+shared.
+
+- [x] **5A (DH-08)** — share purge every 10 min (was hourly); opening an expired link deletes its file then; gauge
+      `paciolus_export_share_oldest_undeleted_seconds` + `export_share_file_overdue` warning past one hour; member
+      removal deletes the revoked files at once; every download rechecks the creator is still in the firm and the
+      account is open.
+- [ ] **5B (DH-09)** — durable pending record written before the bytes are stored; reconciliation of stored objects
+      with no live or pending record.
+- [ ] **5C (OUT-03)** — shared PDF/XLSX/CSV must match a signed, short-lived digest the server issued to that user
+      when it produced the export.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

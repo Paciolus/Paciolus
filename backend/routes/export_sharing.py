@@ -191,15 +191,67 @@ def _resolve_share_or_404(token: str, db: Session) -> ExportShare:
     return share
 
 
-def _enforce_not_expired(share: ExportShare) -> datetime:
-    """Raise 410 if the share has expired; otherwise return ``now``."""
+def _retire_share(share: ExportShare, db: Session) -> bool:
+    """Delete a dead share's stored file and then its row. True when both are gone.
+
+    Sprint 880 (DH-08): the row is the only record of where the file lives, so
+    it is deleted only after storage confirms the file is gone. If the delete
+    fails the row stays, already unservable, for the purge to retry.
+    """
+    if share.object_key and not export_share_storage.delete(share.object_key):
+        return False
+    db.delete(share)
+    db.commit()
+    return True
+
+
+def _enforce_not_expired(share: ExportShare, db: Session) -> datetime:
+    """Raise 410 if the share has expired; otherwise return ``now``.
+
+    Sprint 880 (DH-08): an expired link's file is deleted when it is opened,
+    rather than waiting for the next purge pass.
+    """
     now = datetime.now(UTC)
     expires = share.expires_at
     if expires.tzinfo is None:
         expires = expires.replace(tzinfo=UTC)
     if now > expires:
+        _retire_share(share, db)
         raise HTTPException(status_code=410, detail="This share link has expired.")
     return now
+
+
+def _enforce_creator_standing(share: ExportShare, db: Session) -> None:
+    """Raise 404 (and revoke) if the link's creator has left the firm or closed the account.
+
+    Sprint 880 (DH-08): links end when the creator is removed from the firm or
+    the account is closed. The remove-member route and account erasure revoke
+    them at the time; this check covers any other way a membership or account
+    ends. A downgrade or cancellation does NOT end a link — it runs to expiry,
+    so no plan or entitlement is checked here.
+    """
+    from organization_model import OrganizationMember
+
+    creator = db.get(User, share.user_id)
+    in_good_standing = creator is not None and bool(creator.is_active)
+    if in_good_standing and share.organization_id is not None:
+        in_good_standing = (
+            db.query(OrganizationMember.id)
+            .filter(
+                OrganizationMember.user_id == share.user_id,
+                OrganizationMember.organization_id == share.organization_id,
+            )
+            .first()
+            is not None
+        )
+    if in_good_standing:
+        return
+    share_id = share.id
+    share.revoked_at = datetime.now(UTC)
+    db.commit()
+    _retire_share(share, db)
+    logger.info("Share revoked on access: creator no longer in the firm or account closed; share_id=%s", share_id)
+    raise HTTPException(status_code=404, detail="Share link not found or revoked.")
 
 
 _CONTENT_TYPES = {
@@ -464,7 +516,7 @@ def create_share(
 
 def _finalize_download(share: ExportShare, request: Any, db: Session) -> Response:
     """Shared tail logic for both GET and POST download paths."""
-    now = _enforce_not_expired(share)
+    now = _enforce_not_expired(share, db)
 
     # Sprint 821 (PR #217 review): one conditional UPDATE, so the counter and a
     # single-use link's consumption are atomic. As a read-then-write, two
@@ -532,7 +584,8 @@ def download_share(
     and transparent proxies.  Callers must migrate to the POST variant.
     """
     share = _resolve_share_or_404(token, db)
-    _enforce_not_expired(share)
+    _enforce_not_expired(share, db)
+    _enforce_creator_standing(share, db)
 
     if share.passcode_hash:
         # Sprint 718: collapse to 404 so this endpoint can't be used to
@@ -559,7 +612,8 @@ def download_share_with_passcode(
     a single call pattern.
     """
     share = _resolve_share_or_404(token, db)
-    _enforce_not_expired(share)
+    _enforce_not_expired(share, db)
+    _enforce_creator_standing(share, db)
 
     if share.passcode_hash:
         # Sprint 698: thread the client IP so per-IP throttle can fire.
