@@ -22,6 +22,7 @@ from typing import Any
 from openpyxl.workbook import Workbook
 
 from shared.excel_cells import assert_no_formulas
+from shared.xlsx_in_memory import workbook_to_bytes
 
 SOFTWARE_NAME = "Paciolus"
 
@@ -54,9 +55,9 @@ def save_workbook(wb: Workbook, *, title: str, author: str | None = None) -> byt
         # openpyxl has no separate author field; "creator" is the software, so a
         # firm-entered author is kept in the description, labelled.
         props.description = f"Prepared by: {author.strip()}"
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    return _replace_app_properties(buffer.getvalue())
+    # Sprint 879 (DH-06): serialized in memory — openpyxl's own save writes each
+    # worksheet to a temp file first.
+    return _replace_app_properties(workbook_to_bytes(wb))
 
 
 def _replace_app_properties(xlsx: bytes) -> bytes:

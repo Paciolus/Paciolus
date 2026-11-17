@@ -1,6 +1,5 @@
 """Multi-tab Excel workpaper generator using Oat & Obsidian theme."""
 
-import io
 from datetime import UTC, date, datetime
 from typing import Any, Optional
 
@@ -144,7 +143,6 @@ class PaciolusWorkpaperGenerator:
         self.audit_result = audit_result
         self.filename = filename
         self.wb = Workbook()
-        self.buffer = io.BytesIO()
         # Sprint 53: Workpaper fields (deprecated Sprint 7 — gated by include_signoff)
         self.prepared_by = prepared_by
         self.reviewed_by = reviewed_by
@@ -195,7 +193,6 @@ class PaciolusWorkpaperGenerator:
         # Save to buffer
         author = self.prepared_by if self.include_signoff else None
         excel_bytes = save_workbook(self.wb, title="Trial Balance Diagnostic Workpaper", author=author)
-        self.buffer.close()
 
         log_secure_operation("excel_generate_complete", f"Excel generated: {len(excel_bytes)} bytes")
 

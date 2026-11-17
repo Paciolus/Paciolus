@@ -16,7 +16,6 @@ Features:
 - Rollforward logic: Beg Bal + Activity = End Bal
 """
 
-import io
 from datetime import UTC, datetime
 
 from openpyxl import Workbook
@@ -40,7 +39,6 @@ class LeadSheetGenerator:
         self.recon_result = recon_result
         self.filename = filename
         self.wb = Workbook()
-        self.buffer = io.BytesIO()
 
         # Remove default sheet
         self.wb.remove(self.wb.active)
@@ -87,7 +85,6 @@ class LeadSheetGenerator:
         self._build_detail_tabs()
 
         data = save_workbook(self.wb, title="Lead Sheets")
-        self.buffer.close()
         return data
 
     def _build_index_tab(self) -> None:

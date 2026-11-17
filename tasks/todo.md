@@ -431,7 +431,24 @@ ruff clean; mypy 212.
 ruff clean; mypy 212.
 
 **879e — XLSX exports write worksheet XML to temp files (DH-06, High)**
-- [ ] Confirm in installed openpyxl; one shared in-memory helper for all three generators (approach to CEO first).
+- [x] Confirmed in the installed openpyxl 3.1.5: `ExcelWriter.write_worksheet` builds `WorksheetWriter(ws)` with no
+      `out`, so `create_temporary_file()` → `NamedTemporaryFile(prefix='openpyxl.', delete=False)`; removed on success or
+      at exit only. Every export wrote one per sheet; a forced worksheet failure left `openpyxl.*` on disk.
+- [x] Approach approved by the CEO 2026-11-16: `shared/xlsx_in_memory.workbook_to_bytes` — an `ExcelWriter` subclass
+      writes each sheet into a `BytesIO` and `writestr`s it (nothing on disk, nothing to clean up on failure); on import,
+      openpyxl's temp-file factory is replaced by one that raises. Used by `excel_generator` (workpaper + financial
+      statements), `leadsheet_generator`, `loan_amortization_excel`, and the unused `security_utils.dataframe_to_bytes`
+      Excel branch (pandas' writer would have hit the guard). Output unchanged (Excel render snapshot identical).
+- [x] Tests: `test_sprint_879_xlsx_no_disk.py` — a Python audit hook records every write-open and temp file during each
+      of the four exports with marker names/amounts (none), forced failures inside worksheet writing and inside
+      packaging (none), the guard raises on a bypassing `wb.save`, the override is pinned to openpyxl 3.1.5, an AST scan
+      finds no other workbook save / `to_excel` in production code, `dataframe_to_bytes` writes nothing. Red before.
+- Test-only exemption: `conftest._allow_openpyxl_tempfiles_for_fixtures` lifts the guard for the session, because 15
+  test files build XLSX *uploads* with `wb.save()`/`to_excel`. The guard test re-enables it; the bypass scan covers
+  production code.
+
+**Verification (879e):** 879e + export/excel/leadsheet/loan/financial-statement/memo-render + every XLSX-fixture suite
+640 passed; ruff clean; mypy 212.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

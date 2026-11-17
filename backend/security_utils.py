@@ -310,7 +310,18 @@ def dataframe_to_bytes(df: pd.DataFrame, format: str = "csv") -> bytes:
     if format == "csv":
         df.to_csv(buffer, index=False)
     elif format == "excel":
-        df.to_excel(buffer, index=False, engine="openpyxl")
+        # Sprint 879e (DH-06): pandas' openpyxl writer saves through openpyxl's
+        # temp files; build the workbook and serialize it in memory instead.
+        from openpyxl import Workbook
+
+        from shared.xlsx_in_memory import workbook_to_bytes
+
+        wb = Workbook()
+        ws = wb.active
+        ws.append([str(c) for c in df.columns])
+        for row in df.itertuples(index=False):
+            ws.append(list(row))
+        return workbook_to_bytes(wb)
     else:
         raise ValueError(f"Unsupported format: {format}")
 

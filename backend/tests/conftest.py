@@ -226,6 +226,25 @@ def _clear_analytics_caches():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _allow_openpyxl_tempfiles_for_fixtures():
+    """Sprint 879e: production forbids openpyxl temp files (shared/xlsx_in_memory).
+
+    Test fixtures build XLSX *uploads* with ``wb.save()`` / pandas ``to_excel``,
+    which go through openpyxl's temp files. That is harmless here, so the guard
+    is lifted for the session. ``tests/test_sprint_879_xlsx_no_disk.py``
+    re-enables it to prove it raises, proves the generators write nothing with
+    it lifted, and scans production code for any save that bypasses the helper.
+    """
+    import openpyxl.worksheet._writer as ws_writer
+
+    import shared.xlsx_in_memory as xim
+
+    ws_writer.create_temporary_file = xim.ORIGINAL_CREATE_TEMPORARY_FILE
+    yield
+    ws_writer.create_temporary_file = xim._forbid_openpyxl_tempfiles
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _init_app_db():
     """Ensure the app's own database schema is up-to-date.
 
