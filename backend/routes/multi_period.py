@@ -33,8 +33,8 @@ from shared.diagnostic_response_schemas import (
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.expectation_evaluation import (
-    evaluate_expectations_against_measurements,
     extract_multi_period_measurements,
+    propose_expectation_actuals,
 )
 from shared.export_helpers import csv_response
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
@@ -167,7 +167,7 @@ def compare_period_trial_balances(
     flagged = extract_multi_period_accounts(result_dict)
     # Sprint 887 (OUT-20): material + significant movements are the run's flagged items.
     by_sig = result_dict.get("movements_by_significance") or {}
-    maybe_record_tool_run(
+    tool_run_id = maybe_record_tool_run(
         db,
         payload.engagement_id,
         current_user.id,
@@ -178,14 +178,16 @@ def compare_period_trial_balances(
         flag_count=int(by_sig.get("material", 0)) + int(by_sig.get("significant", 0)),
     )
 
-    # Sprint 728c: evaluate ISA 520 expectations targeting these movements.
+    # Sprint 879b (DH-04): propose actuals for open ISA 520 expectations;
+    # nothing is saved until the auditor captures them.
     if payload.engagement_id is not None:
-        measurements = extract_multi_period_measurements(result_dict)
-        result_dict["expectations_evaluated"] = evaluate_expectations_against_measurements(
-            db=db,
-            user_id=current_user.id,
-            engagement_id=payload.engagement_id,
-            measurements=measurements,
+        result_dict["proposed_actuals"] = propose_expectation_actuals(
+            db,
+            current_user.id,
+            payload.engagement_id,
+            extract_multi_period_measurements(result_dict),
+            source="multi_period",
+            tool_run_id=tool_run_id,
         )
 
     return result_dict
@@ -223,7 +225,7 @@ def compare_three_way_trial_balances(
     flagged = extract_multi_period_accounts(result_dict)
     # Sprint 887 (OUT-20): material + significant movements are the run's flagged items.
     by_sig = result_dict.get("movements_by_significance") or {}
-    maybe_record_tool_run(
+    tool_run_id = maybe_record_tool_run(
         db,
         payload.engagement_id,
         current_user.id,
@@ -234,14 +236,16 @@ def compare_three_way_trial_balances(
         flag_count=int(by_sig.get("material", 0)) + int(by_sig.get("significant", 0)),
     )
 
-    # Sprint 728c: ISA 520 evaluation against current-period balances
+    # Sprint 879b (DH-04): propose actuals for open ISA 520 expectations;
+    # nothing is saved until the auditor captures them.
     if payload.engagement_id is not None:
-        measurements = extract_multi_period_measurements(result_dict)
-        result_dict["expectations_evaluated"] = evaluate_expectations_against_measurements(
-            db=db,
-            user_id=current_user.id,
-            engagement_id=payload.engagement_id,
-            measurements=measurements,
+        result_dict["proposed_actuals"] = propose_expectation_actuals(
+            db,
+            current_user.id,
+            payload.engagement_id,
+            extract_multi_period_measurements(result_dict),
+            source="multi_period",
+            tool_run_id=tool_run_id,
         )
 
     return result_dict

@@ -363,8 +363,30 @@ which would have cost Sentry its stack frames; fixed (pre-set `exc_text` instead
 suites re-run green (103 passed). ruff clean; mypy 212 (gate 1,011), none in changed files.
 
 **879b — analysis saves account balances into expectations (DH-04, Critical)**
-- [ ] Confirm; return proposed actuals, save nothing; explicit capture (one / all from a run) recording the source run;
-      memos print "not captured".
+- [x] Confirmed: `shared/expectation_evaluation.evaluate_expectations_against_measurements` called
+      `update_expectation(result_actual_value=…)` for every match, committed in the analysis request — from
+      `/audit/flux`, both multi-period routes, **and** `/clients/{id}/industry-ratios` (`routes/trends.py`, not in the
+      review). No frontend screen read the result, so the save was silent.
+- [x] `propose_expectation_actuals` reads only and returns `proposed_actuals` (replaces `expectations_evaluated`), each
+      with a signed `capture_token` (HMAC over user, engagement, expectation, actual, source tool, run, 24 h expiry —
+      `shared/expectation_capture.py`), so the saved value and its run cannot be substituted by the browser.
+      `maybe_record_tool_run` now returns the run id.
+- [x] `POST /engagements/{id}/analytical-expectations/capture-actuals` (workspace-gated, like every workspace write):
+      one token or a whole run's; all verified before any save; an already-captured expectation is skipped, never
+      overwritten. New columns `actual_source` / `actual_source_tool_run_id` / `actual_captured_at` /
+      `actual_captured_by` (migration `e879b2d4a6c1`); a typed-in actual records `manual`; clearing clears them.
+- [x] Memo: no actual → "not captured" in Actual and Variance; each row says where its actual came from. Expectations
+      panel no longer shows `$0.00` for a missing actual. Multi-period page: `ProposedActualsPanel` — "Save actual value
+      for <account>" and "Save all N actual values from this run".
+- [x] Tests: `test_sprint_879_expectation_capture.py` (run + rerun save nothing; failed run saves nothing; capture one
+      records the run; capture all; forged/other-user/Free refused; helper writes nothing; manual source; memo PDF text),
+      `ProposedActualsPanel.test.tsx`; 728c tests converted; 878's workspace matrix now covers the capture route.
+- Not changed: actuals auto-saved before this sprint stay, with a NULL source (indistinguishable from typed ones).
+  The flux page does not send an engagement id, so flux proposals have no UI yet (API only).
+
+**Verification (879b):** expectation/flux/multi-period/trends/memo/snapshot/parity/workspace suites 351 + 103 passed;
+memo render snapshot re-recorded (analytical-expectations entries only: "—" → "not captured"); ruff clean; mypy 212;
+frontend `tsc` + eslint clean, 4 suites / 32 tests.
 
 **879c — the activity summary accepts any content (DH-05, Critical)**
 - [ ] Confirm; per-tool aggregate schema shared by API and recorder; typed POST body; invalid stored summaries removed.

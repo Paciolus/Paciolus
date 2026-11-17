@@ -10,6 +10,7 @@ metadata + comparison results. Underlying tool data stays ephemeral.
 """
 
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Optional
 
@@ -287,12 +288,16 @@ class AnalyticalExpectationsManager:
         cpa_notes: Optional[str] = None,
         result_actual_value: Optional[float | Decimal] = None,
         clear_result: bool = False,
+        actual_source: str = "manual",
+        actual_source_tool_run_id: Optional[int] = None,
     ) -> Optional[AnalyticalExpectation]:
         """Update fields on an existing expectation.
 
         ``result_actual_value`` triggers a status recompute via
         ``evaluate_status``; ``clear_result=True`` resets the row to
-        NOT_EVALUATED. Other fields are simple overwrites; XOR rules are
+        NOT_EVALUATED. A captured actual records its source (Sprint 879b):
+        ``"manual"`` by default, or the proposing tool and run when it comes
+        from ``shared.expectation_capture``. Other fields are simple overwrites; XOR rules are
         re-validated when the affected fields change.
         """
         expectation = self._verify_expectation_access(user_id, expectation_id)
@@ -367,6 +372,10 @@ class AnalyticalExpectationsManager:
             expectation.result_actual_value = None
             expectation.result_variance_amount = None
             expectation.result_status = ExpectationResultStatus.NOT_EVALUATED
+            expectation.actual_source = None
+            expectation.actual_source_tool_run_id = None
+            expectation.actual_captured_at = None
+            expectation.actual_captured_by = None
         elif result_actual_value is not None:
             variance, status = evaluate_status(
                 actual_value=result_actual_value,
@@ -379,6 +388,10 @@ class AnalyticalExpectationsManager:
             expectation.result_actual_value = _quantize(result_actual_value)
             expectation.result_variance_amount = variance
             expectation.result_status = status
+            expectation.actual_source = actual_source
+            expectation.actual_source_tool_run_id = actual_source_tool_run_id
+            expectation.actual_captured_at = datetime.now(UTC).replace(tzinfo=None)
+            expectation.actual_captured_by = user_id
 
         expectation.updated_by = user_id
         self.db.commit()

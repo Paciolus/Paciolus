@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useCanvasAccent } from '@/contexts/CanvasAccentContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { ProposedActualsPanel } from '@/components/engagement'
 import {
   AccountMovementTable,
   BudgetSummaryCards,
@@ -356,6 +357,14 @@ export default function MultiPeriodPage() {
                   </div>
 
                   <MovementSummaryCards comparison={comparison} />
+
+                  {engagementId && comparison.proposed_actuals && comparison.proposed_actuals.length > 0 && (
+                    <ProposedActualsPanel
+                      engagementId={engagementId}
+                      proposals={comparison.proposed_actuals}
+                      token={token}
+                    />
+                  )}
                   <BudgetSummaryCards comparison={comparison} />
 
                   {/* Filters + Movement Table */}

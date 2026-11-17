@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback } from 'react'
+import type { ProposedActual } from '@/types/analytical-expectations'
 import type { AuditResult } from '@/types/diagnostic'
 import { apiPost, apiDownload, downloadBlob } from '@/utils'
 
@@ -89,6 +90,8 @@ export interface MovementSummaryResponse {
   accounts_over_budget?: number
   accounts_under_budget?: number
   accounts_on_budget?: number
+  // Sprint 879b: proposals for open expectations — nothing is saved until captured
+  proposed_actuals?: ProposedActual[]
 }
 
 // Sprint 573: AuditResultForComparison replaced by canonical AuditResult

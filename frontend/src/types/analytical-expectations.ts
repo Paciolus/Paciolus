@@ -100,3 +100,27 @@ export const EXPECTATION_STATUS_COLORS: Record<ExpectationResultStatus, string> 
   within_threshold: 'bg-sage-50 text-sage-700 border-sage-200',
   exceeds_threshold: 'bg-clay-50 text-clay-700 border-clay-200',
 };
+
+/**
+ * Sprint 879b (DH-04): an analysis run proposes actuals; nothing is saved until
+ * the auditor captures one (or every proposal from the run).
+ */
+export interface ProposedActual {
+  expectation_id: number;
+  target_type: ExpectationTargetType;
+  target_label: string;
+  actual: number;
+  variance: number;
+  status: ExpectationResultStatus;
+  capture_token: string;
+}
+
+export interface CaptureActualsResult {
+  expectation_id: number;
+  status: 'captured' | 'skipped';
+  reason: 'not_found' | 'already_captured' | null;
+}
+
+export interface CaptureActualsResponse {
+  results: CaptureActualsResult[];
+}

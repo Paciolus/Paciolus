@@ -281,7 +281,7 @@ export function AnalyticalExpectationsPanel({
                     <>
                       <span className="text-xs font-sans text-content-tertiary">Actual:</span>
                       <span className="font-mono text-sm text-content-primary">
-                        {formatCurrency(item.result_actual_value ?? 0)}
+                        {item.result_actual_value === null ? 'not captured' : formatCurrency(item.result_actual_value)}
                       </span>
                       <button
                         type="button"

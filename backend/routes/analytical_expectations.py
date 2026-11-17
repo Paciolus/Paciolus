@@ -20,6 +20,8 @@ from schemas.analytical_expectation_schemas import (
     AnalyticalExpectationCreate,
     AnalyticalExpectationResponse,
     AnalyticalExpectationUpdate,
+    CaptureActualsRequest,
+    CaptureActualsResponse,
 )
 from security_utils import log_secure_operation
 from shared.client_access import RecordNotFound
@@ -53,6 +55,10 @@ def _to_response(expectation: Any) -> AnalyticalExpectationResponse:
         result_actual_value=_to_float(d["result_actual_value"]),
         result_variance_amount=_to_float(d["result_variance_amount"]),
         result_status=d["result_status"],  # type: ignore[arg-type]
+        actual_source=d["actual_source"],
+        actual_source_tool_run_id=d["actual_source_tool_run_id"],
+        actual_captured_at=d["actual_captured_at"],
+        actual_captured_by=d["actual_captured_by"],
         created_by=d["created_by"],
         created_at=d["created_at"] or "",
         updated_by=d["updated_by"],
@@ -162,6 +168,42 @@ def get_expectation(
     if not expectation:
         raise HTTPException(status_code=404, detail="Analytical expectation not found")
     return _to_response(expectation)
+
+
+@router.post(
+    "/engagements/{engagement_id}/analytical-expectations/capture-actuals",
+    response_model=CaptureActualsResponse,
+    dependencies=[Depends(check_workspace_access)],
+)
+@limiter.limit(RATE_LIMIT_WRITE)
+def capture_actuals(
+    request: Request,
+    engagement_id: int,
+    data: CaptureActualsRequest,
+    current_user: User = Depends(require_current_user),
+    db: Session = Depends(get_db),
+) -> CaptureActualsResponse:
+    """Save proposed actuals into the workpaper (Sprint 879b, review DH-04).
+
+    An analysis run only proposes actuals. This is the explicit action that
+    saves them — one token for one account, or every token from a run. Every
+    token is verified before anything is saved; an expectation that already
+    has an actual is skipped, not overwritten.
+    """
+    from shared.expectation_capture import CaptureTokenError
+    from shared.expectation_capture import capture_actuals as _capture
+
+    if AnalyticalExpectationsManager(db)._verify_engagement_access(current_user.id, engagement_id) is None:
+        raise HTTPException(status_code=404, detail="Engagement not found")
+    log_secure_operation(
+        "analytical_expectation_capture",
+        f"User {current_user.id} capturing {len(data.capture_tokens)} actual(s) on engagement {engagement_id}",
+    )
+    try:
+        results = _capture(db, user_id=current_user.id, engagement_id=engagement_id, tokens=data.capture_tokens)
+    except CaptureTokenError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return CaptureActualsResponse.model_validate({"results": results})
 
 
 @router.patch(

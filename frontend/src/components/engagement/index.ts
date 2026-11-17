@@ -12,3 +12,4 @@ export { AnalyticalExpectationsPanel } from './AnalyticalExpectationsPanel';
 export { SumSchedulePanel } from './SumSchedulePanel';
 export { CreateMisstatementModal } from './CreateMisstatementModal';
 export { CaptureToSumButton } from './CaptureToSumButton';
+export { ProposedActualsPanel } from './ProposedActualsPanel';

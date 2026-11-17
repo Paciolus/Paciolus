@@ -73,8 +73,29 @@ class AnalyticalExpectationResponse(BaseModel):
     result_actual_value: Optional[float] = None
     result_variance_amount: Optional[float] = None
     result_status: Literal["not_evaluated", "within_threshold", "exceeds_threshold"]
+    # Sprint 879b: where a captured actual came from ("manual" or the tool)
+    actual_source: Optional[str] = None
+    actual_source_tool_run_id: Optional[int] = None
+    actual_captured_at: Optional[str] = None
+    actual_captured_by: Optional[int] = None
 
     created_by: int
     created_at: str
     updated_by: Optional[int] = None
     updated_at: str
+
+
+class CaptureActualsRequest(BaseModel):
+    """Sprint 879b (DH-04): save proposed actuals — one, or every one from a run."""
+
+    capture_tokens: list[str] = Field(..., min_length=1, max_length=500)
+
+
+class CaptureActualsResult(BaseModel):
+    expectation_id: int
+    status: Literal["captured", "skipped"]
+    reason: Optional[Literal["not_found", "already_captured"]] = None
+
+
+class CaptureActualsResponse(BaseModel):
+    results: list[CaptureActualsResult]

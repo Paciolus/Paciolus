@@ -105,6 +105,41 @@ def _format_money(value: Any) -> str:
         return str(value)
 
 
+NOT_CAPTURED = "not captured"
+
+_SOURCE_LABEL = {
+    "manual": "entered by the auditor",
+    "flux_analysis": "saved by the auditor from a Flux Analysis run",
+    "multi_period": "saved by the auditor from a Multi-Period Comparison run",
+    "industry_ratios": "saved by the auditor from the industry ratios",
+}
+
+
+def _format_actual(exp: AnalyticalExpectation) -> str:
+    """Sprint 879b: an expectation with no captured actual says so — never blank or $0.00."""
+    if exp.result_actual_value is None:
+        return NOT_CAPTURED
+    return _format_money(exp.result_actual_value)
+
+
+def _format_variance(exp: AnalyticalExpectation) -> str:
+    if exp.result_actual_value is None:
+        return NOT_CAPTURED
+    return _format_money(exp.result_variance_amount)
+
+
+def _format_provenance(exp: AnalyticalExpectation) -> str:
+    """Where the captured actual came from, for the per-row narrative."""
+    if exp.result_actual_value is None:
+        return "Actual not captured."
+    source = _SOURCE_LABEL.get(exp.actual_source or "", "captured before sources were recorded")
+    when = f" on {exp.actual_captured_at:%Y-%m-%d}" if exp.actual_captured_at else ""
+    run = ""
+    if exp.actual_source_tool_run is not None:
+        run = f" (run #{exp.actual_source_tool_run.run_number})"
+    return f"Actual {source}{run}{when}."
+
+
 def _format_threshold(exp: AnalyticalExpectation) -> str:
     if exp.precision_threshold_amount is not None:
         return _format_money(exp.precision_threshold_amount)
@@ -350,8 +385,8 @@ class AnalyticalExpectationMemoGenerator:
                             Paragraph(_format_expected(e), styles["MemoTableCell"]),
                             Paragraph(_format_threshold(e), styles["MemoTableCell"]),
                             Paragraph(_format_tags(e), styles["MemoTableCell"]),
-                            Paragraph(_format_money(e.result_actual_value), styles["MemoTableCell"]),
-                            Paragraph(_format_money(e.result_variance_amount), styles["MemoTableCell"]),
+                            Paragraph(_format_actual(e), styles["MemoTableCell"]),
+                            Paragraph(_format_variance(e), styles["MemoTableCell"]),
                             Paragraph(
                                 user_text(_STATUS_LABEL.get(e.result_status, "—")),
                                 styles["MemoTableCell"],
@@ -391,6 +426,7 @@ class AnalyticalExpectationMemoGenerator:
                         f"<b>{user_text(_TARGET_TYPE_LABEL[target_type])} — {user_text(e.procedure_target_label)}.</b> "
                         f"<i>Corroboration:</i> {user_text(e.corroboration_basis_text)}"
                     )
+                    narrative += f" <i>{_format_provenance(e)}</i>"
                     if e.cpa_notes:
                         narrative += f" <i>Auditor notes:</i> {user_text(e.cpa_notes)}"
                     story.append(Paragraph(narrative, styles["MemoBodySmall"]))

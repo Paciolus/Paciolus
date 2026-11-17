@@ -1,6 +1,6 @@
 """
-Sprint 728c — Multi-period TB route auto-evaluates ISA 520 expectations
-when engagement_id is supplied.
+Sprint 728c — Multi-period TB route matches ISA 520 expectations when
+engagement_id is supplied. Sprint 879b: it proposes actuals and saves nothing.
 """
 
 import sys
@@ -48,7 +48,7 @@ _CURRENT = [
 
 @pytest.mark.usefixtures("bypass_csrf")
 class TestMultiPeriodWiring:
-    async def test_evaluates_when_engagement_id_present(self, db_session, override_auth_verified, make_client):
+    async def test_proposes_when_engagement_id_present(self, db_session, override_auth_verified, make_client):
         user = override_auth_verified
         eng = _setup(db_session, user, make_client)
 
@@ -77,18 +77,18 @@ class TestMultiPeriodWiring:
             )
         assert r.status_code == 200, r.text
         body = r.json()
-        assert "expectations_evaluated" in body
+        assert "expectations_evaluated" not in body
         # Multi-period emits signed balances (revenue is credit-normal so current
-        # comes through as negative). Either WITHIN or EXCEEDS is acceptable proof
-        # of wiring; assert the expectation was evaluated, not the specific status.
-        evaluated = body["expectations_evaluated"]
+        # comes through as negative). Either status is acceptable proof of wiring.
+        proposed = body["proposed_actuals"]
         assert any(
-            e["expectation_id"] == exp.id and e["status"] in ("within_threshold", "exceeds_threshold")
-            for e in evaluated
-        ), evaluated
+            e["expectation_id"] == exp.id and e["status"] in ("within_threshold", "exceeds_threshold") for e in proposed
+        ), proposed
 
+        # Sprint 879b: proposed, not saved.
         db_session.refresh(exp)
-        assert exp.result_status != ExpectationResultStatus.NOT_EVALUATED
+        assert exp.result_status == ExpectationResultStatus.NOT_EVALUATED
+        assert exp.result_actual_value is None
 
     async def test_no_engagement_id_skips_evaluation(self, db_session, override_auth_verified, make_client):
         user = override_auth_verified
@@ -104,4 +104,4 @@ class TestMultiPeriodWiring:
             )
         assert r.status_code == 200
         body = r.json()
-        assert body.get("expectations_evaluated", []) == []
+        assert body.get("proposed_actuals", []) == []

@@ -90,11 +90,12 @@ class ReconDataResponse(BaseModel):
     stats: ReconStatsResponse
 
 
-class ExpectationEvaluationResponse(BaseModel):
-    """Sprint 728c: per-evaluation record returned alongside tool output.
+class ProposedActualResponse(BaseModel):
+    """Sprint 879b (DH-04): an actual proposed for an open ISA 520 expectation.
 
-    Surfaces ISA 520 analytical expectations that were auto-evaluated
-    against the tool's output (matched by target_type + target_label).
+    Matched by target_type + target_label against the tool's output. Nothing
+    is saved; the auditor captures it with ``capture_token``
+    (``POST /engagements/{id}/analytical-expectations/capture-actuals``).
     """
 
     expectation_id: int
@@ -103,6 +104,7 @@ class ExpectationEvaluationResponse(BaseModel):
     actual: float
     variance: float
     status: str
+    capture_token: str
 
 
 class FluxAnalysisResponse(BaseModel):
@@ -110,7 +112,7 @@ class FluxAnalysisResponse(BaseModel):
 
     flux: FluxDataResponse
     recon: ReconDataResponse
-    expectations_evaluated: list[ExpectationEvaluationResponse] = []
+    proposed_actuals: list[ProposedActualResponse] = []
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -236,7 +238,7 @@ class MovementSummaryResponse(BaseModel):
     current_total_debits: MonetaryDecimal
     current_total_credits: MonetaryDecimal
     framework_note: Optional[str] = None
-    expectations_evaluated: list[ExpectationEvaluationResponse] = []
+    proposed_actuals: list[ProposedActualResponse] = []
     # Sprint 763: bank-rec materiality emission pattern; for multi-period,
     # ``active_thresholds`` carries the significance thresholds applied.
     active_thresholds: Optional[dict[str, Any]] = None
@@ -307,7 +309,7 @@ class ThreeWayMovementSummaryResponse(BaseModel):
     accounts_on_budget: int
     framework_note: Optional[str] = None
     duplicate_account_warnings: list[dict[str, Any]] = []
-    expectations_evaluated: list[ExpectationEvaluationResponse] = []
+    proposed_actuals: list[ProposedActualResponse] = []
     # Sprint 763: active thresholds emission.
     active_thresholds: Optional[dict[str, Any]] = None
     # Sprint 765: declarative variance basis on the response.

@@ -176,7 +176,30 @@ WRITES: dict[str, Write] = {
         f"/uncorrected-misstatements/{r.misstatement_id}", json={"cpa_notes": "changed"}, headers=h
     ),
     "archive_misstatement": lambda api, r, h: api.delete(f"/uncorrected-misstatements/{r.misstatement_id}", headers=h),
+    # Sprint 879b: saving a run's proposed actual into the expectation.
+    "capture_actuals": lambda api, r, h: api.post(
+        f"/engagements/{r.engagement_id}/analytical-expectations/capture-actuals",
+        json={"capture_tokens": [_capture_token(r, h)]},
+        headers=h,
+    ),
 }
+
+
+def _capture_token(r: _Records, h: dict[str, str]) -> str:
+    """A valid proposal for the caller (the bearer token's subject) on these records."""
+    import jwt
+
+    from shared.expectation_capture import sign_capture
+
+    caller = int(jwt.decode(h["Authorization"].split()[1], options={"verify_signature": False})["sub"])
+    return sign_capture(
+        user_id=caller,
+        engagement_id=r.engagement_id,
+        expectation_id=r.expectation_id,
+        actual=1000,
+        source="multi_period",
+        tool_run_id=None,
+    )
 
 
 def _snapshot(db: Session, r: _Records) -> tuple:
@@ -200,6 +223,7 @@ def _snapshot(db: Session, r: _Records) -> tuple:
         db.query(AnalyticalExpectation).filter(AnalyticalExpectation.engagement_id == r.engagement_id).count(),
         exp.cpa_notes,
         exp.archived_at,
+        exp.result_actual_value,
         db.query(UncorrectedMisstatement).filter(UncorrectedMisstatement.engagement_id == r.engagement_id).count(),
         mis.cpa_notes,
         mis.archived_at,

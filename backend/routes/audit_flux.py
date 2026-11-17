@@ -19,8 +19,8 @@ from shared.diagnostic_response_schemas import FluxAnalysisResponse
 from shared.entitlement_checks import check_upload_limit, enforce_format_access
 from shared.error_messages import sanitize_error
 from shared.expectation_evaluation import (
-    evaluate_expectations_against_measurements,
     extract_flux_measurements,
+    propose_expectation_actuals,
 )
 from shared.materiality_resolver import resolve_materiality
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -85,7 +85,7 @@ async def flux_analysis(
 
             flux_dict = flux_result.to_dict()
             flagged = extract_flux_accounts({"items": flux_dict.get("items", [])})
-            maybe_record_tool_run(
+            tool_run_id = maybe_record_tool_run(
                 db,
                 engagement_id,
                 current_user.id,
@@ -96,22 +96,23 @@ async def flux_analysis(
                 consumes_upload=True,
             )
 
-            # Sprint 728c: evaluate ISA 520 expectations targeting these
-            # flux outputs. No-op when engagement_id is None.
-            expectations_evaluated: list[dict[str, Any]] = []
+            # Sprint 879b (DH-04): propose actuals for open ISA 520
+            # expectations; nothing is saved until the auditor captures them.
+            proposed_actuals: list[dict[str, Any]] = []
             if engagement_id is not None:
-                measurements = extract_flux_measurements(flux_dict)
-                expectations_evaluated = evaluate_expectations_against_measurements(
-                    db=db,
-                    user_id=current_user.id,
-                    engagement_id=engagement_id,
-                    measurements=measurements,
+                proposed_actuals = propose_expectation_actuals(
+                    db,
+                    current_user.id,
+                    engagement_id,
+                    extract_flux_measurements(flux_dict),
+                    source="flux_analysis",
+                    tool_run_id=tool_run_id,
                 )
 
             return {
                 "flux": flux_dict,
                 "recon": recon_result.to_dict(),
-                "expectations_evaluated": expectations_evaluated,
+                "proposed_actuals": proposed_actuals,
             }
 
         except (ValueError, KeyError, TypeError) as e:

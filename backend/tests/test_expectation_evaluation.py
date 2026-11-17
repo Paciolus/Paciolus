@@ -1,5 +1,7 @@
 """
 Sprint 728c — expectation_evaluation helper + tool extractors.
+
+Sprint 879b (DH-04): the helper proposes actuals and saves nothing.
 """
 
 import sys
@@ -16,10 +18,10 @@ from analytical_expectations_model import (
 )
 from engagement_manager import EngagementManager
 from shared.expectation_evaluation import (
-    evaluate_expectations_against_measurements,
     extract_flux_measurements,
     extract_multi_period_measurements,
     extract_ratio_measurements,
+    propose_expectation_actuals,
 )
 
 # =============================================================================
@@ -121,13 +123,15 @@ def _seed_engagement_with_expectation(db_session, make_user, make_client, **kwar
     return user, eng, exp
 
 
-class TestEvaluateExpectationsAgainstMeasurements:
+class TestProposeExpectationActuals:
     def test_within_threshold_match(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[
                 (ExpectationTargetType.ACCOUNT, "Revenue", 1020.0),
             ],
@@ -135,16 +139,20 @@ class TestEvaluateExpectationsAgainstMeasurements:
         assert len(out) == 1
         assert out[0]["status"] == "within_threshold"
         assert out[0]["expectation_id"] == exp.id
-        # Persisted
+        assert out[0]["capture_token"]
+        # Proposed, not persisted (Sprint 879b)
         db_session.refresh(exp)
-        assert exp.result_status == ExpectationResultStatus.WITHIN_THRESHOLD
+        assert exp.result_status == ExpectationResultStatus.NOT_EVALUATED
+        assert exp.result_actual_value is None
 
     def test_exceeds_threshold_match(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[
                 (ExpectationTargetType.ACCOUNT, "Revenue", 1500.0),
             ],
@@ -153,10 +161,12 @@ class TestEvaluateExpectationsAgainstMeasurements:
 
     def test_label_match_is_case_insensitive(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[
                 (ExpectationTargetType.ACCOUNT, "REVENUE", 1020.0),
             ],
@@ -166,10 +176,12 @@ class TestEvaluateExpectationsAgainstMeasurements:
     def test_target_type_mismatch_does_not_evaluate(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
         # Expectation is on ACCOUNT; we pass FLUX_LINE → no match
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[
                 (ExpectationTargetType.FLUX_LINE, "Revenue", 1020.0),
             ],
@@ -178,20 +190,15 @@ class TestEvaluateExpectationsAgainstMeasurements:
         db_session.refresh(exp)
         assert exp.result_status == ExpectationResultStatus.NOT_EVALUATED
 
-    def test_already_evaluated_expectation_is_not_re_run(self, db_session, make_user, make_client):
+    def test_already_captured_expectation_gets_no_proposal(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
-        # First run
-        evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
-            measurements=[(ExpectationTargetType.ACCOUNT, "Revenue", 1020.0)],
-        )
-        # Second run with new value should be a no-op (still within from before)
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        AnalyticalExpectationsManager(db_session).update_expectation(user.id, exp.id, result_actual_value=1020.0)
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[(ExpectationTargetType.ACCOUNT, "Revenue", 9999.0)],
         )
         assert out == []
@@ -201,10 +208,12 @@ class TestEvaluateExpectationsAgainstMeasurements:
     def test_no_engagement_id_match_returns_empty(self, db_session, make_user, make_client):
         user, _eng, _exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
         # A different engagement_id with no items
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=99999,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            99999,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[(ExpectationTargetType.ACCOUNT, "Revenue", 1020.0)],
         )
         assert out == []
@@ -212,20 +221,24 @@ class TestEvaluateExpectationsAgainstMeasurements:
     def test_other_user_cannot_evaluate(self, db_session, make_user, make_client):
         user_a, eng, _exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
         user_b = make_user(email="other-728c@example.com")
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user_b.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user_b.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[(ExpectationTargetType.ACCOUNT, "Revenue", 1020.0)],
         )
         assert out == []
 
     def test_multiple_measurements_first_match_wins(self, db_session, make_user, make_client):
         user, eng, exp = _seed_engagement_with_expectation(db_session, make_user, make_client)
-        out = evaluate_expectations_against_measurements(
-            db=db_session,
-            user_id=user.id,
-            engagement_id=eng.id,
+        out = propose_expectation_actuals(
+            db_session,
+            user.id,
+            eng.id,
+            source="flux_analysis",
+            tool_run_id=None,
             measurements=[
                 (ExpectationTargetType.ACCOUNT, "Revenue", 1020.0),
                 (ExpectationTargetType.ACCOUNT, "Revenue", 9999.0),  # ignored

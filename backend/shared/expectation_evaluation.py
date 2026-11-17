@@ -1,12 +1,13 @@
 """
-Expectation evaluation helper — Sprint 728c (ISA 520).
+Expectation evaluation helper — Sprint 728c (ISA 520); proposals only since Sprint 879b.
 
 Bridges zero-storage tool engines (flux, ratio, multi-period TB) to the
-persisted ``AnalyticalExpectation`` workpaper. The route layer calls this
-helper after running the engine: it extracts measurements from the engine's
-output, matches them to NOT_EVALUATED expectations on the supplied
-engagement, computes variance + status, persists the result, and returns
-records the route can surface inline in the API response.
+``AnalyticalExpectation`` workpaper. The route layer calls this helper after
+running the engine: it extracts measurements from the engine's output, matches
+them to NOT_EVALUATED expectations on the supplied engagement, computes
+variance + status, and returns **proposals** the route surfaces in the
+response. Nothing is persisted here: the auditor captures a proposal
+explicitly (``shared.expectation_capture``).
 
 This keeps entity types out of engine internals — the engines stay
 zero-storage and tool-agnostic.
@@ -15,7 +16,7 @@ zero-storage and tool-agnostic.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 
 from sqlalchemy.orm import Session
 
@@ -35,32 +36,37 @@ def _normalize_label(label: str) -> str:
     return label.strip().lower()
 
 
-def evaluate_expectations_against_measurements(
+def propose_expectation_actuals(
     db: Session,
     user_id: int,
     engagement_id: int,
     measurements: list[tuple[ExpectationTargetType, str, float | Decimal]],
+    *,
+    source: str,
+    tool_run_id: Optional[int],
 ) -> list[dict[str, Any]]:
-    """Match measurements to expectations, persist results, return records.
+    """Match measurements to open expectations and propose an actual for each.
+
+    **Writes nothing** (Sprint 879b, review DH-04). The previous helper saved
+    each match's value — an account's balance — into the workpaper during the
+    analysis request. Each proposal now carries a signed ``capture_token``; the
+    auditor saves it with ``POST .../analytical-expectations/capture-actuals``.
 
     ``measurements`` is a flat list of ``(target_type, target_label, actual)``
-    triples. Multiple triples may map to a single expectation if the auditor
-    used the same label across types (e.g., a "Revenue" account *and* a
-    "Revenue" balance) — first match wins, ordered by ``measurements`` input.
+    triples; first match wins per expectation. Only ``NOT_EVALUATED``
+    expectations get a proposal — a captured actual is cleared explicitly
+    ("Re-evaluate") before it can be replaced.
 
-    Only expectations currently in ``NOT_EVALUATED`` status are evaluated.
-    Expectations already within/exceeds are left untouched (the auditor
-    must explicitly clear via ``PATCH ... clear_result=true`` to re-run).
-
-    Returns a list of {expectation_id, target_type, target_label, actual,
-    variance, status} dicts in the order they were evaluated.
+    Returns {expectation_id, target_type, target_label, actual, variance,
+    status, capture_token} dicts in match order.
     """
-    # Verify access before any DB mutations — the manager's rule, the same
-    # one every engagement route uses (Sprint 853).
+    from shared.expectation_capture import sign_capture
+
+    # Verify access before reading — the manager's rule, the same one every
+    # engagement route uses (Sprint 853).
     if AnalyticalExpectationsManager(db)._verify_engagement_access(user_id, engagement_id) is None:
         return []
 
-    # Pull all NOT_EVALUATED expectations for this engagement once
     open_expectations = (
         db.query(AnalyticalExpectation)
         .filter(
@@ -73,25 +79,18 @@ def evaluate_expectations_against_measurements(
     if not open_expectations:
         return []
 
-    # Index by (target_type, normalized_label) for O(1) lookup
+    # Index by (target_type, normalized_label); keep the first registered
+    # expectation if the auditor duplicated a (type, label) pair.
     index: dict[tuple[ExpectationTargetType, str], AnalyticalExpectation] = {}
     for exp in open_expectations:
-        key = (exp.procedure_target_type, _normalize_label(exp.procedure_target_label))
-        # Keep the first registered expectation for a (type,label) pair if
-        # the auditor accidentally duplicated; the second one stays unevaluated
-        # and the auditor can re-evaluate manually via PATCH.
-        index.setdefault(key, exp)
+        index.setdefault((exp.procedure_target_type, _normalize_label(exp.procedure_target_label)), exp)
 
     results: list[dict[str, Any]] = []
     consumed: set[int] = set()
-    mgr = AnalyticalExpectationsManager(db)
-
     for target_type, label, actual in measurements:
-        key = (target_type, _normalize_label(label))
-        exp = index.get(key)
+        exp = index.get((target_type, _normalize_label(label)))
         if exp is None or exp.id in consumed:
             continue
-
         try:
             variance, status = evaluate_status(
                 actual_value=actual,
@@ -104,15 +103,6 @@ def evaluate_expectations_against_measurements(
         except ValueError:
             # Skip evaluations that hit edge conditions (e.g. percent vs zero)
             continue
-
-        # Persist via the manager so the audit-trail log_secure_operation
-        # fires consistently with manual updates.
-        mgr.update_expectation(
-            user_id=user_id,
-            expectation_id=exp.id,
-            result_actual_value=actual,
-        )
-
         results.append(
             {
                 "expectation_id": exp.id,
@@ -121,10 +111,17 @@ def evaluate_expectations_against_measurements(
                 "actual": float(actual),
                 "variance": float(variance),
                 "status": status.value,
+                "capture_token": sign_capture(
+                    user_id=user_id,
+                    engagement_id=engagement_id,
+                    expectation_id=exp.id,
+                    actual=actual,
+                    source=source,
+                    tool_run_id=tool_run_id,
+                ),
             }
         )
         consumed.add(exp.id)
-
     return results
 
 

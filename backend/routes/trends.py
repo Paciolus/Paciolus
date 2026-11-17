@@ -41,7 +41,7 @@ class IndustryRatiosResponse(BaseModel):
     ratios: dict
     summary_date: Optional[str] = None
     available_industries: list
-    expectations_evaluated: list[dict] = []  # Sprint 728c
+    proposed_actuals: list[dict] = []  # Sprint 879b (was expectations_evaluated)
 
 
 class RollingAnalysisResponse(BaseModel):
@@ -214,20 +214,20 @@ def get_client_industry_ratios(
         "industry_ratios_complete", f"Calculated {industry_result['industry']} ratios for client {client_id}"
     )
 
-    # Sprint 728c: ISA 520 evaluation against industry ratios
-    expectations_evaluated: list[dict[str, Any]] = []
+    # Sprint 879b (DH-04): propose ratio actuals for open ISA 520
+    # expectations; nothing is saved until the auditor captures them. Ratios
+    # come from stored client summaries, so there is no tool run.
+    proposed_actuals: list[dict[str, Any]] = []
     if engagement_id is not None:
-        from shared.expectation_evaluation import (
-            evaluate_expectations_against_measurements,
-            extract_ratio_measurements,
-        )
+        from shared.expectation_evaluation import extract_ratio_measurements, propose_expectation_actuals
 
-        measurements = extract_ratio_measurements(industry_result["ratios"])
-        expectations_evaluated = evaluate_expectations_against_measurements(
-            db=db,
-            user_id=current_user.id,
-            engagement_id=engagement_id,
-            measurements=measurements,
+        proposed_actuals = propose_expectation_actuals(
+            db,
+            current_user.id,
+            engagement_id,
+            extract_ratio_measurements(industry_result["ratios"]),
+            source="industry_ratios",
+            tool_run_id=None,
         )
 
     return {
@@ -239,7 +239,7 @@ def get_client_industry_ratios(
         "ratios": industry_result["ratios"],
         "summary_date": latest_summary.timestamp.isoformat() if latest_summary.timestamp else None,
         "available_industries": get_available_industries(),
-        "expectations_evaluated": expectations_evaluated,
+        "proposed_actuals": proposed_actuals,
     }
 
 

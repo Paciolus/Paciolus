@@ -54,8 +54,11 @@ def maybe_record_tool_run(
     *,
     consumes_upload: bool = False,
     flag_count: Optional[int] = None,
-) -> None:
+) -> Optional[int]:
     """Write a ToolActivity row, and (if engagement_id resolves) a ToolRun row.
+
+    Returns the ToolRun id, or None when no run was recorded (Sprint 879b: a
+    proposed expectation actual names the run that measured it).
 
     **Upload metering (Sprint 790).** When ``success`` is true and the caller
     passes ``consumes_upload=True``, the user's monthly upload counter advances
@@ -110,11 +113,11 @@ def maybe_record_tool_run(
         consume_upload(db, user_id, tool_name)
 
     if engagement is None or manager is None:
-        return
+        return None
 
     from engagement_model import ToolName, ToolRunStatus
 
-    manager.record_tool_run(
+    run = manager.record_tool_run(
         engagement_id=engagement_id,
         tool_name=ToolName(tool_name),
         status=ToolRunStatus.COMPLETED if success else ToolRunStatus.FAILED,
@@ -123,6 +126,7 @@ def maybe_record_tool_run(
         # Sprint 887 (OUT-20): items the run flagged (None = this tool reports no count).
         flag_count=flag_count if success else None,
     )
+    return run.id
 
 
 def consume_upload(db: Session, user_id: int, tool_name: str) -> None:

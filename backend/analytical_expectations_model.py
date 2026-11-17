@@ -37,7 +37,7 @@ from database import Base
 from shared.soft_delete import SoftDeleteMixin
 
 if TYPE_CHECKING:
-    from engagement_model import Engagement
+    from engagement_model import Engagement, ToolRun
     from models import User
 
 
@@ -118,8 +118,9 @@ class AnalyticalExpectation(SoftDeleteMixin, Base):
     # Auditor notes
     cpa_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Result — populated when the actual is captured (manually or via 728c
-    # tool-wiring auto-persist).
+    # Result — populated only when the auditor captures the actual: typed in
+    # (``actual_source="manual"``) or saved from a run's proposal (Sprint 879b,
+    # DH-04 — a run no longer writes it by itself).
     result_actual_value: Mapped[Decimal | None] = mapped_column(Numeric(19, 2), nullable=True)
     result_variance_amount: Mapped[Decimal | None] = mapped_column(Numeric(19, 2), nullable=True)
     result_status: Mapped[ExpectationResultStatus] = mapped_column(
@@ -128,6 +129,15 @@ class AnalyticalExpectation(SoftDeleteMixin, Base):
         default=ExpectationResultStatus.NOT_EVALUATED,
         index=True,
     )
+
+    # Where the captured actual came from (Sprint 879b): "manual", or the tool
+    # whose run proposed it, and that run when there was one.
+    actual_source: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    actual_source_tool_run_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("tool_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    actual_captured_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    actual_captured_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Audit trail
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
@@ -141,6 +151,7 @@ class AnalyticalExpectation(SoftDeleteMixin, Base):
     )
 
     creator: Mapped["User | None"] = relationship("User", foreign_keys=[created_by])
+    actual_source_tool_run: Mapped["ToolRun | None"] = relationship("ToolRun", foreign_keys=[actual_source_tool_run_id])
 
     __table_args__ = (Index("ix_analytical_expectations_eng_status", "engagement_id", "result_status"),)
 
@@ -183,6 +194,10 @@ class AnalyticalExpectation(SoftDeleteMixin, Base):
                 str(self.result_variance_amount) if self.result_variance_amount is not None else None
             ),
             "result_status": self.result_status.value if self.result_status else None,
+            "actual_source": self.actual_source,
+            "actual_source_tool_run_id": self.actual_source_tool_run_id,
+            "actual_captured_at": self.actual_captured_at.isoformat() if self.actual_captured_at else None,
+            "actual_captured_by": self.actual_captured_by,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_by": self.updated_by,
