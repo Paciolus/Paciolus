@@ -161,9 +161,14 @@ def _log_tool_activity(
 ) -> None:
     """Append a ToolActivity row for the unified dashboard feed (Sprint 579)."""
     from models import ToolActivity
+    from shared.activity_summary import validate_activity_summary
 
     display_name = get_filename_display(filename) if filename else None
-    summary_json = json.dumps(summary) if summary else None
+    # Sprint 879c (DH-05): approved aggregates only — the same validator as the
+    # API. Raises ActivitySummaryError (a programming error) before anything is
+    # written; not caught below, so a bad caller fails loudly in tests.
+    clean = validate_activity_summary(tool_name, summary) if summary else None
+    summary_json = json.dumps(clean) if clean else None
 
     try:
         activity = ToolActivity(

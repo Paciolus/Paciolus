@@ -389,7 +389,23 @@ memo render snapshot re-recorded (analytical-expectations entries only: "—" �
 frontend `tsc` + eslint clean, 4 suites / 32 tests.
 
 **879c — the activity summary accepts any content (DH-05, Critical)**
-- [ ] Confirm; per-tool aggregate schema shared by API and recorder; typed POST body; invalid stored summaries removed.
+- [x] Confirmed: `POST /activity/tool-log` took `summary` as a free 2,000-char query string and stored it verbatim;
+      `_log_tool_activity` serialised any dict. Only `trial_balance` passes a summary internally
+      (`was_balanced`, `anomaly_count`). **No frontend code calls `/activity/tool-log`** — no caller to update.
+- [x] `shared/activity_summary.py`: one schema per tool (18 engagement tools + 4 diagnostics), approved scalar
+      aggregates only (`extra="forbid"`, strict types, bounded counts, score 0–100); unknown tools, unknown/nested
+      fields, lists and strings rejected; the error lists allowed fields and never echoes input. Used by the API
+      (typed JSON body `ToolLogRequest`, query parameters gone) and the recorder (raises before writing). The feed
+      drops any stored summary that fails it. Migration `f879c3e5b7d2` sets every failing stored summary to NULL (rows
+      kept — less destructive than the permitted delete).
+- [x] Tests: `test_sprint_879_activity_summary.py` — balances, transaction/payroll rows, file text, nested, key-as-value
+      rejected at both entry points with nothing stored; valid round-trip through API and feed; query string ignored;
+      no submitted value in logs at DEBUG; migration run against SQLite. 7 failed before the fix.
+- [x] `scripts/openapi-snapshot.json` regenerated — covers 879b's fields too (879b's commit left it stale; the drift
+      check is advisory in CI).
+
+**Verification (879c):** activity/authorization/route-snapshot/parity suites 86 + 69 passed; OpenAPI drift clean;
+ruff clean; mypy 212.
 
 **879d — previewed files outlive 10 minutes (DH-07, High)**
 - [ ] Confirm; timed sweep per process, byte budget, per-user cap, purge on logout/deletion; miss → re-send.

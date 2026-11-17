@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
@@ -21,6 +21,12 @@ logger = logging.getLogger(__name__)
 from auth import require_current_user, require_verified_user
 from database import get_db
 from models import ActivityLog, Client, ToolActivity, User
+from shared.activity_summary import (
+    MAX_COUNT,
+    ActivitySummaryError,
+    load_stored_summary,
+    validate_activity_summary,
+)
 from shared.audit_chain import compute_chain_hash, previous_chain_hash, verify_audit_chain
 from shared.db_unit_of_work import db_transaction
 from shared.filenames import (
@@ -417,12 +423,8 @@ def get_tool_activity_feed(
 
     result = []
     for a in activities:
-        summary = None
-        if a.summary_json:
-            try:
-                summary = json.loads(a.summary_json)
-            except (json.JSONDecodeError, TypeError):
-                summary = None
+        # Sprint 879c: a stored summary that fails the schema is not shown.
+        summary = load_stored_summary(a.tool_name, a.summary_json)
 
         result.append(
             ToolActivityResponse(
@@ -438,20 +440,41 @@ def get_tool_activity_feed(
     return result
 
 
+class ToolLogRequest(BaseModel):
+    """Sprint 879c (DH-05): a typed JSON body — no values in the query string."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tool_name: str = Field(..., min_length=1, max_length=50)
+    filename: Optional[str] = Field(default=None, max_length=500)
+    record_count: Optional[int] = Field(default=None, ge=0, le=MAX_COUNT)
+    summary: Optional[dict[str, Any]] = None
+    engagement_id: Optional[int] = None
+
+    @model_validator(mode="after")
+    def _approved_summary(self) -> "ToolLogRequest":
+        try:
+            self.summary = validate_activity_summary(self.tool_name, self.summary)
+        except ActivitySummaryError as e:
+            raise ValueError(str(e)) from None
+        return self
+
+
 @router.post("/activity/tool-log", response_model=ToolActivityResponse, status_code=201)
 @limiter.limit(RATE_LIMIT_WRITE)
 def log_tool_activity(
     request: Request,
-    tool_name: str = Query(..., min_length=1, max_length=50),
-    filename: Optional[str] = Query(default=None, max_length=500),
-    record_count: Optional[int] = Query(default=None),
-    summary: Optional[str] = Query(default=None, max_length=2000),
-    engagement_id: Optional[int] = Query(default=None),
+    data: ToolLogRequest,
     current_user: User = Depends(require_current_user),
     db: Session = Depends(get_db),
 ) -> ToolActivityResponse:
-    """Log a tool execution to the unified activity feed."""
-    display_name = get_filename_display(filename) if filename else None
+    """Log a tool execution to the unified activity feed.
+
+    Sprint 879c: the summary must be an approved aggregate for the tool
+    (``shared.activity_summary``) — the same validator the internal recorder uses.
+    """
+    display_name = get_filename_display(data.filename) if data.filename else None
+    engagement_id = data.engagement_id
 
     # Sprint 848 (security review L1): attach the engagement only if this user
     # can see it, as shared.tool_run_recorder does. Storing the raw ID made an
@@ -465,10 +488,10 @@ def log_tool_activity(
 
     db_activity = ToolActivity(
         user_id=current_user.id,
-        tool_name=tool_name,
+        tool_name=data.tool_name,
         filename_display=display_name,
-        record_count=record_count,
-        summary_json=summary,
+        record_count=data.record_count,
+        summary_json=json.dumps(data.summary) if data.summary else None,
         engagement_id=engagement_id,
     )
 
@@ -480,20 +503,13 @@ def log_tool_activity(
         db.add(db_activity)
     db.refresh(db_activity)
 
-    parsed_summary = None
-    if db_activity.summary_json:
-        try:
-            parsed_summary = json.loads(db_activity.summary_json)
-        except (json.JSONDecodeError, TypeError):
-            pass
-
     return ToolActivityResponse(
         id=db_activity.id,
         tool_name=db_activity.tool_name,
         tool_label=TOOL_LABELS.get(db_activity.tool_name, db_activity.tool_name),
         filename=db_activity.filename_display,
         record_count=db_activity.record_count,
-        summary=parsed_summary,
+        summary=load_stored_summary(db_activity.tool_name, db_activity.summary_json),
         created_at=db_activity.timestamp.isoformat(),
     )
 

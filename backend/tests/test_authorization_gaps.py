@@ -188,7 +188,7 @@ class TestToolLogEngagement:
     async def _log(self, engagement_id: int) -> int:
         async with _client() as client:
             r = await client.post(
-                "/activity/tool-log", params={"tool_name": "journal_entry_testing", "engagement_id": engagement_id}
+                "/activity/tool-log", json={"tool_name": "journal_entry_testing", "engagement_id": engagement_id}
             )
         assert r.status_code == 201, r.text
         return r.json()["id"]
