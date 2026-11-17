@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from export_share_model import ExportShare
 from models import UserTier
 from shared import export_share_storage
+from shared.export_provenance import sign_export
 
 VALID_PDF_BYTES = b"%PDF-1.4 sprint611 test content"
 
@@ -161,6 +162,7 @@ class TestCreateShareUsesR2:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
         finally:
@@ -206,6 +208,7 @@ class TestCreateShareUsesR2:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 token = create.json()["share_token"]
@@ -242,6 +245,7 @@ class TestCreateShareUsesR2:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 token = create.json()["share_token"]
@@ -279,6 +283,7 @@ class TestCreateShareUsesR2:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 token = create.json()["share_token"]
@@ -459,6 +464,7 @@ class TestProductionNeverFallsBackToTheDatabase:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
         finally:

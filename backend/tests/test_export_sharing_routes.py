@@ -15,6 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
+from shared.export_provenance import sign_export
 
 # Sprint 812: exercise these routes with the rate limiter ON (see conftest.limiter_enabled).
 pytestmark = pytest.mark.usefixtures("limiter_enabled")
@@ -68,6 +69,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
@@ -99,6 +101,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "xlsx",
                         "export_data_b64": base64.b64encode(VALID_XLSX_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="xlsx", data=VALID_XLSX_BYTES),
                     },
                 )
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
@@ -128,6 +131,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "csv",
                         "export_data_b64": base64.b64encode(VALID_CSV_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="csv", data=VALID_CSV_BYTES),
                     },
                 )
             assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
@@ -157,6 +161,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(RANDOM_BINARY).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=RANDOM_BINARY),
                     },
                 )
             assert resp.status_code == 400
@@ -187,6 +192,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "xlsx",
                         "export_data_b64": base64.b64encode(EXE_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="xlsx", data=EXE_BYTES),
                     },
                 )
             assert resp.status_code == 400
@@ -216,6 +222,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "csv",
                         "export_data_b64": base64.b64encode(BINARY_AS_CSV).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="csv", data=BINARY_AS_CSV),
                     },
                 )
             assert resp.status_code == 400
@@ -246,6 +253,7 @@ class TestExportSharingMagicByteValidation:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 assert resp.status_code == 200
@@ -332,6 +340,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "passcode": "StrongP@ss1",
                     },
                 )
@@ -365,6 +374,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "passcode": "StrongP@ss1",
                     },
                 )
@@ -403,6 +413,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "passcode": "StrongP@ss1",
                     },
                 )
@@ -448,6 +459,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "passcode": "StrongP@ss1",
                     },
                 )
@@ -485,6 +497,7 @@ class TestExportSharingPasscode:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 assert resp.status_code == 200
@@ -528,6 +541,7 @@ class TestExportSharingSingleUse:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "single_use": True,
                     },
                 )
@@ -559,6 +573,7 @@ class TestExportSharingSingleUse:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                         "single_use": True,
                     },
                 )
@@ -599,6 +614,7 @@ class TestExportSharingSingleUse:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 assert resp.status_code == 200
@@ -642,6 +658,7 @@ class TestExportSharingSecurityHeaders:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 assert resp.status_code == 200
@@ -689,6 +706,7 @@ class TestExportSharingTierTTL:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
             assert resp.status_code == 200
@@ -725,6 +743,7 @@ class TestExportSharingTierTTL:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
             assert resp.status_code == 200
@@ -771,6 +790,7 @@ class TestExportSharingAnomalyLogging:
                         "tool_name": "trial_balance",
                         "export_format": "pdf",
                         "export_data_b64": base64.b64encode(VALID_PDF_BYTES).decode(),
+                        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF_BYTES),
                     },
                 )
                 assert resp.status_code == 200

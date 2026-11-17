@@ -21,6 +21,7 @@ from typing import Any
 
 from fastapi.responses import Response, StreamingResponse
 
+from shared.export_provenance import DIGEST_HEADER, digest_header_value, format_for_media_type
 from shared.filenames import content_disposition, number_cell
 
 MEDIA_PDF = "application/pdf"
@@ -50,14 +51,17 @@ def attachment_response(
     """
     body = content.encode("utf-8") if isinstance(content, str) else content
     disposition = content_disposition(filename, quote_filename=quote_filename)
-    return StreamingResponse(
-        iter([body]),
-        media_type=media_type,
-        headers={
-            "Content-Disposition": disposition,
-            "Content-Length": str(len(body)),
-        },
-    )
+    headers = {
+        "Content-Disposition": disposition,
+        "Content-Length": str(len(body)),
+    }
+    # Sprint 880 (OUT-03): record what the server produced, so a share can prove
+    # its bytes are this export. SecurityHeadersMiddleware swaps this internal
+    # header for a signed token bound to the signed-in user (or drops it).
+    export_format = format_for_media_type(media_type)
+    if export_format is not None:
+        headers[DIGEST_HEADER] = digest_header_value(export_format, body)
+    return StreamingResponse(iter([body]), media_type=media_type, headers=headers)
 
 
 def pdf_response(pdf_bytes: bytes, filename: str) -> Response:

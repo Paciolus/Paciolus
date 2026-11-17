@@ -479,8 +479,11 @@ shared.
       before the bytes are stored; cleared once the upload lands; pending rows never served or listed; the purge
       removes a pending row's file then the row after 10 min; hourly `reconcile_export_share_objects` deletes
       `shares/` objects no row points at (warns `export_share_untracked_objects`).
-- [ ] **5C (OUT-03)** — shared PDF/XLSX/CSV must match a signed, short-lived digest the server issued to that user
-      when it produced the export.
+- [x] **5C (OUT-03)** — shared PDF/XLSX/CSV must match a signed, short-lived digest the server issued to that user
+      when it produced the export (`shared/export_provenance.py`, 15-min HMAC token in `X-Paciolus-Export-Token`,
+      issued by `SecurityHeadersMiddleware` from the digest `attachment_response` records; CORS exposes it). Share
+      create requires `export_token`; the stored file is byte-for-byte the export. Sprint 852's CSV re-write is
+      retired (generated CSVs are already escaped by `SafeCsvWriter`). OpenAPI snapshot regenerated.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

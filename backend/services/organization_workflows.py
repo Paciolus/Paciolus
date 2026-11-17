@@ -219,6 +219,15 @@ def remove_member(db: Session, user: User, member_id: int) -> None:
     db.delete(member)
     db.commit()
 
+    # Sprint 880 (DH-08): the revoked links' files go now. A failed delete is
+    # retried by the share purge (every 10 minutes), which keeps the row until
+    # storage confirms.
+    from shared import export_share_storage
+
+    for key in revoked:
+        if key:
+            export_share_storage.delete(key)
+
     logger.info(
-        "Member removed: org_id=%s user_id=%s by=%s shares_revoked=%d", org.id, member.user_id, user.id, revoked
+        "Member removed: org_id=%s user_id=%s by=%s shares_revoked=%d", org.id, member.user_id, user.id, len(revoked)
     )

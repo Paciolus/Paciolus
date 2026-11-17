@@ -30,6 +30,7 @@ from main import app
 from models import User, UserTier
 from organization_model import Organization, OrganizationMember, OrgRole
 from shared import export_share_storage
+from shared.export_provenance import sign_export
 from shared.parser_metrics import PARSER_REGISTRY
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
@@ -115,6 +116,7 @@ async def _create_share(api: httpx.AsyncClient, user: User, data: bytes = PDF_BY
             "tool_name": "trial_balance",
             "export_format": fmt,
             "export_data_b64": base64.b64encode(data).decode(),
+            "export_token": sign_export(user_id=user.id, export_format=fmt, data=data),
         },
         headers=_auth(user),
     )
@@ -428,6 +430,7 @@ async def _create_expecting_500(db: Session, user: User) -> None:
                     "tool_name": "trial_balance",
                     "export_format": "pdf",
                     "export_data_b64": base64.b64encode(PDF_BYTES).decode(),
+                    "export_token": sign_export(user_id=user.id, export_format="pdf", data=PDF_BYTES),
                 },
                 headers=_auth(user),
             )
@@ -565,3 +568,144 @@ class TestReconciliation:
         finally:
             cleanup_scheduler._scheduler = None
         assert "reconcile_export_share_objects" in ids
+
+
+# ---------------------------------------------------------------------------
+# 5C — only files Paciolus generated can be shared
+# ---------------------------------------------------------------------------
+
+_LOAN = {"principal": "120000", "annual_rate": "0.06", "term_periods": 12}
+_TOKEN_HEADER = "X-Paciolus-Export-Token"
+
+# A structurally valid PDF whose catalog runs JavaScript on open.
+_ACTIVE_PDF = (
+    b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R/OpenAction 3 0 R>>endobj\n"
+    b"2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\n"
+    b"3 0 obj<</S/JavaScript/JS(app.alert('x'))>>endobj\n"
+    b"trailer<</Root 1 0 R>>\n%%EOF\n"
+)
+
+
+def _active_xlsx() -> bytes:
+    """A real workbook whose first cell is a live HYPERLINK formula."""
+    from openpyxl import Workbook
+
+    from shared.xlsx_in_memory import workbook_to_bytes
+
+    wb = Workbook()
+    wb.active["A1"] = '=HYPERLINK("https://attacker.example/","Open report")'
+    return workbook_to_bytes(wb)
+
+
+async def _export(api: httpx.AsyncClient, user: User, fmt: str) -> httpx.Response:
+    r = await api.post(f"/audit/loan-amortization/export.{fmt}", json=_LOAN, headers=_auth(user))
+    assert r.status_code == 200, r.text
+    return r
+
+
+async def _share(api: httpx.AsyncClient, user: User, data: bytes, fmt: str, export_token: str | None) -> httpx.Response:
+    body: dict[str, Any] = {
+        "tool_name": "loan_amortization",
+        "export_format": fmt,
+        "export_data_b64": base64.b64encode(data).decode(),
+    }
+    if export_token is not None:
+        body["export_token"] = export_token
+    return await api.post("/export-sharing/create", json=body, headers=_auth(user))
+
+
+class TestOnlyGeneratedFilesCanBeShared:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("fmt", ["pdf", "xlsx", "csv"])
+    async def test_accepted_share_is_the_generated_export_byte_for_byte(
+        self, api: httpx.AsyncClient, make_user: Any, fake_r2: _FakeR2, fmt: str
+    ) -> None:
+        user = make_user(email=f"s880_bytes_{fmt}@example.com", tier=UserTier.PROFESSIONAL)
+        export = await _export(api, user, fmt)
+        token = export.headers.get(_TOKEN_HEADER)
+        assert token, "export responses carry a provenance token for the signed-in user"
+
+        r = await _share(api, user, export.content, fmt, token)
+        assert r.status_code == 200, r.text
+        share_token = r.json()["share_token"]
+
+        assert fake_r2.objects[_key(share_token)] == export.content
+        download = await api.get(f"/export-sharing/{share_token}")
+        assert download.status_code == 200
+        assert download.content == export.content
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("fmt", "make"), [("pdf", lambda: _ACTIVE_PDF), ("xlsx", _active_xlsx)])
+    async def test_arbitrary_files_with_active_content_are_rejected(
+        self, api: httpx.AsyncClient, make_user: Any, fake_r2: _FakeR2, fmt: str, make: Any
+    ) -> None:
+        user = make_user(email=f"s880_active_{fmt}@example.com", tier=UserTier.PROFESSIONAL)
+        data = make()
+        genuine = (await _export(api, user, fmt)).headers[_TOKEN_HEADER]
+
+        # No token, a forged token, and a genuine token for a different file.
+        assert (await _share(api, user, data, fmt, None)).status_code in (400, 422)
+        assert (await _share(api, user, data, fmt, "forged.token")).status_code == 400
+        assert (await _share(api, user, data, fmt, genuine)).status_code == 400
+        assert fake_r2.objects == {}
+
+    @pytest.mark.asyncio
+    async def test_a_token_issued_to_another_user_is_rejected(
+        self, api: httpx.AsyncClient, make_user: Any, fake_r2: _FakeR2
+    ) -> None:
+        alice = make_user(email="s880_alice@example.com", tier=UserTier.PROFESSIONAL)
+        bob = make_user(email="s880_bob@example.com", tier=UserTier.PROFESSIONAL)
+        export = await _export(api, alice, "pdf")
+        r = await _share(api, bob, export.content, "pdf", export.headers[_TOKEN_HEADER])
+        assert r.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_a_token_for_another_format_is_rejected(
+        self, api: httpx.AsyncClient, make_user: Any, fake_r2: _FakeR2
+    ) -> None:
+        user = make_user(email="s880_fmt@example.com", tier=UserTier.PROFESSIONAL)
+        export = await _export(api, user, "csv")
+        r = await _share(api, user, export.content, "pdf", export.headers[_TOKEN_HEADER])
+        assert r.status_code == 400
+
+    def test_an_expired_token_is_rejected(self) -> None:
+        import time
+
+        from shared.export_provenance import (
+            EXPORT_TOKEN_TTL_SECONDS,
+            ExportProvenanceError,
+            sign_export,
+            verify_export,
+        )
+
+        issued = time.time() - EXPORT_TOKEN_TTL_SECONDS - 1
+        token = sign_export(user_id=7, export_format="pdf", data=PDF_BYTES, now=issued)
+        with pytest.raises(ExportProvenanceError):
+            verify_export(token, user_id=7, export_format="pdf", data=PDF_BYTES)
+        assert EXPORT_TOKEN_TTL_SECONDS <= 30 * 60  # short-lived
+
+    @pytest.mark.asyncio
+    async def test_the_internal_digest_header_never_leaves_the_server(
+        self, api: httpx.AsyncClient, make_user: Any
+    ) -> None:
+        from shared.export_provenance import DIGEST_HEADER
+
+        user = make_user(email="s880_hdr@example.com", tier=UserTier.PROFESSIONAL)
+        export = await _export(api, user, "xlsx")
+        assert DIGEST_HEADER not in export.headers
+
+    @pytest.mark.asyncio
+    async def test_browsers_may_read_the_token_header_cross_origin(
+        self, api: httpx.AsyncClient, make_user: Any
+    ) -> None:
+        from config import CORS_ORIGINS
+
+        user = make_user(email="s880_cors@example.com", tier=UserTier.PROFESSIONAL)
+        r = await api.post(
+            "/audit/loan-amortization/export.pdf",
+            json=_LOAN,
+            headers={**_auth(user), "Origin": CORS_ORIGINS[0]},
+        )
+        assert r.status_code == 200
+        exposed = r.headers.get("access-control-expose-headers", "").lower()
+        assert _TOKEN_HEADER.lower() in exposed

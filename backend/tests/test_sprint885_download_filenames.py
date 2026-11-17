@@ -107,7 +107,9 @@ def share_client(db_session, make_user):
     user = make_user(email="sprint885_share_names@example.com", tier=UserTier.PROFESSIONAL)
     app.dependency_overrides[require_verified_user] = lambda: user
     app.dependency_overrides[get_db] = lambda: db_session
-    yield httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+    client.share_user = user  # Sprint 880 (OUT-03): a share needs the server's signature for this user
+    yield client
     app.dependency_overrides.clear()
 
 
@@ -116,13 +118,17 @@ class TestSharedDownloads:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("label", list(NAMES))
     async def test_shared_download(self, share_client, label):
+        from shared.export_provenance import sign_export
+
+        pdf = b"%PDF-1.4 test"
         async with share_client as client:
             created = await client.post(
                 "/export-sharing/create",
                 json={
                     "tool_name": NAMES[label][:100],
                     "export_format": "pdf",
-                    "export_data_b64": base64.b64encode(b"%PDF-1.4 test").decode(),
+                    "export_data_b64": base64.b64encode(pdf).decode(),
+                    "export_token": sign_export(user_id=share_client.share_user.id, export_format="pdf", data=pdf),
                 },
             )
             assert created.status_code == 200, created.text

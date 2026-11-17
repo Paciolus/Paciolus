@@ -90,9 +90,5 @@ class TestNumberCell:
         assert _write([number_cell(float("-inf"), ".2f")]) == ["'-inf"]
 
 
-class TestUntypedShareRewrite:
-    def test_client_supplied_csv_keeps_numbers_and_escapes_formulas(self):
-        from routes.export_sharing import _rewrite_csv_share
-
-        out = _rewrite_csv_share(b"Account,Amount\r\n=1+1,-123.45\r\n").decode("utf-8")
-        assert list(csv.reader(io.StringIO(out))) == [["Account", "Amount"], ["'=1+1", "-123.45"]]
+# Sprint 880 (OUT-03) removed the client-supplied CSV rewrite: only files Paciolus generated (and
+# signed) can be shared, and the server's CSV writer already escapes them. See test_sprint_880_share_lifecycle.

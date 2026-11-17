@@ -13,9 +13,7 @@ Sprint 593: Passcode protection, single-use mode, security headers,
 Route group prefix: /export-sharing
 """
 
-import csv
 import hashlib
-import io
 import logging
 import re
 import secrets
@@ -36,7 +34,8 @@ from models import User
 from security_middleware import get_client_ip, hash_ip_address
 from shared import export_share_storage
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
-from shared.filenames import SafeCsvWriter, content_disposition, truncate_utf8
+from shared.export_provenance import ExportProvenanceError, verify_export
+from shared.filenames import content_disposition, truncate_utf8
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.passcode_security import (
     PASSCODE_MAX_LENGTH,
@@ -73,6 +72,14 @@ class CreateShareRequest(BaseModel):
     tool_name: str = Field(..., max_length=100)
     export_format: str = Field(..., pattern="^(pdf|xlsx|csv)$")
     export_data_b64: str = Field(..., description="Base64-encoded export file bytes")
+    export_token: str = Field(
+        ...,
+        max_length=1024,
+        description=(
+            "The X-Paciolus-Export-Token header from the export response these bytes came from. "
+            "Only files Paciolus generated for you in the last 15 minutes can be shared."
+        ),
+    )
     # Passcode length range is echoed from shared.passcode_security so clients
     # see one authoritative policy boundary.  Strength rules (char classes)
     # are enforced at runtime — Pydantic cannot express "3 of 4 classes".
@@ -152,27 +159,6 @@ def _validate_export_magic_bytes(export_bytes: bytes, export_format: str) -> Non
             status_code=400,
             detail=f"Export content does not match declared {export_format.upper()} format.",
         )
-
-
-def _rewrite_csv_share(export_bytes: bytes) -> bytes:
-    """Re-write a client-supplied CSV share through ``SafeCsvWriter``.
-
-    Sprint 852 (security review L8): share bytes come from the client, so a
-    CSV share could carry ``=HYPERLINK(...)``-style cells that a recipient's
-    spreadsheet would execute. Re-writing every cell through the server's
-    formula escaping neutralizes that. Escaping is idempotent (an escaped cell
-    starts with ``'``), so exports Paciolus generated round-trip unchanged
-    apart from normalized quoting and CRLF row endings. A UTF-8 BOM is kept.
-    """
-    has_bom = export_bytes.startswith(b"\xef\xbb\xbf")
-    try:
-        text = export_bytes.decode("utf-8-sig")
-        rows = list(csv.reader(io.StringIO(text, newline="")))
-    except (UnicodeDecodeError, csv.Error):
-        raise HTTPException(status_code=400, detail="Export content is not a valid UTF-8 CSV file.")
-    out = io.StringIO(newline="")
-    SafeCsvWriter(out, untyped=True).writerows(rows)
-    return out.getvalue().encode("utf-8-sig" if has_bom else "utf-8")
 
 
 def _resolve_share_or_404(token: str, db: Session) -> ExportShare:
@@ -437,15 +423,23 @@ def create_share(
     if len(export_bytes) > 50 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Export data exceeds 50MB limit.")
 
-    # Validate content matches declared format (provenance check)
+    # Validate content matches declared format
     _validate_export_magic_bytes(export_bytes, body.export_format)
 
-    # Sprint 852 (security review L8): shared exports are client-supplied bytes.
-    # CSV shares are re-written with server-side formula escaping. PDF and XLSX
-    # shares are still stored as the client sent them (magic bytes checked
-    # only); the long-term fix is generating shared exports on the server.
-    if body.export_format == "csv":
-        export_bytes = _rewrite_csv_share(export_bytes)
+    # Sprint 880 (OUT-03): only files Paciolus generated can be shared. The bytes
+    # must match a signed, short-lived digest the server issued to this user
+    # when it produced the export, so the stored file is byte-for-byte that
+    # export — never a client-made PDF or workbook. This supersedes Sprint 852's
+    # CSV re-write: generated CSVs are already formula-escaped, and re-writing
+    # would change their bytes.
+    try:
+        verify_export(body.export_token, user_id=user.id, export_format=body.export_format, data=export_bytes)
+    except ExportProvenanceError as exc:
+        logger.info("Export share refused: provenance check failed; user_id=%s", user.id)
+        raise HTTPException(
+            status_code=400,
+            detail="Only exports Paciolus generated for you can be shared. Export the report again, then share it.",
+        ) from exc
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()

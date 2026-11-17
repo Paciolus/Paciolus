@@ -242,6 +242,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With", "Accept"],
+    # Sprint 880 (OUT-03): the browser must be able to read the export token to share an export.
+    expose_headers=["X-Paciolus-Export-Token"],
 )
 
 # GZip compression for responses > 500 bytes

@@ -10329,6 +10329,12 @@
             "title": "Export Format",
             "type": "string"
           },
+          "export_token": {
+            "description": "The X-Paciolus-Export-Token header from the export response these bytes came from. Only files Paciolus generated for you in the last 15 minutes can be shared.",
+            "maxLength": 1024,
+            "title": "Export Token",
+            "type": "string"
+          },
           "passcode": {
             "anyOf": [
               {
@@ -10358,7 +10364,8 @@
         "required": [
           "tool_name",
           "export_format",
-          "export_data_b64"
+          "export_data_b64",
+          "export_token"
         ],
         "title": "CreateShareRequest",
         "type": "object"

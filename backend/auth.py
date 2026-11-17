@@ -361,6 +361,9 @@ def require_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+    # Sprint 880 (OUT-03): the export-provenance step in SecurityHeadersMiddleware
+    # signs export tokens for this user; request.state is shared with it.
+    request.state.user_id = user.id
     return user
 
 

@@ -178,6 +178,7 @@ class TestBruteForceThrottle:
 # ---------------------------------------------------------------------------
 
 from models import UserTier  # noqa: E402
+from shared.export_provenance import sign_export  # noqa: E402
 
 VALID_PDF = b"%PDF-1.4 integration test"
 
@@ -209,6 +210,7 @@ async def _create_share(
         "tool_name": "trial_balance",
         "export_format": "pdf",
         "export_data_b64": base64.b64encode(VALID_PDF).decode(),
+        "export_token": sign_export(user_id=user.id, export_format="pdf", data=VALID_PDF),
     }
     if passcode is not None:
         payload["passcode"] = passcode

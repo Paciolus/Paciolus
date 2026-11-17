@@ -38,6 +38,27 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
+def _issue_export_token(request: Request, response: Response) -> None:
+    """Swap the internal export-digest header for a signed token, or drop it.
+
+    Sprint 880 (OUT-03): ``shared.export_helpers`` marks each generated export
+    with its digest; the token is issued only to the signed-in user recorded by
+    ``require_current_user``. The digest header itself never leaves the server.
+    """
+    from shared.export_provenance import DIGEST_HEADER, TOKEN_HEADER, sign_from_digest_header
+
+    digest = response.headers.get(DIGEST_HEADER)
+    if digest is None:
+        return
+    del response.headers[DIGEST_HEADER]
+    user_id = getattr(request.state, "user_id", None)
+    if user_id is None or getattr(request.state, "impersonation", False):
+        return
+    token = sign_from_digest_header(int(user_id), digest)
+    if token is not None:
+        response.headers[TOKEN_HEADER] = token
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
     Middleware to add security headers to all responses.
@@ -78,6 +99,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # overriding a route that chose its own policy.
         if "attachment" in response.headers.get("content-disposition", "").lower():
             response.headers.setdefault("Cache-Control", "no-store")
+
+        _issue_export_token(request, response)
 
         # Production-only headers
         if self.production_mode:
