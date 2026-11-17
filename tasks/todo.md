@@ -87,7 +87,7 @@
 >       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; code complete,
 >       local branch stacked on 878, not pushed.
 > - [ ] **Sprint 880** — shared export links: file deleted within an hour of the link ending, no untracked files after a
->       failed create, only Paciolus-generated files can be shared. Security; in progress, stacked on 879.
+>       failed create, only Paciolus-generated files can be shared. Security; code complete, local branch stacked on 879, not pushed.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -462,7 +462,7 @@ flux page sends no engagement id); the preview cache never saves an upload (the 
 it would retire DH-07 — kept per CEO decision; remove `REDACT_LOG_TRACEBACKS` on Render if set (now a no-op).
 
 ### Sprint 880: Shared export links — retention, cleanup and file provenance (DH-08, DH-09, OUT-03)
-**Status:** IN PROGRESS — started 2026-11-16 on local branch `sprint-880-share-links` (stacked on Sprint 879; not pushed).
+**Status:** COMPLETE — 2026-11-16 on local branch `sprint-880-share-links` (stacked on Sprint 879; not pushed).
 **Priority:** P0/P1 (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`.
 **Agents:** Guardian (lead), Executor, Critic.
 
@@ -484,6 +484,16 @@ shared.
       issued by `SecurityHeadersMiddleware` from the digest `attachment_response` records; CORS exposes it). Share
       create requires `export_token`; the stored file is byte-for-byte the export. Sprint 852's CSV re-write is
       retired (generated CSVs are already escaped by `SafeCsvWriter`). OpenAPI snapshot regenerated.
+
+**Commit SHA:** 5A `3afb5f93` · 5B `d6666e17` · 5C `5a29fc38`.
+**Verification (2026-11-16, on `5a29fc38`, detached check worktree):** full backend suite **10,921 passed / 1 skipped /
+0 failed**; frontend Jest 216 suites / 2,130 tests, `tsc` clean; `npm run build` compiles, then stops only at Next's
+advisory check (known; hotfix: next >= 16.4.5); ruff 0; mypy 212; Alembic single head `b880e5a7d9f1`; OpenAPI drift clean.
+**Outside the code:** R2 lifecycle rule on prefix `shares/` in `paciolus-exports` (backstop, e.g. delete after 3 days);
+apply migration `b880e5a7d9f1`; after deploy, check logs for `R2 export-share list failed` (the token must allow listing).
+**Follow-ups found:** `useExportSharing.createShare` posts the wrong field names and no UI calls it; a sharing UI must
+send `export_token` from the export response. XLSX exports escape formula triggers per call, with no writer-level
+guard or test like `SafeCsvWriter`'s.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

@@ -282,3 +282,12 @@
   reads the record before any handler. But don't strip `exc_info` to do it: Sentry needs it for stack frames (its own
   scrubber removes the message). Pre-set `record.exc_text` to the safe summary; `logging.Formatter` renders a pre-set
   `exc_text` instead of the traceback. An existing test that asserted `exc_info` survived caught the first version.
+- **2026-11-16 (Sprint 880):** SQLAlchemy drops an explicit `None` from the INSERT for any column that has a `default`
+  or `server_default`, so the default fires: `ExportShare(stored_at=None)` was saved with "now". A "pending" marker
+  modelled as a nullable timestamp with a default silently never pends. Model the exceptional state as a NOT NULL flag
+  whose default is the normal state (`upload_pending=False`) and set the exception explicitly — and test that the
+  pending row really is pending after commit.
+- **2026-11-16 (Sprint 880):** a value a dependency puts on `request.state` is visible to `BaseHTTPMiddleware` after
+  `call_next` (they share the ASGI scope's state), which is how the export token is bound to the signed-in user without
+  touching 49 export routes. Tests that override `require_verified_user` with a lambda skip that line, so anything that
+  depends on it must be tested with real Bearer auth (`create_access_token`), overriding only `get_db`.
