@@ -514,7 +514,8 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       `remove_seats`: with no seat add-on item they changed the **plan** item's quantity (billing the plan again per
       seat); now the first add-on creates the seat item and a remove without one refuses. Six tests that encoded the
       old model rewritten.
-- [ ] **6B (AZ-08)** — seat allowance derived from status and plan; inactive → 1.
+- [x] **6B (AZ-08)** — seat allowance derived from status and plan; anything but active/trialing → 1 (members kept;
+      invite and accept refused). Tests: canceled, past_due, unpaid, incomplete_expired, paused.
 - [ ] **6C (AZ-09)** — checkout refuses a new subscription while a non-terminal one exists; plan/interval change
       updates the existing subscription; purchase admission serialized with a durable checkout record; sync flags a
       conflicting Stripe subscription ID.

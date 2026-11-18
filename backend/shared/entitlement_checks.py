@@ -696,13 +696,16 @@ def check_seat_limit_for_org(db: Session, org_id: int, exclude_invite_id: int | 
             consumed (it converts from pending to accepted, not adding a new seat).
     """
     from organization_model import OrganizationMember
+    from subscription_model import SubscriptionStatus
 
     sub, entitlements = _resolve_org_subscription(db, org_id)
 
-    if sub is not None:
+    # Sprint 881 (AZ-08): the paid allocation holds only while the subscription is
+    # active or trialing. Cancelled, past due, unpaid, paused or incomplete leaves
+    # the Free allowance — existing members stay, no new seat is reserved or taken.
+    if sub is not None and sub.status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING):
         total_seats = sub.total_seats
     else:
-        # No subscription — enforce free-tier default cap
         total_seats = _FREE_TIER_SEAT_CAP
 
     if total_seats <= 0:
