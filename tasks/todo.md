@@ -37,6 +37,7 @@
 | `routes/billing.py::stripe_webhook` decomposition (signature-verify / dedup / error-mapping triad) | Already touched lightly in the 2026-04-20 refactor pass; full extraction pairs better with the deferred webhook-coverage sprint flagged in Sprint 676 review (handler is currently exercised by 6 route-test files but lacks unit coverage). Bundle both then. | Refactor Pass 2026-04-20 |
 | `useTrialBalanceUpload` decomposition into composable hooks | Hook's state machine (progress indicator, recalc debounce, mapping-required preflight handoff) is tightly coupled to consumer semantics. Not a drop-in extraction — needs Playwright coverage of the mapping-required flow before a split is safe. | Refactor Pass 2026-04-20 |
 | `routes/auth_routes.py` cookie/CSRF helper extraction | Module is already reasonably thin; cookie/token primitives (`_set_refresh_cookie`, `_set_access_cookie`, etc.) are security-critical. Touching them without a specific bug or audit finding is net-negative. Revisit only if a follow-up auth/CSRF audit produces an actionable finding. | Refactor Pass 2026-04-20 |
+| PDF fonts for Chinese, Japanese and Korean (lowest priority) | Sprint 885 (10G) embeds openly licensed fonts for Latin with accents, Greek and Cyrillic; other scripts print a visible replacement character with a note in the document. CJK fonts are large (10–20 MB each) and deferred by CEO decision 2026-11-18. | Sprint 885 / review OUT-25 |
 
 ---
 
@@ -88,6 +89,8 @@
 > - [ ] **Sprint 884** — rounding, precision loss and totals that disagree with their detail (review TQ-12, TQ-13,
 >       OUT-04/05/06/19/23). Local branch, stacked on Sprint 883 — merge 883 first, then push both. Follow-ups are
 >       listed under the sprint.
+> - [ ] **Sprint 885** — exported CSV/Excel/PDF files: formula injection, PDF restyling, non-ASCII download names,
+>       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -357,6 +360,27 @@ detail is computed from the detail as displayed.
       **Still over 100%, not from double counting:** the sample payload carries no `total_revenue`, so the memo takes
       its denominator from the first test detail with `total_revenue`/`gross_revenue`, which is smaller than the
       flagged entries' absolute amounts. Not changed; needs its own item.
+
+### Sprint 885: Exported CSV, Excel and PDF files are safe to open and render correctly
+**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-885-export-safety`, stacked on Sprint 884 (`4eaac54f`); not pushed.
+**Priority:** P0 (two Critical findings: uploaded text becomes a live spreadsheet formula). **Source:** read-only review
+at `ef5e567` (OUT-01, OUT-02, OUT-33, OUT-24, OUT-28, OUT-34, OUT-25, OUT-26, OUT-27). **Agents:** Executor, Guardian, Critic.
+**Decided (CEO, 2026-11-18):** PDF fonts cover Latin with accents, Greek and Cyrillic now, with openly licensed fonts;
+Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
+- [x] **10A / OUT-01 — convergence CSV through the safe writer.** `export_convergence_csv` wrote
+      `f"{account},{count},{tools}
+"`, so "Operating Expense,=1+1" became two cells, the second a live formula, and a
+      quote or line break broke the record. Each row now goes through `safe_csv_writer` as three values (count an int).
+      Reproduced first: 3 of 3 in `test_sprint885_convergence_csv.py` failed over HTTP (commas, quotes, LF, CRLF,
+      `;@`, `=HYPERLINK`, `,+1,-2`).
+- [ ] **10B / OUT-02 — every Excel cell through one typed writer.**
+- [ ] **10C / OUT-33 — CSV text protected by column, not by content.**
+- [ ] **10D / OUT-24 — uploaded text cannot restyle a PDF.**
+- [ ] **10E / OUT-28 — non-ASCII download names.**
+- [ ] **10F / OUT-34 — document properties name Paciolus, not the libraries.**
+- [ ] **10G / OUT-25 — PDF fonts for accented Latin, Greek and Cyrillic.**
+- [ ] **10H / OUT-26 — analytical-expectations table fits the page.**
+- [ ] **10I / OUT-27 — long branding text stays on the page.**
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
