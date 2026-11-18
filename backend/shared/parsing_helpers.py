@@ -16,57 +16,137 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Optional, TypeVar
+from typing import Any, Literal, Optional, TypeVar
 
 # Set sufficient precision for monetary arithmetic
 decimal.getcontext().prec = 28
 
 
+# ---------------------------------------------------------------------------
+# Sprint 883 (review ST-01): the one amount-parsing policy
+# ---------------------------------------------------------------------------
+# Every path that reads an amount from an uploaded cell — the testing engines
+# (``safe_decimal``), preflight, the intake totals-row detector and the trial
+# balance's pandas ingestion — calls ``parse_amount``. Before this, four
+# parsers disagreed: "$(2,000.00)" was -2000 in one and 0 in two others, and
+# preflight summed its readings into the balance check.
+#
+# The policy:
+# - Blank (None, float NaN, empty/whitespace text) is zero, never an error.
+# - Text is: an optional sign, an optional currency symbol ($ € £) in either
+#   order, optional parentheses, the number, and an optional trailing minus.
+#   Parentheses, a leading "-" and a trailing "-" each mean negative; more than
+#   one sign character is invalid. Spaces are allowed between those parts,
+#   never inside the number.
+# - The number is ASCII digits, either ungrouped or grouped in thousands with
+#   commas, an optional decimal point and fraction, and an optional exponent.
+#   No other grouping or decimal separator is read ("1.234,56", "1 234.56" are
+#   invalid): locale support is deliberately not wider than this.
+# - A lone dash ("-", "$ -") is the accounting-format zero.
+# - Non-finite values ("Infinity", "NaN", float inf, Decimal NaN) are invalid.
+# - Invalid input is zero by default (``on_invalid="zero"``) or raises
+#   ``InvalidAmountError`` (``on_invalid="error"``) for callers that must
+#   reject it.
+
+AmountOnInvalid = Literal["zero", "error"]
+
+_AMOUNT_RE = re.compile(
+    r"""
+    ^
+    (?P<sign1>[-+])?\s*
+    (?P<cur1>[$€£])?\s*
+    (?P<sign2>[-+])?\s*
+    (?P<open>\()?\s*
+    (?P<cur2>[$€£])?\s*
+    (?P<sign3>[-+])?\s*
+    (?P<number>
+        (?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]*)?
+        |\.[0-9]+
+    )
+    (?P<exponent>[eE][-+]?[0-9]+)?
+    \s*(?P<close>\))?
+    \s*(?P<trail>-)?
+    $
+    """,
+    re.VERBOSE | re.ASCII,
+)
+_ACCOUNTING_ZERO_RE = re.compile(r"^[$€£]?\s*-\s*$")
+
+
+class InvalidAmountError(ValueError):
+    """An amount cell that is not blank and is not a number under the policy."""
+
+
+_BLANK = object()
+
+
+def _read_amount(value: object) -> Decimal | object | None:
+    """Return the Decimal, ``_BLANK`` for a blank cell, or ``None`` if invalid."""
+    if value is None:
+        return _BLANK
+    if isinstance(value, Decimal):
+        return value if value.is_finite() else None
+    if isinstance(value, float):  # includes numpy.float64
+        if math.isnan(value):
+            return _BLANK  # pandas' missing cell
+        return Decimal(str(value)) if math.isfinite(value) else None
+    if isinstance(value, int):
+        return Decimal(value)
+    text = str(value).strip()
+    if not text:
+        return _BLANK
+    match = _AMOUNT_RE.match(text)
+    if match is None:
+        return Decimal(0) if _ACCOUNTING_ZERO_RE.match(text) else None
+    if match["cur1"] and match["cur2"]:
+        return None
+    if bool(match["open"]) != bool(match["close"]):
+        return None
+    signs = [s for s in (match["sign1"], match["sign2"], match["sign3"]) if s]
+    if len(signs) + bool(match["trail"]) > 1:
+        return None
+    if signs == ["+"] and match["open"]:
+        return None  # "+(5)" contradicts itself
+    negative = bool(match["open"]) or bool(match["trail"]) or signs == ["-"]
+    try:
+        result = Decimal(match["number"].replace(",", "") + (match["exponent"] or ""))
+    except InvalidOperation:
+        return None
+    if not result.is_finite():
+        return None
+    return -result if negative else result
+
+
+def parse_amount(value: object, *, on_invalid: AmountOnInvalid = "zero") -> Decimal:
+    """Read a monetary cell from uploaded data under the one amount policy.
+
+    Blank cells are ``Decimal("0")``. Invalid cells are ``Decimal("0")`` when
+    ``on_invalid="zero"`` (the default) and raise :class:`InvalidAmountError`
+    when ``on_invalid="error"``. See the policy comment above.
+    """
+    result = _read_amount(value)
+    if result is _BLANK:
+        return Decimal(0)
+    if result is None:
+        if on_invalid == "error":
+            raise InvalidAmountError(f"Not a valid amount: {str(value)[:40]!r}")
+        return Decimal(0)
+    assert isinstance(result, Decimal)
+    return result
+
+
 def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
     """Parse a monetary value from user-uploaded data as Decimal.
 
-    Never accepts float as intermediate; always parses from string or int.
-    Returns ``default`` for None, empty string, or unparseable input.
-
-    Handles:
-    - ``None`` → default
-    - ``int`` / ``Decimal`` pass-through
-    - ``float`` → stringified first to avoid binary imprecision
-    - Currency strings: ``$1,234.56``, ``(1,234.56)`` (parenthetical negatives)
-    - Trailing-negative: ``1234-``
+    Reads ``value`` under the amount policy (:func:`parse_amount`); returns
+    ``default`` when the cell is blank or invalid. Floats are stringified
+    first to avoid binary imprecision.
     """
-    if value is None:
+    result = _read_amount(value)
+    if result is _BLANK or result is None:
         return default
-    if isinstance(value, Decimal):
-        return value
-    if isinstance(value, float):
-        if math.isnan(value) or math.isinf(value):
-            return default
-        return Decimal(str(value))
-    if isinstance(value, int):
-        return Decimal(value)
-    try:
-        cleaned = str(value).strip()
-        if not cleaned or cleaned.lower() in ("nan", "none", "inf", "-inf"):
-            return default
-        # Detect accounting-style parenthetical negatives: (1,234.56).
-        # Sprint 824: test after dropping currency signs and spaces — checking
-        # the raw string missed "$(2,000.00)", which parsed as +2,000.
-        bare = re.sub(r"[$\s]", "", cleaned)
-        is_negative = bare.startswith("(") and bare.endswith(")")
-        cleaned = re.sub(r"[,$\s()%]", "", cleaned)
-        if cleaned.startswith("-") or cleaned.endswith("-"):
-            cleaned = "-" + cleaned.strip("-")
-            is_negative = True
-        elif is_negative and not cleaned.startswith("-"):
-            cleaned = "-" + cleaned
-        result = Decimal(cleaned)
-    except (InvalidOperation, ValueError, TypeError):
-        return default
-    # Sprint 824: "Infinity", "-Infinity", "sNaN" etc. parse as non-finite
-    # Decimals — the string check above only knew "inf". A non-finite amount is
-    # never a monetary value; treat it like any other unparseable cell.
-    return result if result.is_finite() else default
+    assert isinstance(result, Decimal)
+    return result
 
 
 def safe_float(value: object) -> float:

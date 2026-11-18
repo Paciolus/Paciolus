@@ -20,8 +20,9 @@ import from here; do not duplicate the heuristics elsewhere.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
 from typing import Any
+
+from shared.parsing_helpers import parse_amount
 
 # ═══════════════════════════════════════════════════════════════
 # Row reconciliation
@@ -126,38 +127,6 @@ def _is_blank(value: Any) -> bool:
     return s in _BLANK_VALUES
 
 
-def _to_decimal(value: Any) -> Decimal:
-    """Best-effort Decimal coercion for accounting-style values.
-
-    Handles $1,234.56, (1,234.56), -500, bare numerics, and blanks. Never
-    raises — unparseable values become Decimal("0"). This is a reconciliation
-    helper, not a validator; precision issues are handled at the monetary
-    layer.
-    """
-    if value is None:
-        return Decimal(0)
-    if isinstance(value, (int, Decimal)):
-        return Decimal(value)
-    if isinstance(value, float):
-        if value != value:  # NaN
-            return Decimal(0)
-        return Decimal(str(value))
-    s = str(value).strip()
-    if not s:
-        return Decimal(0)
-    negative = s.startswith("(") and s.endswith(")")
-    if negative:
-        s = s[1:-1].strip()
-    s = s.replace("$", "").replace(",", "").replace("€", "").replace("£", "").strip()
-    if not s or s == "-":
-        return Decimal(0)
-    try:
-        result = Decimal(s)
-    except (InvalidOperation, ValueError):
-        return Decimal(0)
-    return -result if negative else result
-
-
 def _collect_account_identifier_columns(column_names: list[str]) -> list[str]:
     """Return every column name that looks like an account identifier.
 
@@ -229,8 +198,8 @@ def detect_totals_row(
         if not all_blank:
             continue
 
-        debit_val = _to_decimal(row.get(debit_col))
-        credit_val = _to_decimal(row.get(credit_col))
+        debit_val = parse_amount(row.get(debit_col))
+        credit_val = parse_amount(row.get(credit_col))
 
         if debit_val != 0 and credit_val != 0:
             return idx

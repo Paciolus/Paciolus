@@ -83,6 +83,8 @@
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
 > - [ ] **Sprint 867** — balance sheet shows "OUT OF BALANCE" for a balanced, pre-closing trial balance.
+> - [ ] **Sprint 883** — preflight, TB analysis and the testing tools read amounts and totals rows differently, so one
+>       file can balance in one place and not another (review ST-01, ST-02; ST-09 mapping 500s). Local branch.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -180,6 +182,27 @@ Statements shows "OUT OF BALANCE by -$4,699.50" and blames "a mapping or sign is
 income, which the balance sheet leaves out of equity; the Key Metrics panel on the same page already says "Equity
 includes -$4,699.50 of unclosed current-period earnings". Fix: present current-period earnings in equity on the
 balance sheet (and the Excel/PDF exports); test with a pre-closing TB.
+
+### Sprint 883: One amount policy and one totals-row rule across preflight, TB analysis and testing tools
+**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-883-amount-parsing` off `main` `ef5e5676`; not pushed.
+**Priority:** P0 (High findings: the same file can balance in preflight and not in analysis). **Source:** read-only
+review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
+**Decided (CEO, 2026-11-18):** "$(2,000.00)" = −2000, "1,234.56-" = −1234.56, "€1,234.56" = 1234.56, "Infinity" and
+"NaN" are invalid, never numbers. Locale support no wider than that.
+- [x] **8A / ST-01 — one amount policy.** `shared/parsing_helpers.parse_amount` (blank → 0; invalid → 0 by default or
+      `InvalidAmountError` with `on_invalid="error"`); `safe_decimal` is built on it. Preflight (`_coerce_to_decimal`
+      removed), intake (`_to_decimal` removed), the streaming auditor and the legacy `audit/ingestion.py` call it;
+      `pd.to_numeric` is gone from the TB path. Reproduced first: 42 failures in `test_amount_parsing_policy.py`
+      (one table × 7 paths). Also found: "Infinity" crashed the streaming auditor (`InvalidOperation`) and "NaN"
+      crashed preflight; preflight read "€ 1.234,56" as 1.23456.
+      **Other results that changed (before → after):** `safe_decimal`: "--5" −5→0, "1 234.56" 1234.56→0, "45%" 45→0,
+      "£1,234.56" 0→1234.56, `Decimal("Infinity")` Infinity→0. All paths: "1,2,3" 123→0. `safe_decimal` + preflight:
+      "1_000" 1000→0, Arabic-Indic digits "١٢٣" 123→0. Preflight: "€ 1.234,56" 1.23456→0, "(1,234.56)-" and
+      "-(1,234.56)" 0→−1234.56. Streaming: "($2,000.00)", "-$2,000.00", "$-2,000.00" 0→−2000.
+      Verified on the 8A tree: backend full suite 10,887 passed; 1 failure is the pre-existing
+      `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` (fails on `main` too).
+- [ ] **8B / ST-02 — one totals-row rule** (intake owns it; streaming decides from file position, held-back tail).
+- [ ] **8C / ST-09 — mapping JSON of the wrong shape** returns one 400, not a 500.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

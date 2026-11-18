@@ -10,7 +10,6 @@ single-sheet and multi-sheet audit pipelines.
 from __future__ import annotations
 
 import gc
-import math
 from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -58,8 +57,9 @@ from classification_rules import (
 )
 from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
 from ratio_engine import CategoryTotals, extract_category_totals
-from security_utils import DEFAULT_CHUNK_SIZE, _strip_currency_formatting, log_secure_operation
+from security_utils import DEFAULT_CHUNK_SIZE, log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
+from shared.parsing_helpers import parse_amount
 
 
 class StreamingAuditor:
@@ -224,8 +224,10 @@ class StreamingAuditor:
             log_secure_operation("streaming_error", "Required columns not found")
             return
 
-        debits = pd.to_numeric(chunk[self.debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
-        credits = pd.to_numeric(chunk[self.credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
+        # Sprint 883: the shared amount policy — the same reading preflight
+        # and the testing tools use (invalid and non-finite read as zero).
+        debits = chunk[self.debit_col].map(parse_amount)
+        credits = chunk[self.credit_col].map(parse_amount)
 
         # Sprint 666 Issue 2: Exclude totals rows from aggregation.
         # Heuristic: blank account name + both debit AND credit non-zero.
@@ -252,8 +254,8 @@ class StreamingAuditor:
                     f"Excluded {excluded} summary totals row(s) from aggregation",
                 )
 
-        self._debit_chunks.append(Decimal(str(math.fsum(debits.values))))
-        self._credit_chunks.append(Decimal(str(math.fsum(credits.values))))
+        self._debit_chunks.append(sum(debits, Decimal("0")))
+        self._credit_chunks.append(sum(credits, Decimal("0")))
         self.total_rows = rows_so_far
 
         # BUG-006: Count rows with missing account names or zero balances.

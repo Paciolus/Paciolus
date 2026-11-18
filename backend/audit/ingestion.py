@@ -9,15 +9,15 @@ whether total debits equal total credits.
 
 from __future__ import annotations
 
-import math
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
 import pandas as pd
 
-from security_utils import _strip_currency_formatting, log_secure_operation
+from security_utils import log_secure_operation
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
+from shared.parsing_helpers import parse_amount
 
 
 def check_balance(df: pd.DataFrame) -> dict[str, Any]:
@@ -46,16 +46,13 @@ def check_balance(df: pd.DataFrame) -> dict[str, Any]:
             "balanced": False,
         }
 
-    # Convert columns to numeric, coercing errors to NaN
-    debits = pd.to_numeric(df[debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
-    credits = pd.to_numeric(df[credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
-
-    total_debits = math.fsum(debits.values)
-    total_credits = math.fsum(credits.values)
+    # Sprint 883: the shared amount policy (invalid reads as zero).
+    total_debits = sum(df[debit_col].map(parse_amount), Decimal(0))
+    total_credits = sum(df[credit_col].map(parse_amount), Decimal(0))
     difference = total_debits - total_credits
 
     # Decimal-aware balance check (Sprint 340)
-    is_balanced = abs(Decimal(str(difference))) < BALANCE_TOLERANCE
+    is_balanced = abs(difference) < BALANCE_TOLERANCE
 
     return {
         "status": "success",
@@ -128,9 +125,9 @@ def detect_abnormal_balances(df: pd.DataFrame, materiality_threshold: float = 0.
         log_secure_operation("detect_abnormal_error", "Missing required columns")
         return []
 
-    # Convert to numeric (on the copy)
-    df[debit_col] = pd.to_numeric(df[debit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
-    df[credit_col] = pd.to_numeric(df[credit_col].map(_strip_currency_formatting), errors="coerce").fillna(0)
+    # Convert to numeric (on the copy) — Sprint 883: the shared amount policy
+    df[debit_col] = df[debit_col].map(parse_amount).astype(float)
+    df[credit_col] = df[credit_col].map(parse_amount).astype(float)
 
     # Performance optimization: Vectorized processing instead of iterrows()
     account_names = df[account_col].astype(str).str.strip()

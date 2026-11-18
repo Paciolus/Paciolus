@@ -12,7 +12,7 @@ Pure-Python engine (no Pandas). Takes parsed data from parse_uploaded_file().
 
 import re
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from account_classifier import AccountClassifier
 from classification_rules import AccountCategory
@@ -21,7 +21,7 @@ from column_detector import (
     detect_columns,
 )
 from shared.intake_utils import IntakeSummary, detect_totals_row
-from shared.parsing_helpers import safe_decimal
+from shared.parsing_helpers import parse_amount, safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
 # Dataclasses
@@ -489,45 +489,6 @@ def run_preflight(
 # ═══════════════════════════════════════════════════════════════
 
 
-def _coerce_to_decimal(val: object) -> Decimal:
-    """Coerce a cell value to Decimal, treating None/empty/NaN as 0.
-
-    Handles common currency formats: $1,234.56  (1,234.56)  -$500
-    Returns Decimal("0") for truly unparseable values.
-    """
-    if val is None:
-        return Decimal("0")
-    if isinstance(val, str):
-        stripped = val.strip()
-        if stripped == "":
-            return Decimal("0")
-        # Handle parenthesised negatives: (1,234.56) → -1234.56
-        negative = stripped.startswith("(") and stripped.endswith(")")
-        if negative:
-            stripped = stripped[1:-1].strip()
-        # Strip currency symbols and thousands separators
-        cleaned = stripped.replace("$", "").replace(",", "").replace("€", "").replace("£", "").strip()
-        if cleaned == "" or cleaned == "-":
-            return Decimal("0")
-        try:
-            result = Decimal(cleaned)
-            return -result if negative else result
-        except Exception:
-            return Decimal("0")
-    if isinstance(val, Decimal):
-        return val
-    if isinstance(val, (int, float)):
-        import math
-
-        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
-            return Decimal("0")
-        return Decimal(str(val))
-    try:
-        return Decimal(str(val))
-    except Exception:
-        return Decimal("0")
-
-
 _UNMAPPED_BALANCE_HINTS: tuple[str, ...] = (
     "debit",
     "credit",
@@ -687,14 +648,10 @@ def _check_tb_balance(
     total_debits = Decimal("0")
     total_credits = Decimal("0")
     for row in rows:
-        try:
-            total_debits += _coerce_to_decimal(row.get(debit_col))
-        except (ValueError, TypeError, InvalidOperation):
-            pass
-        try:
-            total_credits += _coerce_to_decimal(row.get(credit_col))
-        except (ValueError, TypeError, InvalidOperation):
-            pass
+        # Sprint 883: the shared amount policy — the same reading the
+        # trial balance analysis and the testing tools use.
+        total_debits += parse_amount(row.get(debit_col))
+        total_credits += parse_amount(row.get(credit_col))
 
     difference = total_debits - total_credits
     balanced = abs(difference) <= tolerance
@@ -1353,8 +1310,8 @@ def _check_category_completeness(
         if not name:
             continue
 
-        debit = _coerce_to_decimal(row.get(debit_col)) if debit_col else Decimal("0")
-        credit = _coerce_to_decimal(row.get(credit_col)) if credit_col else Decimal("0")
+        debit = parse_amount(row.get(debit_col)) if debit_col else Decimal("0")
+        credit = parse_amount(row.get(credit_col)) if credit_col else Decimal("0")
         net = float(debit - credit)
 
         result = classifier.classify(name, net)
