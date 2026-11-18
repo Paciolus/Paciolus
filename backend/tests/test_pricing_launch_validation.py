@@ -849,6 +849,7 @@ class TestBillingLifecycle:
     # --- Seat qty change ---
 
     def test_seat_qty_change_via_sync(self, db_session, make_user):
+        """Sprint 881 (AZ-07): the base item's quantity never sets seats; the seat add-on item does."""
         from billing.subscription_manager import sync_subscription_from_stripe
 
         user = make_user(email="seat_change@example.com")
@@ -858,16 +859,21 @@ class TestBillingLifecycle:
             "cancel_at_period_end": False,
             "current_period_start": 1700000000,
             "current_period_end": 1702600000,
-            "items": {"data": [{"plan": {"interval": "month"}, "quantity": 3}]},
+            "items": {
+                "data": [
+                    {"price": {"id": "price_pro_mo"}, "plan": {"interval": "month"}, "quantity": 3},
+                    {"price": {"id": "price_seat_mo"}, "plan": {"interval": "month"}, "quantity": 1},
+                ]
+            },
         }
-        with patch("billing.price_config.get_all_seat_price_ids", return_value=set()):
+        with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
             sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "professional")
-        assert sub.seat_count == 3
+        assert (sub.seat_count, sub.total_seats) == (7, 8)
 
-        stripe_sub["items"]["data"][0]["quantity"] = 8
-        with patch("billing.price_config.get_all_seat_price_ids", return_value=set()):
+        stripe_sub["items"]["data"][1]["quantity"] = 8
+        with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
             sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sc", "professional")
-        assert sub.seat_count == 8
+        assert (sub.seat_count, sub.total_seats) == (7, 15)
 
     # --- Cancel with no subscription → None ---
 
@@ -983,9 +989,10 @@ class TestBillingLifecycle:
         }
         with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
             sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_dual", "professional")
-        assert sub.seat_count == 1
+        # Sprint 881 (AZ-07): Professional includes 7 seats; the base item's quantity of 1 is not a seat count.
+        assert sub.seat_count == 7
         assert sub.additional_seats == 5
-        assert sub.total_seats == 6
+        assert sub.total_seats == 12
 
     # --- sync handles single-item subscription (no seats) ---
 

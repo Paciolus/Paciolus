@@ -245,7 +245,8 @@ class TestTrialConversion:
             "professional",
         )
         assert sub.status == SubscriptionStatus.ACTIVE
-        assert sub.seat_count == 3
+        # Sprint 881 (AZ-07): included seats come from the plan, not the base item's quantity.
+        assert sub.seat_count == 7
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +258,12 @@ class TestSeatManagementFlow:
     """Full seat lifecycle: add seats, verify, remove seats."""
 
     @patch("billing.subscription_manager.get_stripe")
-    def test_add_3_seats_then_remove_1(self, mock_get_stripe, db_session, make_user):
+    @patch("billing.price_config.get_stripe_seat_price_id", return_value="price_seat_mo")
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_add_3_seats_then_remove_1(self, _ids, _seat_price, mock_get_stripe, db_session, make_user):
+        """Sprint 881 (AZ-07): seats are bought on the seat add-on item; the plan item stays at 1."""
+        from unittest.mock import ANY
+
         from billing.subscription_manager import add_seats, remove_seats
 
         mock_stripe = MagicMock()
@@ -271,33 +277,33 @@ class TestSeatManagementFlow:
             billing_interval=BillingInterval.MONTHLY,
             stripe_customer_id="cus_flow",
             stripe_subscription_id="sub_flow",
-            seat_count=3,
+            seat_count=7,
             additional_seats=0,
         )
         db_session.add(sub)
         db_session.flush()
 
-        # Add 3 seats
-        mock_stripe.Subscription.retrieve.return_value = {
-            "items": {"data": [{"id": "si_flow", "quantity": 3}]},
-        }
+        base_item = {"id": "si_base", "price": {"id": "price_pro_mo"}, "quantity": 1}
+
+        # Add 3 seats: no seat item yet, so one is created
+        mock_stripe.Subscription.retrieve.return_value = {"items": {"data": [base_item]}}
         result = add_seats(db_session, user.id, 3)
         assert result is not None
         assert result.additional_seats == 3
-        assert result.total_seats == 6
-        from unittest.mock import ANY
+        assert result.total_seats == 10
+        mock_stripe.SubscriptionItem.create.assert_called_once_with(
+            subscription="sub_flow", price="price_seat_mo", quantity=3, idempotency_key=ANY
+        )
 
-        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=6, idempotency_key=ANY)
-
-        # Remove 1 seat
+        # Remove 1 seat from the seat item
         mock_stripe.Subscription.retrieve.return_value = {
-            "items": {"data": [{"id": "si_flow", "quantity": 6}]},
+            "items": {"data": [base_item, {"id": "si_seat", "price": {"id": "price_seat_mo"}, "quantity": 3}]},
         }
         result = remove_seats(db_session, user.id, 1)
         assert result is not None
         assert result.additional_seats == 2
-        assert result.total_seats == 5
-        mock_stripe.SubscriptionItem.modify.assert_called_with("si_flow", quantity=5, idempotency_key=ANY)
+        assert result.total_seats == 9
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_seat", quantity=2, idempotency_key=ANY)
 
 
 # ---------------------------------------------------------------------------
@@ -373,40 +379,33 @@ class TestWebhookSimulations:
         )
         assert result is True
 
-    def test_subscription_updated_quantity_change(self, db_session, make_user):
-        """Webhook for quantity change syncs seat_count."""
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_subscription_updated_quantity_change(self, _ids, db_session, make_user):
+        """Webhook for a seat add-on quantity change syncs additional_seats (Sprint 881: not seat_count)."""
         from billing.subscription_manager import sync_subscription_from_stripe
 
         user = make_user(email="webhook_qty@example.com")
 
-        # Initial sync with 3 seats
         stripe_sub = {
             "id": "sub_qty",
             "status": "active",
             "cancel_at_period_end": False,
             "current_period_start": 1700000000,
             "current_period_end": 1702600000,
-            "items": {"data": [{"plan": {"interval": "month"}, "quantity": 3}]},
+            "items": {
+                "data": [
+                    {"price": {"id": "price_pro_mo"}, "plan": {"interval": "month"}, "quantity": 1},
+                    {"price": {"id": "price_seat_mo"}, "plan": {"interval": "month"}, "quantity": 3},
+                ]
+            },
         }
-        sub = sync_subscription_from_stripe(
-            db_session,
-            user.id,
-            stripe_sub,
-            "cus_qty",
-            "professional",
-        )
-        assert sub.seat_count == 3
+        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_qty", "professional")
+        assert (sub.seat_count, sub.additional_seats, sub.total_seats) == (7, 3, 10)
 
-        # Quantity change: now 7 seats
-        stripe_sub["items"]["data"][0]["quantity"] = 7
-        sub = sync_subscription_from_stripe(
-            db_session,
-            user.id,
-            stripe_sub,
-            "cus_qty",
-            "professional",
-        )
-        assert sub.seat_count == 7
+        # Seat add-on quantity change: now 5 add-on seats
+        stripe_sub["items"]["data"][1]["quantity"] = 5
+        sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_qty", "professional")
+        assert (sub.seat_count, sub.additional_seats, sub.total_seats) == (7, 5, 12)
 
     def test_subscription_deleted_event(self, db_session, make_user):
         """Webhook for subscription deletion sets status to canceled."""

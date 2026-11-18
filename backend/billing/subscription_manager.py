@@ -46,24 +46,20 @@ def get_subscription(db: Session, user_id: int) -> Subscription | None:
     return db.query(Subscription).filter(Subscription.user_id == user_id).first()
 
 
-def _extract_seat_quantity(stripe_subscription: dict) -> int:
-    """Extract base seat quantity from the base plan subscription item.
+def included_seats_for_tier(tier: str) -> int:
+    """Seats the plan includes before any add-on (Professional 7, Enterprise 20, else 1).
 
-    Returns the quantity from the base plan item (not seat add-on), defaulting to 1.
-    For dual-line-item subscriptions, the base plan always has quantity=1.
+    Sprint 881 (AZ-07): this used to be read from the base plan item's Stripe
+    ``quantity``. Checkout always sends that item with quantity 1 — it is one
+    plan, not a seat count — so every Professional and Enterprise firm synced
+    as a single seat. The plan's included seats live in ``shared.entitlements``.
     """
-    from billing.price_config import get_all_seat_price_ids
+    from shared.entitlements import get_entitlements
 
-    seat_ids = get_all_seat_price_ids()
-    items = stripe_subscription.get("items", {}).get("data", [])
-    for item in items:
-        price_id = item.get("price", {}).get("id", "")
-        if price_id not in seat_ids:
-            return int(item.get("quantity", 1))
-    # Fallback for single-item subscriptions (backward compat)
-    if items:
-        return int(items[0].get("quantity", 1))
-    return 1
+    try:
+        return get_entitlements(UserTier(tier)).seats_included
+    except ValueError:
+        return get_entitlements(UserTier.FREE).seats_included
 
 
 def _extract_additional_seats(stripe_subscription: dict) -> int:
@@ -88,7 +84,7 @@ def _extract_billing_interval(items: list[dict]) -> BillingInterval:
     """Extract billing interval from the base plan line item.
 
     Identifies the base plan item (non-seat-add-on) and reads its interval.
-    Uses the same seat-price-ID exclusion logic as _extract_seat_quantity
+    Uses the same seat-price-ID exclusion logic as _extract_additional_seats
     for consistency. Falls back to MONTHLY if no items are present.
     """
     from billing.price_config import get_all_seat_price_ids
@@ -237,8 +233,8 @@ def sync_subscription_from_stripe(
     items = stripe_subscription.get("items", {}).get("data", [])
     interval = _extract_billing_interval(items)
 
-    # Extract seat counts (Self-Serve Checkout: dual line item support)
-    seat_quantity = _extract_seat_quantity(stripe_subscription)
+    # Included seats come from the plan; only the seat add-on item counts on top (AZ-07).
+    seat_quantity = included_seats_for_tier(tier)
     additional_seats = _extract_additional_seats(stripe_subscription)
 
     # Convert timestamps
@@ -388,7 +384,7 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     Returns the updated Subscription or None if not found.
     Phase LIX Sprint E. AUDIT-06 FIX 1: concurrency-safe.
     """
-    from billing.price_config import get_all_seat_price_ids, get_max_self_serve_seats
+    from billing.price_config import get_max_self_serve_seats, get_stripe_seat_price_id
 
     # ── Step 1: Read local state WITHOUT lock ────────────────────────
     sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
@@ -416,23 +412,15 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
     if not items:
         return None
 
-    # Find the correct item to modify — seat add-on item by price ID, not position
+    # Seats live on the seat add-on item only. The base plan item is one plan:
+    # changing its quantity would bill the whole plan again per seat (AZ-07).
     seat_item = _find_seat_addon_item(items)
-    if seat_item:
-        item_id = seat_item.get("id")
-        current_quantity = seat_item.get("quantity", 0)
-    elif len(items) == 1:
-        # Single-item subscription (backward compat) — only item is the plan
-        item_id = items[0].get("id")
-        current_quantity = items[0].get("quantity", 1)
-    else:
-        raise ValueError(
-            f"Cannot identify seat add-on item in subscription {snap_stripe_sub_id} "
-            f"with {len(items)} line items. No item matched known seat price IDs: "
-            f"{get_all_seat_price_ids()}"
-        )
-
-    new_quantity = current_quantity + seats_to_add
+    seat_price_id: str | None = None
+    if seat_item is None:
+        interval = sub.billing_interval.value if sub.billing_interval else "monthly"
+        seat_price_id = get_stripe_seat_price_id(interval, sub.tier)
+        if not seat_price_id:
+            raise ValueError(f"No seat add-on price configured for {sub.tier}/{interval}")
 
     # Increment version and generate idempotency key
     new_version = snap_version + 1
@@ -440,7 +428,16 @@ def add_seats(db: Session, user_id: int, seats_to_add: int) -> Subscription | No
 
     # Update Stripe with idempotency key (proration handled by Stripe)
     try:
-        stripe.SubscriptionItem.modify(item_id, quantity=new_quantity, idempotency_key=idempotency_key)
+        if seat_item is not None:
+            new_quantity = int(seat_item.get("quantity", 0)) + seats_to_add
+            stripe.SubscriptionItem.modify(seat_item.get("id"), quantity=new_quantity, idempotency_key=idempotency_key)
+        else:
+            stripe.SubscriptionItem.create(
+                subscription=snap_stripe_sub_id,
+                price=seat_price_id,
+                quantity=seats_to_add,
+                idempotency_key=idempotency_key,
+            )
     except Exception:
         db.rollback()
         raise
@@ -511,23 +508,15 @@ def remove_seats(db: Session, user_id: int, seats_to_remove: int) -> Subscriptio
     if not items:
         return None
 
-    # Find the correct item to modify — seat add-on item by price ID, not position
+    # Seats live on the seat add-on item only; never reduce the plan item (AZ-07).
     seat_item = _find_seat_addon_item(items)
-    if seat_item:
-        item_id = seat_item.get("id")
-        current_quantity = seat_item.get("quantity", 0)
-    elif len(items) == 1:
-        # Single-item subscription (backward compat) — only item is the plan
-        item_id = items[0].get("id")
-        current_quantity = items[0].get("quantity", 1)
-    else:
+    if seat_item is None:
         raise ValueError(
-            f"Cannot identify seat add-on item in subscription {snap_stripe_sub_id} "
-            f"with {len(items)} line items. No item matched known seat price IDs: "
-            f"{get_all_seat_price_ids()}"
+            f"Subscription {snap_stripe_sub_id} has no seat add-on item (known seat price IDs: "
+            f"{get_all_seat_price_ids()}); the local row's additional_seats is out of step with Stripe"
         )
-
-    new_quantity = current_quantity - seats_to_remove
+    item_id = seat_item.get("id")
+    new_quantity = int(seat_item.get("quantity", 0)) - seats_to_remove
 
     # Increment version and generate idempotency key
     new_version = snap_version + 1

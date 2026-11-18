@@ -88,6 +88,9 @@
 >       local branch stacked on 878, not pushed.
 > - [ ] **Sprint 880** — shared export links: file deleted within an hour of the link ending, no untracked files after a
 >       failed create, only Paciolus-generated files can be shared. Security; code complete, local branch stacked on 879, not pushed.
+> - [ ] **Sprint 881** — billing: included seats from the plan, inactive firms back to one seat, no second subscription,
+>       one trial and one use per promo code per account, seat limits from config; three billing tests made real.
+>       Security; in progress, local branch stacked on 880.
 > - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
 > - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
 >       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target.
@@ -494,6 +497,32 @@ apply migration `b880e5a7d9f1`; after deploy, check logs for `R2 export-share li
 **Follow-ups found:** `useExportSharing.createShare` posts the wrong field names and no UI calls it; a sharing UI must
 send `export_token` from the export response. XLSX exports escape formula triggers per call, with no writer-level
 guard or test like `SafeCsvWriter`'s.
+
+### Sprint 881: Seats, duplicate subscriptions and trial eligibility (AZ-07, AZ-08, AZ-09, AZ-16, TQ-11, TQ-17, ST-16)
+**Status:** IN PROGRESS — started 2026-11-18 on local branch `sprint-881-billing-seats` (stacked on Sprint 880; not pushed).
+**Priority:** P0/P1 (freeze-exempt: security defects). **Source:** read-only review at `ef5e567`; every item re-confirmed
+at `5a29fc38` before any change. **Agents:** Guardian (lead), Executor, Critic.
+
+**Decisions (CEO, 2026-11-16/18):** included seats come from the plan (Professional 7, Enterprise 20) and add-on seats
+are added on top. An inactive subscription leaves the firm the Free allowance of 1 seat: existing members stay, but no
+invitation can be sent or accepted. One introductory trial per account; each promo code works once per account. A trial
+or promo counts as used when Stripe confirms the subscription (webhook), not when checkout opens. A subscriber who
+changes plan or interval is moved by updating the existing Stripe subscription, effective now and prorated.
+
+- [x] **6A (AZ-07)** — Stripe's base-plan quantity (always 1) is no longer stored as the included seats; `seat_count`
+      comes from `shared/entitlements.py` for the plan, add-ons on top. Same root error fixed in `add_seats` /
+      `remove_seats`: with no seat add-on item they changed the **plan** item's quantity (billing the plan again per
+      seat); now the first add-on creates the seat item and a remove without one refuses. Six tests that encoded the
+      old model rewritten.
+- [ ] **6B (AZ-08)** — seat allowance derived from status and plan; inactive → 1.
+- [ ] **6C (AZ-09)** — checkout refuses a new subscription while a non-terminal one exists; plan/interval change
+      updates the existing subscription; purchase admission serialized with a durable checkout record; sync flags a
+      conflicting Stripe subscription ID.
+- [ ] **6D (AZ-16)** — trial use and promo redemptions stored per account, checked before Checkout.
+- [ ] **6E** — checkout and seat-change request limits and the "26+" message derived from configured maximums.
+- [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
+- [ ] **6G (TQ-17)** — `test_counter_can_increment` asserts the counter rose by 1.
+- [ ] **6H (ST-16)** — median conversion time and grace-period expiry load rows in batches; query-count assertions.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the

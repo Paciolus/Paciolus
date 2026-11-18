@@ -280,12 +280,14 @@ class TestAddSeatsManager:
         assert result is None
 
     @patch("billing.subscription_manager.get_stripe")
-    def test_add_seats_success(self, mock_get_stripe, db_session, make_user):
+    @patch("billing.price_config.get_stripe_seat_price_id", return_value="price_seat_mo")
+    def test_add_seats_success(self, _seat_price, mock_get_stripe, db_session, make_user):
+        """Sprint 881 (AZ-07): with no seat item yet, one is created; the plan item is left alone."""
         from billing.subscription_manager import add_seats
 
         mock_stripe = MagicMock()
         mock_get_stripe.return_value = mock_stripe
-        mock_stripe.Subscription.retrieve.return_value = {"items": {"data": [{"id": "si_test", "quantity": 3}]}}
+        mock_stripe.Subscription.retrieve.return_value = {"items": {"data": [{"id": "si_test", "quantity": 1}]}}
 
         user = make_user(email="add_seats_ok@example.com")
         sub = Subscription(
@@ -304,7 +306,10 @@ class TestAddSeatsManager:
         result = add_seats(db_session, user.id, 2)
         assert result is not None
         assert result.additional_seats == 2
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=5, idempotency_key=ANY)
+        mock_stripe.SubscriptionItem.modify.assert_not_called()
+        mock_stripe.SubscriptionItem.create.assert_called_once_with(
+            subscription="sub_add3", price="price_seat_mo", quantity=2, idempotency_key=ANY
+        )
 
     @patch("billing.subscription_manager.get_stripe")
     @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
@@ -376,12 +381,20 @@ class TestRemoveSeatsManager:
         assert result is None
 
     @patch("billing.subscription_manager.get_stripe")
-    def test_remove_seats_success(self, mock_get_stripe, db_session, make_user):
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_remove_seats_success(self, _ids, mock_get_stripe, db_session, make_user):
         from billing.subscription_manager import remove_seats
 
         mock_stripe = MagicMock()
         mock_get_stripe.return_value = mock_stripe
-        mock_stripe.Subscription.retrieve.return_value = {"items": {"data": [{"id": "si_test", "quantity": 5}]}}
+        mock_stripe.Subscription.retrieve.return_value = {
+            "items": {
+                "data": [
+                    {"id": "si_base", "price": {"id": "price_pro_mo"}, "quantity": 1},
+                    {"id": "si_test", "price": {"id": "price_seat_mo"}, "quantity": 2},
+                ]
+            }
+        }
 
         user = make_user(email="rm_seats_ok@example.com")
         sub = Subscription(
@@ -400,15 +413,24 @@ class TestRemoveSeatsManager:
         result = remove_seats(db_session, user.id, 1)
         assert result is not None
         assert result.additional_seats == 1
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=4, idempotency_key=ANY)
+        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=1, idempotency_key=ANY)
 
     @patch("billing.subscription_manager.get_stripe")
-    def test_remove_all_additional_seats(self, mock_get_stripe, db_session, make_user):
+    @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})
+    def test_remove_all_additional_seats(self, _ids, mock_get_stripe, db_session, make_user):
+        """Sprint 881 (AZ-07): removing every add-on deletes the seat item; the plan item is untouched."""
         from billing.subscription_manager import remove_seats
 
         mock_stripe = MagicMock()
         mock_get_stripe.return_value = mock_stripe
-        mock_stripe.Subscription.retrieve.return_value = {"items": {"data": [{"id": "si_test", "quantity": 5}]}}
+        mock_stripe.Subscription.retrieve.return_value = {
+            "items": {
+                "data": [
+                    {"id": "si_base", "price": {"id": "price_pro_mo"}, "quantity": 1},
+                    {"id": "si_test", "price": {"id": "price_seat_mo"}, "quantity": 2},
+                ]
+            }
+        }
 
         user = make_user(email="rm_all_seats@example.com")
         sub = Subscription(
@@ -427,7 +449,8 @@ class TestRemoveSeatsManager:
         result = remove_seats(db_session, user.id, 2)
         assert result is not None
         assert result.additional_seats == 0
-        mock_stripe.SubscriptionItem.modify.assert_called_once_with("si_test", quantity=3, idempotency_key=ANY)
+        mock_stripe.SubscriptionItem.delete.assert_called_once_with("si_test", idempotency_key=ANY)
+        mock_stripe.SubscriptionItem.modify.assert_not_called()
 
     @patch("billing.subscription_manager.get_stripe")
     @patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"})

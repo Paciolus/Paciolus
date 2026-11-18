@@ -638,22 +638,6 @@ class TestSubscriptionSeatSync:
             result = _extract_additional_seats(stripe_sub)
             assert result == 0
 
-    def test_extract_seat_quantity_skips_seat_addon(self):
-        """Base seat quantity comes from the plan item, not the seat add-on."""
-        from billing.subscription_manager import _extract_seat_quantity
-
-        stripe_sub = {
-            "items": {
-                "data": [
-                    {"price": {"id": "price_seat_mo"}, "quantity": 5},
-                    {"price": {"id": "price_professional_mo"}, "quantity": 1},
-                ]
-            }
-        }
-        with patch("billing.price_config.get_all_seat_price_ids", return_value={"price_seat_mo"}):
-            result = _extract_seat_quantity(stripe_sub)
-            assert result == 1
-
     def test_sync_subscription_sets_additional_seats(self, db_session, make_user):
         """sync_subscription_from_stripe sets additional_seats from seat add-on item."""
         from billing.subscription_manager import sync_subscription_from_stripe
@@ -678,7 +662,8 @@ class TestSubscriptionSeatSync:
             sub = sync_subscription_from_stripe(db_session, user.id, stripe_sub, "cus_sync_test", "professional")
 
         assert sub.additional_seats == 4
-        assert sub.seat_count == 1  # Base plan quantity
+        assert sub.seat_count == 7  # Professional's included seats (Sprint 881), not the base item's quantity
+        assert sub.total_seats == 11
 
     def test_sync_subscription_zero_seats_without_addon(self, db_session, make_user):
         """Single-item subscription sets additional_seats=0."""

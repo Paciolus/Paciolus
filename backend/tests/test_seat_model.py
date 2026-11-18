@@ -12,6 +12,8 @@ Covers:
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from billing.price_config import (
@@ -23,7 +25,7 @@ from billing.price_config import (
     get_max_self_serve_seats,
     get_seat_price_cents,
 )
-from billing.subscription_manager import _extract_billing_interval, _extract_seat_quantity
+from billing.subscription_manager import _extract_billing_interval, included_seats_for_tier
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 # ---------------------------------------------------------------------------
@@ -332,23 +334,15 @@ class TestExtractBillingInterval:
         assert _extract_billing_interval(items) == BillingInterval.MONTHLY
 
 
-class TestExtractSeatQuantity:
-    """Test extraction of seat quantity from Stripe subscription data."""
+class TestIncludedSeatsForTier:
+    """Sprint 881 (AZ-07): included seats come from the plan, never from Stripe's base-item quantity."""
 
-    def test_quantity_from_items(self):
-        stripe_sub = {"items": {"data": [{"quantity": 5, "price": {"id": "price_123"}}]}}
-        assert _extract_seat_quantity(stripe_sub) == 5
-
-    def test_default_quantity_when_missing(self):
-        stripe_sub = {"items": {"data": [{"price": {"id": "price_123"}}]}}
-        assert _extract_seat_quantity(stripe_sub) == 1
-
-    def test_default_when_no_items(self):
-        assert _extract_seat_quantity({}) == 1
-
-    def test_default_when_empty_items(self):
-        stripe_sub = {"items": {"data": []}}
-        assert _extract_seat_quantity(stripe_sub) == 1
+    @pytest.mark.parametrize(
+        ("tier", "expected"),
+        [("free", 1), ("solo", 1), ("professional", 7), ("enterprise", 20), ("not-a-tier", 1)],
+    )
+    def test_included_seats(self, tier, expected):
+        assert included_seats_for_tier(tier) == expected
 
 
 # ---------------------------------------------------------------------------
