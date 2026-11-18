@@ -43,8 +43,8 @@ class TestXlsxExport:
         result = _baseline_result()
         wb = load_workbook(io.BytesIO(build_amortization_workbook(result)))
         schedule = wb["Schedule"]
-        # header + 360 data rows + blank + totals row
-        assert schedule.max_row == 1 + 360 + 2
+        # header + 360 data rows + blank + totals row + final ending balance (Sprint 884)
+        assert schedule.max_row == 1 + 360 + 3
 
     def test_frozen_header(self):
         result = _baseline_result()

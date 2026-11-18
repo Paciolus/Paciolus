@@ -177,9 +177,23 @@ def export_schedule_csv(
                 f"{entry.ending_balance}",
             ]
         )
+    # Sprint 884 (OUT-06): totals under the columns they total; the final
+    # ending balance on its own row (total payments sat under "Ending Balance").
+    totals = result.column_totals()
     writer.writerow([])
-    writer.writerow(["Total Interest", "", "", "", f"{result.total_interest}", "", "", ""])
-    writer.writerow(["Total Payments", "", "", "", "", "", "", f"{result.total_payments}"])
+    writer.writerow(
+        [
+            "Totals",
+            "",
+            "",
+            f"{totals['scheduled_payment']}",
+            f"{totals['interest']}",
+            f"{totals['principal']}",
+            f"{totals['extra_principal']}",
+            "",
+        ]
+    )
+    writer.writerow(["Final Ending Balance", "", "", "", "", "", "", f"{result.final_ending_balance}"])
 
     buffer.seek(0)
     return attachment_response(buffer.getvalue(), "loan_amortization_schedule.csv", MEDIA_CSV, quote_filename=False)

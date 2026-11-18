@@ -271,7 +271,14 @@ detail is computed from the detail as displayed.
       the engine's totals, so it agrees once they do. Reproduced first: 18 of 19 in `test_sprint884_detail_totals.py`
       (sub-cent, half-cent, mixed-sign and negative half-cent inputs) failed.
 - [ ] **9D / OUT-04 — "Trial Balance" export lists flagged accounts over full-ledger totals.**
-- [ ] **9E / OUT-06 — loan workbook puts total payments under "Ending Balance".**
+- [x] **9E / OUT-06 — loan totals under their own columns.** `AmortizationResult.column_totals()` sums the scheduled
+      payment, interest, principal and extra-principal columns from the rows; the workbook's Schedule totals row puts
+      each under its own column and a separate "Final Ending Balance" row shows the last balance (column 8 used to
+      hold total payments). **Same bug found in the CSV export** (`Total Payments` under "Ending Balance"): fixed the
+      same way. The PDF schedule gains the same totals row. Reproduced first: 9 of 12 in
+      `test_sprint884_loan_totals.py` failed (ordinary, extra-payment and balloon loans; schedule, annual summary,
+      inputs sheet, PDF and CSV compared). `test_loan_amortization_exports.py` row count +1; the Sprint 819 form-export
+      snapshot re-recorded (diff: the loan CSV/PDF totals rows and the xlsx sheet digest only).
 - [ ] **9F / OUT-23 — revenue memo counts a transaction twice.**
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent

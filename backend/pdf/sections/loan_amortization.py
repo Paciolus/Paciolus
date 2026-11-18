@@ -186,6 +186,21 @@ def _schedule_table(result: AmortizationResult) -> Table:
                 _fmt_money(entry.ending_balance),
             ]
         )
+    # Sprint 884 (OUT-06): a totals row under the summable columns, built from
+    # the rows above it; balances are not summed.
+    totals = result.column_totals()
+    rows.append(
+        [
+            "Totals",
+            "",
+            "",
+            _fmt_money(totals["scheduled_payment"]),
+            _fmt_money(totals["interest"]),
+            _fmt_money(totals["principal"]),
+            _fmt_money(totals["extra_principal"]),
+            "",
+        ]
+    )
 
     col_widths = [
         0.6 * inch,
@@ -211,6 +226,8 @@ def _schedule_table(result: AmortizationResult) -> Table:
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ClassicalColors.WHITE, ClassicalColors.OATMEAL_PAPER]),
                 ("TOPPADDING", (0, 0), (-1, -1), 2),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("LINEABOVE", (0, -1), (-1, -1), 0.75, ClassicalColors.OBSIDIAN),
             ]
         )
     )

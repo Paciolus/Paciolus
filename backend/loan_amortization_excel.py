@@ -97,12 +97,21 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         for row in range(2, ws.max_row + 1):
             ws[f"{letter}{row}"].number_format = CURRENCY_FORMAT
 
+    # Sprint 884 (OUT-06): each total sits under the column it totals (it used
+    # to write total payments under "Ending Balance"). Balances are not summed;
+    # the final ending balance is shown on its own row.
+    totals = result.column_totals()
     total_row = ws.max_row + 2
     ws.cell(row=total_row, column=1, value="Totals").font = _TOTAL_FONT
-    ws.cell(row=total_row, column=5, value=_to_float(result.total_interest)).number_format = CURRENCY_FORMAT
-    ws.cell(row=total_row, column=5).font = _TOTAL_FONT
-    ws.cell(row=total_row, column=8, value=_to_float(result.total_payments)).number_format = CURRENCY_FORMAT
-    ws.cell(row=total_row, column=8).font = _TOTAL_FONT
+    for col, key in ((4, "scheduled_payment"), (5, "interest"), (6, "principal"), (7, "extra_principal")):
+        cell = ws.cell(row=total_row, column=col, value=_to_float(totals[key]))
+        cell.number_format = CURRENCY_FORMAT
+        cell.font = _TOTAL_FONT
+    final_row = total_row + 1
+    ws.cell(row=final_row, column=1, value="Final Ending Balance").font = _TOTAL_FONT
+    final = ws.cell(row=final_row, column=8, value=_to_float(result.final_ending_balance))
+    final.number_format = CURRENCY_FORMAT
+    final.font = _TOTAL_FONT
 
     _autosize(
         ws,

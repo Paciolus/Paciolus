@@ -216,6 +216,23 @@ class AmortizationResult:
     payoff_date: Optional[date]
     journal_entry_templates: list[JournalEntryTemplate]
 
+    def column_totals(self) -> dict[str, Decimal]:
+        """Sprint 884 (OUT-06): each summable schedule column, totalled from its rows.
+
+        Exports put each figure under the column it totals; balances are not
+        summed — the final ending balance is shown on its own.
+        """
+        return {
+            "scheduled_payment": sum((e.scheduled_payment for e in self.schedule), ZERO),
+            "interest": sum((e.interest for e in self.schedule), ZERO),
+            "principal": sum((e.principal for e in self.schedule), ZERO),
+            "extra_principal": sum((e.extra_principal for e in self.schedule), ZERO),
+        }
+
+    @property
+    def final_ending_balance(self) -> Decimal:
+        return self.schedule[-1].ending_balance if self.schedule else ZERO
+
     def to_dict(self) -> dict[str, object]:
         return {
             "inputs": {
