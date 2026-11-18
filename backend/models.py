@@ -122,6 +122,11 @@ class User(Base):
     # access tokens — require_current_user rejects tokens issued before this.
     sessions_revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    # Sprint 881 (AZ-16): when Stripe first confirmed a subscription on a trial for
+    # this account. One introductory trial per account, whatever happens to the
+    # subscription afterwards; checkout offers no trial once this is set.
+    trial_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # Sprint 261: DB-backed account lockout (replaces in-memory _lockout_tracker)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

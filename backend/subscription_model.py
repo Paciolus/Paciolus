@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
@@ -244,6 +244,31 @@ class CheckoutAttempt(Base):
 
     def __repr__(self) -> str:
         return f"<CheckoutAttempt(id={self.id}, user_id={self.user_id}, status={self.status})>"
+
+
+class PromoRedemption(Base):
+    """A promo code Stripe confirmed on one of this account's subscriptions (Sprint 881, AZ-16).
+
+    Each code works once per account: checkout refuses a code with a row here.
+    Recorded from the subscription's metadata when Stripe confirms it with a
+    discount, so an abandoned checkout does not use the code.
+    """
+
+    __tablename__ = "promo_redemptions"
+    __table_args__ = (UniqueConstraint("user_id", "promo_code", name="uq_promo_redemptions_user_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    promo_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    redeemed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), server_default=func.now(), nullable=False
+    )
+
+    def __repr__(self) -> str:
+        return f"<PromoRedemption(user_id={self.user_id}, promo_code={self.promo_code})>"
 
 
 class ProcessedWebhookEvent(Base):

@@ -39,11 +39,15 @@ SOLO_ANNUAL = "price_1QpSoloAnnual0000000000a"
 
 
 @pytest.fixture
-def fake_stripe(monkeypatch):
-    monkeypatch.setenv("STRIPE_PRICE_SOLO_MONTHLY", SOLO_MONTHLY)
-    monkeypatch.setenv("STRIPE_PRICE_SOLO_ANNUAL", SOLO_ANNUAL)
+def fake_stripe():
     fake = FakeStripe(price_intervals={SOLO_MONTHLY: "month", SOLO_ANNUAL: "year"})
     with (
+        patch(
+            "billing.price_config._load_stripe_price_ids",
+            return_value={"solo": {"monthly": SOLO_MONTHLY, "annual": SOLO_ANNUAL}},
+        ),
+        patch("billing.price_config._load_pro_seat_price_ids", return_value={"monthly": "", "annual": ""}),
+        patch("billing.price_config._load_ent_seat_price_ids", return_value={"monthly": "", "annual": ""}),
         patch("billing.stripe_client.is_stripe_enabled", return_value=True),
         patch("billing.stripe_client.get_stripe", return_value=fake),
         patch("billing.checkout.get_stripe", return_value=fake),

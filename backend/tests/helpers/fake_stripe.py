@@ -197,9 +197,16 @@ class FakeStripe:
             session = self.sessions[session_id]
             if session["status"] != "open":
                 raise FakeStripeError(f"Session {session_id} is {session['status']}; it cannot be paid")
-            trial = bool(session["subscription_data"].get("trial_period_days"))
-            sub = self.add_subscription(session["customer"], price_id, status="trialing" if trial else "active")
-            self.subscriptions[sub["id"]]["metadata"] = dict(session["subscription_data"].get("metadata", {}))
+            trial_days = int(session["subscription_data"].get("trial_period_days") or 0)
+            sub = self.add_subscription(session["customer"], price_id, status="trialing" if trial_days else "active")
+            stored = self.subscriptions[sub["id"]]
+            stored["metadata"] = dict(session["subscription_data"].get("metadata", {}))
+            # Stripe carries the checkout's discount and trial onto the subscription.
+            stored["discounts"] = [f"di_fake_{d['coupon']}" for d in session["discounts"]]
+            if trial_days:
+                now = int(time.time())
+                stored["trial_start"] = now
+                stored["trial_end"] = now + trial_days * 86400
             session["status"] = "complete"
             session["subscription"] = sub["id"]
             return dict(session)

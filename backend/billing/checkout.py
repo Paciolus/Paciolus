@@ -80,6 +80,7 @@ def open_checkout_session(
     idempotency_key: str | None = None,
     checkout_attempt_id: int | None = None,
     expires_at: int | None = None,
+    promo_code: str | None = None,
 ) -> CheckoutSessionRef:
     """Create a Stripe Checkout Session and return its ID and URL.
 
@@ -103,6 +104,8 @@ def open_checkout_session(
         checkout_attempt_id: Sprint 881 — the ``checkout_attempts`` row this session belongs
             to; sent as ``client_reference_id`` and in both metadata blocks.
         expires_at: Sprint 881 — Unix time after which Stripe expires the session unpaid.
+        promo_code: Sprint 881 — the user-facing code behind ``stripe_coupon_id``, carried in the
+            subscription metadata so the webhook can record the redemption once Stripe confirms it.
 
     Returns:
         The session's ID and its URL for client redirect.
@@ -127,6 +130,8 @@ def open_checkout_session(
     if dpa_version:
         sub_metadata["dpa_version"] = dpa_version
 
+    if promo_code and stripe_coupon_id:
+        sub_metadata["paciolus_promo_code"] = promo_code.upper()
     session_metadata: dict = {"paciolus_user_id": str(user_id)}
     if checkout_attempt_id is not None:
         sub_metadata["paciolus_checkout_attempt_id"] = str(checkout_attempt_id)

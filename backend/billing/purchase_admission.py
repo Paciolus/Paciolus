@@ -36,6 +36,7 @@ from subscription_model import (
     TERMINAL_SUBSCRIPTION_STATUSES,
     CheckoutAttempt,
     CheckoutAttemptStatus,
+    PromoRedemption,
     Subscription,
 )
 
@@ -184,3 +185,13 @@ def mark_attempt_completed(db: Session, event_data: dict) -> CheckoutAttempt | N
         attempt.stripe_checkout_session_id = session_id
     attempt.stripe_subscription_id = event_data.get("subscription")
     return attempt
+
+
+def promo_already_redeemed(db: Session, user_id: int, promo_code: str) -> bool:
+    """True when Stripe has confirmed ``promo_code`` on one of this account's subscriptions (AZ-16)."""
+    return (
+        db.query(PromoRedemption.id)
+        .filter(PromoRedemption.user_id == user_id, PromoRedemption.promo_code == promo_code.upper())
+        .first()
+        is not None
+    )

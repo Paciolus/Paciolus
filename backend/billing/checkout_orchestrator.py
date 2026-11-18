@@ -138,7 +138,7 @@ def orchestrate_checkout(
     from billing.subscription_manager import get_subscription
     from models import UserTier
     from shared.entitlements import get_entitlements
-    from subscription_model import CheckoutAttemptStatus, SubscriptionStatus
+    from subscription_model import CheckoutAttemptStatus
 
     # 0. Sprint 858: Professional/Enterprise are sales-only until Sprint 853.
     #    Checked before any Stripe call, so no customer is created for a refused tier.
@@ -180,10 +180,13 @@ def orchestrate_checkout(
         stripe_coupon_id = get_stripe_coupon_id(promo_code)
         if not stripe_coupon_id:
             raise CheckoutValidationError("Promo code is not currently available. Please contact support.")
+        # Sprint 881 (AZ-16): each code works once per account.
+        if admission.promo_already_redeemed(db, user_id, promo_code):
+            raise CheckoutValidationError(f"Promo code '{promo_code.upper()}' has already been used on this account.")
 
     # 5. Purchase admission (Sprint 881, AZ-09): serialized on the user row; refuse a
     #    second subscription; expire any earlier checkout still payable.
-    admission.lock_purchaser(db, user_id)
+    purchaser = admission.lock_purchaser(db, user_id)
     existing_sub = get_subscription(db, user_id)
     customer_ids = admission.known_customer_ids(db, user_id, existing_sub)
     try:
@@ -215,10 +218,11 @@ def orchestrate_checkout(
     if existing_sub and not existing_sub.stripe_customer_id:
         existing_sub.stripe_customer_id = customer_id
 
-    # 7. Trial eligibility
+    # 7. Trial eligibility — one introductory trial per account (Sprint 881, AZ-16). Stored
+    #    on the account when Stripe confirms a trialing subscription, so cancelling and
+    #    buying again does not restart it.
     trial_days = 0
-    is_new_subscription = existing_sub is None or existing_sub.status == SubscriptionStatus.CANCELED
-    if is_new_subscription and tier in TRIAL_ELIGIBLE_TIERS:
+    if tier in TRIAL_ELIGIBLE_TIERS and purchaser.trial_used_at is None:
         trial_days = TRIAL_PERIOD_DAYS
 
     # 8. DPA acceptance (committed with the attempt row)
@@ -268,6 +272,7 @@ def orchestrate_checkout(
             idempotency_key=f"checkout-attempt-{attempt.id}",
             checkout_attempt_id=attempt.id,
             expires_at=admission.session_expiry_epoch(attempt),
+            promo_code=promo_code,
         )
     except Exception:
         db.rollback()

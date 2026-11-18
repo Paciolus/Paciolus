@@ -524,7 +524,11 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       Sync never overwrites a live stored subscription ID: it sets `conflicting_stripe_subscription_id` and logs
       CRITICAL; checkout-completed/created/updated stop there; deleting the duplicate clears the flag without
       cancelling the live one. Validation now runs before any Stripe call (no customer created for a bad request).
-- [ ] **6D (AZ-16)** — trial use and promo redemptions stored per account, checked before Checkout.
+- [x] **6D (AZ-16)** — `users.trial_used_at` and `promo_redemptions` (unique per account + code; migration
+      `d881b3c5e7f9`) recorded by sync when Stripe confirms a trialing / discounted subscription; checkout offers no
+      trial once used and refuses a code already redeemed. The code travels in the subscription metadata
+      (`paciolus_promo_code`). Sprint 881 test fixtures now patch the price loaders instead of the environment (the
+      secrets manager caches the first value it reads, so a local `backend/.env` won).
 - [ ] **6E** — checkout and seat-change request limits and the "26+" message derived from configured maximums.
 - [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
 - [ ] **6G (TQ-17)** — `test_counter_can_increment` asserts the counter rose by 1.

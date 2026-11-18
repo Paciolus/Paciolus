@@ -204,6 +204,36 @@ def _refresh_org_member_tiers(db: Session, owner_user_id: int, tier: UserTier) -
     return changed
 
 
+def _record_trial_and_promo_use(db: Session, user: User, stripe_subscription: dict) -> None:
+    """Record, on the account, a trial or promo code Stripe has confirmed (Sprint 881, AZ-16).
+
+    Stored independently of the subscription's status, so cancelling and buying
+    again offers neither. Recorded here — when Stripe confirms the subscription —
+    rather than when checkout opens, so an abandoned checkout uses neither.
+    """
+    from subscription_model import PromoRedemption
+
+    on_trial = stripe_subscription.get("status") == "trialing" or bool(stripe_subscription.get("trial_end"))
+    if on_trial and user.trial_used_at is None:
+        user.trial_used_at = datetime.now(UTC)
+        logger.info("Introductory trial recorded as used for user %d", user.id)
+
+    promo_code = (stripe_subscription.get("metadata") or {}).get("paciolus_promo_code")
+    discounted = bool(stripe_subscription.get("discounts")) or bool(stripe_subscription.get("discount"))
+    if promo_code and discounted:
+        code = str(promo_code).upper()
+        exists = (
+            db.query(PromoRedemption.id)
+            .filter(PromoRedemption.user_id == user.id, PromoRedemption.promo_code == code)
+            .first()
+        )
+        if exists is None:
+            db.add(
+                PromoRedemption(user_id=user.id, promo_code=code, stripe_subscription_id=stripe_subscription.get("id"))
+            )
+            logger.info("Promo code %s recorded as redeemed for user %d", code, user.id)
+
+
 def is_conflicting_subscription(sub: Subscription | None, stripe_subscription_id: str | None) -> bool:
     """True when ``stripe_subscription_id`` is a different subscription from the live one stored.
 
@@ -334,6 +364,7 @@ def sync_subscription_from_stripe(
         else:
             user.tier = UserTier.FREE
         _refresh_org_member_tiers(db, user_id, user.tier)
+        _record_trial_and_promo_use(db, user, stripe_subscription)
 
     db.flush()
     logger.info(

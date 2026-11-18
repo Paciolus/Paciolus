@@ -38,11 +38,22 @@ ENT_SEAT_MONTHLY = "price_1QpEnSeatMonthly000000aa"
 
 
 @pytest.fixture(autouse=True)
-def _price_ids(monkeypatch):
-    monkeypatch.setenv("STRIPE_PRICE_PROFESSIONAL_MONTHLY", PRO_MONTHLY)
-    monkeypatch.setenv("STRIPE_PRICE_ENTERPRISE_MONTHLY", ENT_MONTHLY)
-    monkeypatch.setenv("STRIPE_SEAT_PRICE_PRO_MONTHLY", PRO_SEAT_MONTHLY)
-    monkeypatch.setenv("STRIPE_SEAT_PRICE_ENT_MONTHLY", ENT_SEAT_MONTHLY)
+def _price_ids():
+    # Patch the loaders, not the environment: the secrets manager caches the first
+    # value it reads, so a developer's backend/.env would otherwise win.
+    with (
+        patch(
+            "billing.price_config._load_stripe_price_ids",
+            return_value={"professional": {"monthly": PRO_MONTHLY}, "enterprise": {"monthly": ENT_MONTHLY}},
+        ),
+        patch(
+            "billing.price_config._load_pro_seat_price_ids", return_value={"monthly": PRO_SEAT_MONTHLY, "annual": ""}
+        ),
+        patch(
+            "billing.price_config._load_ent_seat_price_ids", return_value={"monthly": ENT_SEAT_MONTHLY, "annual": ""}
+        ),
+    ):
+        yield
 
 
 def _price(price_id: str, unit_amount: int) -> dict:
