@@ -157,15 +157,22 @@ def process_grace_period_expirations(db: Session) -> int:
         .all()
     )
 
+    # Sprint 881 (ST-16): load every subscription and user up front (two queries)
+    # instead of two per episode. Order, flushes, events and emails are unchanged.
+    sub_ids = {episode.subscription_id for episode in expired}
+    subs_by_id = {s.id: s for s in db.query(Subscription).filter(Subscription.id.in_(sub_ids)).all()} if sub_ids else {}
+    user_ids = {s.user_id for s in subs_by_id.values()}
+    users_by_id = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+
     canceled_count = 0
     for episode in expired:
-        sub = db.query(Subscription).filter(Subscription.id == episode.subscription_id).first()
+        sub = subs_by_id.get(episode.subscription_id)
         if not sub:
             continue
 
         # Cancel the subscription
         sub.status = SubscriptionStatus.CANCELED
-        user = db.query(User).filter(User.id == sub.user_id).first()
+        user = users_by_id.get(sub.user_id)
         if user:
             user.tier = UserTier.FREE
 
@@ -190,7 +197,7 @@ def process_grace_period_expirations(db: Session) -> int:
         )
 
         # Send suspension email
-        _send_suspension_email(db, sub)
+        _send_suspension_email(db, sub, user=user)
 
         canceled_count += 1
 
@@ -356,9 +363,13 @@ def _send_recovery_email(db: Session, sub: Subscription) -> None:
         logger.exception("Failed to send recovery email for sub %d", sub.id)
 
 
-def _send_suspension_email(db: Session, sub: Subscription) -> None:
-    """Send account suspended email. Non-blocking."""
-    user = db.query(User).filter(User.id == sub.user_id).first()
+def _send_suspension_email(db: Session, sub: Subscription, user: User | None = None) -> None:
+    """Send account suspended email. Non-blocking.
+
+    ``user`` may be passed when the caller already loaded it (Sprint 881, ST-16).
+    """
+    if user is None:
+        user = db.query(User).filter(User.id == sub.user_id).first()
     if not user:
         return
 

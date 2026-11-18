@@ -35,6 +35,9 @@ _ACTIVE_STATUSES = (SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING)
 # Statuses that indicate involuntary churn risk
 _PAST_DUE_STATUSES = (SubscriptionStatus.PAST_DUE,)
 
+# Bound on IN (...) lists when batching per-user look-ups (Sprint 881, ST-16).
+_IN_CLAUSE_CHUNK = 500
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -519,21 +522,38 @@ def _compute_median_conversion_time(db: Session, since: datetime, until: datetim
     if not converted_events:
         return None
 
-    conversion_days: list[float] = []
-    for user_id, converted_at in converted_events:
-        # Find the corresponding trial_started event
-        trial_event = (
-            db.query(BillingEvent.created_at)
+    # Sprint 881 (ST-16): one query for every trial start of the converting users,
+    # instead of one query per conversion. For each conversion the preceding
+    # trial is the latest start strictly before it (bisect on the sorted starts).
+    from bisect import bisect_left
+
+    user_ids = sorted({uid for uid, _ in converted_events if uid is not None})
+    latest_conversion = max(converted_at for _, converted_at in converted_events)
+    trial_starts: dict[int, list[datetime]] = {}
+    for start in range(0, len(user_ids), _IN_CLAUSE_CHUNK):
+        rows = (
+            db.query(BillingEvent.user_id, BillingEvent.created_at)
             .filter(
                 BillingEvent.event_type == BillingEventType.TRIAL_STARTED,
-                BillingEvent.user_id == user_id,
-                BillingEvent.created_at < converted_at,
+                BillingEvent.user_id.in_(user_ids[start : start + _IN_CLAUSE_CHUNK]),
+                BillingEvent.created_at < latest_conversion,
             )
-            .order_by(BillingEvent.created_at.desc())
-            .first()
+            .all()
         )
-        if trial_event:
-            delta = (converted_at - trial_event[0]).total_seconds() / 86400.0
+        for uid, started_at in rows:
+            if uid is not None:
+                trial_starts.setdefault(uid, []).append(started_at)
+    for starts in trial_starts.values():
+        starts.sort()
+
+    conversion_days: list[float] = []
+    for user_id, converted_at in converted_events:
+        if user_id is None:
+            continue
+        starts = trial_starts.get(user_id, [])
+        idx = bisect_left(starts, converted_at)
+        if idx:
+            delta = (converted_at - starts[idx - 1]).total_seconds() / 86400.0
             conversion_days.append(delta)
 
     if not conversion_days:

@@ -535,7 +535,11 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
 - [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
 - [x] **6G (TQ-17)** — `test_counter_can_increment` reads `professional`/`monthly` from the registry, increments once,
       asserts +1 (a no-op `inc(0)` copy fails).
-- [ ] **6H (ST-16)** — median conversion time and grace-period expiry load rows in batches; query-count assertions.
+- [x] **6H (ST-16)** — median conversion time: one query for all trial starts of the converting users (bisect per
+      conversion; chunked IN lists). Grace-period expiry: subscriptions and users loaded in two queries; suspension email
+      reuses the loaded user. Order, flushes, events and emails unchanged. Query-count tests over 2 vs 7/5 records.
+      **Known limit:** `record_billing_event` commits per churn event (existing transaction behaviour, kept), so each
+      episode's rows are re-read by primary key after that commit.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
