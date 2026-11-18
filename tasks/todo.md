@@ -270,7 +270,19 @@ detail is computed from the detail as displayed.
       subtotal and total is the sum of the lines above it; depreciation and interest add-backs too). The screen shows
       the engine's totals, so it agrees once they do. Reproduced first: 18 of 19 in `test_sprint884_detail_totals.py`
       (sub-cent, half-cent, mixed-sign and negative half-cent inputs) failed.
-- [ ] **9D / OUT-04 — "Trial Balance" export lists flagged accounts over full-ledger totals.**
+- [x] **9D / OUT-04 — the "Trial Balance" export is the trial balance.** The export request (`AuditResultInput`) gains
+      `all_accounts` — the full account list the TB analysis response already returns. CSV (`/export/csv/trial-balance`):
+      every account once, a Flagged column ("Yes (n)" = its flag count), TOTALS summed from the rows as shown
+      (half-up). Workbook: "Standardized TB" → **"Trial Balance"** (same layout: every account once, Flagged column,
+      totals from its rows); "Flagged Anomalies" → **"Flagged Accounts"** (one row per flag as before, plus a subtotal
+      per material/immaterial section and a total of both). The old snapshot shows the bug exactly: a CSV of just a
+      header and `TOTALS,,100000.00,100000.00`. **Default chosen (not decided):** without `all_accounts` the CSV route
+      is a 400 naming the field, and the workbook's Trial Balance tab says the list was not supplied and shows no
+      totals — rather than a partial TB. No frontend code calls either route today, so no frontend change.
+      Reproduced first: 8 of 8 in `test_sprint884_tb_export.py` failed (unflagged accounts + one account flagged
+      twice). Old-contract tests rewritten (`test_export_csv_serializers.py`, `test_export_routes.py`,
+      `test_export_diagnostics_routes.py`: their fixtures now carry `all_accounts`); `route_export_pipeline` and the
+      Excel case of `memo_render_snapshot.json` re-recorded; `USER_GUIDE.md` tab names updated.
 - [x] **9E / OUT-06 — loan totals under their own columns.** `AmortizationResult.column_totals()` sums the scheduled
       payment, interest, principal and extra-principal columns from the rows; the workbook's Schedule totals row puts
       each under its own column and a separate "Final Ending Balance" row shows the last balance (column 8 used to
@@ -284,7 +296,7 @@ detail is computed from the detail as displayed.
       number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
       by two HIGH tests showed $2,500.00 (25.0%) for $1,500.00 (15.0%) of distinct entries
       (`test_sprint884_revenue_high_risk.py`, 1 of 3 failed). Sprint 819 `route_testing_exports` snapshot re-recorded
-      in a follow-up commit: the sample memo's figure fell from $20,986,691.82 (306.7%) to $9,862,237.xx (144.1%).
+      in a follow-up commit: the sample memo's figure fell from $20,986,691.82 (306.7%) to $9,860,237.81 (144.1%).
       **Still over 100%, not from double counting:** the sample payload carries no `total_revenue`, so the memo takes
       its denominator from the first test detail with `total_revenue`/`gross_revenue`, which is smaller than the
       flagged entries' absolute amounts. Not changed; needs its own item.

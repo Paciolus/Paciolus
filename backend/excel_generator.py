@@ -10,6 +10,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
 from shared.filenames import sanitize_csv_value
+from shared.monetary import quantize_monetary
 
 
 class ExcelColors:
@@ -293,62 +294,82 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions["D"].width = 15
 
     def _build_standardized_tb_tab(self) -> None:
-        """Build the Standardized TB tab with formatted trial balance."""
-        ws = self.wb.create_sheet("Standardized TB", 1)
+        """Build the Trial Balance tab: every account once, totals from its rows.
+
+        Sprint 884 (OUT-04): this tab ("Standardized TB") used to list only the
+        flagged accounts — one row per flag — above the full ledger's debit and
+        credit totals. It now lists every account in ``all_accounts`` once,
+        marks the flagged ones, and totals the rows as shown (half-up to cents).
+        The flags themselves are on the "Flagged Accounts" tab.
+        """
+        ws = self.wb.create_sheet("Trial Balance", 1)
 
         # Title
-        ws["A1"] = "Standardized Trial Balance"
+        ws["A1"] = "Trial Balance"
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:F1")
 
+        all_accounts = [a for a in (self.audit_result.get("all_accounts") or []) if isinstance(a, dict)]
+        if not all_accounts:
+            ws["A3"] = (
+                "The full account list was not supplied with this export, so the trial balance is not shown. "
+                "Re-export from the analysis to include it. Flagged accounts are on the Flagged Accounts tab."
+            )
+            ws["A3"].alignment = Alignment(wrap_text=True)
+            ws.merge_cells("A3:F3")
+            ws.column_dimensions["A"].width = 35
+            return
+
         # Headers
-        headers = ["Account", "Category", "Debit", "Credit", "Net", "Classification"]
+        headers = ["Account", "Category", "Debit", "Credit", "Net", "Flagged"]
         for col, header in enumerate(headers, start=1):
             cell = ws.cell(row=3, column=col, value=header)
             cell.style = "header_style"
 
-        # Data from abnormal balances (represents accounts with issues)
-        abnormal_balances = self.audit_result.get("abnormal_balances", [])
+        flag_counts: dict[str, int] = {}
+        material_accounts: set[str] = set()
+        for ab in self.audit_result.get("abnormal_balances", []) or []:
+            if isinstance(ab, dict):
+                name = ab.get("account", "Unknown")
+                flag_counts[name] = flag_counts.get(name, 0) + 1
+                if ab.get("materiality") == "material":
+                    material_accounts.add(name)
 
+        total_debit = total_credit = total_net = quantize_monetary(0)
         row = 4
-        for ab in abnormal_balances:
-            ws.cell(row=row, column=1, value=sanitize_csv_value(ab.get("account", "Unknown")))
-            ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get("type", "Unknown")))
+        for acct in all_accounts:
+            name = acct.get("account", "Unknown")
+            debit = quantize_monetary(acct.get("debit"))
+            credit = quantize_monetary(acct.get("credit"))
+            net = debit - credit
+            total_debit += debit
+            total_credit += credit
+            total_net += net
 
-            debit = ab.get("debit", 0) or 0
-            credit = ab.get("credit", 0) or 0
-            amount = ab.get("amount", 0)
+            ws.cell(row=row, column=1, value=sanitize_csv_value(name))
+            ws.cell(row=row, column=2, value=sanitize_csv_value(acct.get("type", "Unknown")))
+            for col, value in ((3, debit), (4, credit), (5, net)):
+                ws.cell(row=row, column=col, value=float(value)).style = "currency_style"
+            count = flag_counts.get(name, 0)
+            if count:
+                ws.cell(row=row, column=6, value=f"Yes ({count})")
 
-            ws.cell(row=row, column=3, value=debit)
-            ws.cell(row=row, column=3).style = "currency_style"
-
-            ws.cell(row=row, column=4, value=credit)
-            ws.cell(row=row, column=4).style = "currency_style"
-
-            ws.cell(row=row, column=5, value=amount)
-            ws.cell(row=row, column=5).style = "currency_style"
-
-            materiality = ab.get("materiality", "unknown")
-            ws.cell(row=row, column=6, value=materiality.upper())
-
-            # Apply row styling based on materiality
-            if materiality == "material":
+            # Material flags keep their row highlight.
+            if name in material_accounts:
                 for col in range(1, 7):
                     ws.cell(row=row, column=col).fill = _MATERIAL_ROW_FILL
                 ws.cell(row=row, column=1).border = _MATERIAL_ROW_BORDER
 
             row += 1
 
-        # Totals row
+        # Totals row — the sum of the rows above it.
         row += 1
         ws.cell(row=row, column=1, value="TOTALS")
         ws.cell(row=row, column=1).font = Font(bold=True)
-        ws.cell(row=row, column=3, value=self.audit_result.get("total_debits", 0))
-        ws.cell(row=row, column=3).style = "currency_style"
-        ws.cell(row=row, column=3).font = Font(bold=True)
-        ws.cell(row=row, column=4, value=self.audit_result.get("total_credits", 0))
-        ws.cell(row=row, column=4).style = "currency_style"
-        ws.cell(row=row, column=4).font = Font(bold=True)
+        for col, value in ((3, total_debit), (4, total_credit), (5, total_net)):
+            cell = ws.cell(row=row, column=col, value=float(value))
+            cell.style = "currency_style"
+            cell.font = Font(bold=True)
 
         # Column widths
         ws.column_dimensions["A"].width = 35
@@ -358,12 +379,25 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions["E"].width = 15
         ws.column_dimensions["F"].width = 15
 
+    def _write_flag_subtotal(self, ws: Worksheet, row: int, label: str, amount: Any) -> None:
+        """Sprint 884 (OUT-04): a labelled subtotal under the Amount column."""
+        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
+        cell = ws.cell(row=row, column=5, value=float(amount))
+        cell.style = "currency_style"
+        cell.font = Font(bold=True)
+
     def _build_anomalies_tab(self) -> None:
-        """Build the Flagged Anomalies tab with detailed anomaly information."""
-        ws = self.wb.create_sheet("Flagged Anomalies", 2)
+        """Build the Flagged Accounts tab: one row per flag, with subtotals.
+
+        Sprint 884 (OUT-04): renamed from "Flagged Anomalies"; each section
+        ends with a subtotal of its rows as shown, and a total of both
+        sections follows. An account flagged twice appears twice here — once
+        per flag — and once on the Trial Balance tab.
+        """
+        ws = self.wb.create_sheet("Flagged Accounts", 2)
 
         # Title
-        ws["A1"] = "Flagged Anomalies"
+        ws["A1"] = "Flagged Accounts"
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:G1")  # Sprint 53: Extended for Ref column
 
@@ -384,6 +418,7 @@ class PaciolusWorkpaperGenerator:
         immaterial = [ab for ab in abnormal_balances if ab.get("materiality") == "immaterial"]
 
         row = 5
+        material_subtotal = immaterial_subtotal = quantize_monetary(0)
 
         # Material anomalies section
         if material:
@@ -401,7 +436,9 @@ class PaciolusWorkpaperGenerator:
                 ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
                 ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
-                ws.cell(row=row, column=5, value=ab.get("amount", 0))
+                amount = quantize_monetary(ab.get("amount"))
+                material_subtotal += amount
+                ws.cell(row=row, column=5, value=float(amount))
                 ws.cell(row=row, column=5).style = "currency_style"
                 ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
                 ws.cell(row=row, column=7, value="MATERIAL")
@@ -414,7 +451,8 @@ class PaciolusWorkpaperGenerator:
 
                 row += 1
 
-            row += 1  # Spacer
+            self._write_flag_subtotal(ws, row, "Subtotal — material", material_subtotal)
+            row += 2  # Subtotal + spacer
 
         # Immaterial anomalies section
         if immaterial:
@@ -432,13 +470,21 @@ class PaciolusWorkpaperGenerator:
                 ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
                 ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
-                ws.cell(row=row, column=5, value=ab.get("amount", 0))
+                amount = quantize_monetary(ab.get("amount"))
+                immaterial_subtotal += amount
+                ws.cell(row=row, column=5, value=float(amount))
                 ws.cell(row=row, column=5).style = "currency_style"
                 ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
                 ws.cell(row=row, column=7, value="IMMATERIAL")
                 ws.cell(row=row, column=7).font = _IMMATERIAL_LABEL_FONT
 
                 row += 1
+
+            self._write_flag_subtotal(ws, row, "Subtotal — immaterial", immaterial_subtotal)
+            row += 2
+
+        if material or immaterial:
+            self._write_flag_subtotal(ws, row, "Total — all flags", material_subtotal + immaterial_subtotal)
 
         # If no anomalies
         if not material and not immaterial:

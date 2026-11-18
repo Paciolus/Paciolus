@@ -48,6 +48,10 @@ def _make_audit_result(**overrides) -> AuditResultInput:
         "materiality_threshold": 100.0,
         "material_count": 0,
         "immaterial_count": 0,
+        "all_accounts": [
+            {"account": "Cash", "debit": 1000.0, "credit": 0.0, "type": "asset"},
+            {"account": "Revenue", "debit": 0.0, "credit": 1000.0, "type": "revenue"},
+        ],
     }
     defaults.update(overrides)
     return AuditResultInput(**defaults)
@@ -59,6 +63,8 @@ def _make_audit_result(**overrides) -> AuditResultInput:
 
 
 class TestSerializeTrialBalanceCsv:
+    """Sprint 884 (OUT-04): every account once, totals from the rows, a Flagged column."""
+
     def test_header_and_totals_footer(self):
         result = _make_audit_result()
         rows = _parse(serialize_trial_balance_csv(result))
@@ -70,32 +76,28 @@ class TestSerializeTrialBalanceCsv:
             "Net Balance",
             "Category",
             "Classification Confidence",
+            "Flagged",
         ]
-        # Empty abnormal_balances → header + blank + totals
         assert rows[-1][0] == "TOTALS"
         assert rows[-1][2] == "1000.00"
         assert rows[-1][3] == "1000.00"
+        assert rows[-1][4] == "0.00"
 
-    def test_writes_row_per_unique_account(self):
+    def test_writes_one_row_per_account_and_counts_its_flags(self):
         result = _make_audit_result(
             abnormal_balances=[
                 {"account": "Cash", "debit": 500.0, "credit": 0, "amount": 500.0, "type": "asset"},
                 {"account": "Cash", "debit": 100.0, "credit": 0, "amount": 100.0, "type": "asset"},
-                {"account": "AR", "debit": 300.0, "credit": 0, "amount": 300.0, "type": "asset"},
             ],
         )
         rows = _parse(serialize_trial_balance_csv(result))
-        # Ref assigned sequentially, dedup'd accounts
         account_rows = [r for r in rows if r and r[0].startswith("TB-")]
-        assert len(account_rows) == 2
-        assert account_rows[0][1] == "Cash"
-        assert account_rows[1][1] == "AR"
+        assert [r[1] for r in account_rows] == ["Cash", "Revenue"]
+        assert [r[7] for r in account_rows] == ["Yes (2)", ""]
 
     def test_uses_classification_summary_category_when_available(self):
         result = _make_audit_result(
-            abnormal_balances=[
-                {"account": "Rent Expense", "debit": 0, "credit": 200.0, "amount": -200.0, "type": "misc"},
-            ],
+            all_accounts=[{"account": "Rent Expense", "debit": 200.0, "credit": 0, "type": "misc"}],
             classification_summary={
                 "Operating Expenses": [{"account": "Rent Expense", "confidence": 0.92}],
             },
@@ -105,29 +107,31 @@ class TestSerializeTrialBalanceCsv:
         assert expense_row[5] == "Operating Expenses"
         assert expense_row[6] == "92%"
 
-    def test_falls_back_to_anomaly_type_when_no_classification(self):
+    def test_falls_back_to_account_type_when_no_classification(self):
         result = _make_audit_result(
-            abnormal_balances=[
-                {"account": "Unknown Account", "debit": 50.0, "credit": 0, "amount": 50.0, "type": "fallback_type"},
-            ],
+            all_accounts=[{"account": "Unknown Account", "debit": 50.0, "credit": 0, "type": "fallback_type"}],
         )
         rows = _parse(serialize_trial_balance_csv(result))
         row = [r for r in rows if r and r[0].startswith("TB-")][0]
         assert row[5] == "fallback_type"
 
-    def test_non_dict_anomalies_are_skipped(self):
-        result = _make_audit_result(abnormal_balances=["not a dict", 42, None])
+    def test_non_dict_entries_are_skipped(self):
+        result = _make_audit_result(
+            abnormal_balances=["not a dict", 42, None],
+            all_accounts=["not a dict", {"account": "Cash", "debit": 10.0, "credit": 0, "type": "asset"}],
+        )
         rows = _parse(serialize_trial_balance_csv(result))
-        # No account rows emitted, still yields totals
         account_rows = [r for r in rows if r and r[0].startswith("TB-")]
-        assert account_rows == []
+        assert [r[1] for r in account_rows] == ["Cash"]
         assert rows[-1][0] == "TOTALS"
+
+    def test_without_the_account_list_raises(self):
+        with pytest.raises(ValueError, match="all_accounts"):
+            serialize_trial_balance_csv(_make_audit_result(all_accounts=None))
 
     def test_csv_injection_sanitization_on_account_name(self):
         result = _make_audit_result(
-            abnormal_balances=[
-                {"account": "=1+1", "debit": 10, "credit": 0, "amount": 10, "type": "x"},
-            ],
+            all_accounts=[{"account": "=1+1", "debit": 10, "credit": 0, "type": "x"}],
         )
         rows = _parse(serialize_trial_balance_csv(result))
         account_row = [r for r in rows if r and r[0].startswith("TB-")][0]

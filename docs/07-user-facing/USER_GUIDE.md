@@ -193,7 +193,7 @@ If your trial balance contains amounts in multiple currencies:
 ### 3.4 Exporting
 
 - **PDF Report** — Professional diagnostic report with legal disclaimers
-- **Excel Workpaper** — Multi-tab structure (Summary, Standardized TB, Anomalies, Ratios)
+- **Excel Workpaper** — Multi-tab structure (Summary, Trial Balance — every account once, flagged accounts marked — Flagged Accounts, Ratios)
 - **CSV** — Standardized trial balance or anomalies list
 - **Lead Sheets** — A–Z workbook (Excel)
 - **Financial Statements** — Balance Sheet + Income Statement + Cash Flow (PDF or Excel)

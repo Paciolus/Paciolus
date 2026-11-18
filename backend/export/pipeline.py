@@ -17,9 +17,11 @@ import logging
 from collections.abc import Callable
 from typing import Optional
 
+from fastapi import HTTPException
 from fastapi.responses import Response
 
 from export.serializers.csv import (
+    ALL_ACCOUNTS_REQUIRED,
     serialize_accrual_completeness_csv,
     serialize_anomalies_csv,
     serialize_expense_category_csv,
@@ -150,7 +152,13 @@ def export_diagnostic_excel(audit_result: AuditResultInput) -> Response:
 
 
 def export_csv_trial_balance(audit_result: AuditResultInput) -> Response:
-    """Full pipeline: audit result -> trial balance CSV bytes -> streaming response."""
+    """Full pipeline: audit result -> trial balance CSV bytes -> streaming response.
+
+    Sprint 884 (OUT-04): without ``all_accounts`` there is no trial balance to
+    export — a 400, not a file of flagged accounts under full-ledger totals.
+    """
+    if not audit_result.all_accounts:
+        raise HTTPException(status_code=400, detail=ALL_ACCOUNTS_REQUIRED)
     return _run_export(
         lambda: serialize_trial_balance_csv(audit_result),
         source_filename=audit_result.filename or "TrialBalance",

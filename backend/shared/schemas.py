@@ -51,6 +51,9 @@ class AuditResultInput(BaseModel):
     selected_sheets: Optional[list] = None
     sheet_results: Optional[dict] = None
     lead_sheet_grouping: Optional[dict] = None
+    # Sprint 884 (OUT-04): every account from the analysis response. Required by
+    # the trial balance exports, which list each account once (not only the flagged).
+    all_accounts: Optional[list] = None
     # Workpaper signoff fields (deprecated Sprint 7 — ignored unless include_signoff=True)
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None

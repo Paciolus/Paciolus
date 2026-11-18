@@ -37,6 +37,11 @@ BASE_AUDIT = {
     "material_count": 0,
     "immaterial_count": 0,
     "filename": "TestTB",
+    # Sprint 884 (OUT-04): the trial balance exports need every account.
+    "all_accounts": [
+        {"account": "Cash", "debit": 100000.0, "credit": 0.0, "type": "asset"},
+        {"account": "Revenue", "debit": 0.0, "credit": 100000.0, "type": "revenue"},
+    ],
 }
 
 LEAD_SHEET_PAYLOAD = {
@@ -223,14 +228,18 @@ class TestExportCsvTrialBalance:
                 }
             ],
             "material_count": 1,
+            "all_accounts": [
+                *BASE_AUDIT["all_accounts"],
+                {"account": "Cash - Operating", "debit": 1000.0, "credit": 0.0, "type": "asset"},
+            ],
         }
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/export/csv/trial-balance", json=payload)
 
         assert response.status_code == 200
         content = response.content.decode("utf-8-sig")
-        assert "Cash - Operating" in content
-        assert "TB-0001" in content
+        assert "TB-0003,Cash - Operating,1000.00,,1000.00,asset,,Yes (1)" in content
+        assert "TB-0001,Cash,100000.00,,100000.00,asset,," in content  # unflagged accounts are listed too
 
     @pytest.mark.asyncio
     async def test_classification_summary_populates_category(self, override_auth_verified):
@@ -259,16 +268,26 @@ class TestExportCsvTrialBalance:
         assert "Assets" in content
 
     @pytest.mark.asyncio
-    async def test_totals_row_matches_input(self, override_auth_verified):
+    async def test_totals_row_is_the_sum_of_the_account_rows(self, override_auth_verified):
+        """Sprint 884 (OUT-04): TOTALS come from the rows written, not the payload's totals."""
         from main import app
 
-        payload = {**BASE_AUDIT, "total_debits": 250000.0, "total_credits": 250000.0}
+        payload = {
+            **BASE_AUDIT,
+            "total_debits": 999.0,
+            "total_credits": 999.0,
+            "all_accounts": [
+                {"account": "Cash", "debit": 250000.0, "credit": 0.0, "type": "asset"},
+                {"account": "Equity", "debit": 0.0, "credit": 250000.0, "type": "equity"},
+            ],
+        }
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/export/csv/trial-balance", json=payload)
 
         assert response.status_code == 200
         content = response.content.decode("utf-8-sig")
-        assert "250000.00" in content
+        assert "TOTALS,,250000.00,250000.00,0.00" in content
+        assert "999.00" not in content
 
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(self):

@@ -1544,8 +1544,8 @@
  "excel_workpaper": {
   "sheet_order": [
    "Summary",
-   "Standardized TB",
-   "Flagged Anomalies",
+   "Trial Balance",
+   "Flagged Accounts",
    "Key Ratios"
   ],
   "sheets": {
@@ -1564,26 +1564,22 @@
      "D": 15.0
     }
    },
-   "Standardized TB": {
-    "cells": "954324aa609d1b27",
-    "cell_count": 58,
+   "Trial Balance": {
+    "cells": "4c733dbc8bcd22d8",
+    "cell_count": 2,
     "merged": [
-     "A1:F1"
+     "A1:F1",
+     "A3:F3"
     ],
     "widths": {
-     "A": 35.0,
-     "B": 15.0,
-     "C": 15.0,
-     "D": 15.0,
-     "E": 15.0,
-     "F": 15.0
+     "A": 35.0
     }
    },
-   "Flagged Anomalies": {
-    "cells": "5ec24d3335b5ea3f",
-    "cell_count": 67,
+   "Flagged Accounts": {
+    "cells": "c9694aba242fe588",
+    "cell_count": 73,
     "merged": [
-     "A10:G10",
+     "A11:G11",
      "A1:G1",
      "A5:G5"
     ],

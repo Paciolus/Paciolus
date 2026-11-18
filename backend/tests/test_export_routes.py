@@ -52,6 +52,11 @@ MINIMAL_AUDIT_PAYLOAD = {
     "filename": "test_export.csv",
     "classification_summary": {"assets": [{"account": "Cash", "confidence": 0.95}]},
     "risk_summary": {"high": 1, "medium": 0, "low": 0},
+    # Sprint 884 (OUT-04): the trial balance exports need every account.
+    "all_accounts": [
+        {"account": "Cash", "debit": 100000.0, "credit": 0.0, "type": "asset"},
+        {"account": "Revenue", "debit": 0.0, "credit": 100000.0, "type": "revenue"},
+    ],
 }
 
 EMPTY_AUDIT_PAYLOAD = {
@@ -342,29 +347,40 @@ class TestCsvTrialBalanceExport:
             response = await client.post("/export/csv/trial-balance", json=MINIMAL_AUDIT_PAYLOAD)
 
         content = response.content.decode("utf-8-sig")
-        assert "Cash" in content
-        assert "TB-0001" in content
+        assert "TB-0001,Cash,100000.00,,100000.00,assets,95%,Yes (1)" in content
+        assert "TB-0002,Revenue,,100000.00,-100000.00,revenue,," in content
 
     @pytest.mark.asyncio
-    async def test_totals_match_input_values(self, override_auth_verified):
+    async def test_totals_are_the_sum_of_the_account_rows(self, override_auth_verified):
         from main import app
 
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
             response = await client.post("/export/csv/trial-balance", json=MINIMAL_AUDIT_PAYLOAD)
 
         content = response.content.decode("utf-8-sig")
-        assert "100000.00" in content
+        assert "TOTALS,,100000.00,100000.00,0.00" in content
 
     @pytest.mark.asyncio
     async def test_empty_anomalies_still_returns_csv(self, override_auth_verified):
         from main import app
 
+        payload = {**EMPTY_AUDIT_PAYLOAD, "all_accounts": MINIMAL_AUDIT_PAYLOAD["all_accounts"]}
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post("/export/csv/trial-balance", json=EMPTY_AUDIT_PAYLOAD)
+            response = await client.post("/export/csv/trial-balance", json=payload)
 
         assert response.status_code == 200
         content = response.content.decode("utf-8-sig")
         assert "TOTALS" in content
+
+    @pytest.mark.asyncio
+    async def test_without_the_account_list_returns_400(self, override_auth_verified):
+        """Sprint 884 (OUT-04): no account list, no trial balance — not a partial one."""
+        from main import app
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/export/csv/trial-balance", json=EMPTY_AUDIT_PAYLOAD)
+
+        assert response.status_code == 400
 
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(self):

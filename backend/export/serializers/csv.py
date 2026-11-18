@@ -7,6 +7,7 @@ functions for trial_balance, anomalies, preflight_issues, population_profile,
 expense_category, and accrual_completeness — all the "diagnostic" CSV flavors.
 """
 
+from collections import Counter
 from io import StringIO
 
 from shared.export_schemas import (
@@ -16,7 +17,29 @@ from shared.export_schemas import (
     PreFlightCSVInput,
 )
 from shared.filenames import safe_csv_writer, sanitize_csv_value
+from shared.monetary import quantize_monetary
 from shared.schemas import AuditResultInput
+
+ALL_ACCOUNTS_REQUIRED = (
+    "all_accounts is required to export the trial balance: send the full account list from the analysis "
+    "response, not only the flagged accounts."
+)
+
+
+class MissingAccountListError(ValueError):
+    """Sprint 884 (OUT-04): a trial balance export needs every account, not only the flagged ones."""
+
+    def __init__(self) -> None:
+        super().__init__(ALL_ACCOUNTS_REQUIRED)
+
+
+def flag_counts(abnormal_balances: list) -> Counter[str]:
+    """How many flags each account carries (one per abnormal_balances entry)."""
+    return Counter(a.get("account", "Unknown") for a in abnormal_balances if isinstance(a, dict))
+
+
+def flag_label(count: int) -> str:
+    return f"Yes ({count})" if count else ""
 
 
 def _encode_csv(output: StringIO) -> bytes:
@@ -25,15 +48,23 @@ def _encode_csv(output: StringIO) -> bytes:
 
 
 def serialize_trial_balance_csv(audit_result: AuditResultInput) -> bytes:
-    """Serialize trial balance rows from an audit result into CSV bytes.
+    """Serialize the full trial balance from an audit result into CSV bytes.
 
-    Produces one row per unique account in abnormal_balances, with classification
-    confidence from classification_summary when available, plus a TOTALS footer.
+    Sprint 884 (OUT-04): one row per account in ``all_accounts`` (every
+    account, once), a Flagged column giving each account's flag count, and a
+    TOTALS footer that is the sum of the rows as shown (half-up to cents). It
+    used to list only flagged accounts above the full ledger's totals.
+    Raises ``MissingAccountListError`` when ``all_accounts`` is not supplied.
     """
+    if not audit_result.all_accounts:
+        raise MissingAccountListError()
+
     output = StringIO()
     writer = safe_csv_writer(output)
 
-    writer.writerow(["Reference", "Account", "Debit", "Credit", "Net Balance", "Category", "Classification Confidence"])
+    writer.writerow(
+        ["Reference", "Account", "Debit", "Credit", "Net Balance", "Category", "Classification Confidence", "Flagged"]
+    )
 
     classification = audit_result.classification_summary or {}
     category_map = {}
@@ -46,44 +77,38 @@ def serialize_trial_balance_csv(audit_result: AuditResultInput) -> bytes:
                         "confidence": acct.get("confidence", 0),
                     }
 
-    accounts_written: set[str] = set()
+    flags = flag_counts(audit_result.abnormal_balances)
+    total_debit = total_credit = total_net = quantize_monetary(0)
     ref_idx = 1
 
-    for anomaly in audit_result.abnormal_balances:
-        if isinstance(anomaly, dict):
-            account = anomaly.get("account", "Unknown")
-            if account not in accounts_written:
-                debit = anomaly.get("debit", 0) or 0
-                credit = anomaly.get("credit", 0) or 0
-                amount = anomaly.get("amount", 0) or 0
-                category_info = category_map.get(account, {})
+    for acct in audit_result.all_accounts:
+        if not isinstance(acct, dict):
+            continue
+        account = acct.get("account", "Unknown")
+        debit = quantize_monetary(acct.get("debit"))
+        credit = quantize_monetary(acct.get("credit"))
+        net = debit - credit
+        total_debit += debit
+        total_credit += credit
+        total_net += net
+        category_info = category_map.get(account, {})
 
-                writer.writerow(
-                    [
-                        f"TB-{ref_idx:04d}",
-                        sanitize_csv_value(account),
-                        f"{debit:.2f}" if debit else "",
-                        f"{credit:.2f}" if credit else "",
-                        f"{amount:.2f}",
-                        sanitize_csv_value(category_info.get("category", anomaly.get("type", "Unknown"))),
-                        f"{category_info.get('confidence', 0):.0%}" if category_info.get("confidence") else "",
-                    ]
-                )
-                accounts_written.add(account)
-                ref_idx += 1
+        writer.writerow(
+            [
+                f"TB-{ref_idx:04d}",
+                sanitize_csv_value(account),
+                f"{debit}" if debit else "",
+                f"{credit}" if credit else "",
+                f"{net}",
+                sanitize_csv_value(category_info.get("category", acct.get("type", "Unknown"))),
+                f"{category_info.get('confidence', 0):.0%}" if category_info.get("confidence") else "",
+                flag_label(flags.get(account, 0)),
+            ]
+        )
+        ref_idx += 1
 
     writer.writerow([])
-    writer.writerow(
-        [
-            "TOTALS",
-            "",
-            f"{audit_result.total_debits:.2f}",
-            f"{audit_result.total_credits:.2f}",
-            f"{audit_result.difference:.2f}",
-            "",
-            "",
-        ]
-    )
+    writer.writerow(["TOTALS", "", f"{total_debit}", f"{total_credit}", f"{total_net}", "", "", ""])
 
     return _encode_csv(output)
 
