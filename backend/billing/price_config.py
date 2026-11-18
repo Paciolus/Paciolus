@@ -64,6 +64,20 @@ def get_max_self_serve_seats(tier: str) -> int:
     return 1  # Solo and Free have no team features
 
 
+def max_additional_seats(tier: str) -> int:
+    """Add-on seats a tier may buy self-serve: its maximum minus the seats the plan includes.
+
+    Sprint 881: request validation and messages derive from this instead of
+    hard-coded counts. Professional 20 - 7 = 13; Enterprise 100 - 20 = 80; else 0.
+    """
+    if tier not in ("professional", "enterprise"):
+        return 0
+    from models import UserTier
+    from shared.entitlements import get_entitlements
+
+    return max(0, get_max_self_serve_seats(tier) - get_entitlements(UserTier(tier)).seats_included)
+
+
 def get_seat_price_cents(seat_number: int, interval: str = "monthly", tier: str = "professional") -> int | None:
     """Get the per-seat price in cents for a given seat position.
 

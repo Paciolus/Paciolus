@@ -22,6 +22,7 @@ from tests.helpers.contract_assertions import assert_signature
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
+from schemas.billing_schemas import MAX_ADD_ON_SEATS
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 # ===========================================================================
@@ -223,7 +224,7 @@ class TestCheckoutPathCorrectness:
         )
         assert req.seat_count == seat_count
 
-    def test_seat_61_rejected_by_schema(self):
+    def test_seats_over_max_rejected_by_schema(self):
         from pydantic import ValidationError
 
         from routes.billing import CheckoutRequest
@@ -232,7 +233,7 @@ class TestCheckoutPathCorrectness:
             CheckoutRequest(
                 tier="enterprise",
                 interval="monthly",
-                seat_count=61,
+                seat_count=MAX_ADD_ON_SEATS + 1,
             )
 
     # --- Solo plan rejects seats > 0 ---

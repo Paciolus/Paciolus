@@ -20,6 +20,7 @@ from tests.helpers.route_inventory import all_routes
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
+from schemas.billing_schemas import MAX_ADD_ON_SEATS
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 # ---------------------------------------------------------------------------
@@ -168,7 +169,7 @@ class TestCheckoutSeatCount:
             CheckoutRequest(
                 tier="professional",
                 interval="monthly",
-                seat_count=61,  # max is 60 (le=60 in CheckoutRequest)
+                seat_count=MAX_ADD_ON_SEATS + 1,  # Sprint 881: derived from the configured maximums
             )
 
 
@@ -208,7 +209,7 @@ class TestSeatChangeSchemas:
         from routes.billing import SeatChangeRequest
 
         with pytest.raises(ValidationError):
-            SeatChangeRequest(seats=23)
+            SeatChangeRequest(seats=MAX_ADD_ON_SEATS + 1)
 
     def test_seat_change_response_fields(self):
         from routes.billing import SeatChangeResponse

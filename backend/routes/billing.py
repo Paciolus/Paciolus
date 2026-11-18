@@ -266,7 +266,7 @@ def add_seats_endpoint(
     db: Session = Depends(get_db),
 ) -> SeatChangeResponse:
     """Add seats to the current subscription. Stripe prorates automatically."""
-    from billing.price_config import SALES_ONLY_MESSAGE, is_self_serve_purchasable
+    from billing.price_config import SALES_ONLY_MESSAGE, get_max_self_serve_seats, is_self_serve_purchasable
     from billing.subscription_manager import add_seats, get_subscription
 
     # Sprint 858: seats are bought on Professional/Enterprise only, and those
@@ -278,9 +278,11 @@ def add_seats_endpoint(
     with stripe_endpoint_guard(user.id, "add-seats"):
         result = add_seats(db, user.id, body.seats)
     if result is None:
+        # Sprint 881: the sales threshold is the tier's configured maximum + 1 (was a literal "26+").
+        sales_from = get_max_self_serve_seats(sub.tier if sub else "professional") + 1
         raise HTTPException(
             status_code=400,
-            detail="Unable to add seats. Check your subscription status or contact sales for 26+ seats.",
+            detail=f"Unable to add seats. Check your subscription status or contact sales for {sales_from}+ seats.",
         )
 
     return SeatChangeResponse(

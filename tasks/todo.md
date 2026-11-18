@@ -529,7 +529,9 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       trial once used and refuses a code already redeemed. The code travels in the subscription metadata
       (`paciolus_promo_code`). Sprint 881 test fixtures now patch the price loaders instead of the environment (the
       secrets manager caches the first value it reads, so a local `backend/.env` won).
-- [ ] **6E** — checkout and seat-change request limits and the "26+" message derived from configured maximums.
+- [x] **6E** — `price_config.max_additional_seats(tier)` (Professional 13, Enterprise 80); `CheckoutRequest.seat_count`
+      and `SeatChangeRequest.seats` bound by the largest (80, was 60 / 22); the add-seats refusal names the tier's
+      threshold (21+ / 101+, was "26+"). OpenAPI snapshot regenerated.
 - [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
 - [ ] **6G (TQ-17)** — `test_counter_can_increment` asserts the counter rose by 1.
 - [ ] **6H (ST-16)** — median conversion time and grace-period expiry load rows in batches; query-count assertions.

@@ -21,6 +21,7 @@ from tests.helpers.route_inventory import all_routes
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models import UserTier
+from schemas.billing_schemas import MAX_ADD_ON_SEATS
 from subscription_model import BillingInterval, Subscription, SubscriptionStatus
 
 
@@ -432,7 +433,7 @@ class TestCheckoutValidation:
         assert body.seat_count == 5
         assert body.tier == "professional"
 
-    def test_seat_count_capped_at_60_by_schema(self):
+    def test_seat_count_capped_by_schema(self):
         """Pydantic schema rejects seat_count > 60."""
         from pydantic import ValidationError
 
@@ -442,7 +443,7 @@ class TestCheckoutValidation:
             CheckoutRequest(
                 tier="professional",
                 interval="monthly",
-                seat_count=61,
+                seat_count=MAX_ADD_ON_SEATS + 1,
             )
 
     def test_negative_seats_rejected_by_schema(self):

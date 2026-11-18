@@ -8631,7 +8631,7 @@
           },
           "seat_count": {
             "default": 0,
-            "maximum": 60.0,
+            "maximum": 80.0,
             "minimum": 0.0,
             "title": "Seat Count",
             "type": "integer"
@@ -27029,7 +27029,7 @@
         "description": "Request to add or remove seats.",
         "properties": {
           "seats": {
-            "maximum": 22.0,
+            "maximum": 80.0,
             "minimum": 1.0,
             "title": "Seats",
             "type": "integer"

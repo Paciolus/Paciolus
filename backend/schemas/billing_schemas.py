@@ -6,6 +6,13 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from billing.price_config import max_additional_seats
+
+# Sprint 881: the largest add-on count any tier may buy self-serve (Enterprise: 100 - 20 = 80),
+# derived from billing/price_config.py and shared/entitlements.py instead of literals (60, 22)
+# that matched neither. The per-tier limit is enforced where the tier is known.
+MAX_ADD_ON_SEATS = max(max_additional_seats(tier) for tier in ("professional", "enterprise"))
+
 
 class CheckoutRequest(BaseModel):
     """Request to create a Stripe Checkout Session.
@@ -21,7 +28,7 @@ class CheckoutRequest(BaseModel):
     tier: str = Field(..., pattern="^(solo|professional|enterprise)$")
     interval: str = Field(..., pattern="^(monthly|annual)$")
     promo_code: str | None = Field(None, max_length=50)
-    seat_count: int = Field(0, ge=0, le=60)
+    seat_count: int = Field(0, ge=0, le=MAX_ADD_ON_SEATS)
     dpa_accepted: bool = Field(False)
 
     @model_validator(mode="before")
@@ -88,7 +95,7 @@ class UsageResponse(BaseModel):
 class SeatChangeRequest(BaseModel):
     """Request to add or remove seats."""
 
-    seats: int = Field(..., ge=1, le=22)
+    seats: int = Field(..., ge=1, le=MAX_ADD_ON_SEATS)
 
 
 class SeatChangeResponse(BaseModel):
