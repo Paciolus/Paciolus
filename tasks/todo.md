@@ -282,7 +282,8 @@ detail is computed from the detail as displayed.
       Reproduced first: 8 of 8 in `test_sprint884_tb_export.py` failed (unflagged accounts + one account flagged
       twice). Old-contract tests rewritten (`test_export_csv_serializers.py`, `test_export_routes.py`,
       `test_export_diagnostics_routes.py`: their fixtures now carry `all_accounts`); `route_export_pipeline` and the
-      Excel case of `memo_render_snapshot.json` re-recorded; `USER_GUIDE.md` tab names updated.
+      Excel case of `memo_render_snapshot.json` re-recorded; `USER_GUIDE.md` tab names updated. OpenAPI snapshot
+      (`scripts/openapi-snapshot.json`) regenerated for the new field in a follow-up commit.
 - [x] **9E / OUT-06 — loan totals under their own columns.** `AmortizationResult.column_totals()` sums the scheduled
       payment, interest, principal and extra-principal columns from the rows; the workbook's Schedule totals row puts
       each under its own column and a separate "Final Ending Balance" row shows the last balance (column 8 used to
