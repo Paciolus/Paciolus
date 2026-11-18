@@ -463,10 +463,14 @@ class TestPrometheusCounter:
         assert pricing_v2_checkouts_total is not None
 
     def test_counter_can_increment(self):
-        from shared.parser_metrics import pricing_v2_checkouts_total
+        """Sprint 881 (TQ-17): the increment is read back from the registry, not just "does not raise"."""
+        from shared.parser_metrics import PARSER_REGISTRY, pricing_v2_checkouts_total
 
-        # Should not raise
-        pricing_v2_checkouts_total.labels(tier="professional", interval="monthly").inc()
+        labels = {"tier": "professional", "interval": "monthly"}
+        before = PARSER_REGISTRY.get_sample_value("paciolus_pricing_v2_checkouts_total", labels) or 0.0
+        pricing_v2_checkouts_total.labels(**labels).inc()
+        after = PARSER_REGISTRY.get_sample_value("paciolus_pricing_v2_checkouts_total", labels)
+        assert after == before + 1
 
     def test_counter_on_registry(self):
         from shared.parser_metrics import PARSER_REGISTRY

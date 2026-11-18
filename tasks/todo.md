@@ -533,7 +533,8 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       and `SeatChangeRequest.seats` bound by the largest (80, was 60 / 22); the add-seats refusal names the tier's
       threshold (21+ / 101+, was "26+"). OpenAPI snapshot regenerated.
 - [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
-- [ ] **6G (TQ-17)** — `test_counter_can_increment` asserts the counter rose by 1.
+- [x] **6G (TQ-17)** — `test_counter_can_increment` reads `professional`/`monthly` from the registry, increments once,
+      asserts +1 (a no-op `inc(0)` copy fails).
 - [ ] **6H (ST-16)** — median conversion time and grace-period expiry load rows in batches; query-count assertions.
 
 ### Sprint 870: Rate limits never fire in production (#274)
