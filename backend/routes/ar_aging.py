@@ -63,8 +63,8 @@ async def audit_ar_aging(
     # Sprint 678: count AR-aging uploads toward the monthly quota.
     check_upload_limit(current_user, db)
 
-    tb_mapping_dict = parse_json_mapping(tb_column_mapping, "ar_aging_tb")
-    sl_mapping_dict = parse_json_mapping(sl_column_mapping, "ar_aging_sl")
+    tb_mapping_dict = parse_json_mapping(tb_column_mapping, "ar_aging_tb", field="tb_column_mapping")
+    sl_mapping_dict = parse_json_mapping(sl_column_mapping, "ar_aging_sl", field="sl_column_mapping")
 
     # RPT-07 remediation (2026-04-20): aging requires a deterministic
     # reference date when sub-ledger detail is provided, otherwise bucket

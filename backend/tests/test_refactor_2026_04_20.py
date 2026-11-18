@@ -170,9 +170,11 @@ class TestHelpersReExports:
         )
 
         assert parse_json_list("[1,2,3]", "nums") == [1, 2, 3]
-        assert parse_json_list("not-json", "nums") is None
+        # Sprint 883: not supplied is None; malformed input is now a 400
+        # (test_json_form_parsing.py).
+        assert parse_json_list(None, "nums") is None
         assert parse_json_mapping('{"a":"b"}', "m") == {"a": "b"}
-        assert parse_json_mapping("not-json", "m") is None
+        assert parse_json_mapping(None, "m") is None
         # Sprint 810 (T-3): was a `callable` loop over six symbols. These are the
         # client-access guards — the functions that decide whether a user may
         # read another user's client — so their parameter contract is exactly

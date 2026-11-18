@@ -220,7 +220,20 @@ review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
       totals; before pandas 3 they were grouped under an account literally named "nan".
       Verified on the 8B tree: backend full suite 10,933 passed; only failures are the pre-existing Sprint 819
       snapshot test and the not-yet-implemented 8C tests.
-- [ ] **8C / ST-09 — mapping JSON of the wrong shape** returns one 400, not a 500.
+- [x] **8C / ST-09 — mapping JSON of the wrong shape is one 400.** `shared/helpers.parse_json_mapping` accepts only
+      a JSON object whose values are strings; anything else supplied (`[]`, `null`, `"text"`, `{"a": 1}`, malformed
+      JSON) is a 400 "Invalid <field>: expected a JSON object whose keys and values are strings." Not supplied stays
+      `None`. Malformed JSON used to be silently treated as "no mapping" (the run went ahead on auto-detected
+      columns); it is now the same 400. `parse_json_list` gets the same treatment, with `item_type=str` for
+      `selected_sheets` (TB) and `stratify_by` (JE sample + preview). Callers name their field (bank rec
+      `bank_/ledger_column_mapping`, AR aging `tb_/sl_column_mapping`). Reproduced first: 79 of 86 tests in
+      `test_json_form_parsing.py` fail on the old helper (500s over HTTP at all nine callers: TB, AP via
+      `testing_route`, JE, JE sample, JE preview, bank rec, AR aging, sampling design, sampling evaluate).
+      `test_refactor_2026_04_20.py` asserted the old "malformed → None" contract; now asserts "not supplied → None".
+      **Not changed (outside the listed callers):** `routes/audit_pipeline.py` parses `account_type_overrides` with
+      its own `json.loads` + `len(...)`, so `"5"` there is still a 500.
+      Verified on the final tree: backend full suite 11,012 passed; 1 failure, the pre-existing Sprint 819 snapshot
+      test. mypy (CI command): 212 errors, the same set as `main` (baseline 1,011).
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

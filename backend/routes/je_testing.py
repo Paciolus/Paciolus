@@ -150,7 +150,7 @@ async def sample_journal_entries(
     current_user: User = Depends(require_verified_user),
 ) -> dict[str, Any]:
     """Run stratified random sampling on a General Ledger extract."""
-    stratify_list = parse_json_list(stratify_by, "je_stratify")
+    stratify_list = parse_json_list(stratify_by, "je_stratify", field="stratify_by", item_type=str)
     if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid JSON in stratify_by")
     valid_criteria = {"account", "amount_range", "period", "user"}
@@ -205,7 +205,7 @@ async def preview_sampling(
     current_user: User = Depends(require_verified_user),
 ) -> dict[str, Any]:
     """Preview stratum counts without running sampling."""
-    stratify_list = parse_json_list(stratify_by, "je_preview_stratify")
+    stratify_list = parse_json_list(stratify_by, "je_preview_stratify", field="stratify_by", item_type=str)
     if stratify_list is None:
         raise HTTPException(status_code=400, detail="Invalid stratify_by parameter")
 

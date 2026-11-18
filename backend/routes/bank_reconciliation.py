@@ -80,8 +80,8 @@ async def audit_bank_reconciliation(
             detail="Performance materiality cannot exceed materiality.",
         )
 
-    bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank")
-    ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger")
+    bank_mapping_dict = parse_json_mapping(bank_column_mapping, "bank_rec_bank", field="bank_column_mapping")
+    ledger_mapping_dict = parse_json_mapping(ledger_column_mapping, "bank_rec_ledger", field="ledger_column_mapping")
 
     log_secure_operation(
         "bank_rec_upload", f"Processing bank rec: bank={bank_file.filename}, ledger={ledger_file.filename}"

@@ -147,7 +147,9 @@ async def audit_trial_balance(
             log_secure_operation("audit_overrides_error", "Invalid JSON in overrides, ignoring")
 
     column_mapping_dict = parse_json_mapping(column_mapping, "audit_column")
-    selected_sheets_list = parse_json_list(selected_sheets, "audit_selected_sheets")
+    selected_sheets_list = parse_json_list(
+        selected_sheets, "audit_selected_sheets", field="selected_sheets", item_type=str
+    )
 
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
     materiality_threshold, materiality_source = resolve_materiality(
