@@ -106,7 +106,8 @@ def count_raw_data_rows(file_bytes: bytes, filename: str | None) -> int | None:
 # ═══════════════════════════════════════════════════════════════
 
 
-_BLANK_VALUES = frozenset({"", "nan", "none", "null", "n/a", "na"})
+# "<na>" is how pandas' missing-value marker (pd.NA) prints.
+_BLANK_VALUES = frozenset({"", "nan", "none", "null", "n/a", "na", "<na>"})
 
 
 def _is_blank(value: Any) -> bool:
@@ -152,59 +153,76 @@ def _collect_account_identifier_columns(column_names: list[str]) -> list[str]:
     return hits
 
 
+# Sprint 883 (review ST-02): this module is the single owner of the totals-row
+# rule. Preflight applies it to the whole row list; the streaming auditor holds
+# back candidate rows until it knows the file's last rows, then asks
+# ``select_totals_row`` — so both exclude the same row wherever chunk
+# boundaries fall.
+
+TOTALS_ROW_WINDOW = 3
+"""A totals row is only recognised among the file's last this-many rows."""
+
+
+def account_identifier_columns(column_names: list[str]) -> list[str]:
+    """The columns whose blankness the totals-row rule checks (all of them)."""
+    return _collect_account_identifier_columns(column_names)
+
+
+def is_totals_row_candidate(
+    row: dict[str, Any],
+    id_cols: list[str],
+    debit_col: str | None,
+    credit_col: str | None,
+) -> bool:
+    """True if ``row`` has the shape of a totals row, wherever it sits.
+
+    Every account-identifier column is blank and both the debit and the credit
+    read (under the shared amount policy) as non-zero. A legitimate data row may
+    have a blank Account Name (e.g., account code 6055 with no name in
+    tb_unusual_accounts.csv) but it keeps its code, and a genuine account with
+    both a debit and a credit keeps its identifier. Position is decided
+    separately by :func:`select_totals_row`.
+    """
+    if not id_cols or not debit_col or not credit_col:
+        return False
+    if not all(_is_blank(row.get(col)) for col in id_cols):
+        return False
+    return parse_amount(row.get(debit_col)) != 0 and parse_amount(row.get(credit_col)) != 0
+
+
+def select_totals_row(candidate_positions: list[int], row_count: int) -> int | None:
+    """Pick the totals row from candidate positions in a file of ``row_count`` rows.
+
+    Only a candidate among the last ``TOTALS_ROW_WINDOW`` rows qualifies (some
+    exports put a separator or signature line after the Grand Total); of those,
+    the last one is the totals row. Returns its 0-based position, or None.
+    """
+    in_window = [p for p in candidate_positions if row_count - TOTALS_ROW_WINDOW <= p < row_count]
+    return max(in_window) if in_window else None
+
+
 def detect_totals_row(
     rows: list[dict[str, Any]],
     column_names: list[str],
     debit_col: str | None,
     credit_col: str | None,
 ) -> int | None:
-    """Detect a summary/totals row at the end of the TB data.
+    """Detect the summary/totals row of a TB given as a complete row list.
 
-    Heuristic (ALL conditions must hold):
-
-    1. The row is in the final three rows of the dataset.
-    2. Every account-identifier column on the row is blank.
-    3. Both the debit and credit columns have non-zero numeric values.
-
-    Condition 3 is the tight part: a legitimate data row may have a blank
-    Account Name (e.g., account code 6055 with no name in tb_unusual_accounts.csv)
-    but it will be one-sided (debit OR credit, not both). A totals row is
-    two-sided by construction — it sums both columns independently.
-
-    Returns the index of the detected totals row, or None if no row matches.
-
-    Rationale for "last three rows": some TB exports produce Grand Total
-    plus a separator + signature line; allowing a small window lets us catch
-    the totals row even when trailing non-data rows follow it.
+    The row is a totals-row candidate (:func:`is_totals_row_candidate`) and is
+    the last candidate in the final ``TOTALS_ROW_WINDOW`` rows
+    (:func:`select_totals_row`). Returns its index, or None.
     """
-    if not rows or not debit_col or not credit_col:
+    if not rows:
         return None
-
-    id_cols = _collect_account_identifier_columns(column_names)
-    if not id_cols:
-        return None
-
+    id_cols = account_identifier_columns(column_names)
     n = len(rows)
-    start = max(0, n - 3)
-
-    for idx in range(n - 1, start - 1, -1):  # scan from the end backwards
-        row = rows[idx]
-
-        all_blank = True
-        for col in id_cols:
-            if not _is_blank(row.get(col)):
-                all_blank = False
-                break
-        if not all_blank:
-            continue
-
-        debit_val = parse_amount(row.get(debit_col))
-        credit_val = parse_amount(row.get(credit_col))
-
-        if debit_val != 0 and credit_val != 0:
-            return idx
-
-    return None
+    candidates = [
+        idx
+        for idx in range(max(0, n - TOTALS_ROW_WINDOW), n)
+        if is_totals_row_candidate(rows[idx], id_cols, debit_col, credit_col)
+    ]
+    return select_totals_row(candidates, n)
 
 
 def exclude_totals_row(

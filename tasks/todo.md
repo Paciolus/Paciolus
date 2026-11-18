@@ -201,7 +201,25 @@ review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
       "-(1,234.56)" 0→−1234.56. Streaming: "($2,000.00)", "-$2,000.00", "$-2,000.00" 0→−2000.
       Verified on the 8A tree: backend full suite 10,887 passed; 1 failure is the pre-existing
       `test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged` (fails on `main` too).
-- [ ] **8B / ST-02 — one totals-row rule** (intake owns it; streaming decides from file position, held-back tail).
+- [x] **8B / ST-02 — one totals-row rule.** `shared/intake_utils.py` owns it: `is_totals_row_candidate` (every
+      account-identifier column blank, debit and credit both non-zero), `TOTALS_ROW_WINDOW` = 3 and
+      `select_totals_row` (the last candidate among the file's last three rows); `detect_totals_row` (preflight) is
+      built from them. The streaming auditor no longer zeroes every blank-account two-sided row in every chunk: it
+      holds back only candidate rows until three more rows have arrived, and `finish_ingestion()` (called by both
+      pipelines, and by `get_balance_result` / the `account_balances` property) applies intake's choice. The excluded
+      row reaches none of: balance totals, account aggregation, `missing_names_count`, `missing_balances_count`
+      (the old code counted the zeroed totals row as a zero-balance row). `row_count` stays rows submitted, with
+      `totals_rows_excluded` beside it. Reproduced first: 34 of 39 cases in `test_totals_row_agreement.py` failed
+      (same file through preflight's parser and the chunked reader at chunk sizes 1, 2, 3, 4, 1000: totals shape at
+      the start kept, at the end dropped, mid-file on a chunk boundary kept, blank name with a code kept, a genuine
+      two-sided account kept, only the last of two candidates dropped; plus the pipeline entry point).
+      **Found on the way (pre-existing, pandas 3):** `astype(str)` now keeps a missing cell as NA, not "nan", so the
+      streaming auditor's blank test never matched a CSV blank — the old totals exclusion and `missing_names_count`
+      were dead for CSV input. Blank detection fixed. **Not changed, needs a decision:** rows whose account cell is
+      blank are still left out of `account_balances` (pandas drops NA group keys) although they count in the balance
+      totals; before pandas 3 they were grouped under an account literally named "nan".
+      Verified on the 8B tree: backend full suite 10,933 passed; only failures are the pre-existing Sprint 819
+      snapshot test and the not-yet-implemented 8C tests.
 - [ ] **8C / ST-09 — mapping JSON of the wrong shape** returns one 400, not a 500.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent

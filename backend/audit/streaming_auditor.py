@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 
 from account_classifier import AccountClassifier, create_classifier
@@ -58,6 +59,12 @@ from classification_rules import (
 from column_detector import ColumnDetectionResult, ColumnMapping, detect_columns
 from ratio_engine import CategoryTotals, extract_category_totals
 from security_utils import DEFAULT_CHUNK_SIZE, log_secure_operation
+from shared.intake_utils import (
+    TOTALS_ROW_WINDOW,
+    account_identifier_columns,
+    is_totals_row_candidate,
+    select_totals_row,
+)
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 from shared.parsing_helpers import parse_amount
 
@@ -95,8 +102,14 @@ class StreamingAuditor:
         # Sprint 666: Totals-row exclusion counter (see process_chunk)
         self.totals_rows_excluded = 0
 
-        # Per-account aggregation for abnormal balance detection
-        self.account_balances: dict[str, dict[str, Decimal]] = {}
+        # Per-account aggregation for abnormal balance detection (read via the
+        # ``account_balances`` property, which finishes ingestion first)
+        self._account_balances: dict[str, dict[str, Decimal]] = {}
+
+        # Sprint 883: totals-row candidates held back until the file's last
+        # rows are known — (position in file, row, debit, credit)
+        self._held_rows: list[tuple[int, pd.DataFrame, pd.Series, pd.Series]] = []
+        self._rows_seen = 0
 
         # Column mapping (discovered from first chunk or user-provided)
         self.debit_col: Optional[str] = None
@@ -217,56 +230,116 @@ class StreamingAuditor:
         return self.column_detection
 
     def process_chunk(self, chunk: pd.DataFrame, rows_so_far: int) -> None:
-        """Process a single chunk, updating running totals and account aggregations."""
+        """Process a single chunk, updating running totals and account aggregations.
+
+        Sprint 883 (review ST-02): rows shaped like a totals row are held back
+        until the auditor knows whether they are among the file's last rows;
+        :meth:`finish_ingestion` then applies ``shared.intake_utils``' rule —
+        the same one preflight applies — so the excluded row does not depend
+        on where chunk boundaries fall. Every other row is aggregated now.
+        """
         chunk.columns = chunk.columns.str.strip()
 
         if not self._discover_columns(chunk):
             log_secure_operation("streaming_error", "Required columns not found")
             return
 
+        self.total_rows = rows_so_far
+
         # Sprint 883: the shared amount policy — the same reading preflight
         # and the testing tools use (invalid and non-finite read as zero).
         debits = chunk[self.debit_col].map(parse_amount)
         credits = chunk[self.credit_col].map(parse_amount)
 
-        # Sprint 666 Issue 2: Exclude totals rows from aggregation.
-        # Heuristic: blank account name + both debit AND credit non-zero.
-        # Legitimate data rows may have a blank account name (e.g. a row
-        # identified only by account code) but will be one-sided — they
-        # carry a debit OR a credit, not both. A totals row sums both
-        # columns independently and is two-sided by construction.
-        # The debit/credit values for detected totals rows are zeroed out
-        # before summation so they do not contribute to the balance check
-        # or account-level aggregates.
-        blank_mask = None
-        totals_mask = None
-        if self.account_col:
-            acct_series = chunk[self.account_col].astype(str).str.strip()
-            blank_mask = acct_series.isin(["", "nan", "none", "None", "NaN"])
-            totals_mask = blank_mask & (debits != 0) & (credits != 0)
-            if bool(totals_mask.any()):
-                excluded = int(totals_mask.sum())
-                self.totals_rows_excluded += excluded
-                debits = debits.mask(totals_mask, 0)
-                credits = credits.mask(totals_mask, 0)
-                log_secure_operation(
-                    "totals_row_excluded",
-                    f"Excluded {excluded} summary totals row(s) from aggregation",
-                )
+        first_position = self._rows_seen
+        self._rows_seen += len(chunk)
+
+        hold = self._totals_row_candidates(chunk, debits, credits)
+        for offset in np.flatnonzero(hold):
+            self._held_rows.append(
+                (first_position + int(offset), chunk.iloc[[offset]], debits.iloc[[offset]], credits.iloc[[offset]])
+            )
+        keep = ~hold
+        self._aggregate(chunk[keep], debits[keep], credits[keep])
+
+        # A held row with TOTALS_ROW_WINDOW rows after it cannot be the totals
+        # row: it is an ordinary row and is aggregated now.
+        cutoff = self._rows_seen - TOTALS_ROW_WINDOW
+        released = [h for h in self._held_rows if h[0] < cutoff]
+        if released:
+            self._held_rows = [h for h in self._held_rows if h[0] >= cutoff]
+            self._aggregate_held(released)
+
+        self._report_progress(rows_so_far, f"Scanning rows: {rows_so_far:,}")
+
+        del debits
+        del credits
+        gc.collect()
+
+    def finish_ingestion(self) -> None:
+        """Decide the totals row among the held-back rows; aggregate the rest.
+
+        Called by the pipelines once the last chunk is in, and by every
+        accessor that reads aggregated results, so a caller cannot read a
+        partial aggregation. Idempotent.
+        """
+        if not self._held_rows:
+            return
+        excluded = select_totals_row([h[0] for h in self._held_rows], self._rows_seen)
+        rest = [h for h in self._held_rows if h[0] != excluded]
+        self._held_rows = []
+        if rest:
+            self._aggregate_held(rest)
+        if excluded is not None:
+            self.totals_rows_excluded += 1
+            log_secure_operation("totals_row_excluded", "Excluded 1 summary totals row from aggregation")
+
+    @property
+    def account_balances(self) -> dict[str, dict[str, Decimal]]:
+        """Per-account debit/credit totals (complete: reading finishes ingestion)."""
+        self.finish_ingestion()
+        return self._account_balances
+
+    @account_balances.setter
+    def account_balances(self, value: dict[str, dict[str, Decimal]]) -> None:
+        self._account_balances = value
+
+    def _totals_row_candidates(self, chunk: pd.DataFrame, debits: pd.Series, credits: pd.Series) -> np.ndarray:
+        """Boolean mask of rows with the totals-row shape (``shared.intake_utils`` rule)."""
+        hold = np.zeros(len(chunk), dtype=bool)
+        id_cols = account_identifier_columns(list(chunk.columns))
+        if not id_cols:
+            return hold
+        two_sided = ((debits != 0) & (credits != 0)).to_numpy(dtype=bool)
+        for offset in np.flatnonzero(two_sided):
+            row = chunk.iloc[offset].to_dict()
+            hold[offset] = is_totals_row_candidate(row, id_cols, self.debit_col, self.credit_col)
+        return hold
+
+    def _aggregate_held(self, held: list[tuple[int, pd.DataFrame, pd.Series, pd.Series]]) -> None:
+        self._aggregate(
+            pd.concat([h[1] for h in held]),
+            pd.concat([h[2] for h in held]),
+            pd.concat([h[3] for h in held]),
+        )
+
+    def _aggregate(self, chunk: pd.DataFrame, debits: pd.Series, credits: pd.Series) -> None:
+        """Add rows that are part of the analysis to every running total."""
+        if len(chunk) == 0:
+            return
 
         self._debit_chunks.append(sum(debits, Decimal("0")))
         self._credit_chunks.append(sum(credits, Decimal("0")))
-        self.total_rows = rows_so_far
 
         # BUG-006: Count rows with missing account names or zero balances.
-        # Totals rows (excluded above) must not inflate the missing-names
-        # count — they are a known pipeline artifact, not a data quality issue.
+        # The excluded totals row never reaches here, so it inflates neither.
+        # Sprint 883: under pandas 3 ``astype(str)`` keeps a missing cell as
+        # NA rather than "nan", so test for missing values explicitly.
         if self.account_col:
-            if totals_mask is not None:
-                true_blank = blank_mask & ~totals_mask
-            else:
-                true_blank = blank_mask
-            self.missing_names_count += int(true_blank.sum()) if true_blank is not None else 0
+            raw_accounts = chunk[self.account_col]
+            acct_series = raw_accounts.astype(str).str.strip()
+            blank_mask = raw_accounts.isna() | acct_series.isin(["", "nan", "none", "None", "NaN"])
+            self.missing_names_count += int(blank_mask.sum())
 
         zero_balance_mask = (debits == 0) & (credits == 0)
         self.missing_balances_count += int(zero_balance_mask.sum())
@@ -274,7 +347,7 @@ class StreamingAuditor:
         if self.account_col:
             temp_df = pd.DataFrame(
                 {
-                    "account": acct_series,
+                    "account": acct_series.values,
                     "debit": debits.values,
                     "credit": credits.values,
                 }
@@ -282,11 +355,12 @@ class StreamingAuditor:
 
             grouped = temp_df.groupby("account", as_index=False).agg({"debit": "sum", "credit": "sum"})
 
+            balances = self._account_balances
             for account_name, debit_sum, credit_sum in zip(grouped["account"], grouped["debit"], grouped["credit"]):
-                if account_name not in self.account_balances:
-                    self.account_balances[account_name] = {"debit": Decimal("0"), "credit": Decimal("0")}
-                self.account_balances[account_name]["debit"] += Decimal(str(debit_sum))
-                self.account_balances[account_name]["credit"] += Decimal(str(credit_sum))
+                if account_name not in balances:
+                    balances[account_name] = {"debit": Decimal("0"), "credit": Decimal("0")}
+                balances[account_name]["debit"] += Decimal(str(debit_sum))
+                balances[account_name]["credit"] += Decimal(str(credit_sum))
 
             # Sprint 526: Extract account_type values
             if self.account_type_col and self.account_type_col in chunk.columns:
@@ -325,12 +399,6 @@ class StreamingAuditor:
 
             del temp_df, grouped
 
-        self._report_progress(rows_so_far, f"Scanning rows: {rows_so_far:,}")
-
-        del debits
-        del credits
-        gc.collect()
-
     def _finalize_balances(self) -> None:
         """Ensure all accumulated balances are Decimal (monetary precision).
 
@@ -344,6 +412,7 @@ class StreamingAuditor:
 
     def get_balance_result(self) -> dict[str, Any]:
         """Get the balance check result after all chunks processed."""
+        self.finish_ingestion()
         self._finalize_balances()
         total_debits = sum(self._debit_chunks, Decimal("0"))
         total_credits = sum(self._credit_chunks, Decimal("0"))
@@ -480,7 +549,7 @@ class StreamingAuditor:
         return resolve_csv_type(raw_value)
 
     def _resolve_category(self, account_key: str, net_balance: float = 0.0) -> AccountCategory:
-        """Resolve the account category -- CSV-provided type takes priority over heuristic."""
+        """Resolve the account category — CSV-provided type takes priority over heuristic."""
         return resolve_category(
             account_key,
             net_balance,
@@ -490,7 +559,7 @@ class StreamingAuditor:
         )
 
     def _display_name(self, account_key: str) -> str:
-        """Build display name: '[code] -- [name]' when account_name column is available."""
+        """Build display name: '[code] — [name]' when account_name column is available."""
         return build_display_name(account_key, self.provided_account_names)
 
     def _is_balance_abnormal(self, category: AccountCategory, net_balance: float, account_name: str = "") -> bool:
@@ -548,7 +617,9 @@ class StreamingAuditor:
 
     def clear(self) -> None:
         """Clear all accumulated data and force garbage collection."""
-        self.account_balances.clear()
+        self._account_balances.clear()
+        self._held_rows.clear()
+        self._rows_seen = 0
         self.provided_account_subtypes.clear()
         self._debit_chunks.clear()
         self._credit_chunks.clear()

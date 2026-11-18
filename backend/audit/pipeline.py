@@ -76,6 +76,8 @@ def audit_trial_balance_streaming(
             rows_read += len(chunk)
             auditor.process_chunk(chunk, rows_processed)
             del chunk
+        # Sprint 883: decide the totals row now the whole file is known.
+        auditor.finish_ingestion()
 
         # ── Sprint 666 Issue 5 (BLOCKING): Block silent success ──
         # Fail the pipeline explicitly when ingestion produced no rows OR
@@ -554,6 +556,7 @@ def audit_trial_balance_multi_sheet(
             ):
                 auditor.process_chunk(chunk, rows_processed)
                 del chunk
+            auditor.finish_ingestion()  # Sprint 883: decide the sheet's totals row
 
             sheet_balance = auditor.get_balance_result()
             sheet_abnormals = auditor.get_abnormal_balances()
