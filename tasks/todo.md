@@ -86,7 +86,8 @@
 > - [ ] **Sprint 883** — preflight, TB analysis and the testing tools read amounts and totals rows differently, so one
 >       file can balance in one place and not another (review ST-01, ST-02; ST-09 mapping 500s). Local branch.
 > - [ ] **Sprint 884** — rounding, precision loss and totals that disagree with their detail (review TQ-12, TQ-13,
->       OUT-04/05/06/19/23). Local branch, stacked on Sprint 883.
+>       OUT-04/05/06/19/23). Local branch, stacked on Sprint 883 — merge 883 first, then push both. Follow-ups are
+>       listed under the sprint.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -95,6 +96,8 @@
 >
 > **Then (C)**
 > - [ ] Sprint 869 (JE calibration) · Sprint 859 (pooler-aware TLS check) · Dependabot batch (open: #297–#306, #311).
+> - [ ] **Next.js upgrade** — `next build` compiles but exits 1 on alternate runs with Next's `SecurityFatalError`
+>       ("your version of Next.js is affected by a known security vulnerability"). Security; seen in Sprint 884.
 > - [ ] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` (names, scope, where created, expiry —
 >       never values) + one yearly **Nov 1** rotation/sign-off day shared with Sprint 860 + an alarm for GitHub
 >       disabling scheduled workflows after 60 idle days. (Carried from PR #312.)
@@ -111,6 +114,7 @@
 > - [ ] Refund policy · registered address / agent / EU-rep + DPO decisions · Stripe Billing Portal: no plan switching to
 >       Professional/Enterprise (Sprint 858 note) · H12: verify or relabel the ISA 315 "Appendix 1 matrix" citation.
 > - [ ] Sprint 853 (firm-owned client data) is blocked on a CEO decision.
+> - [ ] Sprint 884 follow-up: should the TB response carry the currency conversion it computes (today it is dropped)?
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
@@ -330,6 +334,20 @@ detail is computed from the detail as displayed.
       snapshot re-recorded (diff: the loan CSV/PDF totals rows and the xlsx sheet digest only).
 **Commits:** `c781e7e2` (9A), `cc19befb` (9C), `b0faf6d4` (9E), `f0d19362` + `06c7e560` (9F), `924d36a1` + `394aa48a` (9D), `6edac9f7` (9B); this record.
 **Open for the CEO:** (1) the TB API response drops `currency_conversion` (9A note) — expose it or not; (2) revenue memo denominator (9F note); (3) Next.js upgrade for the build advisory gate.
+
+**Follow-ups (filed 2026-11-18, to do later):**
+- [ ] **Currency conversion never reaches the user.** `apply_currency_conversion` computes `currency_conversion`, but
+      `TrialBalanceResponse` has no such field (`extra="ignore"` drops it) and no frontend code calls the currency
+      memo route. Needs the CEO decision above; if yes, add the field (amounts via `ExactMoney`) and a screen/export.
+- [ ] **Revenue memo "High-Risk Entries" can exceed 100% of revenue.** With no `total_revenue` in the payload, the
+      memo takes its denominator from the first test detail carrying `total_revenue`/`gross_revenue` (sample:
+      $9,860,237.81 = 144.1%). Decide the denominator (engine total revenue, gross vs net) and send it in the result.
+- [ ] **Browser display above ~70 trillion.** The API sends exact digits, but a JavaScript number shows amounts above
+      ~2^46 one cent off. Only if that range matters: send monetary fields as strings and format them in the frontend.
+- [ ] **Remaining `float` monetary response fields.** Sprint 884 moved `MonetaryDecimal` and the payroll / FA /
+      inventory / 3WM entry fields to exact numbers; other routes' response schemas still declare amounts as `float`
+      (and finding `details` stay floats by design, Sprint 829). Sweep `shared/*response_schemas.py` for amount fields.
+- [ ] **Next.js upgrade** (see "Then (C)" above).
 - [x] **9F / OUT-23 — revenue memo counts a transaction once.** "High-Risk Entries (HIGH severity)" now sums the
       HIGH tests' flagged entries once per source `row_number` (`_sum_flagged_amounts_once`); an entry with no row
       number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
