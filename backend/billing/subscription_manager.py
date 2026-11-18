@@ -204,6 +204,39 @@ def _refresh_org_member_tiers(db: Session, owner_user_id: int, tier: UserTier) -
     return changed
 
 
+def is_conflicting_subscription(sub: Subscription | None, stripe_subscription_id: str | None) -> bool:
+    """True when ``stripe_subscription_id`` is a different subscription from the live one stored.
+
+    One local row per account. A different ID is a *replacement* when the stored
+    subscription has ended (canceled / incomplete_expired) and a *conflict*
+    otherwise: the account would be billed for two subscriptions (AZ-09).
+    """
+    from subscription_model import TERMINAL_SUBSCRIPTION_STATUSES
+
+    return (
+        sub is not None
+        and bool(sub.stripe_subscription_id)
+        and bool(stripe_subscription_id)
+        and stripe_subscription_id != sub.stripe_subscription_id
+        and sub.status not in TERMINAL_SUBSCRIPTION_STATUSES
+    )
+
+
+def flag_conflicting_subscription(db: Session, sub: Subscription, stripe_subscription_id: str) -> None:
+    """Record a second live Stripe subscription on the account's row without syncing it."""
+    sub.conflicting_stripe_subscription_id = stripe_subscription_id
+    sub.conflict_detected_at = datetime.now(UTC)
+    db.flush()
+    logger.critical(
+        "MANUAL RECONCILIATION REQUIRED: user %d has a second Stripe subscription %s while %s (%s) is "
+        "still live. The stored subscription was kept; cancel and refund the duplicate in Stripe.",
+        sub.user_id,
+        stripe_subscription_id,
+        sub.stripe_subscription_id,
+        sub.status.value if sub.status else "unknown",
+    )
+
+
 def sync_subscription_from_stripe(
     db: Session,
     user_id: int,
@@ -218,6 +251,11 @@ def sync_subscription_from_stripe(
     Extracts seat quantity from Stripe subscription items (Phase LIX Sprint B).
     """
     sub = get_subscription(db, user_id)
+
+    # Sprint 881 (AZ-09): never let a second Stripe subscription overwrite a live one.
+    if sub is not None and is_conflicting_subscription(sub, stripe_subscription.get("id")):
+        flag_conflicting_subscription(db, sub, str(stripe_subscription.get("id")))
+        return sub
 
     stripe_status = stripe_subscription.get("status", "active")
     status = _STATUS_MAP.get(stripe_status)

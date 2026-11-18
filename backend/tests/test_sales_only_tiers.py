@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import billing.price_config as price_config
 from auth import require_current_user, require_verified_user
+from billing.checkout import CheckoutSessionRef
 from billing.checkout_orchestrator import CheckoutTierNotSelfServeError, orchestrate_checkout
 from database import get_db
 from main import app
@@ -60,7 +61,10 @@ def stripe_mocks():
         patch("billing.stripe_client.is_stripe_enabled", return_value=True),
         patch("billing.price_config.get_stripe_price_id", side_effect=lambda t, i: f"price_{t}_{i}"),
         patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_test") as customer,
-        patch("billing.checkout.create_checkout_session", return_value="https://checkout.stripe.test/s") as session,
+        patch(
+            "billing.checkout.open_checkout_session",
+            return_value=CheckoutSessionRef(session_id="cs_test_s", url="https://checkout.stripe.test/s"),
+        ) as session,
     ):
         yield customer, session
 

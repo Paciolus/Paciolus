@@ -146,6 +146,12 @@ class Subscription(Base):
     # Cancellation
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Sprint 881 (AZ-09): a Stripe subscription for this user whose ID differs from
+    # the one stored here while the stored one is still live. Sync never overwrites
+    # the stored ID in that case; it records the other ID here for an operator.
+    conflicting_stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    conflict_detected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     # DPA acceptance (Sprint 459 — PI1.3 / C2.1)
     # Timestamps when the customer accepted the Data Processing Addendum, and which version.
     dpa_accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -186,6 +192,58 @@ class Subscription(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+# Statuses after which Stripe will never bill the subscription again.
+TERMINAL_SUBSCRIPTION_STATUSES: frozenset[SubscriptionStatus] = frozenset(
+    {SubscriptionStatus.CANCELED, SubscriptionStatus.INCOMPLETE_EXPIRED}
+)
+
+
+class CheckoutAttemptStatus(str, PyEnum):
+    """Lifecycle of one Stripe Checkout Session opened for a purchase."""
+
+    OPENING = "opening"  # row committed; the Stripe session may or may not exist yet
+    OPEN = "open"  # Stripe session created and payable until expires_at
+    COMPLETED = "completed"  # checkout.session.completed received
+    EXPIRED = "expired"  # expired in Stripe (by us when a newer checkout opened, or by time)
+    FAILED = "failed"  # the Stripe call failed; no session exists
+
+
+class CheckoutAttempt(Base):
+    """Durable identity of every Checkout Session opened for a new subscription (Sprint 881, AZ-09).
+
+    Purchase admission locks the user row, then expires every earlier session
+    still payable before opening a new one, so at most one checkout per account
+    can complete. The row is committed before Stripe is called, so a crash
+    between the two still leaves a record (and the Stripe customer) that the
+    next attempt uses to find and expire the session.
+
+    ZERO-STORAGE: Stripe references, plan and timestamps only.
+    """
+
+    __tablename__ = "checkout_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default=CheckoutAttemptStatus.OPENING.value)
+    tier: Mapped[str] = mapped_column(String(20), nullable=False)
+    billing_interval: Mapped[str] = mapped_column(String(10), nullable=False)
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    trial_offered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    promo_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), server_default=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return f"<CheckoutAttempt(id={self.id}, user_id={self.user_id}, status={self.status})>"
 
 
 class ProcessedWebhookEvent(Base):

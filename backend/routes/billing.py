@@ -22,6 +22,7 @@ from models import User
 from schemas.billing_schemas import (  # noqa: F401 — backward compat re-exports
     BillingMessageResponse,
     CancelRequest,
+    ChangePlanRequest,
     CheckoutRequest,
     CheckoutResponse,
     PortalResponse,
@@ -88,6 +89,7 @@ def create_checkout(
 ) -> CheckoutResponse:
     """Create a Stripe Checkout Session for upgrading to a paid plan."""
     from billing.checkout_orchestrator import (
+        CheckoutConflictError,
         CheckoutProviderError,
         CheckoutTierNotSelfServeError,
         CheckoutUnavailableError,
@@ -108,6 +110,8 @@ def create_checkout(
         )
     except CheckoutTierNotSelfServeError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except CheckoutConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except CheckoutUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except CheckoutValidationError as e:
@@ -120,6 +124,43 @@ def create_checkout(
     pricing_v2_checkouts_total.labels(tier=body.tier, interval=body.interval).inc()
 
     return CheckoutResponse(checkout_url=checkout_url)
+
+
+@router.post("/change-plan", response_model=BillingMessageResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
+def change_plan_endpoint(
+    request: Request,
+    body: ChangePlanRequest,
+    user: Annotated[User, Depends(require_verified_user)],
+    db: Session = Depends(get_db),
+) -> BillingMessageResponse:
+    """Move the existing subscription to another plan or interval (Sprint 881, AZ-09).
+
+    Updates the existing Stripe subscription — effective now, prorated on the next
+    invoice — instead of opening a second subscription through Checkout.
+    """
+    from billing.checkout_orchestrator import (
+        CheckoutProviderError,
+        CheckoutTierNotSelfServeError,
+        CheckoutUnavailableError,
+        CheckoutValidationError,
+        change_plan,
+    )
+
+    try:
+        change_plan(db, user.id, tier=body.tier, interval=body.interval)
+    except CheckoutTierNotSelfServeError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except CheckoutUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except CheckoutValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except CheckoutProviderError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return BillingMessageResponse(
+        message="Your plan has been changed. The difference is prorated on your next invoice."
+    )
 
 
 @router.get("/subscription", response_model=SubscriptionResponse)

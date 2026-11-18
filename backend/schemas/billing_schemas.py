@@ -37,6 +37,13 @@ class CheckoutRequest(BaseModel):
         return data
 
 
+class ChangePlanRequest(BaseModel):
+    """Move the existing subscription to another plan or billing interval (Sprint 881)."""
+
+    tier: str = Field(..., pattern="^(solo|professional|enterprise)$")
+    interval: str = Field(..., pattern="^(monthly|annual)$")
+
+
 class CheckoutResponse(BaseModel):
     """Response with Stripe Checkout Session URL."""
 

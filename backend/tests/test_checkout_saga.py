@@ -13,12 +13,32 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from billing.checkout import CheckoutSessionRef
 from billing.checkout_orchestrator import (
     CheckoutProviderError,
     CheckoutValidationError,
     _rollback_stripe_customer,
     orchestrate_checkout,
 )
+from subscription_model import SubscriptionStatus
+
+
+@pytest.fixture(autouse=True)
+def _admission():
+    """Sprint 881: purchase admission (row lock, Stripe look-ups, attempt row) is covered by
+    test_sprint_881_checkout_admission.py against a real session; these saga tests use a
+    mock session, so admission is stubbed to "nothing open, no customer yet"."""
+    attempt = MagicMock(id=1, expires_at=None)
+    with (
+        patch("billing.purchase_admission.lock_purchaser"),
+        patch("billing.purchase_admission.known_customer_ids", return_value=[]),
+        patch("billing.purchase_admission.refuse_if_subscribed"),
+        patch("billing.purchase_admission.close_open_checkouts"),
+        patch("billing.purchase_admission.begin_attempt", return_value=attempt),
+        patch("billing.purchase_admission.session_expiry_epoch", return_value=0),
+    ):
+        yield attempt
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -118,7 +138,7 @@ class TestSagaCheckoutSessionFailure:
             patch("billing.subscription_manager.get_subscription", return_value=None),
             patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_new_123"),
             patch(
-                "billing.checkout.create_checkout_session",
+                "billing.checkout.open_checkout_session",
                 side_effect=Exception("Stripe session error"),
             ),
             patch("billing.checkout_orchestrator._rollback_stripe_customer") as mock_rollback,
@@ -142,7 +162,8 @@ class TestSagaCheckoutSessionFailure:
         """Existing Stripe customer is NOT deleted when session creation fails."""
         existing_sub = MagicMock()
         existing_sub.stripe_customer_id = "cus_existing_456"
-        existing_sub.status.value = "active"
+        # Sprint 881: an active subscriber is refused before Stripe; a canceled one may buy again.
+        existing_sub.status = SubscriptionStatus.CANCELED
 
         db = _mock_db_session()
 
@@ -153,12 +174,13 @@ class TestSagaCheckoutSessionFailure:
             patch("billing.price_config.TRIAL_PERIOD_DAYS", 7),
             patch("billing.price_config.get_max_self_serve_seats", return_value=1),
             patch("billing.subscription_manager.get_subscription", return_value=existing_sub),
+            patch("billing.purchase_admission.known_customer_ids", return_value=["cus_existing_456"]),
             patch(
                 "billing.checkout.create_or_get_stripe_customer",
                 return_value="cus_existing_456",
             ),
             patch(
-                "billing.checkout.create_checkout_session",
+                "billing.checkout.open_checkout_session",
                 side_effect=Exception("Stripe session error"),
             ),
             patch("billing.checkout_orchestrator._rollback_stripe_customer") as mock_rollback,
@@ -201,8 +223,8 @@ class TestSagaDBCommitFailure:
             patch("billing.subscription_manager.get_subscription", return_value=None),
             patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_abc"),
             patch(
-                "billing.checkout.create_checkout_session",
-                return_value="https://checkout.stripe.com/session123",
+                "billing.checkout.open_checkout_session",
+                return_value=CheckoutSessionRef("cs_test", "https://checkout.stripe.com/session123"),
             ),
         ):
             import logging
@@ -239,8 +261,8 @@ class TestSagaDBCommitFailure:
             patch("billing.subscription_manager.get_subscription", return_value=None),
             patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_xyz"),
             patch(
-                "billing.checkout.create_checkout_session",
-                return_value="https://checkout.stripe.com/session456",
+                "billing.checkout.open_checkout_session",
+                return_value=CheckoutSessionRef("cs_test", "https://checkout.stripe.com/session456"),
             ),
             patch("billing.checkout_orchestrator._rollback_stripe_customer") as mock_rollback,
         ):
@@ -267,11 +289,11 @@ class TestSagaDBCommitFailure:
 
 @pytest.mark.usefixtures("self_serve_team_tiers")
 class TestSagaValidationFailureRollback:
-    """Validation failures (promo, seats) after customer creation
-    should clean up the new Stripe customer."""
+    """Sprint 881: validation failures (promo, seats) are raised before any Stripe call,
+    so no customer is created and there is nothing to roll back."""
 
-    def test_promo_validation_failure_deletes_new_customer(self):
-        """Invalid promo code after new customer creation triggers rollback."""
+    def test_promo_validation_failure_creates_no_customer(self):
+        """Invalid promo code: refused before a customer is created."""
         db = _mock_db_session()
 
         with (
@@ -281,7 +303,7 @@ class TestSagaValidationFailureRollback:
             patch("billing.price_config.TRIAL_PERIOD_DAYS", 0),
             patch("billing.price_config.get_max_self_serve_seats", return_value=10),
             patch("billing.subscription_manager.get_subscription", return_value=None),
-            patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_new_promo"),
+            patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_new_promo") as customer,
             patch(
                 "billing.price_config.validate_promo_for_interval",
                 return_value="Promo not valid for monthly",
@@ -300,10 +322,11 @@ class TestSagaValidationFailureRollback:
                     db=db,
                 )
 
-            mock_rollback.assert_called_once_with("cus_new_promo", 5)
+            customer.assert_not_called()
+            mock_rollback.assert_not_called()
 
-    def test_seat_validation_failure_deletes_new_customer(self):
-        """Solo plan with seats after new customer creation triggers rollback."""
+    def test_seat_validation_failure_creates_no_customer(self):
+        """Solo plan with seats: refused before a customer is created."""
         db = _mock_db_session()
 
         with (
@@ -313,7 +336,7 @@ class TestSagaValidationFailureRollback:
             patch("billing.price_config.TRIAL_PERIOD_DAYS", 0),
             patch("billing.price_config.get_max_self_serve_seats", return_value=1),
             patch("billing.subscription_manager.get_subscription", return_value=None),
-            patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_new_seat"),
+            patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_new_seat") as customer,
             patch("billing.checkout_orchestrator._rollback_stripe_customer") as mock_rollback,
         ):
             with pytest.raises(CheckoutValidationError, match="Solo plan"):
@@ -328,7 +351,8 @@ class TestSagaValidationFailureRollback:
                     db=db,
                 )
 
-            mock_rollback.assert_called_once_with("cus_new_seat", 8)
+            customer.assert_not_called()
+            mock_rollback.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -352,8 +376,8 @@ class TestSagaHappyPath:
             patch("billing.subscription_manager.get_subscription", return_value=None),
             patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_happy"),
             patch(
-                "billing.checkout.create_checkout_session",
-                return_value="https://checkout.stripe.com/happy",
+                "billing.checkout.open_checkout_session",
+                return_value=CheckoutSessionRef("cs_test", "https://checkout.stripe.com/happy"),
             ),
             patch("billing.checkout_orchestrator._rollback_stripe_customer") as mock_rollback,
         ):

@@ -8583,6 +8583,27 @@
         "title": "ChainVerifyResponse",
         "type": "object"
       },
+      "ChangePlanRequest": {
+        "description": "Move the existing subscription to another plan or billing interval (Sprint 881).",
+        "properties": {
+          "interval": {
+            "pattern": "^(monthly|annual)$",
+            "title": "Interval",
+            "type": "string"
+          },
+          "tier": {
+            "pattern": "^(solo|professional|enterprise)$",
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "interval"
+        ],
+        "title": "ChangePlanRequest",
+        "type": "object"
+      },
       "CheckoutRequest": {
         "description": "Request to create a Stripe Checkout Session.\n\nRedirect URLs (success_url, cancel_url) are intentionally excluded — they are\nderived server-side from FRONTEND_URL to prevent open-redirect injection.\nExtra fields are silently ignored; a Prometheus counter fires if URL fields\nare detected in the request body.",
         "properties": {
@@ -36273,6 +36294,53 @@
           }
         ],
         "summary": "Cancel Subscription Endpoint",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/change-plan": {
+      "post": {
+        "description": "Move the existing subscription to another plan or interval (Sprint 881, AZ-09).\n\nUpdates the existing Stripe subscription — effective now, prorated on the next\ninvoice — instead of opening a second subscription through Checkout.",
+        "operationId": "change_plan_endpoint_billing_change_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingMessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Change Plan Endpoint",
         "tags": [
           "billing"
         ]

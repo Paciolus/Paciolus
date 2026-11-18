@@ -267,6 +267,11 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
         price_id = base_item.get("price", {}).get("id", "")
         tier = _resolve_tier_from_price(price_id)
 
+    # Sprint 881 (AZ-09): the session's checkout attempt is done, whatever follows.
+    from billing.purchase_admission import mark_attempt_completed
+
+    mark_attempt_completed(db, event_data)
+
     if tier is None:
         logger.error(
             "checkout.session.completed: could not resolve tier for user %d (subscription %s)",
@@ -275,7 +280,16 @@ def handle_checkout_completed(db: Session, event_data: dict) -> None:
         )
         return
 
+    from billing.subscription_manager import is_conflicting_subscription
+
+    existing_sub = get_subscription(db, user_id)
+    conflict = existing_sub is not None and is_conflicting_subscription(
+        existing_sub, stripe_sub.get("id", subscription_id)
+    )
     sync_subscription_from_stripe(db, user_id, stripe_sub, customer_id, tier)
+    if conflict:
+        # A second live subscription: flagged by sync, nothing else is applied.
+        return
     logger.info("checkout.session.completed: synced user %d to tier %s", user_id, tier)
 
     # Backfill org subscription linkage: if user already has an org but it has no
@@ -342,6 +356,13 @@ def handle_subscription_updated(db: Session, event_data: dict) -> None:
     # Guard: if local subscription is already CANCELED, reject re-activation
     existing_sub = get_subscription(db, user_id)
     new_status = event_data.get("status", "")
+
+    # Sprint 881 (AZ-09): an update to a second live subscription is flagged, not applied.
+    from billing.subscription_manager import flag_conflicting_subscription, is_conflicting_subscription
+
+    if existing_sub is not None and is_conflicting_subscription(existing_sub, event_data.get("id")):
+        flag_conflicting_subscription(db, existing_sub, str(event_data.get("id")))
+        return
     if existing_sub and existing_sub.status == SubscriptionStatus.CANCELED and new_status == "active":
         logger.warning(
             "customer.subscription.updated: ignoring active status for user %d — subscription already canceled",
@@ -485,6 +506,23 @@ def handle_subscription_deleted(db: Session, event_data: dict) -> None:
         return
 
     sub = get_subscription(db, user_id)
+
+    # Sprint 881 (AZ-09): deleting a duplicate subscription (the remedy for a flagged
+    # conflict) must not cancel the live one the account is using.
+    deleted_id = event_data.get("id")
+    if sub and sub.stripe_subscription_id and deleted_id and deleted_id != sub.stripe_subscription_id:
+        if sub.conflicting_stripe_subscription_id == deleted_id:
+            sub.conflicting_stripe_subscription_id = None
+            sub.conflict_detected_at = None
+            db.flush()
+        logger.warning(
+            "customer.subscription.deleted: %s is not user %d's stored subscription %s — local state unchanged",
+            deleted_id,
+            user_id,
+            sub.stripe_subscription_id,
+        )
+        return
+
     if sub:
         sub.status = SubscriptionStatus.CANCELED
         sub.cancel_at_period_end = False
@@ -748,7 +786,13 @@ def handle_subscription_created(db: Session, event_data: dict) -> None:
         )
         return
 
+    from billing.subscription_manager import is_conflicting_subscription
+
+    conflict = existing_sub is not None and is_conflicting_subscription(existing_sub, stripe_subscription_id)
     sync_subscription_from_stripe(db, user_id, event_data, customer_id, tier)
+    if conflict:
+        # Sprint 881 (AZ-09): a second live subscription — flagged by sync, nothing else applied.
+        return
     logger.info("customer.subscription.created: synced user %d to tier %s", user_id, tier)
     _flag_sales_only_tier("customer.subscription.created", user_id, tier)
 

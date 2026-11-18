@@ -516,9 +516,14 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       old model rewritten.
 - [x] **6B (AZ-08)** — seat allowance derived from status and plan; anything but active/trialing → 1 (members kept;
       invite and accept refused). Tests: canceled, past_due, unpaid, incomplete_expired, paused.
-- [ ] **6C (AZ-09)** — checkout refuses a new subscription while a non-terminal one exists; plan/interval change
-      updates the existing subscription; purchase admission serialized with a durable checkout record; sync flags a
-      conflicting Stripe subscription ID.
+- [x] **6C (AZ-09)** — checkout refuses (409) while a non-terminal subscription exists locally **or in Stripe** (webhook
+      lag); `POST /billing/change-plan` updates the existing subscription (prorated, effective now); admission locks the
+      user row, expires every earlier session still payable (refuses if one already completed), and commits a
+      `checkout_attempts` row (migration `c881a2b4d6e8`) before calling Stripe — attempt ID is the session's
+      `client_reference_id` and idempotency key (the key was accepted but never sent before), session lifetime 30 min.
+      Sync never overwrites a live stored subscription ID: it sets `conflicting_stripe_subscription_id` and logs
+      CRITICAL; checkout-completed/created/updated stop there; deleting the duplicate clears the flag without
+      cancelling the live one. Validation now runs before any Stripe call (no customer created for a bad request).
 - [ ] **6D (AZ-16)** — trial use and promo redemptions stored per account, checked before Checkout.
 - [ ] **6E** — checkout and seat-change request limits and the "26+" message derived from configured maximums.
 - [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
