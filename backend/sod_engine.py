@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 
 
 class SodSeverity(str, Enum):
@@ -487,7 +487,7 @@ def sod_result_to_csv(result: SodResult) -> str:
                 summary.high_severity_count,
                 summary.medium_severity_count,
                 summary.low_severity_count,
-                f"{summary.risk_score:.2f}",
+                number_cell(summary.risk_score, ".2f"),
                 summary.risk_tier,
                 summary.risk_tier_reason or "",
             ]

@@ -15,7 +15,7 @@ from auth import require_verified_user
 from models import User
 from shared.csv_export import ColumnSpec, csv_export_handler, diagnostic_csv_export
 from shared.entitlement_checks import check_export_access
-from shared.filenames import sanitize_csv_value
+from shared.filenames import number_cell, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_EXPORT, limiter
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ _FLAG_PREFIX: list[ColumnSpec] = [
 # -- Shared suffix columns (every flagged-entry tool ends with these) --------
 _FLAG_SUFFIX: list[ColumnSpec] = [
     ("Issue", lambda fe, _e: sanitize_csv_value(fe.get("issue", ""))),
-    ("Confidence", lambda fe, _e: f"{fe.get('confidence', 0):.2f}"),
+    ("Confidence", lambda fe, _e: number_cell(fe.get("confidence", 0), ".2f")),
 ]
 
 
@@ -86,8 +86,8 @@ JE_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Date", lambda _fe, e: e.get("posting_date", "") or e.get("entry_date", "")),
         ("Account", lambda _fe, e: sanitize_csv_value(e.get("account", ""))),
         ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
-        ("Debit", lambda _fe, e: f"{e.get('debit', 0):.2f}" if e.get("debit") else ""),
-        ("Credit", lambda _fe, e: f"{e.get('credit', 0):.2f}" if e.get("credit") else ""),
+        ("Debit", lambda _fe, e: number_cell(e.get("debit", 0), ".2f") if e.get("debit") else ""),
+        ("Credit", lambda _fe, e: number_cell(e.get("credit", 0), ".2f") if e.get("credit") else ""),
     ],
     _FLAG_SUFFIX,
 )
@@ -98,7 +98,7 @@ AP_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Vendor", lambda _fe, e: sanitize_csv_value(e.get("vendor_name", ""))),
         ("Invoice #", lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
         ("Payment Date", lambda _fe, e: e.get("payment_date", "")),
-        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") else ""),
+        ("Amount", lambda _fe, e: number_cell(e.get("amount", 0), ".2f") if e.get("amount") else ""),
         ("Check #", lambda _fe, e: sanitize_csv_value(e.get("check_number", ""))),
         ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
     ],
@@ -112,7 +112,7 @@ PAYROLL_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Employee ID", lambda _fe, e: sanitize_csv_value(e.get("employee_id", ""))),
         ("Department", lambda _fe, e: sanitize_csv_value(e.get("department", ""))),
         ("Pay Date", lambda _fe, e: e.get("pay_date", "")),
-        ("Gross Pay", lambda _fe, e: f"{e.get('gross_pay', 0):.2f}" if e.get("gross_pay") else ""),
+        ("Gross Pay", lambda _fe, e: number_cell(e.get("gross_pay", 0), ".2f") if e.get("gross_pay") else ""),
     ],
     _FLAG_SUFFIX,
 )
@@ -123,7 +123,7 @@ REVENUE_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Account Name", lambda _fe, e: sanitize_csv_value(e.get("account_name", ""))),
         ("Account Number", lambda _fe, e: sanitize_csv_value(e.get("account_number", ""))),
         ("Date", lambda _fe, e: e.get("date", "")),
-        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") is not None else ""),
+        ("Amount", lambda _fe, e: number_cell(e.get("amount", 0), ".2f") if e.get("amount") is not None else ""),
         ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
         ("Entry Type", lambda _fe, e: sanitize_csv_value(e.get("entry_type", ""))),
         ("Reference", lambda _fe, e: sanitize_csv_value(e.get("reference", ""))),
@@ -138,8 +138,8 @@ AR_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Customer Name", lambda _fe, e: sanitize_csv_value(e.get("customer_name", ""))),
         ("Invoice #", lambda _fe, e: sanitize_csv_value(e.get("invoice_number", ""))),
         ("Date", lambda _fe, e: e.get("date", "")),
-        ("Amount", lambda _fe, e: f"{e.get('amount', 0):.2f}" if e.get("amount") is not None else ""),
-        ("Aging Days", lambda _fe, e: str(e.get("aging_days", "")) if e.get("aging_days") is not None else ""),
+        ("Amount", lambda _fe, e: number_cell(e.get("amount", 0), ".2f") if e.get("amount") is not None else ""),
+        ("Aging Days", lambda _fe, e: number_cell(e.get("aging_days", "")) if e.get("aging_days") is not None else ""),
     ],
     _FLAG_SUFFIX,
 )
@@ -150,14 +150,19 @@ FA_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Asset ID", lambda _fe, e: sanitize_csv_value(e.get("asset_id", ""))),
         ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
         ("Category", lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
-        ("Cost", lambda _fe, e: f"{e.get('cost', 0):.2f}" if e.get("cost") is not None else ""),
+        ("Cost", lambda _fe, e: number_cell(e.get("cost", 0), ".2f") if e.get("cost") is not None else ""),
         (
             "Accum Depreciation",
             lambda _fe, e: (
-                f"{e.get('accumulated_depreciation', 0):.2f}" if e.get("accumulated_depreciation") is not None else ""
+                number_cell(e.get("accumulated_depreciation", 0), ".2f")
+                if e.get("accumulated_depreciation") is not None
+                else ""
             ),
         ),
-        ("Useful Life", lambda _fe, e: str(e.get("useful_life", "")) if e.get("useful_life") is not None else ""),
+        (
+            "Useful Life",
+            lambda _fe, e: number_cell(e.get("useful_life", "")) if e.get("useful_life") is not None else "",
+        ),
         ("Acquisition Date", lambda _fe, e: e.get("acquisition_date", "")),
     ],
     _FLAG_SUFFIX,
@@ -169,11 +174,16 @@ INVENTORY_COLUMNS: list[ColumnSpec] = _build_schema(
         ("Item ID", lambda _fe, e: sanitize_csv_value(e.get("item_id", ""))),
         ("Description", lambda _fe, e: sanitize_csv_value((e.get("description", "") or "")[:80])),
         ("Category", lambda _fe, e: sanitize_csv_value(e.get("category", ""))),
-        ("Quantity", lambda _fe, e: f"{e.get('quantity', 0):.2f}" if e.get("quantity") is not None else ""),
-        ("Unit Cost", lambda _fe, e: f"{e.get('unit_cost', 0):.2f}" if e.get("unit_cost") is not None else ""),
+        ("Quantity", lambda _fe, e: number_cell(e.get("quantity", 0), ".2f") if e.get("quantity") is not None else ""),
+        (
+            "Unit Cost",
+            lambda _fe, e: number_cell(e.get("unit_cost", 0), ".2f") if e.get("unit_cost") is not None else "",
+        ),
         (
             "Extended Value",
-            lambda _fe, e: f"{e.get('extended_value', 0):.2f}" if e.get("extended_value") is not None else "",
+            lambda _fe, e: (
+                number_cell(e.get("extended_value", 0), ".2f") if e.get("extended_value") is not None else ""
+            ),
         ),
         ("Location", lambda _fe, e: sanitize_csv_value(e.get("location", ""))),
         ("Last Movement Date", lambda _fe, e: e.get("last_movement_date", "")),
@@ -191,7 +201,7 @@ def _ar_aging_summary_writer(writer: Any, composite_score: dict[str, Any]) -> No
     """AR Aging has a custom summary layout including has_subledger."""
     writer.writerow([])
     writer.writerow(["SUMMARY"])
-    writer.writerow(["Composite Score", f"{composite_score.get('score', 0):.1f}"])
+    writer.writerow(["Composite Score", number_cell(composite_score.get("score", 0), ".1f")])
     writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
     writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
     writer.writerow(["Tests Run", composite_score.get("tests_run", 0)])
@@ -392,12 +402,12 @@ def export_csv_three_way_match(
                     sanitize_csv_value(inv.get("invoice_number", "")),
                     sanitize_csv_value(rec.get("receipt_number", "")),
                     sanitize_csv_value(po.get("vendor", "") or inv.get("vendor", "")),
-                    f"{po.get('total_amount', 0):.2f}" if po else "",
-                    f"{inv.get('total_amount', 0):.2f}" if inv else "",
-                    f"{rec.get('total_amount', 0):.2f}" if rec else "",
-                    f"{total_variance:.2f}" if total_variance else "",
-                    f"{max_pct:.1%}" if max_pct else "",
-                    f"{m.get('match_confidence', 0):.2f}",
+                    number_cell(po.get("total_amount", 0), ".2f") if po else "",
+                    number_cell(inv.get("total_amount", 0), ".2f") if inv else "",
+                    number_cell(rec.get("total_amount", 0), ".2f") if rec else "",
+                    number_cell(total_variance, ".2f") if total_variance else "",
+                    number_cell(max_pct, ".1%") if max_pct else "",
+                    number_cell(m.get("match_confidence", 0), ".2f"),
                 ]
             )
 
@@ -409,7 +419,7 @@ def export_csv_three_way_match(
         writer.writerow(["Total Receipts", s.get("total_receipts", 0)])
         writer.writerow(["Full Matches", s.get("full_match_count", 0)])
         writer.writerow(["Partial Matches", s.get("partial_match_count", 0)])
-        writer.writerow(["Full Match Rate", f"{s.get('full_match_rate', 0):.1%}"])
+        writer.writerow(["Full Match Rate", number_cell(s.get("full_match_rate", 0), ".1%")])
         writer.writerow(["Net Variance", f"${s.get('net_variance', 0):,.2f}"])
         writer.writerow(["Risk Assessment", sanitize_csv_value(s.get("risk_assessment", ""))])
 
@@ -450,7 +460,9 @@ def export_csv_sampling_selection(
                     item.get("row_index", ""),
                     sanitize_csv_value(item.get("item_id", "")),
                     sanitize_csv_value((item.get("description", "") or "")[:80]),
-                    f"{item.get('recorded_amount', 0):.2f}" if item.get("recorded_amount") is not None else "",
+                    number_cell(item.get("recorded_amount", 0), ".2f")
+                    if item.get("recorded_amount") is not None
+                    else "",
                     "",  # Blank audited amount for auditor to fill in
                     item.get("stratum", ""),
                     item.get("selection_method", ""),

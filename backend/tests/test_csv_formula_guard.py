@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 
 BACKEND = Path(__file__).resolve().parent.parent
 
@@ -93,9 +93,17 @@ def test_text_cells_with_formula_triggers_are_escaped(payload):
 
 
 @pytest.mark.parametrize("number", ["-1,234.56", "-500", "+12", "-0.5%", "1000.00"])
-def test_plain_number_strings_stay_numeric(number):
-    (parsed,) = csv.reader(_rows([number]))
+def test_numbers_formatted_by_the_caller_stay_numeric(number):
+    # Sprint 885 (OUT-33): a numeric column says so with number_cell; the
+    # writer no longer guesses from what a str looks like.
+    (parsed,) = csv.reader(_rows([number_cell(number)]))
     assert parsed == [number]
+
+
+@pytest.mark.parametrize("number", ["-1,234.56", "-500", "+12", "-0.5%"])
+def test_signed_plain_str_is_text_and_escaped(number):
+    (parsed,) = csv.reader(_rows([number]))
+    assert parsed == ["'" + number]
 
 
 def test_non_string_cells_pass_through():

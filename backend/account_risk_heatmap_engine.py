@@ -26,7 +26,7 @@ from dataclasses import asdict, dataclass, field
 from decimal import Decimal
 from typing import Any
 
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 
 # =============================================================================
 # Constants
@@ -408,11 +408,11 @@ def heatmap_to_csv(result: AccountRiskHeatmapResult) -> str:
                 row.account_number,
                 row.account_name,
                 row.signal_count,
-                f"{row.weighted_score:.3f}",
+                number_cell(row.weighted_score, ".3f"),
                 row.severities.get("high", 0),
                 row.severities.get("medium", 0),
                 row.severities.get("low", 0),
-                str(row.total_materiality),
+                number_cell(row.total_materiality),
                 "; ".join(row.sources),
                 " | ".join(row.issues[:5]),  # cap to first 5 to keep CSV readable
             ]

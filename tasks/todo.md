@@ -374,7 +374,18 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       Reproduced first: 3 of 3 in `test_sprint885_convergence_csv.py` failed over HTTP (commas, quotes, LF, CRLF,
       `;@`, `=HYPERLINK`, `,+1,-2`).
 - [ ] **10B / OUT-02 — every Excel cell through one typed writer.**
-- [ ] **10C / OUT-33 — CSV text protected by column, not by content.**
+- [x] **10C / OUT-33 — CSV text protected by column, not by content.** `SafeCsvWriter` left any str matching
+      `_PLAIN_NUMBER` bare, so a text identifier "+00123"/"-00123" became a number. Now every `str` is text and is
+      escaped; numbers, Decimals and `NumberCell` pass bare. `number_cell(value, spec, suffix)` gives exactly the old
+      `f"{value:spec}{suffix}"` text, marked numeric (falls back to escaped text for "nan"/"inf"). Every numeric CSV
+      column was converted (codemod of `f"{x:.2f}"`-style cells plus vetted `str(amount)`/`f"{amount}"` cells in 17
+      modules); before converting, a full-suite run logging every number-looking str reaching the writer found the
+      exercised sites (cash flow, testing-tool CSVs, multi-period, TB, depreciation). The client-supplied share
+      re-write has no column types, so it keeps the content rule (`SafeCsvWriter(untyped=True)`).
+      No CSV output changed in the Sprint 819 route/output snapshots. `test_csv_formula_guard.py`'s
+      "plain-number strings stay numeric" asserted the old contract; rewritten. Tests: `test_sprint885_csv_text_by_column.py`
+      (13; 5 failed first). **Note:** a CSV can only escape "+00123" with the visible `'` mark (same as every other
+      escaped cell); "00123" goes out exactly, but whether a spreadsheet then drops its zeros is the spreadsheet's choice.
 - [ ] **10D / OUT-24 — uploaded text cannot restyle a PDF.**
 - [ ] **10E / OUT-28 — non-ASCII download names.**
 - [ ] **10F / OUT-34 — document properties name Paciolus, not the libraries.**

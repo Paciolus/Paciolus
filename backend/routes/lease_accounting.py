@@ -25,7 +25,7 @@ from lease_accounting_engine import (
 )
 from shared.error_messages import sanitize_error
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -151,8 +151,8 @@ def export_lease_csv(
             result.classification_result.classification.value,
         ]
     )
-    writer.writerow(["Initial Lease Liability", str(result.initial_lease_liability)])
-    writer.writerow(["Initial ROU Asset", str(result.initial_rou_asset)])
+    writer.writerow(["Initial Lease Liability", number_cell(result.initial_lease_liability)])
+    writer.writerow(["Initial ROU Asset", number_cell(result.initial_rou_asset)])
     writer.writerow([])
 
     writer.writerow(["LIABILITY SCHEDULE"])
@@ -162,10 +162,10 @@ def export_lease_csv(
             [
                 entry.period_number,
                 entry.payment_date.isoformat() if entry.payment_date else "",
-                f"{entry.payment}",
-                f"{entry.interest}",
-                f"{entry.principal}",
-                f"{entry.ending_liability}",
+                number_cell(entry.payment),
+                number_cell(entry.interest),
+                number_cell(entry.principal),
+                number_cell(entry.ending_liability),
             ]
         )
     writer.writerow([])
@@ -177,22 +177,22 @@ def export_lease_csv(
             [
                 entry.period_number,
                 entry.payment_date.isoformat() if entry.payment_date else "",
-                f"{entry.rou_amortization}",
-                f"{entry.period_lease_cost}",
-                f"{entry.ending_rou_balance}",
+                number_cell(entry.rou_amortization),
+                number_cell(entry.period_lease_cost),
+                number_cell(entry.ending_rou_balance),
             ]
         )
     writer.writerow([])
 
     writer.writerow(["MATURITY ANALYSIS (UNDISCOUNTED)"])
     for bucket in result.disclosure_tables.maturity_analysis:
-        writer.writerow([bucket.label, str(bucket.undiscounted_payments)])
+        writer.writerow([bucket.label, number_cell(bucket.undiscounted_payments)])
     d = result.disclosure_tables
-    writer.writerow(["Total undiscounted payments", str(d.total_undiscounted_payments)])
-    writer.writerow(["Less: imputed interest", str(d.less_imputed_interest)])
-    writer.writerow(["Present value of lease liability", str(d.present_value_of_lease_liability)])
-    writer.writerow(["Weighted-avg remaining term (years)", str(d.weighted_average_remaining_term_years)])
-    writer.writerow(["Weighted-avg discount rate", str(d.weighted_average_discount_rate)])
+    writer.writerow(["Total undiscounted payments", number_cell(d.total_undiscounted_payments)])
+    writer.writerow(["Less: imputed interest", number_cell(d.less_imputed_interest)])
+    writer.writerow(["Present value of lease liability", number_cell(d.present_value_of_lease_liability)])
+    writer.writerow(["Weighted-avg remaining term (years)", number_cell(d.weighted_average_remaining_term_years)])
+    writer.writerow(["Weighted-avg discount rate", number_cell(d.weighted_average_discount_rate)])
 
     safe_name = "".join(c if c.isalnum() else "_" for c in config.lease_name)[:60]
     return attachment_response(buffer.getvalue(), f"lease_{safe_name}.csv", MEDIA_CSV, quote_filename=False)

@@ -26,7 +26,7 @@ from io import StringIO
 from typing import Optional
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
-from shared.filenames import safe_csv_writer, sanitize_csv_value
+from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_str, with_parse_memo
 
@@ -1090,13 +1090,13 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
             [
                 sanitize_csv_value(bank.date) if bank else "",
                 sanitize_csv_value(bank.description) if bank else "",
-                f"{bank.amount:.2f}" if bank else "",
+                number_cell(bank.amount, ".2f") if bank else "",
                 sanitize_csv_value(bank.reference) if bank else "",
                 sanitize_csv_value(ledger.date) if ledger else "",
                 sanitize_csv_value(ledger.description) if ledger else "",
-                f"{ledger.amount:.2f}" if ledger else "",
+                number_cell(ledger.amount, ".2f") if ledger else "",
                 sanitize_csv_value(ledger.reference) if ledger else "",
-                f"{m.match_confidence:.2f}",
+                number_cell(m.match_confidence, ".2f"),
             ]
         )
 
@@ -1128,11 +1128,11 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
         bank_cells = [
             sanitize_csv_value(bank.date) if bank else "",
             sanitize_csv_value(bank.description) if bank else "",
-            f"{bank.amount:.2f}" if bank else "",
+            number_cell(bank.amount, ".2f") if bank else "",
             sanitize_csv_value(bank.reference) if bank else "",
         ]
         if not pieces:
-            writer.writerow([group_no, *bank_cells, "", "", "", "", f"{m.match_confidence:.2f}"])
+            writer.writerow([group_no, *bank_cells, "", "", "", "", number_cell(m.match_confidence, ".2f")])
             continue
         for idx, ledger in enumerate(pieces):
             writer.writerow(
@@ -1141,9 +1141,9 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
                     *(bank_cells if idx == 0 else ["", "", "", ""]),
                     sanitize_csv_value(ledger.date),
                     sanitize_csv_value(ledger.description),
-                    f"{ledger.amount:.2f}",
+                    number_cell(ledger.amount, ".2f"),
                     sanitize_csv_value(ledger.reference),
-                    f"{m.match_confidence:.2f}" if idx == 0 else "",
+                    number_cell(m.match_confidence, ".2f") if idx == 0 else "",
                 ]
             )
 
@@ -1164,7 +1164,7 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
                 [
                     sanitize_csv_value(txn.date),
                     sanitize_csv_value(txn.description),
-                    f"{txn.amount:.2f}",
+                    number_cell(txn.amount, ".2f"),
                     sanitize_csv_value(txn.reference or ""),
                     SPLIT_SEARCH_LIMITED_CSV_NOTE if m.split_search_limited else "",
                 ]
@@ -1184,7 +1184,7 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
                 [
                     sanitize_csv_value(ledger_txn.date),
                     sanitize_csv_value(ledger_txn.description),
-                    f"{ledger_txn.amount:.2f}",
+                    number_cell(ledger_txn.amount, ".2f"),
                     sanitize_csv_value(ledger_txn.reference or ""),
                 ]
             )
@@ -1195,15 +1195,15 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     writer.writerow(["SUMMARY"])
     writer.writerow(["Matched Items", summary.matched_count])
     writer.writerow(["Split Matches (included in Matched Items)", len(splits)])
-    writer.writerow(["Matched Amount", f"{summary.matched_amount:.2f}"])
+    writer.writerow(["Matched Amount", number_cell(summary.matched_amount, ".2f")])
     writer.writerow(["Bank Only Items", summary.bank_only_count])
     writer.writerow(["Bank Only Items Not Searched Exhaustively for Splits", limited_count])
-    writer.writerow(["Bank Only Amount", f"{summary.bank_only_amount:.2f}"])
+    writer.writerow(["Bank Only Amount", number_cell(summary.bank_only_amount, ".2f")])
     writer.writerow(["Ledger Only Items", summary.ledger_only_count])
-    writer.writerow(["Ledger Only Amount", f"{summary.ledger_only_amount:.2f}"])
-    writer.writerow(["Reconciling Difference", f"{summary.reconciling_difference:.2f}"])
-    writer.writerow(["Total Bank", f"{summary.total_bank:.2f}"])
-    writer.writerow(["Total Ledger", f"{summary.total_ledger:.2f}"])
+    writer.writerow(["Ledger Only Amount", number_cell(summary.ledger_only_amount, ".2f")])
+    writer.writerow(["Reconciling Difference", number_cell(summary.reconciling_difference, ".2f")])
+    writer.writerow(["Total Bank", number_cell(summary.total_bank, ".2f")])
+    writer.writerow(["Total Ledger", number_cell(summary.total_ledger, ".2f")])
 
     return output.getvalue()
 

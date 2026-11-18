@@ -42,13 +42,50 @@ def sanitize_csv_value(value: object) -> str:
     return s
 
 
-# A plain number — "-1,234.56", "+12", "-0.5%" — is not a formula and must stay
-# numeric in the spreadsheet, so a negative amount is never turned into text.
+# A plain number — "-1,234.56", "+12", "-0.5%". Used only to validate text a
+# caller says it formatted from a number (``number_cell``), and for the one
+# untyped re-write of a client-supplied CSV (``untyped=True``).
 _PLAIN_NUMBER = re.compile(r"^[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)?(?:\.\d+)?%?$")
 
 
+def _is_plain_number(text: str) -> bool:
+    return bool(_PLAIN_NUMBER.match(text)) and any(c.isdigit() for c in text)
+
+
+class NumberCell(str):
+    """Text the caller formatted from a number, e.g. ``"-1,234.56"`` or ``"12.5%"``.
+
+    Sprint 885 (review OUT-33): the safe CSV writer decides by what a column
+    is, not by what its content looks like. A plain ``str`` is text and is
+    always escaped, so an identifier such as ``"+00123"`` can no longer slip
+    through as a number. A numeric column passes ints, floats or Decimals, or a
+    ``NumberCell`` when it needs a fixed format. Build one with ``number_cell``.
+    """
+
+    __slots__ = ()
+
+
+def number_cell(value: Any, spec: str = "", suffix: str = "") -> str:
+    """``format(value, spec) + suffix`` marked as a number for the CSV writer.
+
+    The text is exactly what ``f"{value:{spec}}{suffix}"`` gave before. If it is
+    not a plain number (``"nan"``, ``"inf"``) it is returned as ordinary text,
+    so the writer escapes it rather than trusting it.
+    """
+    text = format(value, spec) + suffix
+    return NumberCell(text) if _is_plain_number(text) else text
+
+
 def _escape_cell(value: object) -> object:
-    if isinstance(value, str) and value and not (_PLAIN_NUMBER.match(value) and any(c.isdigit() for c in value)):
+    if isinstance(value, NumberCell):
+        return str(value)
+    if isinstance(value, str) and value:
+        return sanitize_csv_value(value)
+    return value
+
+
+def _escape_untyped_cell(value: object) -> object:
+    if isinstance(value, str) and value and not _is_plain_number(value):
         return sanitize_csv_value(value)
     return value
 
@@ -59,17 +96,22 @@ class SafeCsvWriter:
     The claims review found six exports writing customer-supplied names —
     account, user, vendor, entity, lease and adjustment labels — straight into
     CSV with no escaping, while others escaped field by field. Escaping at the
-    writer means a new column cannot forget it. Non-string cells (numbers,
-    Decimals, None) pass through to ``csv`` unchanged, as do strings that are
-    plain numbers. ``tests/test_csv_formula_guard.py`` fails the build if
-    export code constructs a raw ``csv.writer``.
+    writer means a new column cannot forget it. ``tests/test_csv_formula_guard.py``
+    fails the build if export code constructs a raw ``csv.writer``.
+
+    Sprint 885 (OUT-33): every ``str`` is text and is escaped, even when it
+    looks like a number. Numbers, Decimals, ``NumberCell`` and None pass
+    through unchanged. ``untyped=True`` is only for re-writing a CSV whose
+    cells have lost their types (a client-supplied share): there a plain
+    number is the best evidence available and is left bare.
     """
 
-    def __init__(self, stream: Any, **kwargs: Any) -> None:
+    def __init__(self, stream: Any, *, untyped: bool = False, **kwargs: Any) -> None:
         self._writer = csv.writer(stream, **kwargs)  # the one sanctioned raw writer
+        self._escape = _escape_untyped_cell if untyped else _escape_cell
 
     def writerow(self, row: Iterable[object]) -> Any:
-        return self._writer.writerow([_escape_cell(v) for v in row])
+        return self._writer.writerow([self._escape(v) for v in row])
 
     def writerows(self, rows: Iterable[Iterable[object]]) -> None:
         for row in rows:

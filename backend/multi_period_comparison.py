@@ -31,7 +31,7 @@ from lead_sheet_mapping import (
     LEAD_SHEET_NAMES,
     assign_lead_sheet,
 )
-from shared.filenames import safe_csv_writer, sanitize_csv_value
+from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
 from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
@@ -1234,10 +1234,10 @@ def export_movements_csv(
             sanitize_csv_value(m["account_name"]),
             sanitize_csv_value(f"{m['lead_sheet']}: {m['lead_sheet_name']}"),
             sanitize_csv_value(m["lead_sheet_category"]),
-            f"{m['prior_balance']:.2f}",
-            f"{m['current_balance']:.2f}",
-            f"{m['change_amount']:.2f}",
-            f"{m['change_percent']:.1f}%" if m["change_percent"] is not None else "N/A",
+            number_cell(m["prior_balance"], ".2f"),
+            number_cell(m["current_balance"], ".2f"),
+            number_cell(m["change_amount"], ".2f"),
+            number_cell(m["change_percent"], ".1f", "%") if m["change_percent"] is not None else "N/A",
             sanitize_csv_value(m["movement_type"]),
             sanitize_csv_value(m["significance"]),
         ]
@@ -1246,9 +1246,11 @@ def export_movements_csv(
             if bv:
                 row.extend(
                     [
-                        f"{bv['budget_balance']:.2f}",
-                        f"{bv['variance_amount']:.2f}",
-                        f"{bv['variance_percent']:.1f}%" if bv["variance_percent"] is not None else "N/A",
+                        number_cell(bv["budget_balance"], ".2f"),
+                        number_cell(bv["variance_amount"], ".2f"),
+                        number_cell(bv["variance_percent"], ".1f", "%")
+                        if bv["variance_percent"] is not None
+                        else "N/A",
                     ]
                 )
             else:
@@ -1282,12 +1284,12 @@ def export_movements_csv(
             sanitize_csv_value(f"{ls_d['lead_sheet']}: {ls_d['lead_sheet_name']}"),
             sanitize_csv_value(ls_d["lead_sheet_category"]),
             "",
-            f"{ls_d['prior_total']:.2f}",
-            f"{ls_d['current_total']:.2f}",
-            f"{ls_d['net_change']:.2f}",
-            f"{ls_d['change_percent']:.1f}%" if ls_d["change_percent"] is not None else "N/A",
+            number_cell(ls_d["prior_total"], ".2f"),
+            number_cell(ls_d["current_total"], ".2f"),
+            number_cell(ls_d["net_change"], ".2f"),
+            number_cell(ls_d["change_percent"], ".1f", "%") if ls_d["change_percent"] is not None else "N/A",
             "",
-            str(ls_d["account_count"]),
+            number_cell(ls_d["account_count"]),
         ]
         if include_budget and budget_data is not None:
             bt = ls_d.get("budget_total")
@@ -1295,9 +1297,9 @@ def export_movements_csv(
             bvp = ls_d.get("budget_variance_percent")
             row.extend(
                 [
-                    f"{bt:.2f}" if bt is not None else "",
-                    f"{bv:.2f}" if bv is not None else "",
-                    f"{bvp:.1f}%" if bvp is not None else "N/A",
+                    number_cell(bt, ".2f") if bt is not None else "",
+                    number_cell(bv, ".2f") if bv is not None else "",
+                    number_cell(bvp, ".1f", "%") if bvp is not None else "N/A",
                 ]
             )
         writer.writerow(row)
@@ -1305,9 +1307,11 @@ def export_movements_csv(
     # Summary statistics
     writer.writerow([])
     writer.writerow(["SUMMARY STATISTICS"])
-    writer.writerow(["Total Accounts", str(summary.total_accounts if hasattr(summary, "total_accounts") else "")])
+    writer.writerow(
+        ["Total Accounts", number_cell(summary.total_accounts if hasattr(summary, "total_accounts") else "")]
+    )
     mbt = summary.movements_by_type if hasattr(summary, "movements_by_type") else {}
     for mt_key, mt_val in mbt.items() if isinstance(mbt, dict) else []:
-        writer.writerow([f"  {mt_key}", str(mt_val)])
+        writer.writerow([f"  {mt_key}", number_cell(mt_val)])
 
     return output.getvalue()

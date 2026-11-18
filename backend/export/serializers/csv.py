@@ -16,7 +16,7 @@ from shared.export_schemas import (
     PopulationProfileCSVInput,
     PreFlightCSVInput,
 )
-from shared.filenames import safe_csv_writer, sanitize_csv_value
+from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
 from shared.monetary import quantize_monetary
 from shared.schemas import AuditResultInput
 
@@ -97,18 +97,20 @@ def serialize_trial_balance_csv(audit_result: AuditResultInput) -> bytes:
             [
                 f"TB-{ref_idx:04d}",
                 sanitize_csv_value(account),
-                f"{debit}" if debit else "",
-                f"{credit}" if credit else "",
-                f"{net}",
+                number_cell(debit) if debit else "",
+                number_cell(credit) if credit else "",
+                number_cell(net),
                 sanitize_csv_value(category_info.get("category", acct.get("type", "Unknown"))),
-                f"{category_info.get('confidence', 0):.0%}" if category_info.get("confidence") else "",
+                number_cell(category_info.get("confidence", 0), ".0%") if category_info.get("confidence") else "",
                 flag_label(flags.get(account, 0)),
             ]
         )
         ref_idx += 1
 
     writer.writerow([])
-    writer.writerow(["TOTALS", "", f"{total_debit}", f"{total_credit}", f"{total_net}", "", "", ""])
+    writer.writerow(
+        ["TOTALS", "", number_cell(total_debit), number_cell(total_credit), number_cell(total_net), "", "", ""]
+    )
 
     return _encode_csv(output)
 
@@ -156,11 +158,11 @@ def serialize_anomalies_csv(audit_result: AuditResultInput) -> bytes:
                     sanitize_csv_value(anomaly.get("account", "Unknown")),
                     sanitize_csv_value(anomaly.get("type", "Unknown")),
                     sanitize_csv_value(anomaly.get("issue", "")),
-                    f"{anomaly.get('amount', 0):.2f}",
+                    number_cell(anomaly.get("amount", 0), ".2f"),
                     materiality.title(),
                     anomaly.get("severity", "low").title(),
                     anomaly.get("anomaly_type", "abnormal_balance"),
-                    f"{anomaly.get('confidence', 0):.0%}" if anomaly.get("confidence") else "",
+                    number_cell(anomaly.get("confidence", 0), ".0%") if anomaly.get("confidence") else "",
                 ]
             )
 
@@ -194,7 +196,7 @@ def serialize_preflight_issues_csv(pf_input: PreFlightCSVInput) -> bytes:
                     sanitize_csv_value(issue.get("category", "").replace("_", " ").title()),
                     issue.get("severity", "").upper(),
                     sanitize_csv_value(issue.get("message", "")),
-                    str(issue.get("affected_count", 0)),
+                    number_cell(issue.get("affected_count", 0)),
                     sanitize_csv_value(issue.get("remediation", "")),
                 ]
             )
@@ -212,15 +214,15 @@ def serialize_population_profile_csv(pp_input: PopulationProfileCSVInput) -> byt
     writer.writerow([])
     writer.writerow(["Statistic", "Value"])
     writer.writerow(["Account Count", pp_input.account_count])
-    writer.writerow(["Total Absolute Balance", f"{pp_input.total_abs_balance:.2f}"])
-    writer.writerow(["Mean (Absolute)", f"{pp_input.mean_abs_balance:.2f}"])
-    writer.writerow(["Median (Absolute)", f"{pp_input.median_abs_balance:.2f}"])
-    writer.writerow(["Standard Deviation", f"{pp_input.std_dev_abs_balance:.2f}"])
-    writer.writerow(["Minimum", f"{pp_input.min_abs_balance:.2f}"])
-    writer.writerow(["Maximum", f"{pp_input.max_abs_balance:.2f}"])
-    writer.writerow(["P25", f"{pp_input.p25:.2f}"])
-    writer.writerow(["P75", f"{pp_input.p75:.2f}"])
-    writer.writerow(["Gini Coefficient", f"{pp_input.gini_coefficient:.4f}"])
+    writer.writerow(["Total Absolute Balance", number_cell(pp_input.total_abs_balance, ".2f")])
+    writer.writerow(["Mean (Absolute)", number_cell(pp_input.mean_abs_balance, ".2f")])
+    writer.writerow(["Median (Absolute)", number_cell(pp_input.median_abs_balance, ".2f")])
+    writer.writerow(["Standard Deviation", number_cell(pp_input.std_dev_abs_balance, ".2f")])
+    writer.writerow(["Minimum", number_cell(pp_input.min_abs_balance, ".2f")])
+    writer.writerow(["Maximum", number_cell(pp_input.max_abs_balance, ".2f")])
+    writer.writerow(["P25", number_cell(pp_input.p25, ".2f")])
+    writer.writerow(["P75", number_cell(pp_input.p75, ".2f")])
+    writer.writerow(["Gini Coefficient", number_cell(pp_input.gini_coefficient, ".4f")])
     writer.writerow(["Gini Interpretation", pp_input.gini_interpretation])
     writer.writerow([])
 
@@ -233,8 +235,8 @@ def serialize_population_profile_csv(pp_input: PopulationProfileCSVInput) -> byt
                 [
                     sanitize_csv_value(b.get("label", "")),
                     b.get("count", 0),
-                    f"{b.get('percent_count', 0):.1f}%",
-                    f"{b.get('sum_abs', 0):.2f}",
+                    number_cell(b.get("percent_count", 0), ".1f", "%"),
+                    number_cell(b.get("sum_abs", 0), ".2f"),
                 ]
             )
     writer.writerow([])
@@ -249,9 +251,9 @@ def serialize_population_profile_csv(pp_input: PopulationProfileCSVInput) -> byt
                     t.get("rank", ""),
                     sanitize_csv_value(str(t.get("account", ""))),
                     sanitize_csv_value(t.get("category", "Unknown")),
-                    f"{t.get('net_balance', 0):.2f}",
-                    f"{t.get('abs_balance', 0):.2f}",
-                    f"{t.get('percent_of_total', 0):.1f}%",
+                    number_cell(t.get("net_balance", 0), ".2f"),
+                    number_cell(t.get("abs_balance", 0), ".2f"),
+                    number_cell(t.get("percent_of_total", 0), ".1f", "%"),
                 ]
             )
 
@@ -270,11 +272,11 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
     writer.writerow(["EXPENSE CATEGORY ANALYTICAL PROCEDURES"])
     writer.writerow([])
     writer.writerow(["Metric", "Value"])
-    writer.writerow(["Total Expenses", f"{ec_input.total_expenses:.2f}"])
-    writer.writerow(["Total Revenue", f"{ec_input.total_revenue:.2f}"])
+    writer.writerow(["Total Expenses", number_cell(ec_input.total_expenses, ".2f")])
+    writer.writerow(["Total Revenue", number_cell(ec_input.total_revenue, ".2f")])
     writer.writerow(["Revenue Available", "Yes" if ec_input.revenue_available else "No"])
     writer.writerow(["Prior Period Data", "Yes" if ec_input.prior_available else "No"])
-    writer.writerow(["Materiality Threshold", f"{ec_input.materiality_threshold:.2f}"])
+    writer.writerow(["Materiality Threshold", number_cell(ec_input.materiality_threshold, ".2f")])
     writer.writerow(["Active Categories", ec_input.category_count])
     writer.writerow([])
 
@@ -294,7 +296,7 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
         if isinstance(c, dict):
             amount = c.get("amount", 0)
             pct = c.get("pct_of_revenue")
-            pct_str = f"{pct:.2f}%" if pct is not None else "N/A"
+            pct_str = number_cell(pct, ".2f", "%") if pct is not None else "N/A"
 
             if has_prior:
                 prior_amt = c.get("prior_amount")
@@ -303,10 +305,10 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
                 writer.writerow(
                     [
                         sanitize_csv_value(c.get("label", "")),
-                        f"{amount:.2f}",
+                        number_cell(amount, ".2f"),
                         pct_str,
-                        f"{prior_amt:.2f}" if prior_amt is not None else "N/A",
-                        f"{dollar_change:.2f}" if dollar_change is not None else "N/A",
+                        number_cell(prior_amt, ".2f") if prior_amt is not None else "N/A",
+                        number_cell(dollar_change, ".2f") if dollar_change is not None else "N/A",
                         "Yes" if exceeds else "No",
                     ]
                 )
@@ -314,7 +316,7 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
                 writer.writerow(
                     [
                         sanitize_csv_value(c.get("label", "")),
-                        f"{amount:.2f}",
+                        number_cell(amount, ".2f"),
                         pct_str,
                     ]
                 )
@@ -332,15 +334,15 @@ def serialize_accrual_completeness_csv(ac_input: AccrualCompletenessCSVInput) ->
     writer.writerow([])
     writer.writerow(["Metric", "Value"])
     writer.writerow(["Accrual Accounts Identified", ac_input.accrual_account_count])
-    writer.writerow(["Total Accrued Balance", f"{ac_input.total_accrued_balance:.2f}"])
+    writer.writerow(["Total Accrued Balance", number_cell(ac_input.total_accrued_balance, ".2f")])
     writer.writerow(["Prior Period Data", "Yes" if ac_input.prior_available else "No"])
     if ac_input.prior_operating_expenses is not None:
-        writer.writerow(["Prior Operating Expenses", f"{ac_input.prior_operating_expenses:.2f}"])
+        writer.writerow(["Prior Operating Expenses", number_cell(ac_input.prior_operating_expenses, ".2f")])
     if ac_input.monthly_run_rate is not None:
-        writer.writerow(["Monthly Run-Rate", f"{ac_input.monthly_run_rate:.2f}"])
+        writer.writerow(["Monthly Run-Rate", number_cell(ac_input.monthly_run_rate, ".2f")])
     if ac_input.accrual_to_run_rate_pct is not None:
-        writer.writerow(["Accrual-to-Run-Rate %", f"{ac_input.accrual_to_run_rate_pct:.1f}%"])
-    writer.writerow(["Threshold", f"{ac_input.threshold_pct:.0f}%"])
+        writer.writerow(["Accrual-to-Run-Rate %", number_cell(ac_input.accrual_to_run_rate_pct, ".1f", "%")])
+    writer.writerow(["Threshold", number_cell(ac_input.threshold_pct, ".0f", "%")])
     writer.writerow(["Below Threshold", "Yes" if ac_input.below_threshold else "No"])
     writer.writerow([])
 
@@ -352,7 +354,7 @@ def serialize_accrual_completeness_csv(ac_input: AccrualCompletenessCSVInput) ->
             writer.writerow(
                 [
                     sanitize_csv_value(str(a.get("account_name", ""))),
-                    f"{a.get('balance', 0):.2f}",
+                    number_cell(a.get("balance", 0), ".2f"),
                     sanitize_csv_value(a.get("matched_keyword", "")),
                 ]
             )

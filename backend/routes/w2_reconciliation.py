@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from auth import User, require_verified_user
 from database import get_db
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer, sanitize_csv_value
+from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -327,9 +327,9 @@ def export_reconciliation_csv(
                 sanitize_csv_value(d.employee_name),
                 d.kind.value,
                 d.severity.value,
-                str(d.expected),
-                str(d.actual),
-                str(d.difference),
+                number_cell(d.expected),
+                number_cell(d.actual),
+                number_cell(d.difference),
                 sanitize_csv_value(d.message),
             ]
         )
@@ -344,9 +344,9 @@ def export_reconciliation_csv(
                 "W-3" if m.compared_with == "w3" else "Payroll YTD",
                 m.kind.value,
                 m.severity.value,
-                str(m.expected),
-                str(m.actual),
-                str(m.difference),
+                number_cell(m.expected),
+                number_cell(m.actual),
+                number_cell(m.difference),
                 sanitize_csv_value(m.message),
             ]
         )
@@ -359,12 +359,12 @@ def export_reconciliation_csv(
         writer.writerow([result.summary["w3_status"]])
     else:
         writer.writerow(["Employee Count", w3.employee_count])
-        writer.writerow(["Total Federal Wages", str(w3.total_federal_wages)])
-        writer.writerow(["Total Federal Withholding", str(w3.total_federal_withholding)])
-        writer.writerow(["Total SS Wages", str(w3.total_ss_wages)])
-        writer.writerow(["Total SS Tax Withheld", str(w3.total_ss_tax_withheld)])
-        writer.writerow(["Total Medicare Wages", str(w3.total_medicare_wages)])
-        writer.writerow(["Total Medicare Tax Withheld", str(w3.total_medicare_tax_withheld)])
+        writer.writerow(["Total Federal Wages", number_cell(w3.total_federal_wages)])
+        writer.writerow(["Total Federal Withholding", number_cell(w3.total_federal_withholding)])
+        writer.writerow(["Total SS Wages", number_cell(w3.total_ss_wages)])
+        writer.writerow(["Total SS Tax Withheld", number_cell(w3.total_ss_tax_withheld)])
+        writer.writerow(["Total Medicare Wages", number_cell(w3.total_medicare_wages)])
+        writer.writerow(["Total Medicare Tax Withheld", number_cell(w3.total_medicare_tax_withheld)])
 
     # Sprint 826 (W1/W2): the export must carry the same "not run" disclosure as
     # the screen, or a workpaper built from it would read as fully checked.

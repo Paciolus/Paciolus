@@ -30,7 +30,7 @@ from form_1099_engine import (
     prepare_1099s,
 )
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -195,10 +195,10 @@ def export_1099_csv(
                 candidate.form_type,
                 candidate.vendor_id,
                 candidate.vendor_name,
-                str(candidate.total_reportable),
+                number_cell(candidate.total_reportable),
                 categories,
                 candidate.payment_count,
-                str(candidate.excluded_amount),
+                number_cell(candidate.excluded_amount),
                 "Yes" if candidate.flagged_for_review else "No",
                 "; ".join(candidate.review_reasons),
             ]
@@ -218,7 +218,7 @@ def export_1099_csv(
                     payee.form_type,
                     payee.vendor_id,
                     payee.vendor_name,
-                    str(payee.total),
+                    number_cell(payee.total),
                     categories,
                     payee.reason,
                 ]

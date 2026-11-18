@@ -30,7 +30,7 @@ from loan_amortization_engine import (
 from shared.entitlement_checks import check_export_access
 from shared.error_messages import sanitize_error
 from shared.export_helpers import MEDIA_CSV, MEDIA_EXCEL, MEDIA_PDF, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -169,12 +169,12 @@ def export_schedule_csv(
             [
                 entry.period_number,
                 entry.payment_date.isoformat() if entry.payment_date else "",
-                f"{entry.beginning_balance}",
-                f"{entry.scheduled_payment}",
-                f"{entry.interest}",
-                f"{entry.principal}",
-                f"{entry.extra_principal}",
-                f"{entry.ending_balance}",
+                number_cell(entry.beginning_balance),
+                number_cell(entry.scheduled_payment),
+                number_cell(entry.interest),
+                number_cell(entry.principal),
+                number_cell(entry.extra_principal),
+                number_cell(entry.ending_balance),
             ]
         )
     # Sprint 884 (OUT-06): totals under the columns they total; the final
@@ -186,14 +186,14 @@ def export_schedule_csv(
             "Totals",
             "",
             "",
-            f"{totals['scheduled_payment']}",
-            f"{totals['interest']}",
-            f"{totals['principal']}",
-            f"{totals['extra_principal']}",
+            number_cell(totals["scheduled_payment"]),
+            number_cell(totals["interest"]),
+            number_cell(totals["principal"]),
+            number_cell(totals["extra_principal"]),
             "",
         ]
     )
-    writer.writerow(["Final Ending Balance", "", "", "", "", "", "", f"{result.final_ending_balance}"])
+    writer.writerow(["Final Ending Balance", "", "", "", "", "", "", number_cell(result.final_ending_balance)])
 
     buffer.seek(0)
     return attachment_response(buffer.getvalue(), "loan_amortization_schedule.csv", MEDIA_CSV, quote_filename=False)

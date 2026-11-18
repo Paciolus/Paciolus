@@ -21,6 +21,8 @@ from typing import Any
 
 from fastapi.responses import Response, StreamingResponse
 
+from shared.filenames import number_cell
+
 MEDIA_PDF = "application/pdf"
 MEDIA_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MEDIA_CSV = "text/csv; charset=utf-8"
@@ -81,8 +83,8 @@ def write_testing_csv_summary(writer: Any, composite_score: dict[str, Any], entr
     """
     writer.writerow([])
     writer.writerow(["SUMMARY"])
-    writer.writerow(["Composite Score", f"{composite_score.get('score', 0):.1f}"])
+    writer.writerow(["Composite Score", number_cell(composite_score.get("score", 0), ".1f")])
     writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
     writer.writerow([f"Total {entry_label}", composite_score.get("total_entries", 0)])
     writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
-    writer.writerow(["Flag Rate", f"{composite_score.get('flag_rate', 0):.1%}"])
+    writer.writerow(["Flag Rate", number_cell(composite_score.get("flag_rate", 0), ".1%")])

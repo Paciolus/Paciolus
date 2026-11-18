@@ -26,7 +26,7 @@ from depreciation_engine import (
 )
 from shared.error_messages import sanitize_error
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 
@@ -162,13 +162,13 @@ def export_depreciation_csv(
             [
                 entry.year_index,
                 entry.calendar_year if entry.calendar_year else "",
-                f"{entry.beginning_book_value}",
-                f"{entry.depreciation}",
-                f"{entry.accumulated_depreciation}",
-                f"{entry.ending_book_value}",
+                number_cell(entry.beginning_book_value),
+                number_cell(entry.depreciation),
+                number_cell(entry.accumulated_depreciation),
+                number_cell(entry.ending_book_value),
             ]
         )
-    writer.writerow(["", "Total", "", f"{result.total_book_depreciation}", "", ""])
+    writer.writerow(["", "Total", "", number_cell(result.total_book_depreciation), "", ""])
 
     if result.tax_schedule:
         writer.writerow([])
@@ -188,13 +188,13 @@ def export_depreciation_csv(
                 [
                     entry.year_index,
                     entry.calendar_year if entry.calendar_year else "",
-                    f"{entry.beginning_book_value}",
-                    f"{entry.depreciation}",
-                    f"{entry.accumulated_depreciation}",
-                    f"{entry.ending_book_value}",
+                    number_cell(entry.beginning_book_value),
+                    number_cell(entry.depreciation),
+                    number_cell(entry.accumulated_depreciation),
+                    number_cell(entry.ending_book_value),
                 ]
             )
-        writer.writerow(["", "Total", "", f"{result.total_tax_depreciation}", "", ""])
+        writer.writerow(["", "Total", "", number_cell(result.total_tax_depreciation), "", ""])
 
         writer.writerow([])
         writer.writerow(["BOOK vs TAX TIMING"])
@@ -212,11 +212,11 @@ def export_depreciation_csv(
             writer.writerow(
                 [
                     row.year_index,
-                    f"{row.book_depreciation}",
-                    f"{row.tax_depreciation}",
-                    f"{row.timing_difference}",
-                    f"{row.deferred_tax_change}",
-                    f"{row.cumulative_deferred_tax}",
+                    number_cell(row.book_depreciation),
+                    number_cell(row.tax_depreciation),
+                    number_cell(row.timing_difference),
+                    number_cell(row.deferred_tax_change),
+                    number_cell(row.cumulative_deferred_tax),
                 ]
             )
 

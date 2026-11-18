@@ -29,7 +29,7 @@ from cash_flow_projector_engine import (
 )
 from database import get_db
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -162,11 +162,11 @@ def export_projection_csv(
                     scenario_name,
                     point.day_index,
                     point.day_date.isoformat(),
-                    str(point.ar_inflow),
-                    str(point.ap_outflow),
-                    str(point.recurring_net),
-                    str(point.net_change),
-                    str(point.ending_balance),
+                    number_cell(point.ar_inflow),
+                    number_cell(point.ap_outflow),
+                    number_cell(point.recurring_net),
+                    number_cell(point.net_change),
+                    number_cell(point.ending_balance),
                 ]
             )
 

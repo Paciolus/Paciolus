@@ -31,7 +31,7 @@ from book_to_tax_engine import (
 )
 from database import get_db
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -171,44 +171,44 @@ def export_book_to_tax_csv(
 
     writer.writerow(["Schedule M-1"])
     writer.writerow(["Line", "Description", "Amount"])
-    writer.writerow(["1", "Net Income per Books", str(result.schedule_m1.net_income_per_books)])
-    writer.writerow(["2", "Federal Income Tax per Books", str(result.schedule_m1.federal_income_tax_per_books)])
+    writer.writerow(["1", "Net Income per Books", number_cell(result.schedule_m1.net_income_per_books)])
+    writer.writerow(["2", "Federal Income Tax per Books", number_cell(result.schedule_m1.federal_income_tax_per_books)])
     writer.writerow([])
     writer.writerow(["Permanent Additions"])
     for a in result.schedule_m1.permanent_additions:
-        writer.writerow(["", a.label, str(a.amount)])
+        writer.writerow(["", a.label, number_cell(a.amount)])
     writer.writerow(["Temporary Additions"])
     for a in result.schedule_m1.temporary_additions:
-        writer.writerow(["", a.label, str(a.amount)])
+        writer.writerow(["", a.label, number_cell(a.amount)])
     writer.writerow(["Permanent Subtractions"])
     for a in result.schedule_m1.permanent_subtractions:
-        writer.writerow(["", a.label, str(a.amount)])
+        writer.writerow(["", a.label, number_cell(a.amount)])
     writer.writerow(["Temporary Subtractions"])
     for a in result.schedule_m1.temporary_subtractions:
-        writer.writerow(["", a.label, str(a.amount)])
+        writer.writerow(["", a.label, number_cell(a.amount)])
     writer.writerow([])
-    writer.writerow(["", "Taxable Income", str(result.schedule_m1.taxable_income)])
+    writer.writerow(["", "Taxable Income", number_cell(result.schedule_m1.taxable_income)])
 
     writer.writerow([])
     writer.writerow(["Deferred Tax Rollforward"])
     dt = result.deferred_tax
-    writer.writerow(["", "Beginning DTA", str(dt.beginning_dta)])
-    writer.writerow(["", "Beginning DTL", str(dt.beginning_dtl)])
-    writer.writerow(["", "Current-Year Temporary Net", str(dt.current_year_temporary_adjustments)])
-    writer.writerow(["", "Tax Rate", str(dt.tax_rate)])
-    writer.writerow(["", "Movement", str(dt.current_year_movement)])
-    writer.writerow(["", "Ending DTA", str(dt.ending_dta)])
-    writer.writerow(["", "Ending DTL", str(dt.ending_dtl)])
+    writer.writerow(["", "Beginning DTA", number_cell(dt.beginning_dta)])
+    writer.writerow(["", "Beginning DTL", number_cell(dt.beginning_dtl)])
+    writer.writerow(["", "Current-Year Temporary Net", number_cell(dt.current_year_temporary_adjustments)])
+    writer.writerow(["", "Tax Rate", number_cell(dt.tax_rate)])
+    writer.writerow(["", "Movement", number_cell(dt.current_year_movement)])
+    writer.writerow(["", "Ending DTA", number_cell(dt.ending_dta)])
+    writer.writerow(["", "Ending DTL", number_cell(dt.ending_dtl)])
 
     writer.writerow([])
     writer.writerow(["Tax Provision"])
     p = result.tax_provision
-    writer.writerow(["", "Taxable Income", str(p.taxable_income)])
-    writer.writerow(["", "Current Federal Tax", str(p.current_federal_tax)])
-    writer.writerow(["", "Current State Tax", str(p.current_state_tax)])
-    writer.writerow(["", "Deferred Tax Expense", str(p.deferred_tax_expense)])
-    writer.writerow(["", "Total Tax Expense", str(p.total_tax_expense)])
-    writer.writerow(["", "Effective Rate", str(p.effective_rate)])
+    writer.writerow(["", "Taxable Income", number_cell(p.taxable_income)])
+    writer.writerow(["", "Current Federal Tax", number_cell(p.current_federal_tax)])
+    writer.writerow(["", "Current State Tax", number_cell(p.current_state_tax)])
+    writer.writerow(["", "Deferred Tax Expense", number_cell(p.deferred_tax_expense)])
+    writer.writerow(["", "Total Tax Expense", number_cell(p.total_tax_expense)])
+    writer.writerow(["", "Effective Rate", number_cell(p.effective_rate)])
 
     buffer.seek(0)
     return attachment_response(buffer.getvalue(), f"book_to_tax_{result.tax_year}.csv", MEDIA_CSV, quote_filename=False)

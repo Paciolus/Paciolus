@@ -27,7 +27,7 @@ from intercompany_elimination_engine import (
     run_intercompany_elimination,
 )
 from shared.export_helpers import MEDIA_CSV, attachment_response
-from shared.filenames import safe_csv_writer
+from shared.filenames import number_cell, safe_csv_writer
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_amount
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -144,17 +144,17 @@ def export_consolidation_csv(
             [
                 column.entity_id,
                 column.entity_name,
-                str(column.debit_total),
-                str(column.credit_total),
-                str(column.intercompany_gross),
+                number_cell(column.debit_total),
+                number_cell(column.credit_total),
+                number_cell(column.intercompany_gross),
             ]
         )
     writer.writerow(
         [
             "Totals",
             "",
-            str(result.worksheet.total_entity_debits),
-            str(result.worksheet.total_entity_credits),
+            number_cell(result.worksheet.total_entity_debits),
+            number_cell(result.worksheet.total_entity_credits),
             "",
         ]
     )
@@ -162,8 +162,8 @@ def export_consolidation_csv(
         [
             "Eliminations",
             "",
-            str(result.worksheet.elimination_debits),
-            str(result.worksheet.elimination_credits),
+            number_cell(result.worksheet.elimination_debits),
+            number_cell(result.worksheet.elimination_credits),
             "",
         ]
     )
@@ -171,8 +171,8 @@ def export_consolidation_csv(
         [
             "Consolidated",
             "",
-            str(result.worksheet.consolidated_debits),
-            str(result.worksheet.consolidated_credits),
+            number_cell(result.worksheet.consolidated_debits),
+            number_cell(result.worksheet.consolidated_credits),
             "",
         ]
     )
@@ -188,7 +188,7 @@ def export_consolidation_csv(
                 je.debit_account,
                 je.credit_entity,
                 je.credit_account,
-                str(je.amount),
+                number_cell(je.amount),
             ]
         )
 
@@ -203,7 +203,7 @@ def export_consolidation_csv(
                 m.counterparty or "",
                 m.account,
                 m.direction,
-                str(m.amount),
+                number_cell(m.amount),
                 m.message,
             ]
         )

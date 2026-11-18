@@ -171,7 +171,7 @@ def _rewrite_csv_share(export_bytes: bytes) -> bytes:
     except (UnicodeDecodeError, csv.Error):
         raise HTTPException(status_code=400, detail="Export content is not a valid UTF-8 CSV file.")
     out = io.StringIO(newline="")
-    SafeCsvWriter(out).writerows(rows)
+    SafeCsvWriter(out, untyped=True).writerows(rows)
     return out.getvalue().encode("utf-8-sig" if has_bom else "utf-8")
 
 
