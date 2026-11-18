@@ -29,7 +29,7 @@ from typing import Any, Optional, TypeVar
 
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.fuzzy_match import similarity_at_least
-from shared.monetary import MONETARY_NEAR_ZERO
+from shared.monetary import MONETARY_NEAR_ZERO, quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 
 # Sprint 766: monetary epsilon consolidated to ``shared.monetary.MONETARY_NEAR_ZERO``
@@ -461,8 +461,9 @@ class PurchaseOrder:
             "vendor": self.vendor,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_price": float(self.unit_price),
-            "total_amount": float(self.total_amount),
+            # Sprint 884 (TQ-12, OUT-19): Decimals, not float(); the API sends them as exact numbers.
+            "unit_price": self.unit_price,  # a unit price is not rounded to cents
+            "total_amount": quantize_monetary(self.total_amount),
             "order_date": self.order_date,
             "expected_delivery": self.expected_delivery,
             "approver": self.approver,
@@ -499,8 +500,9 @@ class Invoice:
             "vendor": self.vendor,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_price": float(self.unit_price),
-            "total_amount": float(self.total_amount),
+            # Sprint 884 (TQ-12, OUT-19): Decimals, not float(); the API sends them as exact numbers.
+            "unit_price": self.unit_price,
+            "total_amount": quantize_monetary(self.total_amount),
             "invoice_date": self.invoice_date,
             "due_date": self.due_date,
             "row_number": self.row_number,
@@ -1090,10 +1092,10 @@ class ThreeWayMatchSummary:
     partial_match_count: int = 0
     full_match_rate: float = 0.0
     partial_match_rate: float = 0.0
-    total_po_amount: float = 0.0
-    total_invoice_amount: float = 0.0
-    total_receipt_amount: float = 0.0
-    net_variance: float = 0.0
+    total_po_amount: Decimal = Decimal("0")
+    total_invoice_amount: Decimal = Decimal("0")
+    total_receipt_amount: Decimal = Decimal("0")
+    net_variance: Decimal = Decimal("0")
     material_variances_count: int = 0
     risk_assessment: str = "low"  # low, medium, high
     # Documented denominator basis — declared explicitly so consumers do not
@@ -1112,10 +1114,11 @@ class ThreeWayMatchSummary:
             "partial_match_count": self.partial_match_count,
             "full_match_rate": round(self.full_match_rate, 4),
             "partial_match_rate": round(self.partial_match_rate, 4),
-            "total_po_amount": round(self.total_po_amount, 2),
-            "total_invoice_amount": round(self.total_invoice_amount, 2),
-            "total_receipt_amount": round(self.total_receipt_amount, 2),
-            "net_variance": round(self.net_variance, 2),
+            # Sprint 884: half-up cents (round() on a Decimal is half-even).
+            "total_po_amount": quantize_monetary(self.total_po_amount),
+            "total_invoice_amount": quantize_monetary(self.total_invoice_amount),
+            "total_receipt_amount": quantize_monetary(self.total_receipt_amount),
+            "net_variance": quantize_monetary(self.net_variance),
             "material_variances_count": self.material_variances_count,
             "risk_assessment": self.risk_assessment,
             "match_rate_denominator": self.match_rate_denominator,
@@ -1650,10 +1653,11 @@ def _build_match_summary(
         partial_match_count=len(result.partial_matches),
         full_match_rate=len(result.full_matches) / total_docs,
         partial_match_rate=len(result.partial_matches) / total_docs,
-        total_po_amount=float(sum(po.total_amount for po in pos)),
-        total_invoice_amount=float(sum(inv.total_amount for inv in invoices)),
-        total_receipt_amount=0.0,  # Receipts don't always have amounts
-        net_variance=float(
+        # Sprint 884 (TQ-12, OUT-19): Decimal totals, not float().
+        total_po_amount=quantize_monetary(sum((po.total_amount for po in pos), Decimal("0"))),
+        total_invoice_amount=quantize_monetary(sum((inv.total_amount for inv in invoices), Decimal("0"))),
+        total_receipt_amount=Decimal("0"),  # Receipts don't always have amounts
+        net_variance=quantize_monetary(
             abs(
                 sum((po.total_amount for po in pos), Decimal("0"))
                 - sum((inv.total_amount for inv in invoices), Decimal("0"))

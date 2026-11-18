@@ -244,8 +244,11 @@ review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
 `account_type_overrides` 500 (8C note) — fold into this sprint or file separately.
 
 ### Sprint 884: Rounding, precision loss and totals that disagree with their detail
-**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-884-rounding-totals`, stacked on Sprint 883 (`f5215465`);
-not pushed. **Priority:** P0 (three Critical findings: a total that is not the sum of the rows printed above it).
+**Status:** IN REVIEW (2026-11-18) — code complete on local branch `sprint-884-rounding-totals`, stacked on Sprint 883
+(`f5215465`); not pushed. Backend full suite 11,095 passed; 1 failure, the pre-existing Sprint 819 engagement
+snapshot (fails on `main`). Frontend: Jest 212 suites / 2,107 passed; `next build` compiles all 70 routes, but exits 1
+on alternate runs on Next.js's own security-advisory gate ("SecurityFatalError … retry"), on this tree and on the
+unchanged one; no frontend file changed. A Next.js upgrade is the fix; not done here. **Priority:** P0 (three Critical findings: a total that is not the sum of the rows printed above it).
 **Source:** read-only review at `ef5e567` (TQ-12, TQ-13, OUT-04, OUT-05, OUT-06, OUT-19, OUT-23). **Agents:** Executor, Critic.
 **Decided (CEO, 2026-11-18):** one rounding rule — half-up to cents (`shared/monetary.py`); a total shown beneath
 detail is computed from the detail as displayed.
@@ -259,7 +262,40 @@ detail is computed from the detail as displayed.
       **Not as described:** the TB API response never carries the conversion — `TrialBalanceResponse` has no
       `currency_conversion` field and `extra="ignore"` drops it — and no other export exists, so "API response" and
       "export" have nothing to show; the memo route is tested over HTTP instead.
-- [ ] **9B / TQ-12, OUT-19 — Decimals turned into floats before output.**
+- [x] **9B / TQ-12, OUT-19 — amounts stay exact from engine to export.** **Decided (CEO, 2026-11-18):** largest
+      supported amount 999,999,999,999,999.99; the API sends exact JSON numbers (still numbers, no frontend type
+      change); Excel gets an exact text copy where it cannot hold a value.
+      - Limit: `shared/monetary.MAX_SUPPORTED_AMOUNT`; `parse_amount`/`safe_decimal` raise `AmountTooLargeError`
+        above it (never a silent 0); `sanitize_error` passes its message through; an app handler makes it a 400
+        `AMOUNT_TOO_LARGE`. The intercompany route snapshot's "huge" cases now carry that message (both were already
+        400; one said "An unexpected error occurred").
+      - Exact JSON: `shared/exact_json.py` — `exact_number()` gives a plain float when the float is exact (every
+        everyday amount, so responses are unchanged), otherwise a marker with a per-process secret that
+        `ExactNumberMiddleware` (innermost, before GZip) rewrites as the bare number. `MonetaryDecimal` uses it, as do
+        the payroll / fixed-asset / inventory / three-way-match response fields (`ExactMoney`; they were `float`).
+        The TB route sends `lead_sheet_grouping` through `exact_numbers()` (its account amounts used to go out as
+        JSON *strings*; now numbers, matching the frontend types).
+      - Engines: `lead_sheet_grouping_to_dict` returns Decimals at cents half-up (totals from the shown summaries);
+        `FinancialStatementBuilder` is Decimal throughout (zero lines print `$0.00`, not `$-0.00`); payroll, FA,
+        inventory, PO, invoice and 3WM summary `to_dict` return Decimals (amounts at cents, unit prices and pay rates
+        unrounded; 3WM summary used `round()`, i.e. half-even).
+      - Exports: `shared/excel_exact.py` makes openpyxl write Decimal cells digit for digit (it wrote every number
+        with `"%.16g"`, so even a Decimal lost digits) and adds "Exact: … approximate" notes beside values over 15
+        significant digits; used by the loan workbook (`_to_float` removed) and the FS workbook. The FS export route
+        reads its JSON body with `parse_float=Decimal` (`DecimalBodyRoute`; same path/method/position).
+      - Tests: `test_sprint884_exact_amounts.py` (28): 90,071,992,547,409.93, 1,234.005 → 1,234.01, −1,234.005 →
+        −1,234.01 and 100 one-cent balances through engine, API response text, PDF text and workbook XML; the FS
+        export through the real builder and renderer (PDF and Excel). Reproduced first: collection failed (no limit);
+        then 14 of 28 failed before the engine changes. Old-contract test rewritten: `tests/qa/test_decimal_serialization.py`
+        (required floats from the engine; now Decimals in the engine, JSON numbers at the API). Two FS tests adapted to
+        Decimal; `pdf/sections/ratios.py` takes `float()` for its debt-to-equity ratio only.
+      - Snapshots re-recorded after checking values: fixed_assets, inventory, payroll, payroll_ghost,
+        three_way_match, column_overrides (float → Decimal, every value identical); route_form_exports (loan xlsx
+        cells identical, number text e.g. `200000.00`); route_export_pipeline (FS `$-0.00` → `$0.00` only);
+        route_intercompany_elimination (limit message).
+      - **Not done (outside the named files):** finding `details` dicts stay floats by design (Sprint 829);
+        other routes' `float` response fields are unchanged; a browser still shows amounts above ~70 trillion one
+        cent off (JS numbers) — follow-up if that range matters.
 - [x] **9C / OUT-05 — detail and total rounded separately.** Accrual completeness: `AccrualAccount` holds its
       balance at cents, half-up, so `total_accrued_balance`, `total_deferred_revenue`, the checklist balances and the
       deferred analysis are sums of the rows shown (was Python `round()`, i.e. half-even, on the row and again on the

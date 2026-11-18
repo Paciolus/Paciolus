@@ -30,7 +30,7 @@ from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.monetary import decimals_to_floats
+from shared.monetary import decimals_to_floats, quantize_monetary
 from shared.parsing_helpers import infer_day_first, parse_date, safe_decimal, safe_str, with_parse_memo
 from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
@@ -386,15 +386,16 @@ class FixedAssetEntry:
         return {
             "asset_id": self.asset_id,
             "description": self.description,
-            "cost": float(self.cost),
-            "accumulated_depreciation": float(self.accumulated_depreciation),
+            # Sprint 884 (TQ-12, OUT-19): Decimals, not float(); the API sends them as exact numbers.
+            "cost": quantize_monetary(self.cost),
+            "accumulated_depreciation": quantize_monetary(self.accumulated_depreciation),
             "acquisition_date": self.acquisition_date,
             "useful_life": self.useful_life,
             "depreciation_method": self.depreciation_method,
-            "residual_value": float(self.residual_value),
+            "residual_value": quantize_monetary(self.residual_value),
             "location": self.location,
             "category": self.category,
-            "net_book_value": float(self.net_book_value) if self.net_book_value is not None else None,
+            "net_book_value": quantize_monetary(self.net_book_value) if self.net_book_value is not None else None,
             "row_number": self.row_number,
         }
 

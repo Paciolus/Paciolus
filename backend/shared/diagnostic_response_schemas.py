@@ -10,16 +10,16 @@ Typed Pydantic models replacing response_model=dict for:
 - Adjusting Entries
 """
 
-from decimal import Decimal
-from typing import Annotated, Any, Literal, Optional
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, PlainSerializer
+from pydantic import BaseModel, ConfigDict
 
-# Monetary Decimal: stores as Decimal in Python, serializes as JSON number (float).
-MonetaryDecimal = Annotated[
-    Decimal,
-    PlainSerializer(lambda v: float(v), return_type=float, when_used="always"),
-]
+from shared.exact_json import ExactMoney
+
+# Monetary Decimal: stores as Decimal in Python, serializes as a JSON number.
+# Sprint 884 (TQ-12): the number carries the exact digits (it was float(v), so
+# 90,071,992,547,409.93 went out as ...409.94) — see shared/exact_json.py.
+MonetaryDecimal = ExactMoney
 
 # ═══════════════════════════════════════════════════════════════
 # Flux Analysis

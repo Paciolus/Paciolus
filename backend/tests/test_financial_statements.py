@@ -1056,7 +1056,7 @@ class TestSprint803DepreciationAddBack:
         ebitda = statements.operating_income + statements.depreciation_amount
         assert statements.depreciation_amount == 30000.0
         assert ebitda > statements.operating_income
-        assert ebitda == pytest.approx(statements.operating_income + 30000.0)
+        assert ebitda == pytest.approx(statements.operating_income + Decimal("30000"))
 
     def test_accumulated_depreciation_alone_adds_back_nothing(self):
         """

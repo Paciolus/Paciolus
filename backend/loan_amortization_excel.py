@@ -21,6 +21,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from excel_generator import ExcelColors
 from loan_amortization_engine import AmortizationResult
+from shared.excel_exact import APPROXIMATE_HEADER, approximate_note, money
 
 CURRENCY_FORMAT = '"$"#,##0.00'
 PERCENT_FORMAT = "0.0000%"
@@ -32,15 +33,28 @@ _HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True
 _TOTAL_FONT = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
 
 
-def _to_float(value: Decimal | str | int | None) -> float | None:
-    if value is None:
+def _exact(value: Decimal | str | int | None) -> Decimal | None:
+    """A cell value that keeps every digit.
+
+    Sprint 884 (TQ-12, OUT-19): this was ``_to_float``, which returned
+    ``float(value)`` for any Decimal, so 9,007,199,254,740,993.01 reached the
+    file as 9007199254740994.0. Amounts and rates are written as Decimals,
+    which ``shared.excel_exact`` writes digit for digit.
+    """
+    if value is None or value == "":
         return None
-    if isinstance(value, Decimal):
-        return float(value)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+    return value if isinstance(value, Decimal) else Decimal(str(value))
+
+
+def _note_beside(ws: Worksheet, row: int, col: int, items: list[tuple[str, object]]) -> None:
+    """Where Excel cannot hold a row's amounts exactly, write them as text beside it."""
+    note = approximate_note(items)
+    if note is None:
+        return
+    if ws.cell(row=1, column=col).value is None:
+        ws.cell(row=1, column=col, value=APPROXIMATE_HEADER)
+        _apply_header([ws.cell(row=1, column=col)])
+    ws.cell(row=row, column=col, value=note)
 
 
 def _apply_header(row_cells) -> None:
@@ -79,18 +93,22 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     ws.freeze_panes = "A2"
 
     for entry in result.schedule:
+        amounts = [
+            entry.beginning_balance,
+            entry.scheduled_payment,
+            entry.interest,
+            entry.principal,
+            entry.extra_principal,
+            entry.ending_balance,
+        ]
         ws.append(
             [
                 entry.period_number,
                 entry.payment_date.isoformat() if entry.payment_date else "",
-                _to_float(entry.beginning_balance),
-                _to_float(entry.scheduled_payment),
-                _to_float(entry.interest),
-                _to_float(entry.principal),
-                _to_float(entry.extra_principal),
-                _to_float(entry.ending_balance),
+                *(money(a) for a in amounts),
             ]
         )
+        _note_beside(ws, ws.max_row, 9, list(zip(headers[2:8], amounts)))
 
     for col in range(3, 9):
         letter = get_column_letter(col)
@@ -104,14 +122,24 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     total_row = ws.max_row + 2
     ws.cell(row=total_row, column=1, value="Totals").font = _TOTAL_FONT
     for col, key in ((4, "scheduled_payment"), (5, "interest"), (6, "principal"), (7, "extra_principal")):
-        cell = ws.cell(row=total_row, column=col, value=_to_float(totals[key]))
+        cell = ws.cell(row=total_row, column=col, value=money(totals[key]))
         cell.number_format = CURRENCY_FORMAT
         cell.font = _TOTAL_FONT
+    _note_beside(
+        ws,
+        total_row,
+        9,
+        [
+            (headers[c - 1], totals[k])
+            for c, k in ((4, "scheduled_payment"), (5, "interest"), (6, "principal"), (7, "extra_principal"))
+        ],
+    )
     final_row = total_row + 1
     ws.cell(row=final_row, column=1, value="Final Ending Balance").font = _TOTAL_FONT
-    final = ws.cell(row=final_row, column=8, value=_to_float(result.final_ending_balance))
+    final = ws.cell(row=final_row, column=8, value=money(result.final_ending_balance))
     final.number_format = CURRENCY_FORMAT
     final.font = _TOTAL_FONT
+    _note_beside(ws, final_row, 9, [("Ending Balance", result.final_ending_balance)])
 
     _autosize(
         ws,
@@ -125,16 +153,15 @@ def _build_annual_summary_sheet(ws: Worksheet, result: AmortizationResult) -> No
     _apply_header(ws[1])
 
     for entry in result.annual_summary:
+        amounts = [entry.total_payments, entry.total_interest, entry.total_principal, entry.ending_balance]
         ws.append(
             [
                 entry.year_index,
                 entry.calendar_year if entry.calendar_year else "",
-                _to_float(entry.total_payments),
-                _to_float(entry.total_interest),
-                _to_float(entry.total_principal),
-                _to_float(entry.ending_balance),
+                *(money(a) for a in amounts),
             ]
         )
+        _note_beside(ws, ws.max_row, 7, list(zip(headers[2:6], amounts)))
 
     for col in range(3, 7):
         letter = get_column_letter(col)
@@ -150,19 +177,21 @@ def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     _apply_header(ws[1])
 
     rows: list[tuple[str, object]] = [
-        ("Principal", _to_float(cfg.principal)),
-        ("Annual Rate", _to_float(cfg.annual_rate)),
+        ("Principal", money(cfg.principal)),
+        ("Annual Rate", _exact(cfg.annual_rate)),
         ("Term (periods)", cfg.term_periods),
         ("Payment Frequency", cfg.frequency),
         ("Method", cfg.method.value),
         ("Start Date", cfg.start_date.isoformat() if cfg.start_date else ""),
-        ("Balloon Amount", _to_float(cfg.balloon_amount) if cfg.balloon_amount else ""),
-        ("Total Interest", _to_float(result.total_interest)),
-        ("Total Payments", _to_float(result.total_payments)),
+        ("Balloon Amount", money(cfg.balloon_amount) if cfg.balloon_amount else ""),
+        ("Total Interest", money(result.total_interest)),
+        ("Total Payments", money(result.total_payments)),
         ("Payoff Date", result.payoff_date.isoformat() if result.payoff_date else ""),
     ]
     for label, value in rows:
         ws.append([label, value])
+        if isinstance(value, Decimal) and label != "Annual Rate":
+            _note_beside(ws, ws.max_row, 3, [(label, value)])
 
     # Apply formatting per-field
     ws["B2"].number_format = CURRENCY_FORMAT  # Principal
@@ -179,7 +208,7 @@ def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         _apply_header([ws.cell(row=start + 1, column=1), ws.cell(row=start + 1, column=2)])
         for i, extra in enumerate(cfg.extra_payments, start=2):
             ws.cell(row=start + i, column=1, value=extra.period_number)
-            cell = ws.cell(row=start + i, column=2, value=_to_float(extra.amount))
+            cell = ws.cell(row=start + i, column=2, value=money(extra.amount))
             cell.number_format = CURRENCY_FORMAT
 
     if cfg.rate_changes:
@@ -190,7 +219,7 @@ def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         _apply_header([ws.cell(row=start + 1, column=1), ws.cell(row=start + 1, column=2)])
         for i, chg in enumerate(cfg.rate_changes, start=2):
             ws.cell(row=start + i, column=1, value=chg.period_number)
-            cell = ws.cell(row=start + i, column=2, value=_to_float(chg.new_annual_rate))
+            cell = ws.cell(row=start + i, column=2, value=_exact(chg.new_annual_rate))
             cell.number_format = PERCENT_FORMAT
 
     ws.column_dimensions["A"].width = 22

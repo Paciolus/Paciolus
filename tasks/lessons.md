@@ -159,3 +159,12 @@
 - **Route tests that pass only inside the full suite are order-dependent (Sprint 883).** The new mapping tests
   reached the routes in the full run but got 403 (CSRF) alone; another test had left CSRF bypassed. Run a new test
   file on its own before trusting it, and use the `bypass_csrf` fixture explicitly.
+- **Run the snapshot suites, not just the tests named after the feature (Sprint 884).** The 9F revenue memo fix was
+  committed after `-k revenue` passed; the Sprint 819 *route* snapshot that pins the same memo text
+  (`route_testing_exports`) has no "revenue" in its name and failed later. After any change to a memo, export or
+  serializer, run `tests/test_sprint819_*` and `tests/test_memo_render_equivalence.py` before committing.
+- **`round()` on a Decimal is half-even; so is `"{:.2f}"` (Sprint 884).** The accrual, expense-category and 3WM
+  serializers all called `round(x, 2)` on Decimals and so broke the half-up rule silently. Use `quantize_monetary`.
+- **A Decimal pipeline can still lose digits in the writer (Sprint 884).** openpyxl writes every number with
+  `"%.16g"`, so a Decimal cell holding 9007199254740993.01 reached the file as 9007199254740994 even with no `float()`
+  in our code. Check the bytes on disk (the sheet XML), not the value handed to the library.

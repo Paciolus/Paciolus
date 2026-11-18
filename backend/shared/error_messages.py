@@ -8,6 +8,7 @@ Prevents leaking internal tracebacks, file paths, or SQL errors to API responses
 import re
 
 from security_utils import log_secure_operation
+from shared.monetary import AmountTooLargeError
 
 # Pattern → user-friendly message mapping
 _ERROR_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -106,6 +107,11 @@ def sanitize_error(
     # Always log the full error for debugging
     if log_label:
         log_secure_operation(log_label, raw_message)
+
+    # Sprint 884 (TQ-12): the amount limit is a message we wrote for the user;
+    # every route that sanitizes a ValueError passes it through.
+    if isinstance(exception, AmountTooLargeError):
+        return raw_message
 
     # Check against known patterns
     for pattern, friendly_message in _ERROR_PATTERNS:

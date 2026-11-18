@@ -18,6 +18,10 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+# Sprint 884 (TQ-12, OUT-19): amounts validate as Decimal and go out as exact
+# JSON numbers (they were float fields, which rounded to 17 digits).
+from shared.exact_json import ExactMoney
+
 # ═══════════════════════════════════════════════════════════════
 # Shared Models (reused across tools)
 # ═══════════════════════════════════════════════════════════════
@@ -412,8 +416,8 @@ class PurchaseOrderResponse(BaseModel):
     vendor: str
     description: str
     quantity: float
-    unit_price: float
-    total_amount: float
+    unit_price: ExactMoney
+    total_amount: ExactMoney
     order_date: Optional[str] = None
     expected_delivery: Optional[str] = None
     approver: Optional[str] = None
@@ -429,8 +433,8 @@ class InvoiceResponse(BaseModel):
     vendor: str
     description: str
     quantity: float
-    unit_price: float
-    total_amount: float
+    unit_price: ExactMoney
+    total_amount: ExactMoney
     invoice_date: Optional[str] = None
     due_date: Optional[str] = None
     row_number: int
@@ -492,10 +496,10 @@ class ThreeWayMatchSummaryResponse(BaseModel):
     partial_match_count: int
     full_match_rate: float
     partial_match_rate: float
-    total_po_amount: float
-    total_invoice_amount: float
-    total_receipt_amount: float
-    net_variance: float
+    total_po_amount: ExactMoney
+    total_invoice_amount: ExactMoney
+    total_receipt_amount: ExactMoney
+    net_variance: ExactMoney
     material_variances_count: int
     risk_assessment: Literal["low", "medium", "high"]
 
@@ -771,13 +775,13 @@ class PayrollEntryResponse(BaseModel):
     employee_name: str
     department: Optional[str] = None
     pay_date: Optional[str] = None
-    gross_pay: float
-    net_pay: float
-    deductions: float
+    gross_pay: ExactMoney
+    net_pay: ExactMoney
+    deductions: ExactMoney
     check_number: Optional[str] = None
     pay_type: Optional[str] = None
     hours: float
-    rate: float
+    rate: ExactMoney
     term_date: Optional[str] = None
     bank_account: Optional[str] = None
     address: Optional[str] = None
@@ -987,15 +991,15 @@ class FixedAssetEntryResponse(BaseModel):
 
     asset_id: Optional[str] = None
     description: Optional[str] = None
-    cost: float
-    accumulated_depreciation: float
+    cost: ExactMoney
+    accumulated_depreciation: ExactMoney
     acquisition_date: Optional[str] = None
     useful_life: Optional[float] = None
     depreciation_method: Optional[str] = None
-    residual_value: float
+    residual_value: ExactMoney
     location: Optional[str] = None
     category: Optional[str] = None
-    net_book_value: Optional[float] = None
+    net_book_value: Optional[ExactMoney] = None
     row_number: int
 
 
@@ -1071,8 +1075,8 @@ class InventoryEntryResponse(BaseModel):
     item_id: Optional[str] = None
     description: Optional[str] = None
     quantity: float
-    unit_cost: float
-    extended_value: float
+    unit_cost: ExactMoney
+    extended_value: ExactMoney
     location: Optional[str] = None
     last_movement_date: Optional[str] = None
     category: Optional[str] = None

@@ -25,6 +25,7 @@ from shared.account_extractors import extract_tb_accounts
 from shared.diagnostic_response_schemas import TrialBalanceResponse
 from shared.entitlement_checks import check_diagnostic_limit, enforce_format_access
 from shared.error_messages import sanitize_error
+from shared.exact_json import exact_numbers
 from shared.helpers import (
     parse_json_list,
     parse_json_mapping,
@@ -206,6 +207,12 @@ async def audit_trial_balance(
 
             # Sprint 310: Include materiality source in response
             analysis_result["materiality_source"] = materiality_source
+
+            # Sprint 884 (TQ-12): the lead-sheet grouping is a free-form dict in the
+            # response model, where a Decimal would go out as a string; send its
+            # amounts as exact JSON numbers instead.
+            if analysis_result.get("lead_sheet_grouping") is not None:
+                analysis_result["lead_sheet_grouping"] = exact_numbers(analysis_result["lead_sheet_grouping"])
 
             flagged = extract_tb_accounts(analysis_result)
             tb_filename = file.filename or ""

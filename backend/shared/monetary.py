@@ -105,3 +105,52 @@ def decimals_to_floats(value: object) -> object:
     if isinstance(value, (list, tuple)):
         return [decimals_to_floats(v) for v in value]
     return value
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sprint 884 (TQ-12 / OUT-19): the largest amount the product supports.
+#
+# CEO decision 2026-11-18: 999,999,999,999,999.99. Every amount up to it is
+# carried exactly as a Decimal from upload to API response, PDF and workbook.
+# An uploaded amount above it is refused with AmountTooLargeError (a 400),
+# never read as zero; serializing one refuses the same way.
+#
+# Two limits sit below this one and are handled where they bite:
+# - a float (and so a JavaScript number) holds every cent exactly only up to
+#   about 2**53 cents (~90 trillion). The API writes exact digits regardless
+#   (shared/exact_json.py); a browser may still show a value above that ~70-90
+#   trillion range one cent off.
+# - Excel keeps 15 significant digits. Workbooks write the exact value into the
+#   file and, where it has more than 15 digits, an exact text copy beside it
+#   (EXCEL_EXACT_DIGITS / excel_holds_exactly).
+# ─────────────────────────────────────────────────────────────────────────────
+
+MAX_SUPPORTED_AMOUNT = Decimal("999999999999999.99")
+
+EXCEL_EXACT_DIGITS = 15
+
+
+class AmountTooLargeError(ValueError):
+    """An amount larger than MAX_SUPPORTED_AMOUNT (in absolute value)."""
+
+    def __init__(self, value: object = None) -> None:
+        self.value = value
+        super().__init__(
+            f"An amount exceeds the largest supported amount, {MAX_SUPPORTED_AMOUNT:,}. "
+            "Split the balance or report it in thousands."
+        )
+
+
+def ensure_supported_amount(value: Decimal) -> Decimal:
+    """Return ``value``, or raise AmountTooLargeError if it is above the limit."""
+    if value.is_finite() and abs(value) > MAX_SUPPORTED_AMOUNT:
+        raise AmountTooLargeError(value)
+    return value
+
+
+def excel_holds_exactly(value: Decimal) -> bool:
+    """True if Excel's 15 significant digits hold ``value`` exactly."""
+    if not value.is_finite():
+        return False
+    digits = value.normalize().as_tuple().digits
+    return len(digits) <= EXCEL_EXACT_DIGITS

@@ -9,6 +9,7 @@ from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Si
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
+from shared.excel_exact import approximate_note, money
 from shared.filenames import sanitize_csv_value
 from shared.monetary import quantize_monetary
 
@@ -620,6 +621,21 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions["D"].width = 50
 
 
+def _fs_amount(ws: Worksheet, row: int, value: Any, label: str) -> None:
+    """Write a statement amount in column B, exactly.
+
+    Sprint 884 (TQ-12, OUT-19): the amount is a Decimal at cents (written digit
+    for digit, see shared/excel_exact.py). Where it has more than the 15
+    significant digits Excel keeps, column D carries an exact text copy and
+    says the number in column B is approximate.
+    """
+    amount = money(value)
+    ws.cell(row=row, column=2, value=amount)
+    note = approximate_note([(str(label).strip(), amount)]) if amount is not None else None
+    if note:
+        ws.cell(row=row, column=4, value=note)
+
+
 def generate_financial_statements_excel(
     statements: Any,
     prepared_by: Optional[str] = None,
@@ -693,13 +709,13 @@ def generate_financial_statements_excel(
                 ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
                 ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
                 ws.cell(row=row, column=2).border = Border(bottom=Side(style="double", color=ExcelColors.OBSIDIAN))
-                ws.cell(row=row, column=2, value=item.amount)
+                _fs_amount(ws, row, item.amount, item.label)
             elif item.is_subtotal:
                 ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
                 ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
                 ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
                 ws.cell(row=row, column=2).border = Border(top=Side(style="thin", color=ExcelColors.OBSIDIAN_500))
-                ws.cell(row=row, column=2, value=item.amount)
+                _fs_amount(ws, row, item.amount, item.label)
             elif item.indent_level == 0 and not item.lead_sheet_ref:
                 # Section header — no amount
                 ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
@@ -707,7 +723,7 @@ def generate_financial_statements_excel(
             else:
                 # Regular line item
                 ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                ws.cell(row=row, column=2, value=item.amount)
+                _fs_amount(ws, row, item.amount, item.label)
                 ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
                 ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
 
@@ -802,7 +818,7 @@ def generate_financial_statements_excel(
                 indent = "    " * item.indent_level
                 cf_ws.cell(row=row, column=1, value=f"{indent}{sanitize_csv_value(item.label)}")
                 cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                cf_ws.cell(row=row, column=2, value=item.amount)
+                _fs_amount(cf_ws, row, item.amount, item.label)
                 cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
                 cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                 if item.source:
@@ -814,7 +830,7 @@ def generate_financial_statements_excel(
             # Section subtotal
             cf_ws.cell(row=row, column=1, value=f"    Net {section.label}")
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
-            cf_ws.cell(row=row, column=2, value=section.subtotal)
+            _fs_amount(cf_ws, row, section.subtotal, f"Net {section.label}")
             cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).border = Border(top=Side(style="thin", color=ExcelColors.OBSIDIAN_500))
@@ -823,7 +839,7 @@ def generate_financial_statements_excel(
         # Net Change in Cash
         cf_ws.cell(row=row, column=1, value="NET CHANGE IN CASH")
         cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
-        cf_ws.cell(row=row, column=2, value=cf.net_change)
+        _fs_amount(cf_ws, row, cf.net_change, "Net change in cash")
         cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
         cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
         cf_ws.cell(row=row, column=2).border = Border(bottom=Side(style="double", color=ExcelColors.OBSIDIAN))
@@ -838,21 +854,21 @@ def generate_financial_statements_excel(
 
             cf_ws.cell(row=row, column=1, value="    Beginning Cash")
             cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            cf_ws.cell(row=row, column=2, value=cf.beginning_cash)
+            _fs_amount(cf_ws, row, cf.beginning_cash, "Beginning cash")
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             row += 1
 
             cf_ws.cell(row=row, column=1, value="    Net Change in Cash")
             cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            cf_ws.cell(row=row, column=2, value=cf.net_change)
+            _fs_amount(cf_ws, row, cf.net_change, "Net change in cash")
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             row += 1
 
             cf_ws.cell(row=row, column=1, value="ENDING CASH")
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
-            cf_ws.cell(row=row, column=2, value=cf.ending_cash)
+            _fs_amount(cf_ws, row, cf.ending_cash, "Ending cash")
             cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).border = Border(bottom=Side(style="double", color=ExcelColors.OBSIDIAN))

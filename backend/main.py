@@ -44,6 +44,8 @@ from security_middleware import (
     SecurityHeadersMiddleware,
 )
 from security_utils import log_secure_operation
+from shared.exact_json import ExactNumberMiddleware
+from shared.monetary import AmountTooLargeError
 from shared.rate_limits import DefaultLimitMiddleware, get_storage_backend, limiter
 from shared.schemas import ErrorResponse
 from version import __version__
@@ -229,6 +231,11 @@ app = FastAPI(
     openapi_url=None if ENV_MODE == "production" else "/openapi.json",
 )
 
+# Sprint 884 (TQ-12): write exact-number markers in JSON bodies back as bare
+# numbers. Added first, so it is the innermost middleware and sees the body
+# before GZip compresses it. See shared/exact_json.py.
+app.add_middleware(ExactNumberMiddleware)
+
 # CORS configuration from environment — explicit methods/headers (Sprint 200)
 app.add_middleware(
     CORSMiddleware,
@@ -306,6 +313,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         detail="Internal server error",
     )
     return JSONResponse(status_code=500, content=body.model_dump())
+
+
+# Sprint 884 (TQ-12): an amount above MAX_SUPPORTED_AMOUNT is a clear 400,
+# wherever it is found — on upload or when a result is serialized.
+@app.exception_handler(AmountTooLargeError)
+async def amount_too_large_handler(request: Request, exc: AmountTooLargeError) -> JSONResponse:
+    rid = request_id_var.get("-")
+    body = ErrorResponse(code="AMOUNT_TOO_LARGE", message=str(exc), request_id=rid, detail=str(exc))
+    return JSONResponse(status_code=400, content=body.model_dump())
 
 
 # HTTPException handler — wraps FastAPI's default with the unified error envelope

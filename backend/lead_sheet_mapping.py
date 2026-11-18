@@ -35,6 +35,7 @@ from typing import Optional
 
 from classification_rules import AccountCategory
 from security_utils import log_secure_operation
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
 
@@ -943,22 +944,32 @@ def lead_sheet_grouping_to_dict(grouping: LeadSheetGrouping) -> dict:
                 if name:
                     unclassified_accounts.append(str(name))
 
-    return {
-        "summaries": [
+    # Sprint 884 (TQ-12, OUT-19): Decimals, rounded half-up to the cent they are
+    # shown at — not floats, which turned 90,071,992,547,409.93 into ...409.94.
+    # Net is the shown debit less the shown credit, and the grand totals are the
+    # sums of the shown summaries. The API converts these to exact JSON numbers
+    # (shared/exact_json.py) at its boundary.
+    summaries = []
+    for s in grouping.summaries:
+        debit = quantize_monetary(s.total_debit)
+        credit = quantize_monetary(s.total_credit)
+        summaries.append(
             {
                 "lead_sheet": s.lead_sheet.value,
                 "name": s.name,
                 "category": s.category,
-                "total_debit": float(s.total_debit),
-                "total_credit": float(s.total_credit),
-                "net_balance": float(s.net_balance),
+                "total_debit": debit,
+                "total_credit": credit,
+                "net_balance": debit - credit,
                 "account_count": s.account_count,
                 "accounts": s.accounts,
             }
-            for s in grouping.summaries
-        ],
-        "total_debits": float(grouping.total_debits),
-        "total_credits": float(grouping.total_credits),
+        )
+
+    return {
+        "summaries": summaries,
+        "total_debits": sum((s["total_debit"] for s in summaries), Decimal("0.00")),
+        "total_credits": sum((s["total_credit"] for s in summaries), Decimal("0.00")),
         "total_accounts": sum(s.account_count for s in grouping.summaries),
         "unclassified_count": grouping.unclassified_count,
         "unclassified_accounts": unclassified_accounts,

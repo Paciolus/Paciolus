@@ -28,11 +28,16 @@ Sign Conventions:
     - Other (O): mixed → flip sign (credits = income, debits = expense)
 """
 
-import math
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
-from shared.monetary import quantize_monetary
+from shared.monetary import BALANCE_TOLERANCE, MONETARY_NEAR_ZERO, quantize_monetary
+from shared.parsing_helpers import safe_decimal
+
+# Sprint 884: every amount in this module is an exact Decimal. Float never
+# touches a monetary value, so e.g. 90071992547409.93 survives unchanged.
+ZERO = Decimal("0")
 
 # Interest expense keywords for automatic detection from account descriptions
 INTEREST_EXPENSE_KEYWORDS: list[tuple[str, bool]] = [
@@ -65,12 +70,12 @@ class StatementLineItem:
     """A single line on a financial statement."""
 
     label: str
-    amount: float
+    amount: Decimal
     indent_level: int = 0  # 0=section header, 1=line item
     is_subtotal: bool = False
     is_total: bool = False
     lead_sheet_ref: str = ""  # "A", "B", etc.
-    prior_amount: Optional[float] = None  # Prior period amount (Sprint 488)
+    prior_amount: Optional[Decimal] = None  # Prior period amount (Sprint 488)
 
 
 @dataclass
@@ -78,7 +83,7 @@ class CashFlowLineItem:
     """A single line item on the cash flow statement."""
 
     label: str
-    amount: float
+    amount: Decimal
     source: str = ""  # lead_sheet_ref or "computed"
     indent_level: int = 1  # 0=section header, 1=line item
 
@@ -89,7 +94,7 @@ class CashFlowSection:
 
     label: str
     items: list[CashFlowLineItem] = field(default_factory=list)
-    subtotal: float = 0.0
+    subtotal: Decimal = ZERO
 
     def to_dict(self) -> dict:
         return {
@@ -114,11 +119,11 @@ class CashFlowStatement:
     operating: CashFlowSection
     investing: CashFlowSection
     financing: CashFlowSection
-    net_change: float = 0.0
-    beginning_cash: float = 0.0
-    ending_cash: float = 0.0
+    net_change: Decimal = ZERO
+    beginning_cash: Decimal = ZERO
+    ending_cash: Decimal = ZERO
     is_reconciled: bool = False
-    reconciliation_difference: float = 0.0
+    reconciliation_difference: Decimal = ZERO
     has_prior_period: bool = False
     notes: list[str] = field(default_factory=list)
 
@@ -142,9 +147,9 @@ class MappingTraceAccount:
     """An individual TB account contributing to a statement line."""
 
     account_name: str
-    debit: float
-    credit: float
-    net_balance: float
+    debit: Decimal
+    credit: Decimal
+    net_balance: Decimal
     confidence: float
     matched_keywords: list[str] = field(default_factory=list)
 
@@ -157,12 +162,12 @@ class MappingTraceEntry:
     line_label: str  # e.g. "Cash and Cash Equivalents"
     lead_sheet_ref: str  # "A"
     lead_sheet_name: str  # "Cash and Cash Equivalents"
-    statement_amount: float  # sign-corrected display amount
+    statement_amount: Decimal  # sign-corrected display amount
     account_count: int
     accounts: list[MappingTraceAccount] = field(default_factory=list)
     is_tied: bool = True
-    tie_difference: float = 0.0
-    raw_aggregate: float = 0.0  # Sprint 295: sum of account net balances (pre-sign-correction)
+    tie_difference: Decimal = ZERO
+    raw_aggregate: Decimal = ZERO  # Sprint 295: sum of account net balances (pre-sign-correction)
     sign_correction_applied: bool = False  # Sprint 295: True for credit-normal letters (G-K, L, O)
 
 
@@ -181,14 +186,14 @@ class EquityComponent:
         str  # "common_stock" / "additional_paid_in_capital" / "retained_earnings" / "treasury_stock" / "aoci" / "other"
     )
     label: str
-    beginning_balance: float
-    contributions: float = 0.0  # Owner contributions / stock issuance
-    distributions: float = 0.0  # Distributions / share buybacks (negative to equity)
-    dividends: float = 0.0  # Dividends declared (negative to retained earnings)
-    net_income_allocation: float = 0.0  # Net income attribution (retained earnings only)
-    other_comprehensive_income: float = 0.0  # AOCI movement only
-    other_movement: float = 0.0  # Catch-all for residuals
-    ending_balance: float = 0.0
+    beginning_balance: Decimal
+    contributions: Decimal = ZERO  # Owner contributions / stock issuance
+    distributions: Decimal = ZERO  # Distributions / share buybacks (negative to equity)
+    dividends: Decimal = ZERO  # Dividends declared (negative to retained earnings)
+    net_income_allocation: Decimal = ZERO  # Net income attribution (retained earnings only)
+    other_comprehensive_income: Decimal = ZERO  # AOCI movement only
+    other_movement: Decimal = ZERO  # Catch-all for residuals
+    ending_balance: Decimal = ZERO
 
 
 @dataclass
@@ -206,14 +211,14 @@ class StatementOfChangesInEquity:
     """
 
     components: list[EquityComponent]
-    beginning_total_equity: float
-    net_income: float
-    total_contributions: float
-    total_distributions: float
-    total_dividends: float
-    total_other_comprehensive_income: float
-    total_other_movement: float
-    ending_total_equity: float
+    beginning_total_equity: Decimal
+    net_income: Decimal
+    total_contributions: Decimal
+    total_distributions: Decimal
+    total_dividends: Decimal
+    total_other_comprehensive_income: Decimal
+    total_other_movement: Decimal
+    ending_total_equity: Decimal
     unmapped_accounts: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -256,9 +261,9 @@ class EquityActivity:
     """
 
     account: str
-    contributions: float = 0.0
-    distributions: float = 0.0
-    dividends: float = 0.0
+    contributions: Decimal = ZERO
+    distributions: Decimal = ZERO
+    dividends: Decimal = ZERO
 
 
 @dataclass
@@ -268,16 +273,16 @@ class FinancialStatements:
     balance_sheet: list[StatementLineItem]
     income_statement: list[StatementLineItem]
     # Balance Sheet totals
-    total_assets: float = 0.0
-    total_liabilities: float = 0.0
-    total_equity: float = 0.0
+    total_assets: Decimal = ZERO
+    total_liabilities: Decimal = ZERO
+    total_equity: Decimal = ZERO
     is_balanced: bool = False
-    balance_difference: float = 0.0
+    balance_difference: Decimal = ZERO
     # Income Statement totals
-    total_revenue: float = 0.0
-    gross_profit: float = 0.0
-    operating_income: float = 0.0
-    net_income: float = 0.0
+    total_revenue: Decimal = ZERO
+    gross_profit: Decimal = ZERO
+    operating_income: Decimal = ZERO
+    net_income: Decimal = ZERO
     # Cash Flow Statement (Sprint 83)
     cash_flow_statement: Optional[CashFlowStatement] = None
     # Statement of Changes in Equity (Sprint 638)
@@ -285,17 +290,17 @@ class FinancialStatements:
     # Account-to-Statement Mapping Trace (Sprint 284)
     mapping_trace: list[MappingTraceEntry] = field(default_factory=list)
     # Derived amounts for ratio computation (Sprint 488)
-    depreciation_amount: float = 0.0
-    interest_expense: float = 0.0
+    depreciation_amount: Decimal = ZERO
+    interest_expense: Decimal = ZERO
     # Prior period totals (Sprint 488)
     has_prior_period: bool = False
-    prior_total_assets: float = 0.0
-    prior_total_liabilities: float = 0.0
-    prior_total_equity: float = 0.0
-    prior_total_revenue: float = 0.0
-    prior_gross_profit: float = 0.0
-    prior_operating_income: float = 0.0
-    prior_net_income: float = 0.0
+    prior_total_assets: Decimal = ZERO
+    prior_total_liabilities: Decimal = ZERO
+    prior_total_equity: Decimal = ZERO
+    prior_total_revenue: Decimal = ZERO
+    prior_gross_profit: Decimal = ZERO
+    prior_operating_income: Decimal = ZERO
+    prior_net_income: Decimal = ZERO
     # Pre-closing TB note (Sprint 535 P2-3)
     is_pre_closing: bool = False
     pre_closing_note: str = ""
@@ -401,27 +406,27 @@ class FinancialStatementBuilder:
         # Sprint 884 (OUT-05): every lead-sheet balance is rounded half-up to
         # the cent it is shown at before any subtotal is taken, so each
         # subtotal and total is the sum of the lines printed above it.
-        self._balance_map: dict[str, float] = {}
+        self._balance_map: dict[str, Decimal] = {}
         for summary in self.grouping.get("summaries", []):
             letter = summary.get("lead_sheet", "")
-            self._balance_map[letter] = float(quantize_monetary(summary.get("net_balance", 0.0)))
+            self._balance_map[letter] = quantize_monetary(summary.get("net_balance"))
         # Index prior period balances
-        self._prior_balance_map: dict[str, float] = {}
+        self._prior_balance_map: dict[str, Decimal] = {}
         if self.prior_grouping:
             for summary in self.prior_grouping.get("summaries", []):
                 letter = summary.get("lead_sheet", "")
-                self._prior_balance_map[letter] = float(quantize_monetary(summary.get("net_balance", 0.0)))
+                self._prior_balance_map[letter] = quantize_monetary(summary.get("net_balance"))
         # Sprint 803: `_account_descriptions` was built here from the same wrong
         # account-name key as `_extract_depreciation`, and never read by anything.
         # Removed rather than corrected — dead code carrying a live bug.
 
-    def _get_lead_sheet_balance(self, letter: str) -> float:
-        """Get net_balance for a lead sheet letter, 0.0 if missing."""
-        return self._balance_map.get(letter, 0.0)
+    def _get_lead_sheet_balance(self, letter: str) -> Decimal:
+        """Get net_balance for a lead sheet letter, 0 if missing."""
+        return self._balance_map.get(letter, ZERO)
 
-    def _get_prior_balance(self, letter: str) -> float:
-        """Get prior period net_balance for a lead sheet letter, 0.0 if missing."""
-        return self._prior_balance_map.get(letter, 0.0)
+    def _get_prior_balance(self, letter: str) -> Decimal:
+        """Get prior period net_balance for a lead sheet letter, 0 if missing."""
+        return self._prior_balance_map.get(letter, ZERO)
 
     def build(self) -> FinancialStatements:
         """Build complete financial statements."""
@@ -430,13 +435,13 @@ class FinancialStatementBuilder:
 
         # Calculate totals from raw lead sheet balances
         # Assets: A-F, positive net_balance = asset
-        current_assets = sum(self._get_lead_sheet_balance(ls) for ls in ["A", "B", "C", "D"])
-        noncurrent_assets = sum(self._get_lead_sheet_balance(ls) for ls in ["E", "F"])
+        current_assets = sum((self._get_lead_sheet_balance(ls) for ls in ["A", "B", "C", "D"]), ZERO)
+        noncurrent_assets = sum((self._get_lead_sheet_balance(ls) for ls in ["E", "F"]), ZERO)
         total_assets = current_assets + noncurrent_assets
 
         # Liabilities: G-J, negative net_balance → flip sign
-        current_liabilities = sum(-self._get_lead_sheet_balance(ls) for ls in ["G", "H"])
-        noncurrent_liabilities = sum(-self._get_lead_sheet_balance(ls) for ls in ["I", "J"])
+        current_liabilities = sum((-self._get_lead_sheet_balance(ls) for ls in ["G", "H"]), ZERO)
+        noncurrent_liabilities = sum((-self._get_lead_sheet_balance(ls) for ls in ["I", "J"]), ZERO)
         total_liabilities = current_liabilities + noncurrent_liabilities
 
         # Equity: K, negative net_balance → flip sign
@@ -444,7 +449,7 @@ class FinancialStatementBuilder:
 
         # Balance check
         balance_difference = total_assets - (total_liabilities + total_equity)
-        is_balanced = abs(balance_difference) < 0.01
+        is_balanced = abs(balance_difference) < BALANCE_TOLERANCE
 
         # Income Statement totals
         total_revenue = -self._get_lead_sheet_balance("L")  # Credits → positive
@@ -461,19 +466,19 @@ class FinancialStatementBuilder:
 
         # Prior period totals (Sprint 488)
         has_prior = bool(self.prior_grouping)
-        prior_total_assets = 0.0
-        prior_total_liabilities = 0.0
-        prior_total_equity = 0.0
-        prior_total_revenue = 0.0
-        prior_gross_profit = 0.0
-        prior_operating_income = 0.0
-        prior_net_income = 0.0
+        prior_total_assets = ZERO
+        prior_total_liabilities = ZERO
+        prior_total_equity = ZERO
+        prior_total_revenue = ZERO
+        prior_gross_profit = ZERO
+        prior_operating_income = ZERO
+        prior_net_income = ZERO
         if has_prior:
-            prior_ca = sum(self._get_prior_balance(ls) for ls in ["A", "B", "C", "D"])
-            prior_nca = sum(self._get_prior_balance(ls) for ls in ["E", "F"])
+            prior_ca = sum((self._get_prior_balance(ls) for ls in ["A", "B", "C", "D"]), ZERO)
+            prior_nca = sum((self._get_prior_balance(ls) for ls in ["E", "F"]), ZERO)
             prior_total_assets = prior_ca + prior_nca
-            prior_cl = sum(-self._get_prior_balance(ls) for ls in ["G", "H"])
-            prior_ncl = sum(-self._get_prior_balance(ls) for ls in ["I", "J"])
+            prior_cl = sum((-self._get_prior_balance(ls) for ls in ["G", "H"]), ZERO)
+            prior_ncl = sum((-self._get_prior_balance(ls) for ls in ["I", "J"]), ZERO)
             prior_total_liabilities = prior_cl + prior_ncl
             prior_total_equity = -self._get_prior_balance("K")
             prior_total_revenue = -self._get_prior_balance("L")
@@ -495,8 +500,8 @@ class FinancialStatementBuilder:
         # revenue/expense accounts haven't been closed to retained earnings.
         is_pre_closing = False
         pre_closing_note = ""
-        if not is_balanced and abs(net_income) > 0.01:
-            if abs(balance_difference - net_income) < 0.01:
+        if not is_balanced and abs(net_income) > BALANCE_TOLERANCE:
+            if abs(balance_difference - net_income) < BALANCE_TOLERANCE:
                 is_pre_closing = True
                 pre_closing_note = (
                     "This trial balance appears to be pre-closing: the balance sheet "
@@ -540,7 +545,7 @@ class FinancialStatementBuilder:
 
         return statements
 
-    def _prior_display(self, letter: str, sign_flip: bool = False) -> Optional[float]:
+    def _prior_display(self, letter: str, sign_flip: bool = False) -> Optional[Decimal]:
         """Get prior period display amount, or None if no prior data."""
         if not self.prior_grouping:
             return None
@@ -553,10 +558,10 @@ class FinancialStatementBuilder:
         has_prior = bool(self.prior_grouping)
 
         # ── ASSETS ──
-        lines.append(StatementLineItem("ASSETS", 0.0, indent_level=0))
+        lines.append(StatementLineItem("ASSETS", ZERO, indent_level=0))
 
         # Current Assets
-        lines.append(StatementLineItem("Current Assets", 0.0, indent_level=0))
+        lines.append(StatementLineItem("Current Assets", ZERO, indent_level=0))
         cash = self._get_lead_sheet_balance("A")
         receivables = self._get_lead_sheet_balance("B")
         inventory = self._get_lead_sheet_balance("C")
@@ -590,7 +595,7 @@ class FinancialStatementBuilder:
         total_current_assets = cash + receivables + inventory + prepaid
         prior_tca = None
         if has_prior:
-            prior_tca = sum(self._get_prior_balance(ls) for ls in ["A", "B", "C", "D"])
+            prior_tca = sum((self._get_prior_balance(ls) for ls in ["A", "B", "C", "D"]), ZERO)
         lines.append(
             StatementLineItem(
                 "Total Current Assets", total_current_assets, indent_level=1, is_subtotal=True, prior_amount=prior_tca
@@ -598,7 +603,7 @@ class FinancialStatementBuilder:
         )
 
         # Non-Current Assets
-        lines.append(StatementLineItem("Non-Current Assets", 0.0, indent_level=0))
+        lines.append(StatementLineItem("Non-Current Assets", ZERO, indent_level=0))
         ppe = self._get_lead_sheet_balance("E")
         intangibles = self._get_lead_sheet_balance("F")
 
@@ -624,7 +629,7 @@ class FinancialStatementBuilder:
         total_noncurrent_assets = ppe + intangibles
         prior_tnca = None
         if has_prior:
-            prior_tnca = sum(self._get_prior_balance(ls) for ls in ["E", "F"])
+            prior_tnca = sum((self._get_prior_balance(ls) for ls in ["E", "F"]), ZERO)
         lines.append(
             StatementLineItem(
                 "Total Non-Current Assets",
@@ -638,16 +643,16 @@ class FinancialStatementBuilder:
         total_assets = total_current_assets + total_noncurrent_assets
         prior_ta = None
         if has_prior:
-            prior_ta = (prior_tca or 0.0) + (prior_tnca or 0.0)
+            prior_ta = (prior_tca or ZERO) + (prior_tnca or ZERO)
         lines.append(
             StatementLineItem("TOTAL ASSETS", total_assets, indent_level=0, is_total=True, prior_amount=prior_ta)
         )
 
         # ── LIABILITIES & EQUITY ──
-        lines.append(StatementLineItem("LIABILITIES & EQUITY", 0.0, indent_level=0))
+        lines.append(StatementLineItem("LIABILITIES & EQUITY", ZERO, indent_level=0))
 
         # Current Liabilities (flip sign)
-        lines.append(StatementLineItem("Current Liabilities", 0.0, indent_level=0))
+        lines.append(StatementLineItem("Current Liabilities", ZERO, indent_level=0))
         ap = -self._get_lead_sheet_balance("G")
         other_cl = -self._get_lead_sheet_balance("H")
 
@@ -673,7 +678,7 @@ class FinancialStatementBuilder:
         total_current_liabilities = ap + other_cl
         prior_tcl = None
         if has_prior:
-            prior_tcl = sum(-self._get_prior_balance(ls) for ls in ["G", "H"])
+            prior_tcl = sum((-self._get_prior_balance(ls) for ls in ["G", "H"]), ZERO)
         lines.append(
             StatementLineItem(
                 "Total Current Liabilities",
@@ -685,7 +690,7 @@ class FinancialStatementBuilder:
         )
 
         # Non-Current Liabilities (flip sign)
-        lines.append(StatementLineItem("Non-Current Liabilities", 0.0, indent_level=0))
+        lines.append(StatementLineItem("Non-Current Liabilities", ZERO, indent_level=0))
         lt_debt = -self._get_lead_sheet_balance("I")
         other_lt = -self._get_lead_sheet_balance("J")
 
@@ -711,7 +716,7 @@ class FinancialStatementBuilder:
         total_noncurrent_liabilities = lt_debt + other_lt
         prior_tncl = None
         if has_prior:
-            prior_tncl = sum(-self._get_prior_balance(ls) for ls in ["I", "J"])
+            prior_tncl = sum((-self._get_prior_balance(ls) for ls in ["I", "J"]), ZERO)
         lines.append(
             StatementLineItem(
                 "Total Non-Current Liabilities",
@@ -725,7 +730,7 @@ class FinancialStatementBuilder:
         total_liabilities = total_current_liabilities + total_noncurrent_liabilities
         prior_tl = None
         if has_prior:
-            prior_tl = (prior_tcl or 0.0) + (prior_tncl or 0.0)
+            prior_tl = (prior_tcl or ZERO) + (prior_tncl or ZERO)
         lines.append(
             StatementLineItem(
                 "Total Liabilities", total_liabilities, indent_level=0, is_subtotal=True, prior_amount=prior_tl
@@ -747,7 +752,7 @@ class FinancialStatementBuilder:
         total_le = total_liabilities + equity
         prior_tle = None
         if has_prior:
-            prior_tle = (prior_tl or 0.0) + (-self._get_prior_balance("K"))
+            prior_tle = (prior_tl or ZERO) + (-self._get_prior_balance("K"))
         lines.append(
             StatementLineItem(
                 "TOTAL LIABILITIES & EQUITY", total_le, indent_level=0, is_total=True, prior_amount=prior_tle
@@ -802,7 +807,7 @@ class FinancialStatementBuilder:
         operating_income = gross_profit - opex
         prior_oi = None
         if has_prior:
-            prior_oi = (prior_gp or 0.0) - self._get_prior_balance("N")
+            prior_oi = (prior_gp or ZERO) - self._get_prior_balance("N")
         lines.append(
             StatementLineItem(
                 "OPERATING INCOME", operating_income, indent_level=0, is_subtotal=True, prior_amount=prior_oi
@@ -825,7 +830,7 @@ class FinancialStatementBuilder:
         net_income = operating_income + other_net
         prior_ni = None
         if has_prior:
-            prior_ni = (prior_oi or 0.0) + (-self._get_prior_balance("O"))
+            prior_ni = (prior_oi or ZERO) + (-self._get_prior_balance("O"))
         lines.append(StatementLineItem("NET INCOME", net_income, indent_level=0, is_total=True, prior_amount=prior_ni))
 
         return lines
@@ -862,7 +867,7 @@ class FinancialStatementBuilder:
                 summary_index[letter] = summary
 
         # Index statement amounts by lead sheet ref for tie-out comparison
-        stmt_amounts: dict[str, float] = {}
+        stmt_amounts: dict[str, Decimal] = {}
         for item in statements.balance_sheet:
             if item.lead_sheet_ref:
                 stmt_amounts[item.lead_sheet_ref] = item.amount
@@ -874,7 +879,7 @@ class FinancialStatementBuilder:
 
         for stmt_name, line_label, ref in self.STATEMENT_LINE_MAP:
             summary = summary_index.get(ref)
-            statement_amount = stmt_amounts.get(ref, 0.0)
+            statement_amount = stmt_amounts.get(ref, ZERO)
 
             if summary is None:
                 # Lead sheet not present — empty entry, trivially tied
@@ -887,7 +892,7 @@ class FinancialStatementBuilder:
                         statement_amount=statement_amount,
                         account_count=0,
                         is_tied=True,
-                        tie_difference=0.0,
+                        tie_difference=ZERO,
                         sign_correction_applied=ref in self.SIGN_CORRECTED_LETTERS,
                     )
                 )
@@ -896,14 +901,14 @@ class FinancialStatementBuilder:
             lead_sheet_name = summary.get("name", line_label)
             raw_accounts = summary.get("accounts", [])
             accounts: list[MappingTraceAccount] = []
-            net_values: list[float] = []
+            net_values: list[Decimal] = []
 
             for acct in raw_accounts:
                 if not isinstance(acct, dict):
                     continue
                 acct_name = str(acct.get("account", acct.get("name", "Unknown")))
-                debit = acct.get("debit", 0.0)
-                credit = acct.get("credit", 0.0)
+                debit = safe_decimal(acct.get("debit"))
+                credit = safe_decimal(acct.get("credit"))
                 net = debit - credit
                 net_values.append(net)
                 confidence = acct.get("confidence", 1.0)
@@ -919,13 +924,13 @@ class FinancialStatementBuilder:
                     )
                 )
 
-            raw_sum = math.fsum(net_values)
+            raw_sum = sum(net_values, ZERO)
             sign_corrected = ref in self.SIGN_CORRECTED_LETTERS
 
             # Tie-out: compare raw account sum to the summary net_balance
-            summary_net = summary.get("net_balance", 0.0)
+            summary_net = safe_decimal(summary.get("net_balance"))
             tie_diff = abs(raw_sum - summary_net)
-            is_tied = tie_diff < 0.01
+            is_tied = tie_diff < BALANCE_TOLERANCE
 
             trace.append(
                 MappingTraceEntry(
@@ -953,13 +958,13 @@ class FinancialStatementBuilder:
     # line on an asset sheet.
     DEPRECIATION_SCAN_ORDER: tuple[tuple[str, ...], ...] = (("N", "O"), ("E", "F"))
 
-    def _extract_depreciation(self) -> float:
+    def _extract_depreciation(self) -> Decimal:
         """
         Detect depreciation/amortization from account names in OpEx (N), Other (O),
         and — only if neither carries one — Non-Current Assets (E, F).
 
         Returns the period depreciation and amortization expense as a positive number,
-        summed across every matching account, or 0.0 if none is separately identifiable.
+        summed across every matching account, or 0 if none is separately identifiable.
 
         Sprint 803 (finding A-5) fixed three defects here:
         - The account name was read from the key ``name``, which the serialized grouping
@@ -974,7 +979,7 @@ class FinancialStatementBuilder:
           depreciation and amortization lines now adds back both.
         """
         for letters in self.DEPRECIATION_SCAN_ORDER:
-            total = 0.0
+            total = ZERO
             for summary in self.grouping.get("summaries", []):
                 if summary.get("lead_sheet", "") not in letters:
                     continue
@@ -992,21 +997,21 @@ class FinancialStatementBuilder:
                     if "accum" in name:
                         continue
                     if any(keyword in name for keyword, _is_phrase in DEPRECIATION_KEYWORDS):
-                        balance = acct.get("net_balance", 0.0)
-                        if balance == 0.0:
-                            balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                        total += abs(float(balance))
-            if total > 0.0:
-                return float(quantize_monetary(total))
-        return 0.0
+                        balance = safe_decimal(acct.get("net_balance"))
+                        if balance == ZERO:
+                            balance = safe_decimal(acct.get("debit")) - safe_decimal(acct.get("credit"))
+                        total += abs(balance)
+            if total > ZERO:
+                return quantize_monetary(total)
+        return ZERO
 
-    def _extract_interest_expense(self) -> float:
+    def _extract_interest_expense(self) -> Decimal:
         """
         Detect interest expense from account descriptions in Other Income/Expense (O)
         and Operating Expenses (N).
 
         Returns the estimated interest expense as a positive number.
-        If not separately identifiable, returns 0.0.
+        If not separately identifiable, returns 0.
         """
         for summary in self.grouping.get("summaries", []):
             letter = summary.get("lead_sheet", "")
@@ -1019,25 +1024,25 @@ class FinancialStatementBuilder:
                 name = (acct.get("name", "") or acct.get("account", "")).lower()
                 for keyword, is_phrase in INTEREST_EXPENSE_KEYWORDS:
                     if is_phrase and keyword in name:
-                        balance = acct.get("net_balance", 0.0)
-                        if balance == 0.0:
-                            balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                        return float(quantize_monetary(abs(balance)))
-        return 0.0
+                        balance = safe_decimal(acct.get("net_balance"))
+                        if balance == ZERO:
+                            balance = safe_decimal(acct.get("debit")) - safe_decimal(acct.get("credit"))
+                        return quantize_monetary(abs(balance))
+        return ZERO
 
-    def _compute_balance_change(self, letter: str) -> float:
+    def _compute_balance_change(self, letter: str) -> Decimal:
         """
         Compute the change in a lead sheet balance: current - prior.
 
-        Returns 0.0 if no prior period is available.
+        Returns 0 if no prior period is available.
         """
         if not self.prior_grouping:
-            return 0.0
+            return ZERO
         current = self._get_lead_sheet_balance(letter)
         prior = self._get_prior_balance(letter)
         return current - prior
 
-    def _build_operating_items(self, net_income: float, has_prior: bool, notes: list[str]) -> list[CashFlowLineItem]:
+    def _build_operating_items(self, net_income: Decimal, has_prior: bool, notes: list[str]) -> list[CashFlowLineItem]:
         """Build operating activity line items (indirect method).
 
         Starts with net income, adds back non-cash items (depreciation),
@@ -1074,7 +1079,7 @@ class FinancialStatementBuilder:
         if has_prior:
             # Change in Receivables (B): increase = cash outflow (negative)
             delta_b = self._compute_balance_change("B")
-            if abs(delta_b) > 0.005:
+            if abs(delta_b) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Accounts Receivable",
@@ -1086,7 +1091,7 @@ class FinancialStatementBuilder:
 
             # Change in Inventory (C): increase = cash outflow
             delta_c = self._compute_balance_change("C")
-            if abs(delta_c) > 0.005:
+            if abs(delta_c) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Inventory",
@@ -1098,7 +1103,7 @@ class FinancialStatementBuilder:
 
             # Change in Prepaid Expenses (D): increase = cash outflow
             delta_d = self._compute_balance_change("D")
-            if abs(delta_d) > 0.005:
+            if abs(delta_d) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Prepaid Expenses",
@@ -1112,7 +1117,7 @@ class FinancialStatementBuilder:
             # G has negative net_balance (credit), so change is also negative
             # When liability increases: more negative → delta is negative → flip = positive inflow
             delta_g = self._compute_balance_change("G")
-            if abs(delta_g) > 0.005:
+            if abs(delta_g) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Accounts Payable",
@@ -1124,7 +1129,7 @@ class FinancialStatementBuilder:
 
             # Change in Accrued Liabilities (H): same as AP
             delta_h = self._compute_balance_change("H")
-            if abs(delta_h) > 0.005:
+            if abs(delta_h) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Accrued Liabilities",
@@ -1148,7 +1153,7 @@ class FinancialStatementBuilder:
         if has_prior:
             # Change in PPE (E): asset increase = cash outflow (capital expenditure)
             delta_e = self._compute_balance_change("E")
-            if abs(delta_e) > 0.005:
+            if abs(delta_e) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Capital Expenditures (PPE)",
@@ -1160,7 +1165,7 @@ class FinancialStatementBuilder:
 
             # Change in Other Non-Current Assets (F)
             delta_f = self._compute_balance_change("F")
-            if abs(delta_f) > 0.005:
+            if abs(delta_f) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Other Non-Current Assets",
@@ -1172,7 +1177,7 @@ class FinancialStatementBuilder:
 
         return items
 
-    def _build_financing_items(self, net_income: float, has_prior: bool) -> list[CashFlowLineItem]:
+    def _build_financing_items(self, net_income: Decimal, has_prior: bool) -> list[CashFlowLineItem]:
         """Build financing activity line items.
 
         Changes in long-term debt (I, J) and equity excluding retained earnings (K).
@@ -1183,7 +1188,7 @@ class FinancialStatementBuilder:
             # Change in Long-Term Debt (I): liability increase = cash inflow
             # I has negative net_balance; more negative = increase
             delta_i = self._compute_balance_change("I")
-            if abs(delta_i) > 0.005:
+            if abs(delta_i) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Long-Term Debt",
@@ -1195,7 +1200,7 @@ class FinancialStatementBuilder:
 
             # Change in Short-Term Debt / Other LT Liabilities (J)
             delta_j = self._compute_balance_change("J")
-            if abs(delta_j) > 0.005:
+            if abs(delta_j) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Change in Other Long-Term Liabilities",
@@ -1212,7 +1217,7 @@ class FinancialStatementBuilder:
             # K has negative net_balance; change in displayed equity = -delta_k
             equity_change_displayed = -delta_k
             financing_equity_change = equity_change_displayed - net_income
-            if abs(financing_equity_change) > 0.005:
+            if abs(financing_equity_change) > MONETARY_NEAR_ZERO:
                 items.append(
                     CashFlowLineItem(
                         "Equity Changes (excl. Retained Earnings)",
@@ -1286,9 +1291,9 @@ class FinancialStatementBuilder:
 
     def _build_soce(
         self,
-        net_income: float,
-        total_equity: float,
-        prior_total_equity: float,
+        net_income: Decimal,
+        total_equity: Decimal,
+        prior_total_equity: Decimal,
     ) -> StatementOfChangesInEquity:
         """Build the Statement of Changes in Equity rollforward.
 
@@ -1310,10 +1315,10 @@ class FinancialStatementBuilder:
         prior_accounts = self._collect_prior_equity_accounts()
 
         # Build prior-balance lookup by account name (case-insensitive).
-        prior_by_name: dict[str, float] = {}
+        prior_by_name: dict[str, Decimal] = {}
         for acct in prior_accounts:
             name = str(acct.get("name", "")).strip().lower()
-            prior_by_name[name] = float(acct.get("net_balance", 0.0) or 0.0)
+            prior_by_name[name] = quantize_monetary(acct.get("net_balance"))
 
         # Equity accounts are credit-normal — flip sign so positive values
         # display as equity.
@@ -1332,12 +1337,13 @@ class FinancialStatementBuilder:
             component_type, label, is_explicit = self._classify_equity_account(name)
             if not is_explicit:
                 unmapped.append(name)
-            ending = -float(acct.get("net_balance", 0.0) or 0.0)  # flip sign
-            beginning = -prior_by_name.get(name.lower(), 0.0)
+            ending = -quantize_monetary(acct.get("net_balance"))  # flip sign
+            beginning = -prior_by_name.get(name.lower(), ZERO)
             act = activity_by_name.get(name.lower())
-            contributions = act.contributions if act else 0.0
-            distributions = act.distributions if act else 0.0
-            dividends = act.dividends if act else 0.0
+            # Callers may still hand in float activity amounts; read them exactly.
+            contributions = quantize_monetary(act.contributions) if act else ZERO
+            distributions = quantize_monetary(act.distributions) if act else ZERO
+            dividends = quantize_monetary(act.dividends) if act else ZERO
 
             component = components.get(component_type)
             if component is None:
@@ -1365,8 +1371,8 @@ class FinancialStatementBuilder:
                 EquityComponent(
                     component_type="retained_earnings",
                     label="Retained Earnings",
-                    beginning_balance=0.0,
-                    ending_balance=0.0,
+                    beginning_balance=ZERO,
+                    ending_balance=ZERO,
                 ),
             )
             re.net_income_allocation += net_income
@@ -1391,8 +1397,8 @@ class FinancialStatementBuilder:
             )
             component.other_movement = component.ending_balance - component.beginning_balance - explained
             # Collapse tiny rounding residuals.
-            if abs(component.other_movement) < 0.005:
-                component.other_movement = 0.0
+            if abs(component.other_movement) < MONETARY_NEAR_ZERO:
+                component.other_movement = ZERO
 
         components_list = list(components.values())
         # Deterministic order: common, APIC, retained, treasury, AOCI, other
@@ -1408,18 +1414,18 @@ class FinancialStatementBuilder:
 
         return StatementOfChangesInEquity(
             components=components_list,
-            beginning_total_equity=prior_total_equity if self.prior_grouping else 0.0,
+            beginning_total_equity=prior_total_equity if self.prior_grouping else ZERO,
             net_income=net_income,
-            total_contributions=sum(c.contributions for c in components_list),
-            total_distributions=sum(c.distributions for c in components_list),
-            total_dividends=sum(c.dividends for c in components_list),
-            total_other_comprehensive_income=sum(c.other_comprehensive_income for c in components_list),
-            total_other_movement=sum(c.other_movement for c in components_list),
+            total_contributions=sum((c.contributions for c in components_list), ZERO),
+            total_distributions=sum((c.distributions for c in components_list), ZERO),
+            total_dividends=sum((c.dividends for c in components_list), ZERO),
+            total_other_comprehensive_income=sum((c.other_comprehensive_income for c in components_list), ZERO),
+            total_other_movement=sum((c.other_movement for c in components_list), ZERO),
             ending_total_equity=total_equity,
             unmapped_accounts=unmapped,
         )
 
-    def _build_cash_flow_statement(self, net_income: float) -> CashFlowStatement:
+    def _build_cash_flow_statement(self, net_income: Decimal) -> CashFlowStatement:
         """
         Build Cash Flow Statement using indirect method (ASC 230 / IAS 7).
 
@@ -1433,7 +1439,7 @@ class FinancialStatementBuilder:
 
         # Build activity sections
         operating_items = self._build_operating_items(net_income, has_prior, notes)
-        operating_subtotal = sum(item.amount for item in operating_items)
+        operating_subtotal = sum((item.amount for item in operating_items), ZERO)
         operating = CashFlowSection(
             label="Cash Flows from Operating Activities",
             items=operating_items,
@@ -1441,7 +1447,7 @@ class FinancialStatementBuilder:
         )
 
         investing_items = self._build_investing_items(has_prior)
-        investing_subtotal = sum(item.amount for item in investing_items)
+        investing_subtotal = sum((item.amount for item in investing_items), ZERO)
         investing = CashFlowSection(
             label="Cash Flows from Investing Activities",
             items=investing_items,
@@ -1449,7 +1455,7 @@ class FinancialStatementBuilder:
         )
 
         financing_items = self._build_financing_items(net_income, has_prior)
-        financing_subtotal = sum(item.amount for item in financing_items)
+        financing_subtotal = sum((item.amount for item in financing_items), ZERO)
         financing = CashFlowSection(
             label="Cash Flows from Financing Activities",
             items=financing_items,
@@ -1459,14 +1465,14 @@ class FinancialStatementBuilder:
         # Reconciliation
         net_change = operating_subtotal + investing_subtotal + financing_subtotal
         ending_cash = self._get_lead_sheet_balance("A")
-        beginning_cash = self._get_prior_balance("A") if has_prior else 0.0
+        beginning_cash = self._get_prior_balance("A") if has_prior else ZERO
 
         if has_prior:
             expected_ending = beginning_cash + net_change
             reconciliation_diff = ending_cash - expected_ending
-            is_reconciled = abs(reconciliation_diff) < 0.01
+            is_reconciled = abs(reconciliation_diff) < BALANCE_TOLERANCE
         else:
-            reconciliation_diff = 0.0
+            reconciliation_diff = ZERO
             is_reconciled = False
             if not any("Prior period" in n for n in notes):
                 notes.append("Prior period required for cash flow reconciliation")

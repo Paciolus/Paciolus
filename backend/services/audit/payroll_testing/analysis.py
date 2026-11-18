@@ -37,7 +37,7 @@ from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
 from shared.fuzzy_match import similarity_at_least
-from shared.monetary import decimals_to_floats
+from shared.monetary import decimals_to_floats, quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 from shared.round_amounts import ROUND_AMOUNT_PATTERNS_4TIER, keep_most_severe, match_round_amount
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
@@ -474,13 +474,14 @@ class PayrollEntry:
             "employee_name": self.employee_name,
             "department": self.department,
             "pay_date": self.pay_date.isoformat() if self.pay_date else None,
-            "gross_pay": float(self.gross_pay),
-            "net_pay": float(self.net_pay),
-            "deductions": float(self.deductions),
+            # Sprint 884 (TQ-12, OUT-19): Decimals, not float(); the API sends them as exact numbers.
+            "gross_pay": quantize_monetary(self.gross_pay),
+            "net_pay": quantize_monetary(self.net_pay),
+            "deductions": quantize_monetary(self.deductions),
             "check_number": self.check_number,
             "pay_type": self.pay_type,
             "hours": self.hours,
-            "rate": float(self.rate),
+            "rate": self.rate,  # a pay rate is not rounded to cents
             "hire_date": self.hire_date.isoformat() if self.hire_date else None,
             "term_date": self.term_date.isoformat() if self.term_date else None,
             "bank_account": self.bank_account,

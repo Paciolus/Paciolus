@@ -30,7 +30,7 @@ from engine_framework import AuditEngineBase
 from shared.column_detector import ColumnFieldConfig, detect_columns
 from shared.data_quality import FieldQualityConfig
 from shared.data_quality import assess_data_quality as _shared_assess_dq
-from shared.monetary import decimals_to_floats
+from shared.monetary import decimals_to_floats, quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal, safe_float, safe_str, with_parse_memo
 from shared.reference_date import reference_date_label
 from shared.test_aggregator import calculate_composite_score as _shared_calc_cs
@@ -383,12 +383,13 @@ class InventoryEntry:
             "item_id": self.item_id,
             "description": self.description,
             "quantity": self.quantity,
-            "unit_cost": float(self.unit_cost),
-            "extended_value": float(self.extended_value),
+            # Sprint 884 (TQ-12, OUT-19): Decimals, not float(); the API sends them as exact numbers.
+            "unit_cost": self.unit_cost,  # a unit cost is not rounded to cents
+            "extended_value": quantize_monetary(self.extended_value),
             "location": self.location,
             "last_movement_date": self.last_movement_date,
             "category": self.category,
-            "selling_price": float(self.selling_price) if self.selling_price is not None else None,
+            "selling_price": self.selling_price,
             "row_number": self.row_number,
         }
 

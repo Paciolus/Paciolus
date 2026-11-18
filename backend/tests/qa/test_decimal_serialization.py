@@ -1,8 +1,8 @@
 """
 Regression test for Decimal-to-float serialization in lead sheet responses (NEW-004).
 
-Verifies that lead_sheet_grouping_to_dict serializes monetary fields as
-float (JSON number), not string, so frontend consumers can do arithmetic.
+Sprint 884 (TQ-12): the engine now returns exact Decimals; the API converts them
+to exact JSON numbers (shared/exact_json.py), so the frontend still gets numbers.
 """
 
 from decimal import Decimal
@@ -46,34 +46,30 @@ def _make_grouping() -> LeadSheetGrouping:
     )
 
 
-def test_monetary_fields_are_float_not_string():
-    """Monetary fields must serialize as float, not Decimal/string."""
+def test_monetary_fields_are_exact_decimals_in_the_engine():
+    """Sprint 884 (TQ-12): the engine keeps exact Decimals (float() lost digits above ~90 trillion)."""
     result = lead_sheet_grouping_to_dict(_make_grouping())
 
-    # Top-level totals
-    assert isinstance(result["total_debits"], float)
-    assert isinstance(result["total_credits"], float)
-
-    # Per-summary fields
+    assert isinstance(result["total_debits"], Decimal)
     for summary in result["summaries"]:
-        assert isinstance(summary["total_debit"], float), f"total_debit is {type(summary['total_debit'])}"
-        assert isinstance(summary["total_credit"], float), f"total_credit is {type(summary['total_credit'])}"
-        assert isinstance(summary["net_balance"], float), f"net_balance is {type(summary['net_balance'])}"
+        for key in ("total_debit", "total_credit", "net_balance"):
+            assert isinstance(summary[key], Decimal), f"{key} is {type(summary[key])}"
 
 
 def test_monetary_values_preserve_precision():
-    """Float conversion should preserve at least 2 decimal places."""
     result = lead_sheet_grouping_to_dict(_make_grouping())
 
-    assert result["total_debits"] == 150000.50
-    assert result["total_credits"] == 525000.75
-    assert result["summaries"][0]["net_balance"] == 124999.75
+    assert result["total_debits"] == Decimal("150000.50")
+    assert result["total_credits"] == Decimal("525000.75")
+    assert result["summaries"][0]["net_balance"] == Decimal("124999.75")
 
 
-def test_json_serializable():
-    """The dict must be JSON-serializable without custom encoders."""
+def test_api_form_is_json_numbers_not_strings():
+    """NEW-004 still holds at the API boundary: exact_numbers() gives JSON numbers, not strings."""
     import json
 
-    result = lead_sheet_grouping_to_dict(_make_grouping())
-    serialized = json.dumps(result)
-    assert '"total_debit": 150000.5' in serialized or '"total_debit": 150000.50' in serialized
+    from shared.exact_json import exact_numbers
+
+    serialized = json.dumps(exact_numbers(lead_sheet_grouping_to_dict(_make_grouping())))
+    assert '"total_debit": 150000.5' in serialized
+    assert '"150000.5' not in serialized

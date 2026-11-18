@@ -48,6 +48,7 @@ from export.pipeline import (
 )
 from models import User
 from shared.entitlement_checks import check_export_access
+from shared.exact_json import DecimalBodyRoute
 from shared.export_schemas import (
     AccrualCompletenessCSVInput,
     ExpenseCategoryCSVInput,
@@ -143,7 +144,6 @@ def export_leadsheets(
 # --- Financial Statements Export ---
 
 
-@router.post("/export/financial-statements", dependencies=[Depends(check_export_access)])
 @limiter.limit(RATE_LIMIT_EXPORT)
 def export_financial_statements(
     request: Request,
@@ -160,6 +160,18 @@ def export_financial_statements(
     """
     branding = load_pdf_branding_context(current_user, db) if format == "pdf" else None
     return pipeline_export_financial_statements(payload, fmt=format, branding=branding)
+
+
+# Sprint 884 (TQ-12): registered with DecimalBodyRoute so the posted lead-sheet
+# amounts are read as Decimals (a float parse turned 90071992547409.93 into
+# ...409.94 before the statements were built). Same path, method and position.
+router.add_api_route(
+    "/export/financial-statements",
+    export_financial_statements,
+    methods=["POST"],
+    dependencies=[Depends(check_export_access)],
+    route_class_override=DecimalBodyRoute,
+)
 
 
 # --- Pre-Flight Issues CSV (Sprint 283) ---

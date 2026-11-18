@@ -18,6 +18,8 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, Optional, TypeVar
 
+from shared.monetary import ensure_supported_amount
+
 # Set sufficient precision for monetary arithmetic
 decimal.getcontext().prec = 28
 
@@ -117,6 +119,18 @@ def _read_amount(value: object) -> Decimal | object | None:
     return -result if negative else result
 
 
+def _read_supported_amount(value: object) -> Decimal | object | None:
+    """``_read_amount``, refusing anything above MAX_SUPPORTED_AMOUNT.
+
+    Sprint 884 (TQ-12): an amount too large to carry is an error the user
+    sees (AmountTooLargeError, a 400), never a cell silently read as zero.
+    """
+    result = _read_amount(value)
+    if isinstance(result, Decimal):
+        ensure_supported_amount(result)
+    return result
+
+
 def parse_amount(value: object, *, on_invalid: AmountOnInvalid = "zero") -> Decimal:
     """Read a monetary cell from uploaded data under the one amount policy.
 
@@ -124,7 +138,7 @@ def parse_amount(value: object, *, on_invalid: AmountOnInvalid = "zero") -> Deci
     ``on_invalid="zero"`` (the default) and raise :class:`InvalidAmountError`
     when ``on_invalid="error"``. See the policy comment above.
     """
-    result = _read_amount(value)
+    result = _read_supported_amount(value)
     if result is _BLANK:
         return Decimal(0)
     if result is None:
@@ -142,7 +156,7 @@ def safe_decimal(value: object, default: Decimal = Decimal("0")) -> Decimal:
     ``default`` when the cell is blank or invalid. Floats are stringified
     first to avoid binary imprecision.
     """
-    result = _read_amount(value)
+    result = _read_supported_amount(value)
     if result is _BLANK or result is None:
         return default
     assert isinstance(result, Decimal)

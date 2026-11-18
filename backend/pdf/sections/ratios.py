@@ -106,12 +106,13 @@ def render_ratios(story: list, styles: dict, statements: Any) -> bool:
             statements.net_income or 0.0,
         )
     )
-    _equity = (statements.total_equity or 0.0) + _unclosed
+    # A ratio is not an amount: compute it in float from the (Decimal) totals.
+    _equity = float(statements.total_equity or 0.0) + _unclosed
     if _equity != 0:
-        de_ratio = statements.total_liabilities / _equity
+        de_ratio = float(statements.total_liabilities or 0.0) / _equity
         prior_de_str = None
         if _has_prior:
-            _prior_equity = (statements.prior_total_equity or 0.0) + float(
+            _prior_equity = float(statements.prior_total_equity or 0.0) + float(
                 unclosed_earnings_adjustment(
                     statements.prior_total_assets or 0.0,
                     statements.prior_total_liabilities or 0.0,
@@ -120,7 +121,7 @@ def render_ratios(story: list, styles: dict, statements: Any) -> bool:
                 )
             )
             if _prior_equity != 0:
-                prior_de_str = f"{statements.prior_total_liabilities / _prior_equity:.2f}x"
+                prior_de_str = f"{float(statements.prior_total_liabilities or 0.0) / _prior_equity:.2f}x"
         ratio_lines.append(("Debt-to-Equity Ratio", f"{de_ratio:.2f}x", prior_de_str))
 
     # 7. Interest Coverage

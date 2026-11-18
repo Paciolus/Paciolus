@@ -13,6 +13,8 @@ Tests cover:
 - Serialization: to_dict() roundtrip
 """
 
+from decimal import Decimal
+
 import pytest
 
 from financial_statement_builder import (
@@ -25,6 +27,7 @@ from financial_statement_builder import (
 # =============================================================================
 # FIXTURES
 # =============================================================================
+
 
 @pytest.fixture
 def current_grouping():
@@ -39,51 +42,156 @@ def current_grouping():
     """
     return {
         "summaries": [
-            {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-             "total_debit": 60000.0, "total_credit": 0.0, "net_balance": 60000.0,
-             "account_count": 2, "accounts": []},
-            {"lead_sheet": "B", "name": "Receivables", "category": "Current Assets",
-             "total_debit": 35000.0, "total_credit": 0.0, "net_balance": 35000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "C", "name": "Inventory", "category": "Current Assets",
-             "total_debit": 20000.0, "total_credit": 0.0, "net_balance": 20000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "D", "name": "Prepaid", "category": "Current Assets",
-             "total_debit": 5000.0, "total_credit": 0.0, "net_balance": 5000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "E", "name": "PPE", "category": "Non-Current Assets",
-             "total_debit": 50000.0, "total_credit": 0.0, "net_balance": 50000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "F", "name": "Intangibles", "category": "Non-Current Assets",
-             "total_debit": 10000.0, "total_credit": 0.0, "net_balance": 10000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "G", "name": "AP", "category": "Current Liabilities",
-             "total_debit": 0.0, "total_credit": 30000.0, "net_balance": -30000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "H", "name": "Accrued", "category": "Current Liabilities",
-             "total_debit": 0.0, "total_credit": 10000.0, "net_balance": -10000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "I", "name": "LT Debt", "category": "Non-Current Liabilities",
-             "total_debit": 0.0, "total_credit": 40000.0, "net_balance": -40000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "J", "name": "Other LT", "category": "Non-Current Liabilities",
-             "total_debit": 0.0, "total_credit": 5000.0, "net_balance": -5000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "K", "name": "Equity", "category": "Equity",
-             "total_debit": 0.0, "total_credit": 95000.0, "net_balance": -95000.0,
-             "account_count": 2, "accounts": []},
-            {"lead_sheet": "L", "name": "Revenue", "category": "Revenue",
-             "total_debit": 0.0, "total_credit": 200000.0, "net_balance": -200000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "M", "name": "COGS", "category": "Cost of Sales",
-             "total_debit": 80000.0, "total_credit": 0.0, "net_balance": 80000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "N", "name": "OpEx", "category": "Operating Expenses",
-             "total_debit": 50000.0, "total_credit": 0.0, "net_balance": 50000.0,
-             "account_count": 2, "accounts": []},
-            {"lead_sheet": "O", "name": "Other", "category": "Other",
-             "total_debit": 0.0, "total_credit": 10000.0, "net_balance": -10000.0,
-             "account_count": 1, "accounts": []},
+            {
+                "lead_sheet": "A",
+                "name": "Cash",
+                "category": "Current Assets",
+                "total_debit": 60000.0,
+                "total_credit": 0.0,
+                "net_balance": 60000.0,
+                "account_count": 2,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "B",
+                "name": "Receivables",
+                "category": "Current Assets",
+                "total_debit": 35000.0,
+                "total_credit": 0.0,
+                "net_balance": 35000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "C",
+                "name": "Inventory",
+                "category": "Current Assets",
+                "total_debit": 20000.0,
+                "total_credit": 0.0,
+                "net_balance": 20000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "D",
+                "name": "Prepaid",
+                "category": "Current Assets",
+                "total_debit": 5000.0,
+                "total_credit": 0.0,
+                "net_balance": 5000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "E",
+                "name": "PPE",
+                "category": "Non-Current Assets",
+                "total_debit": 50000.0,
+                "total_credit": 0.0,
+                "net_balance": 50000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "F",
+                "name": "Intangibles",
+                "category": "Non-Current Assets",
+                "total_debit": 10000.0,
+                "total_credit": 0.0,
+                "net_balance": 10000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "G",
+                "name": "AP",
+                "category": "Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 30000.0,
+                "net_balance": -30000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "H",
+                "name": "Accrued",
+                "category": "Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 10000.0,
+                "net_balance": -10000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "I",
+                "name": "LT Debt",
+                "category": "Non-Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 40000.0,
+                "net_balance": -40000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "J",
+                "name": "Other LT",
+                "category": "Non-Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 5000.0,
+                "net_balance": -5000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "K",
+                "name": "Equity",
+                "category": "Equity",
+                "total_debit": 0.0,
+                "total_credit": 95000.0,
+                "net_balance": -95000.0,
+                "account_count": 2,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "L",
+                "name": "Revenue",
+                "category": "Revenue",
+                "total_debit": 0.0,
+                "total_credit": 200000.0,
+                "net_balance": -200000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "M",
+                "name": "COGS",
+                "category": "Cost of Sales",
+                "total_debit": 80000.0,
+                "total_credit": 0.0,
+                "net_balance": 80000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "N",
+                "name": "OpEx",
+                "category": "Operating Expenses",
+                "total_debit": 50000.0,
+                "total_credit": 0.0,
+                "net_balance": 50000.0,
+                "account_count": 2,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "O",
+                "name": "Other",
+                "category": "Other",
+                "total_debit": 0.0,
+                "total_credit": 10000.0,
+                "net_balance": -10000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
         ],
         "total_debits": 310000.0,
         "total_credits": 390000.0,
@@ -102,39 +210,116 @@ def prior_grouping():
     """
     return {
         "summaries": [
-            {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-             "total_debit": 50000.0, "total_credit": 0.0, "net_balance": 50000.0,
-             "account_count": 2, "accounts": []},
-            {"lead_sheet": "B", "name": "Receivables", "category": "Current Assets",
-             "total_debit": 30000.0, "total_credit": 0.0, "net_balance": 30000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "C", "name": "Inventory", "category": "Current Assets",
-             "total_debit": 15000.0, "total_credit": 0.0, "net_balance": 15000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "D", "name": "Prepaid", "category": "Current Assets",
-             "total_debit": 3000.0, "total_credit": 0.0, "net_balance": 3000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "E", "name": "PPE", "category": "Non-Current Assets",
-             "total_debit": 40000.0, "total_credit": 0.0, "net_balance": 40000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "F", "name": "Intangibles", "category": "Non-Current Assets",
-             "total_debit": 8000.0, "total_credit": 0.0, "net_balance": 8000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "G", "name": "AP", "category": "Current Liabilities",
-             "total_debit": 0.0, "total_credit": 25000.0, "net_balance": -25000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "H", "name": "Accrued", "category": "Current Liabilities",
-             "total_debit": 0.0, "total_credit": 8000.0, "net_balance": -8000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "I", "name": "LT Debt", "category": "Non-Current Liabilities",
-             "total_debit": 0.0, "total_credit": 35000.0, "net_balance": -35000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "J", "name": "Other LT", "category": "Non-Current Liabilities",
-             "total_debit": 0.0, "total_credit": 5000.0, "net_balance": -5000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "K", "name": "Equity", "category": "Equity",
-             "total_debit": 0.0, "total_credit": 73000.0, "net_balance": -73000.0,
-             "account_count": 2, "accounts": []},
+            {
+                "lead_sheet": "A",
+                "name": "Cash",
+                "category": "Current Assets",
+                "total_debit": 50000.0,
+                "total_credit": 0.0,
+                "net_balance": 50000.0,
+                "account_count": 2,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "B",
+                "name": "Receivables",
+                "category": "Current Assets",
+                "total_debit": 30000.0,
+                "total_credit": 0.0,
+                "net_balance": 30000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "C",
+                "name": "Inventory",
+                "category": "Current Assets",
+                "total_debit": 15000.0,
+                "total_credit": 0.0,
+                "net_balance": 15000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "D",
+                "name": "Prepaid",
+                "category": "Current Assets",
+                "total_debit": 3000.0,
+                "total_credit": 0.0,
+                "net_balance": 3000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "E",
+                "name": "PPE",
+                "category": "Non-Current Assets",
+                "total_debit": 40000.0,
+                "total_credit": 0.0,
+                "net_balance": 40000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "F",
+                "name": "Intangibles",
+                "category": "Non-Current Assets",
+                "total_debit": 8000.0,
+                "total_credit": 0.0,
+                "net_balance": 8000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "G",
+                "name": "AP",
+                "category": "Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 25000.0,
+                "net_balance": -25000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "H",
+                "name": "Accrued",
+                "category": "Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 8000.0,
+                "net_balance": -8000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "I",
+                "name": "LT Debt",
+                "category": "Non-Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 35000.0,
+                "net_balance": -35000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "J",
+                "name": "Other LT",
+                "category": "Non-Current Liabilities",
+                "total_debit": 0.0,
+                "total_credit": 5000.0,
+                "net_balance": -5000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "K",
+                "name": "Equity",
+                "category": "Equity",
+                "total_debit": 0.0,
+                "total_credit": 73000.0,
+                "net_balance": -73000.0,
+                "account_count": 2,
+                "accounts": [],
+            },
         ],
         "total_debits": 146000.0,
         "total_credits": 179000.0,
@@ -147,22 +332,50 @@ def grouping_with_depreciation():
     """Lead sheet grouping with depreciation account in OpEx (N)."""
     return {
         "summaries": [
-            {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-             "total_debit": 50000.0, "total_credit": 0.0, "net_balance": 50000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "K", "name": "Equity", "category": "Equity",
-             "total_debit": 0.0, "total_credit": 50000.0, "net_balance": -50000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "L", "name": "Revenue", "category": "Revenue",
-             "total_debit": 0.0, "total_credit": 100000.0, "net_balance": -100000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "N", "name": "OpEx", "category": "Operating Expenses",
-             "total_debit": 60000.0, "total_credit": 0.0, "net_balance": 60000.0,
-             "account_count": 3, "accounts": [
-                 {"name": "Salaries Expense", "net_balance": 30000.0},
-                 {"name": "Depreciation Expense", "net_balance": 15000.0},
-                 {"name": "Rent Expense", "net_balance": 15000.0},
-             ]},
+            {
+                "lead_sheet": "A",
+                "name": "Cash",
+                "category": "Current Assets",
+                "total_debit": 50000.0,
+                "total_credit": 0.0,
+                "net_balance": 50000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "K",
+                "name": "Equity",
+                "category": "Equity",
+                "total_debit": 0.0,
+                "total_credit": 50000.0,
+                "net_balance": -50000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "L",
+                "name": "Revenue",
+                "category": "Revenue",
+                "total_debit": 0.0,
+                "total_credit": 100000.0,
+                "net_balance": -100000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "N",
+                "name": "OpEx",
+                "category": "Operating Expenses",
+                "total_debit": 60000.0,
+                "total_credit": 0.0,
+                "net_balance": 60000.0,
+                "account_count": 3,
+                "accounts": [
+                    {"name": "Salaries Expense", "net_balance": 30000.0},
+                    {"name": "Depreciation Expense", "net_balance": 15000.0},
+                    {"name": "Rent Expense", "net_balance": 15000.0},
+                ],
+            },
         ],
         "total_debits": 110000.0,
         "total_credits": 150000.0,
@@ -175,12 +388,26 @@ def prior_grouping_with_depreciation():
     """Prior period matching grouping_with_depreciation."""
     return {
         "summaries": [
-            {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-             "total_debit": 35000.0, "total_credit": 0.0, "net_balance": 35000.0,
-             "account_count": 1, "accounts": []},
-            {"lead_sheet": "K", "name": "Equity", "category": "Equity",
-             "total_debit": 0.0, "total_credit": 35000.0, "net_balance": -35000.0,
-             "account_count": 1, "accounts": []},
+            {
+                "lead_sheet": "A",
+                "name": "Cash",
+                "category": "Current Assets",
+                "total_debit": 35000.0,
+                "total_credit": 0.0,
+                "net_balance": 35000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
+            {
+                "lead_sheet": "K",
+                "name": "Equity",
+                "category": "Equity",
+                "total_debit": 0.0,
+                "total_credit": 35000.0,
+                "net_balance": -35000.0,
+                "account_count": 1,
+                "accounts": [],
+            },
         ],
         "total_debits": 35000.0,
         "total_credits": 35000.0,
@@ -191,6 +418,7 @@ def prior_grouping_with_depreciation():
 # =============================================================================
 # TestCashFlowFromSinglePeriod
 # =============================================================================
+
 
 class TestCashFlowFromSinglePeriod:
     """Cash flow statement with single period — no working capital changes."""
@@ -233,21 +461,18 @@ class TestCashFlowFromSinglePeriod:
 # TestCashFlowWithPriorPeriod
 # =============================================================================
 
+
 class TestCashFlowWithPriorPeriod:
     """Cash flow statement with both current and prior period."""
 
     def test_has_prior_period_true(self, current_grouping, prior_grouping):
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         assert cf.has_prior_period is True
 
     def test_operating_working_capital_changes(self, current_grouping, prior_grouping):
         """WC changes appear in operating section."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         labels = [i.label for i in cf.operating.items]
         assert "Change in Accounts Receivable" in labels
@@ -258,36 +483,28 @@ class TestCashFlowWithPriorPeriod:
 
     def test_receivable_increase_negative(self, current_grouping, prior_grouping):
         """AR increase (35K-30K=5K) → -5K cash outflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         ar_item = next(i for i in cf.operating.items if "Receivable" in i.label)
         assert ar_item.amount == -5000.0
 
     def test_inventory_increase_negative(self, current_grouping, prior_grouping):
         """Inventory increase (20K-15K=5K) → -5K cash outflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         inv_item = next(i for i in cf.operating.items if "Inventory" in i.label)
         assert inv_item.amount == -5000.0
 
     def test_ap_increase_positive(self, current_grouping, prior_grouping):
         """AP increase (-30K - (-25K) = -5K change → -(-5K) = +5K inflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         ap_item = next(i for i in cf.operating.items if "Accounts Payable" in i.label)
         assert ap_item.amount == 5000.0
 
     def test_investing_ppe_change(self, current_grouping, prior_grouping):
         """PPE increase (50K-40K=10K) → -10K investing outflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         ppe_item = next(i for i in cf.investing.items if "PPE" in i.label)
         assert ppe_item.amount == -10000.0
@@ -296,6 +513,7 @@ class TestCashFlowWithPriorPeriod:
 # =============================================================================
 # TestOperatingSection
 # =============================================================================
+
 
 class TestOperatingSection:
     """Detailed operating section tests."""
@@ -316,18 +534,14 @@ class TestOperatingSection:
 
     def test_operating_subtotal(self, current_grouping, prior_grouping):
         """Operating subtotal is sum of all items."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         expected = sum(i.amount for i in cf.operating.items)
         assert abs(cf.operating.subtotal - expected) < 0.01
 
     def test_accrued_liabilities_change(self, current_grouping, prior_grouping):
         """Accrued liabilities increase (-10K - (-8K) = -2K) → +2K inflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         accrued = next(i for i in cf.operating.items if "Accrued" in i.label)
         assert accrued.amount == 2000.0
@@ -336,6 +550,7 @@ class TestOperatingSection:
 # =============================================================================
 # TestInvestingSection
 # =============================================================================
+
 
 class TestInvestingSection:
     """Investing activities tests."""
@@ -349,18 +564,14 @@ class TestInvestingSection:
 
     def test_other_assets_change(self, current_grouping, prior_grouping):
         """Other non-current assets change (10K-8K=2K) → -2K outflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         other_item = next(i for i in cf.investing.items if "Other" in i.label)
         assert other_item.amount == -2000.0
 
     def test_investing_subtotal(self, current_grouping, prior_grouping):
         """Investing subtotal is sum of PPE + Other Assets changes."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         # PPE: -10K, Other: -2K
         assert cf.investing.subtotal == -12000.0
@@ -369,6 +580,7 @@ class TestInvestingSection:
 # =============================================================================
 # TestFinancingSection
 # =============================================================================
+
 
 class TestFinancingSection:
     """Financing activities tests."""
@@ -381,9 +593,7 @@ class TestFinancingSection:
 
     def test_debt_increase(self, current_grouping, prior_grouping):
         """LT debt increase (-40K - (-35K) = -5K change) → +5K inflow."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         debt_item = next(i for i in cf.financing.items if "Long-Term Debt" in i.label)
         assert debt_item.amount == 5000.0
@@ -394,9 +604,7 @@ class TestFinancingSection:
         Net income = 80K
         Financing equity = 22K - 80K = -58K (dividends/distributions)
         """
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         equity_items = [i for i in cf.financing.items if "Equity" in i.label]
         assert len(equity_items) == 1
@@ -410,30 +618,25 @@ class TestFinancingSection:
 # TestReconciliation
 # =============================================================================
 
+
 class TestReconciliation:
     """Cash flow reconciliation tests."""
 
     def test_beginning_cash(self, current_grouping, prior_grouping):
         """Beginning cash from prior period lead sheet A."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         assert cf.beginning_cash == 50000.0
 
     def test_ending_cash(self, current_grouping, prior_grouping):
         """Ending cash from current period lead sheet A."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         assert cf.ending_cash == 60000.0
 
     def test_net_change_calculation(self, current_grouping, prior_grouping):
         """Net change = operating + investing + financing."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         expected = cf.operating.subtotal + cf.investing.subtotal + cf.financing.subtotal
         assert abs(cf.net_change - expected) < 0.01
@@ -442,6 +645,7 @@ class TestReconciliation:
 # =============================================================================
 # TestEdgeCases
 # =============================================================================
+
 
 class TestEdgeCases:
     """Edge cases for cash flow statement."""
@@ -460,19 +664,37 @@ class TestEdgeCases:
         """Missing lead sheets treated as zero — no errors."""
         grouping = {
             "summaries": [
-                {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-                 "total_debit": 10000.0, "total_credit": 0.0, "net_balance": 10000.0,
-                 "account_count": 1, "accounts": []},
+                {
+                    "lead_sheet": "A",
+                    "name": "Cash",
+                    "category": "Current Assets",
+                    "total_debit": 10000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 10000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
             ],
-            "total_debits": 10000.0, "total_credits": 0.0, "unclassified_count": 0,
+            "total_debits": 10000.0,
+            "total_credits": 0.0,
+            "unclassified_count": 0,
         }
         prior = {
             "summaries": [
-                {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-                 "total_debit": 8000.0, "total_credit": 0.0, "net_balance": 8000.0,
-                 "account_count": 1, "accounts": []},
+                {
+                    "lead_sheet": "A",
+                    "name": "Cash",
+                    "category": "Current Assets",
+                    "total_debit": 8000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 8000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
             ],
-            "total_debits": 8000.0, "total_credits": 0.0, "unclassified_count": 0,
+            "total_debits": 8000.0,
+            "total_credits": 0.0,
+            "unclassified_count": 0,
         }
         builder = FinancialStatementBuilder(grouping, prior_lead_sheet_grouping=prior)
         result = builder.build()
@@ -484,25 +706,57 @@ class TestEdgeCases:
         """Zero-change lead sheets don't produce line items."""
         current = {
             "summaries": [
-                {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-                 "total_debit": 10000.0, "total_credit": 0.0, "net_balance": 10000.0,
-                 "account_count": 1, "accounts": []},
-                {"lead_sheet": "B", "name": "AR", "category": "Current Assets",
-                 "total_debit": 5000.0, "total_credit": 0.0, "net_balance": 5000.0,
-                 "account_count": 1, "accounts": []},
+                {
+                    "lead_sheet": "A",
+                    "name": "Cash",
+                    "category": "Current Assets",
+                    "total_debit": 10000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 10000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
+                {
+                    "lead_sheet": "B",
+                    "name": "AR",
+                    "category": "Current Assets",
+                    "total_debit": 5000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 5000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
             ],
-            "total_debits": 15000.0, "total_credits": 0.0, "unclassified_count": 0,
+            "total_debits": 15000.0,
+            "total_credits": 0.0,
+            "unclassified_count": 0,
         }
         prior = {
             "summaries": [
-                {"lead_sheet": "A", "name": "Cash", "category": "Current Assets",
-                 "total_debit": 10000.0, "total_credit": 0.0, "net_balance": 10000.0,
-                 "account_count": 1, "accounts": []},
-                {"lead_sheet": "B", "name": "AR", "category": "Current Assets",
-                 "total_debit": 5000.0, "total_credit": 0.0, "net_balance": 5000.0,
-                 "account_count": 1, "accounts": []},
+                {
+                    "lead_sheet": "A",
+                    "name": "Cash",
+                    "category": "Current Assets",
+                    "total_debit": 10000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 10000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
+                {
+                    "lead_sheet": "B",
+                    "name": "AR",
+                    "category": "Current Assets",
+                    "total_debit": 5000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 5000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
             ],
-            "total_debits": 15000.0, "total_credits": 0.0, "unclassified_count": 0,
+            "total_debits": 15000.0,
+            "total_credits": 0.0,
+            "unclassified_count": 0,
         }
         builder = FinancialStatementBuilder(current, prior_lead_sheet_grouping=prior)
         cf = builder.build().cash_flow_statement
@@ -515,14 +769,13 @@ class TestEdgeCases:
 # TestSerialization
 # =============================================================================
 
+
 class TestSerialization:
     """Cash flow statement serialization tests."""
 
     def test_cash_flow_in_financial_statements_dict(self, current_grouping, prior_grouping):
         """to_dict() includes cash_flow_statement."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         d = builder.build().to_dict()
         assert "cash_flow_statement" in d
         cf = d["cash_flow_statement"]
@@ -532,16 +785,14 @@ class TestSerialization:
 
     def test_cash_flow_to_dict_roundtrip(self, current_grouping, prior_grouping):
         """CashFlowStatement.to_dict() produces JSON-safe structure."""
-        builder = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
         d = cf.to_dict()
 
         assert isinstance(d["operating"]["items"], list)
         assert isinstance(d["investing"]["items"], list)
         assert isinstance(d["financing"]["items"], list)
-        assert isinstance(d["net_change"], float)
+        assert isinstance(d["net_change"], Decimal)  # Sprint 884: amounts are exact Decimals
         assert isinstance(d["notes"], list)
         assert isinstance(d["is_reconciled"], bool)
 
@@ -570,6 +821,7 @@ class TestSerialization:
 # TestDepreciationDetection
 # =============================================================================
 
+
 class TestDepreciationDetection:
     """Tests for depreciation keyword detection."""
 
@@ -585,16 +837,32 @@ class TestDepreciationDetection:
         """'amortization' keyword also detected."""
         grouping = {
             "summaries": [
-                {"lead_sheet": "N", "name": "OpEx", "category": "Operating Expenses",
-                 "total_debit": 20000.0, "total_credit": 0.0, "net_balance": 20000.0,
-                 "account_count": 1, "accounts": [
-                     {"name": "Amortization of Intangibles", "net_balance": 8000.0},
-                 ]},
-                {"lead_sheet": "L", "name": "Revenue", "category": "Revenue",
-                 "total_debit": 0.0, "total_credit": 50000.0, "net_balance": -50000.0,
-                 "account_count": 1, "accounts": []},
+                {
+                    "lead_sheet": "N",
+                    "name": "OpEx",
+                    "category": "Operating Expenses",
+                    "total_debit": 20000.0,
+                    "total_credit": 0.0,
+                    "net_balance": 20000.0,
+                    "account_count": 1,
+                    "accounts": [
+                        {"name": "Amortization of Intangibles", "net_balance": 8000.0},
+                    ],
+                },
+                {
+                    "lead_sheet": "L",
+                    "name": "Revenue",
+                    "category": "Revenue",
+                    "total_debit": 0.0,
+                    "total_credit": 50000.0,
+                    "net_balance": -50000.0,
+                    "account_count": 1,
+                    "accounts": [],
+                },
             ],
-            "total_debits": 20000.0, "total_credits": 50000.0, "unclassified_count": 0,
+            "total_debits": 20000.0,
+            "total_credits": 50000.0,
+            "unclassified_count": 0,
         }
         builder = FinancialStatementBuilder(grouping)
         cf = builder.build().cash_flow_statement
@@ -621,12 +889,11 @@ class TestDepreciationDetection:
 # TestCashFlowWithDepreciationAndPrior
 # =============================================================================
 
+
 class TestCashFlowWithDepreciationAndPrior:
     """End-to-end test with depreciation + prior period."""
 
-    def test_full_cash_flow_reconciled(
-        self, grouping_with_depreciation, prior_grouping_with_depreciation
-    ):
+    def test_full_cash_flow_reconciled(self, grouping_with_depreciation, prior_grouping_with_depreciation):
         """Cash flow with depreciation and prior period produces reconciled statement."""
         builder = FinancialStatementBuilder(
             grouping_with_depreciation,
@@ -655,9 +922,7 @@ class TestCashFlowWithDepreciationAndPrior:
         assert cf.beginning_cash == 35000.0
         assert cf.ending_cash == 50000.0
 
-    def test_depreciation_not_in_notes(
-        self, grouping_with_depreciation, prior_grouping_with_depreciation
-    ):
+    def test_depreciation_not_in_notes(self, grouping_with_depreciation, prior_grouping_with_depreciation):
         """No depreciation note when successfully detected."""
         builder = FinancialStatementBuilder(
             grouping_with_depreciation,
@@ -670,6 +935,7 @@ class TestCashFlowWithDepreciationAndPrior:
 # =============================================================================
 # TestBackwardCompatibility
 # =============================================================================
+
 
 class TestBackwardCompatibility:
     """Existing financial statement tests still pass with new code."""
@@ -686,9 +952,7 @@ class TestBackwardCompatibility:
     def test_prior_period_does_not_affect_bs_is(self, current_grouping, prior_grouping):
         """Prior period only affects cash flow, not BS/IS."""
         builder_single = FinancialStatementBuilder(current_grouping)
-        builder_dual = FinancialStatementBuilder(
-            current_grouping, prior_lead_sheet_grouping=prior_grouping
-        )
+        builder_dual = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         single = builder_single.build()
         dual = builder_dual.build()
 
