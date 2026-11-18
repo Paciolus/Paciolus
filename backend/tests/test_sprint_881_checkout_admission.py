@@ -16,7 +16,7 @@ Now:
 * sync never overwrites a live stored subscription ID with a different one — it
   records the other ID on the row and logs it for an operator.
 
-The concurrent-purchase test on PostgreSQL is in ``test_sprint_881_seat_lock_pg.py``.
+The concurrent-purchase test on PostgreSQL is in ``test_sprint_881_checkout_race_pg.py``.
 """
 
 import logging
@@ -203,6 +203,59 @@ class TestOneOpenCheckoutPerAccount:
         db_session.refresh(attempt)
         assert attempt.status == CheckoutAttemptStatus.COMPLETED.value
         assert attempt.stripe_subscription_id == session["subscription"]
+
+
+class TestCheckoutBeingOpened:
+    """An attempt committed as ``opening`` whose Stripe session may not exist yet.
+
+    The attempt row is committed (releasing the purchaser lock) before Stripe is
+    called. A second checkout arriving in that window cannot see the first session
+    to expire it, so it must not open its own: two payable sessions would follow.
+    """
+
+    def _opening(self, db_session, user, age):
+        from datetime import UTC, datetime
+
+        attempt = CheckoutAttempt(
+            user_id=user.id,
+            status=CheckoutAttemptStatus.OPENING.value,
+            tier="solo",
+            billing_interval="monthly",
+            stripe_customer_id="cus_inflight",
+            created_at=datetime.now(UTC) - age,
+        )
+        db_session.add(attempt)
+        # Committed, as the real first request's row is: a refused checkout rolls back.
+        db_session.commit()
+        return attempt
+
+    def test_recent_opening_attempt_refuses_a_second_checkout(self, db_session, make_user, fake_stripe):
+        from datetime import timedelta
+
+        user = make_user(email="az09_inflight@example.com")
+        fake_stripe.customers["cus_inflight"] = {"id": "cus_inflight"}
+        attempt = self._opening(db_session, user, timedelta(seconds=5))
+        with pytest.raises(CheckoutConflictError):
+            _checkout(db_session, user)
+        assert fake_stripe.created_sessions == []
+        db_session.refresh(attempt)
+        assert attempt.status == CheckoutAttemptStatus.OPENING.value
+
+    def test_stale_opening_attempt_is_closed_and_its_session_expired(self, db_session, make_user, fake_stripe):
+        """A crash after Stripe created the session: the stale row's customer leads to it."""
+        from datetime import timedelta
+
+        user = make_user(email="az09_stale@example.com")
+        fake_stripe.customers["cus_inflight"] = {"id": "cus_inflight"}
+        orphan = fake_stripe.checkout.Session.create(customer="cus_inflight", metadata={})
+        attempt = self._opening(db_session, user, timedelta(minutes=10))
+
+        _checkout(db_session, user)
+
+        assert fake_stripe.expired_sessions == [orphan.id]
+        db_session.refresh(attempt)
+        assert attempt.status == CheckoutAttemptStatus.FAILED.value
+        assert len(fake_stripe.created_sessions) == 2
 
 
 class TestSyncFlagsConflictingSubscription:

@@ -524,6 +524,12 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       Sync never overwrites a live stored subscription ID: it sets `conflicting_stripe_subscription_id` and logs
       CRITICAL; checkout-completed/created/updated stop there; deleting the duplicate clears the flag without
       cancelling the live one. Validation now runs before any Stripe call (no customer created for a bad request).
+      **Follow-up (found writing the PG race test):** the attempt row commits — releasing the lock — before the Stripe
+      session exists, so a second checkout in that window saw nothing to expire and opened a second payable session.
+      An `opening` attempt younger than 3 min now refuses a second checkout (409); an older one is closed and its
+      customer's open sessions expired. `test_sprint_881_checkout_race_pg.py`: two threads, separate committed
+      sessions, Stripe latency 0.3 s — exactly one session payable. Fails 3/3 with the user-row lock removed, 2/2 with
+      the in-flight check removed (run on a local PostgreSQL 16).
 - [x] **6D (AZ-16)** — `users.trial_used_at` and `promo_redemptions` (unique per account + code; migration
       `d881b3c5e7f9`) recorded by sync when Stripe confirms a trialing / discounted subscription; checkout offers no
       trial once used and refuses a code already redeemed. The code travels in the subscription metadata

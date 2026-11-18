@@ -46,6 +46,12 @@ logger = logging.getLogger(__name__)
 # payable after this, which bounds how long an untracked one could matter.
 CHECKOUT_SESSION_LIFETIME = timedelta(minutes=30)
 
+# An ``opening`` attempt younger than this may still be creating its Stripe
+# session, which a second checkout could neither see nor expire. Older than this,
+# its request is gone (Stripe calls time out well inside it) and the attempt is
+# closed, any session it created being found through its customer.
+OPENING_GRACE = timedelta(minutes=3)
+
 _LIVE_ATTEMPT_STATUSES = (CheckoutAttemptStatus.OPENING.value, CheckoutAttemptStatus.OPEN.value)
 _TERMINAL_STRIPE_STATUSES = frozenset(s.value for s in TERMINAL_SUBSCRIPTION_STATUSES)
 
@@ -56,6 +62,27 @@ class AlreadySubscribedError(Exception):
 
 class PurchaseInProgressError(Exception):
     """An earlier checkout for the account has already been paid (→ 409)."""
+
+
+class CheckoutBeingOpenedError(Exception):
+    """Another checkout for the account is still creating its Stripe session (→ 409)."""
+
+
+def _naive_utc(dt: datetime) -> datetime:
+    return dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def refuse_if_checkout_being_opened(db: Session, user_id: int) -> None:
+    """Raise ``CheckoutBeingOpenedError`` while a recent ``opening`` attempt exists."""
+    cutoff = _naive_utc(datetime.now(UTC) - OPENING_GRACE)
+    opening = (
+        db.query(CheckoutAttempt.id, CheckoutAttempt.created_at)
+        .filter(CheckoutAttempt.user_id == user_id, CheckoutAttempt.status == CheckoutAttemptStatus.OPENING.value)
+        .all()
+    )
+    for attempt_id, created_at in opening:
+        if created_at is not None and _naive_utc(created_at) > cutoff:
+            raise CheckoutBeingOpenedError(attempt_id)
 
 
 def lock_purchaser(db: Session, user_id: int) -> User:

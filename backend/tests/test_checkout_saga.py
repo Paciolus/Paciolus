@@ -33,6 +33,7 @@ def _admission():
         patch("billing.purchase_admission.lock_purchaser"),
         patch("billing.purchase_admission.known_customer_ids", return_value=[]),
         patch("billing.purchase_admission.refuse_if_subscribed"),
+        patch("billing.purchase_admission.refuse_if_checkout_being_opened"),
         patch("billing.purchase_admission.close_open_checkouts"),
         patch("billing.purchase_admission.begin_attempt", return_value=attempt),
         patch("billing.purchase_admission.session_expiry_epoch", return_value=0),

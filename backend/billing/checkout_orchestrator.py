@@ -33,6 +33,7 @@ ALREADY_SUBSCRIBED_MESSAGE = (
 PURCHASE_IN_PROGRESS_MESSAGE = (
     "A checkout for this account has just been paid and is being set up. Refresh in a minute before trying again."
 )
+CHECKOUT_BEING_OPENED_MESSAGE = "A checkout for this account is already being opened. Try again in a moment."
 
 
 def _rollback_stripe_customer(customer_id: str, user_id: int) -> None:
@@ -191,7 +192,12 @@ def orchestrate_checkout(
     customer_ids = admission.known_customer_ids(db, user_id, existing_sub)
     try:
         admission.refuse_if_subscribed(existing_sub, customer_ids)
+        admission.refuse_if_checkout_being_opened(db, user_id)
         admission.close_open_checkouts(db, user_id, customer_ids)
+    except admission.CheckoutBeingOpenedError as exc:
+        db.rollback()
+        logger.info("Checkout refused for user %d: attempt %s is still opening", user_id, exc)
+        raise CheckoutConflictError(CHECKOUT_BEING_OPENED_MESSAGE)
     except admission.AlreadySubscribedError as exc:
         db.rollback()
         logger.info("Checkout refused for user %d: %s", user_id, exc)

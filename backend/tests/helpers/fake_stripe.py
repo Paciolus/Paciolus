@@ -29,6 +29,8 @@ class _Customers:
         self._o = owner
 
     def create(self, email: str, metadata: dict | None = None, **_: Any) -> SimpleNamespace:
+        if self._o.customer_create_delay:
+            time.sleep(self._o.customer_create_delay)  # network latency, outside the lock
         with self._o.lock:
             cid = f"cus_fake{next(self._o.seq):06d}"
             self._o.customers[cid] = {"id": cid, "email": email, "metadata": metadata or {}}
@@ -44,6 +46,8 @@ class _Sessions:
         self._o = owner
 
     def create(self, idempotency_key: str | None = None, **params: Any) -> SimpleNamespace:
+        if self._o.session_create_delay:
+            time.sleep(self._o.session_create_delay)  # network latency, outside the lock
         with self._o.lock:
             if idempotency_key and idempotency_key in self._o.idempotent:
                 sid = self._o.idempotent[idempotency_key]
@@ -159,6 +163,10 @@ class FakeStripe:
         self.expired_sessions: list[str] = []
         self.modifications: list[tuple[str, dict]] = []
         self.price_intervals = price_intervals or {}
+        # Seconds Customer.create / Session.create wait before answering, so concurrent
+        # checkouts overlap the way real Stripe latency makes them.
+        self.customer_create_delay = 0.0
+        self.session_create_delay = 0.0
         self.Customer = _Customers(self)
         self.Subscription = _Subscriptions(self)
         self.checkout = SimpleNamespace(Session=_Sessions(self))
