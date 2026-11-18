@@ -328,6 +328,8 @@ detail is computed from the detail as displayed.
       `test_sprint884_loan_totals.py` failed (ordinary, extra-payment and balloon loans; schedule, annual summary,
       inputs sheet, PDF and CSV compared). `test_loan_amortization_exports.py` row count +1; the Sprint 819 form-export
       snapshot re-recorded (diff: the loan CSV/PDF totals rows and the xlsx sheet digest only).
+**Commits:** `c781e7e2` (9A), `cc19befb` (9C), `b0faf6d4` (9E), `f0d19362` + `06c7e560` (9F), `924d36a1` + `394aa48a` (9D), `6edac9f7` (9B); this record.
+**Open for the CEO:** (1) the TB API response drops `currency_conversion` (9A note) — expose it or not; (2) revenue memo denominator (9F note); (3) Next.js upgrade for the build advisory gate.
 - [x] **9F / OUT-23 — revenue memo counts a transaction once.** "High-Risk Entries (HIGH severity)" now sums the
       HIGH tests' flagged entries once per source `row_number` (`_sum_flagged_amounts_once`); an entry with no row
       number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
