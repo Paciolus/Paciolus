@@ -209,6 +209,28 @@ def _sum_flagged_amounts(flagged_entries: list[dict]) -> Decimal:
     return total
 
 
+def _sum_flagged_amounts_once(test_results: list[dict]) -> Decimal:
+    """Sum absolute amounts of the entries flagged by these tests, each source row once.
+
+    Sprint 884 (OUT-23): a transaction flagged by two HIGH tests was added
+    twice. Entries are keyed by ``row_number``; an entry without one (0 is the
+    aggregate-finding sentinel) cannot be matched to a row, so it counts as
+    its own item.
+    """
+    total = Decimal("0")
+    seen_rows: set[int] = set()
+    for tr in test_results:
+        for fe in tr.get("flagged_entries", []):
+            entry = fe.get("entry", {}) or {}
+            row = entry.get("row_number")
+            if isinstance(row, int) and row > 0:
+                if row in seen_rows:
+                    continue
+                seen_rows.add(row)
+            total += abs(safe_decimal(entry.get("amount", 0)))
+    return total
+
+
 # ─────────────────────────────────────────────────────────────────────
 # SCOPE ENRICHMENTS (IMPROVEMENT-03)
 # ─────────────────────────────────────────────────────────────────────
@@ -241,19 +263,18 @@ def _build_revenue_quality_indicators(
 
     # Compute HIGH-risk aggregate
     test_results = result.get("test_results", [])
-    high_risk_amount = Decimal("0")
     cutoff_amount = Decimal("0")
     december_amount = Decimal("0")
     december_pct = 0.0
     concentration_pct = 0.0
     concentration_amount = 0.0
 
-    for tr in test_results:
-        severity = tr.get("severity", "")
-        test_key = tr.get("test_key", "")
+    high_risk_amount = _sum_flagged_amounts_once(
+        [tr for tr in test_results if tr.get("severity", "") == "high" and tr.get("entries_flagged", 0) > 0]
+    )
 
-        if severity == "high" and tr.get("entries_flagged", 0) > 0:
-            high_risk_amount += _sum_flagged_amounts(tr.get("flagged_entries", []))
+    for tr in test_results:
+        test_key = tr.get("test_key", "")
 
         if test_key == "cutoff_risk" and tr.get("entries_flagged", 0) > 0:
             cutoff_amount = _sum_flagged_amounts(tr.get("flagged_entries", []))

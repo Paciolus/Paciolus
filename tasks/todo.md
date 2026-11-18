@@ -279,7 +279,11 @@ detail is computed from the detail as displayed.
       `test_sprint884_loan_totals.py` failed (ordinary, extra-payment and balloon loans; schedule, annual summary,
       inputs sheet, PDF and CSV compared). `test_loan_amortization_exports.py` row count +1; the Sprint 819 form-export
       snapshot re-recorded (diff: the loan CSV/PDF totals rows and the xlsx sheet digest only).
-- [ ] **9F / OUT-23 — revenue memo counts a transaction twice.**
+- [x] **9F / OUT-23 — revenue memo counts a transaction once.** "High-Risk Entries (HIGH severity)" now sums the
+      HIGH tests' flagged entries once per source `row_number` (`_sum_flagged_amounts_once`); an entry with no row
+      number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
+      by two HIGH tests showed $2,500.00 (25.0%) for $1,500.00 (15.0%) of distinct entries
+      (`test_sprint884_revenue_high_risk.py`, 1 of 3 failed).
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
