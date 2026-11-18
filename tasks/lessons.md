@@ -146,3 +146,16 @@
 ## Recent lessons
 
 *(New entries go here, newest last. Earlier entries, including the three from 2026-11-14/15, are in the archive and in the rules above.)*
+- **A library upgrade can silently disable a guard without failing a test (Sprint 883, 2026-11-18).** Under pandas 3,
+  `Series.astype(str)` keeps a missing cell as NA instead of `"nan"`, so the streaming auditor's
+  `isin(["", "nan", ...])` blank test stopped matching CSV blanks: the totals-row exclusion and `missing_names_count`
+  went dead for CSV input, and no test noticed because the tests built DataFrames whose blanks were already `""`.
+  Rule: test a guard through the real reader (`process_tb_chunked` / `parse_uploaded_file` on CSV bytes), not
+  through a hand-built DataFrame, and after a pandas/numpy major re-check every `astype(str)` + string-compare blank test.
+- **Make one parser the policy and route every path through it; then test the paths, not the parser (Sprint 883).**
+  Four amount parsers disagreed on "$(2,000.00)", "1,234.56-", "€1,234.56" and "Infinity", and two of them crashed on
+  inputs the others accepted. A single input table run through every path (preflight, intake, streaming, legacy,
+  `safe_decimal`) found both crashes the review had not.
+- **Route tests that pass only inside the full suite are order-dependent (Sprint 883).** The new mapping tests
+  reached the routes in the full run but got 403 (CSRF) alone; another test had left CSRF bypassed. Run a new test
+  file on its own before trusting it, and use the `bypass_csrf` fixture explicitly.

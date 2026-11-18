@@ -184,7 +184,8 @@ includes -$4,699.50 of unclosed current-period earnings". Fix: present current-p
 balance sheet (and the Excel/PDF exports); test with a pre-closing TB.
 
 ### Sprint 883: One amount policy and one totals-row rule across preflight, TB analysis and testing tools
-**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-883-amount-parsing` off `main` `ef5e5676`; not pushed.
+**Status:** IN REVIEW (2026-11-18) — code complete on local branch `sprint-883-amount-parsing` off `main` `ef5e5676`;
+not pushed. Frontend build/Jest not run (no frontend file changed; the run was stopped by the machine for low memory).
 **Priority:** P0 (High findings: the same file can balance in preflight and not in analysis). **Source:** read-only
 review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
 **Decided (CEO, 2026-11-18):** "$(2,000.00)" = −2000, "1,234.56-" = −1234.56, "€1,234.56" = 1234.56, "Infinity" and
@@ -234,6 +235,11 @@ review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
       its own `json.loads` + `len(...)`, so `"5"` there is still a 500.
       Verified on the final tree: backend full suite 11,012 passed; 1 failure, the pre-existing Sprint 819 snapshot
       test. mypy (CI command): 212 errors, the same set as `main` (baseline 1,011).
+
+**Commits:** `dc934594` (8A, ST-01), `346d291d` (8B, ST-02), `fa03cd73` (8C, ST-09); this record + lessons.
+**Open for the CEO:** (1) blank-account rows are counted in the balance totals but left out of `account_balances`
+(8B note) — group them under one "(blank account)" line, or exclude them from the totals too? (2) the
+`account_type_overrides` 500 (8C note) — fold into this sprint or file separately.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
