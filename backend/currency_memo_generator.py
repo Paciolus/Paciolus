@@ -14,6 +14,7 @@ Sprint 509 restructure:
 - Conclusion section
 """
 
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
@@ -35,6 +36,7 @@ from shared.memo_base import (
     source_line,
 )
 from shared.memo_template import _roman
+from shared.monetary import quantize_monetary
 from shared.safe_paragraph import Paragraph
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -67,13 +69,19 @@ _NON_MONETARY_KEYWORDS = [
 ]
 
 
-def _format_currency_amount(amount: float, currency: str = "USD") -> str:
-    """Format a currency amount with appropriate symbol."""
+def _format_currency_amount(amount: Any, currency: str = "USD") -> str:
+    """Format a currency amount with appropriate symbol.
+
+    Sprint 884 (TQ-13): rounded half-up to cents through ``quantize_monetary``
+    and always shown to the cent. Float ``:,.2f`` rounded 1.005 down, and
+    ``:,.0f`` above a million dropped the cents, so a totals row no longer
+    matched the rows printed above it.
+    """
     symbols = {"USD": "$", "EUR": "\u20ac", "GBP": "\u00a3", "JPY": "\u00a5", "CAD": "C$"}
     symbol = symbols.get(currency, "")
-    if abs(amount) >= 1_000_000:
-        return f"{symbol}{amount:,.0f}"
-    return f"{symbol}{amount:,.2f}"
+    value = quantize_monetary(amount)
+    sign = "-" if value < 0 else ""
+    return f"{sign}{symbol}{abs(value):,.2f}"
 
 
 def generate_currency_conversion_memo(
@@ -493,7 +501,9 @@ def _build_conversion_output_table(
     headers = ["Currency", "Accounts", "Foreign Total", "Rate", f"{pres_currency} Equivalent", "% of Total"]
     data = [headers]
 
-    total_usd = 0.0
+    # Sprint 884: the totals row is the sum of the rows as printed.
+    total_usd = Decimal("0")
+    total_pct = Decimal("0")
     total_accounts = 0
 
     for exp in currency_exposure:
@@ -502,7 +512,7 @@ def _build_conversion_output_table(
         foreign_total = exp.get("foreign_total", 0.0)
         rate = exp.get("rate", "N/A")
         usd_equiv = exp.get("usd_equivalent", 0.0)
-        pct = exp.get("pct_of_total", 0.0)
+        pct = Decimal(str(exp.get("pct_of_total") or 0)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
 
         data.append(
             [
@@ -511,10 +521,11 @@ def _build_conversion_output_table(
                 _format_currency_amount(foreign_total, curr),
                 str(rate),
                 _format_currency_amount(usd_equiv, pres_currency),
-                f"{pct:.1f}%",
+                f"{pct}%",
             ]
         )
-        total_usd += usd_equiv
+        total_usd += quantize_monetary(usd_equiv)
+        total_pct += pct
         total_accounts += acct_count
 
     # Totals row
@@ -526,7 +537,7 @@ def _build_conversion_output_table(
             "",
             "",
             _format_currency_amount(total_usd, pres_currency),
-            "100.0%",
+            f"{total_pct}%",
         ]
     )
 

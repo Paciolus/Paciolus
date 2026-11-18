@@ -7,19 +7,20 @@ for diagnostic analysis. Implements the closing-rate MVP defined in RFC.
 Key design decisions:
 - Closing rate only (average/historical deferred)
 - Vectorized Pandas operations for 500K-row TBs
-- Decimal precision (4 internal, 2 display)
+- Decimal precision: rates inverted at 4dp; converted amounts rounded half-up to cents (Sprint 884)
 - Zero-Storage: rate tables session-scoped, never persisted
 """
 
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional
 
 import pandas as pd
 
 from shared.column_detector import ColumnFieldConfig, ColumnPattern, detect_columns
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import parse_date, safe_decimal
 
 # ISO 4217 currency codes (common subset for validation)
@@ -725,7 +726,7 @@ def find_rate(
             )
             if rate is not None:
                 # Invert: 1 / rate
-                inverted = (Decimal("1") / rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_EVEN)
+                inverted = (Decimal("1") / rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_UP)
                 return inverted, issue
         return None, "missing_rate"
 
@@ -1013,7 +1014,12 @@ def convert_trial_balance(
 
         rate, issue = rate_info
         assert rate is not None  # guarded by rate_info[0] is None check above
-        converted = (amount * rate).quantize(INTERNAL_PRECISION, rounding=ROUND_HALF_EVEN)
+        # Sprint 884 (TQ-13): straight from the exact product to cents, half-up
+        # (shared/monetary.py). Rounding to 4dp first and then to cents
+        # double-rounded (1.00 x 1.00495 → 1.0050 → 1.01), and half-even made
+        # 1.00 x 1.005 USD 1.00 here and 1.01 everywhere else. Cents per row
+        # also make the exposure total the sum of the rows as shown.
+        converted = quantize_monetary(amount * rate)
         converted_amounts.append(converted)
         converted_count += 1
 
@@ -1108,9 +1114,9 @@ def _build_currency_exposure(
             CurrencyExposure(
                 currency=curr,
                 account_count=acct_count,
-                foreign_total=foreign_total.quantize(DISPLAY_PRECISION, rounding=ROUND_HALF_EVEN),
+                foreign_total=quantize_monetary(foreign_total),
                 rate=rate_str,
-                usd_equivalent=usd_equiv.quantize(DISPLAY_PRECISION, rounding=ROUND_HALF_EVEN),
+                usd_equivalent=quantize_monetary(usd_equiv),
                 pct_of_total=Decimal("0"),  # Calculated below
             )
         )
@@ -1119,7 +1125,7 @@ def _build_currency_exposure(
     if total_usd != 0:
         for exp in exposure:
             exp.pct_of_total = (
-                (abs(exp.usd_equivalent) / abs(total_usd) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_EVEN)
+                (abs(exp.usd_equivalent) / abs(total_usd) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
                 if total_usd
                 else Decimal("0")
             )

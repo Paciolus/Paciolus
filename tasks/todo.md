@@ -85,6 +85,8 @@
 > - [ ] **Sprint 867** — balance sheet shows "OUT OF BALANCE" for a balanced, pre-closing trial balance.
 > - [ ] **Sprint 883** — preflight, TB analysis and the testing tools read amounts and totals rows differently, so one
 >       file can balance in one place and not another (review ST-01, ST-02; ST-09 mapping 500s). Local branch.
+> - [ ] **Sprint 884** — rounding, precision loss and totals that disagree with their detail (review TQ-12, TQ-13,
+>       OUT-04/05/06/19/23). Local branch, stacked on Sprint 883.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -240,6 +242,28 @@ review at `ef5e567` (ST-01, ST-02, ST-09). **Agents:** Executor, Critic.
 **Open for the CEO:** (1) blank-account rows are counted in the balance totals but left out of `account_balances`
 (8B note) — group them under one "(blank account)" line, or exclude them from the totals too? (2) the
 `account_type_overrides` 500 (8C note) — fold into this sprint or file separately.
+
+### Sprint 884: Rounding, precision loss and totals that disagree with their detail
+**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-884-rounding-totals`, stacked on Sprint 883 (`f5215465`);
+not pushed. **Priority:** P0 (three Critical findings: a total that is not the sum of the rows printed above it).
+**Source:** read-only review at `ef5e567` (TQ-12, TQ-13, OUT-04, OUT-05, OUT-06, OUT-19, OUT-23). **Agents:** Executor, Critic.
+**Decided (CEO, 2026-11-18):** one rounding rule — half-up to cents (`shared/monetary.py`); a total shown beneath
+detail is computed from the detail as displayed.
+- [x] **9A / TQ-13 — one rounding rule in the currency engine.** Converted amounts go straight from the exact product
+      to cents, half-up (`quantize_monetary`); the 4dp intermediate double-rounded (1.00 × 1.00495 → 1.0050 → 1.01).
+      Exposure totals, percentages and the rate inversion are half-up. The memo formats through `quantize_monetary`,
+      always to the cent (it dropped cents at ≥ 1,000,000 with float `:,.0f`), puts the sign before the symbol
+      (`-$1.01`), and its totals row is the sum of the printed rows (amount and %, no hard-coded "100.0%").
+      Reproduced first: 8 of 10 in `test_sprint884_currency_rounding.py` failed. Snapshots re-recorded
+      (`sprint819/currency.json.gz`, `memo_render_snapshot.json` currency cases only) — every diff is a cent.
+      **Not as described:** the TB API response never carries the conversion — `TrialBalanceResponse` has no
+      `currency_conversion` field and `extra="ignore"` drops it — and no other export exists, so "API response" and
+      "export" have nothing to show; the memo route is tested over HTTP instead.
+- [ ] **9B / TQ-12, OUT-19 — Decimals turned into floats before output.**
+- [ ] **9C / OUT-05 — detail and total rounded separately (accrual completeness; check expense category, FS).**
+- [ ] **9D / OUT-04 — "Trial Balance" export lists flagged accounts over full-ledger totals.**
+- [ ] **9E / OUT-06 — loan workbook puts total payments under "Ending Balance".**
+- [ ] **9F / OUT-23 — revenue memo counts a transaction twice.**
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
