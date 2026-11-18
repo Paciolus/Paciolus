@@ -19,6 +19,7 @@ from typing import Optional
 
 from column_detector import detect_columns
 from ratio_engine import COGS_KEYWORDS
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
@@ -109,13 +110,13 @@ class ExpenseCategory:
         return {
             "label": self.label,
             "key": self.key,
-            "amount": round(self.amount, 2),
+            "amount": quantize_monetary(self.amount),
             "pct_of_revenue": round(self.pct_of_revenue, 4) if self.pct_of_revenue is not None else None,
             "prior_amount": round(self.prior_amount, 2) if self.prior_amount is not None else None,
             "prior_pct_of_revenue": round(self.prior_pct_of_revenue, 4)
             if self.prior_pct_of_revenue is not None
             else None,
-            "dollar_change": round(self.dollar_change, 2) if self.dollar_change is not None else None,
+            "dollar_change": quantize_monetary(self.dollar_change) if self.dollar_change is not None else None,
             "exceeds_threshold": self.exceeds_threshold,
             "benchmark_pct": round(self.benchmark_pct, 4) if self.benchmark_pct is not None else None,
         }
@@ -136,7 +137,7 @@ class ExpenseCategoryReport:
     def to_dict(self) -> dict:
         return {
             "categories": [c.to_dict() for c in self.categories],
-            "total_expenses": round(self.total_expenses, 2),
+            "total_expenses": quantize_monetary(self.total_expenses),
             "total_revenue": round(self.total_revenue, 2),
             "revenue_available": self.revenue_available,
             "prior_available": self.prior_available,
@@ -235,6 +236,9 @@ def compute_expense_categories(
 
         category_amounts[subcategory] += net
 
+    # Sprint 884 (OUT-05): each category is rounded half-up to the cent it is
+    # shown at before the total is taken, so the total is the sum of the rows.
+    category_amounts = {k: quantize_monetary(v) for k, v in category_amounts.items()}
     total_expenses = sum(category_amounts.values(), Decimal("0"))
     revenue_available = abs(total_revenue_dec) > NEAR_ZERO
     prior_available = prior_total_expenses is not None

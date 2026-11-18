@@ -260,7 +260,16 @@ detail is computed from the detail as displayed.
       `currency_conversion` field and `extra="ignore"` drops it — and no other export exists, so "API response" and
       "export" have nothing to show; the memo route is tested over HTTP instead.
 - [ ] **9B / TQ-12, OUT-19 — Decimals turned into floats before output.**
-- [ ] **9C / OUT-05 — detail and total rounded separately (accrual completeness; check expense category, FS).**
+- [x] **9C / OUT-05 — detail and total rounded separately.** Accrual completeness: `AccrualAccount` holds its
+      balance at cents, half-up, so `total_accrued_balance`, `total_deferred_revenue`, the checklist balances and the
+      deferred analysis are sums of the rows shown (was Python `round()`, i.e. half-even, on the row and again on the
+      unrounded total: 0.014 + 0.014 showed 0.01 + 0.01 over 0.03). The memo's TOTAL and Deferred Revenue Balance are
+      the sum of the rows it prints, even from a client payload whose total disagrees. **Same pattern found and
+      fixed:** expense categories (each category rounded before `total_expenses`; memo TOTAL amount and % are the sum
+      of the printed rows) and the financial statements (each lead-sheet balance rounded to cents on intake, so every
+      subtotal and total is the sum of the lines above it; depreciation and interest add-backs too). The screen shows
+      the engine's totals, so it agrees once they do. Reproduced first: 18 of 19 in `test_sprint884_detail_totals.py`
+      (sub-cent, half-cent, mixed-sign and negative half-cent inputs) failed.
 - [ ] **9D / OUT-04 — "Trial Balance" export lists flagged accounts over full-ledger totals.**
 - [ ] **9E / OUT-06 — loan workbook puts total payments under "Ending Balance".**
 - [ ] **9F / OUT-23 — revenue memo counts a transaction twice.**

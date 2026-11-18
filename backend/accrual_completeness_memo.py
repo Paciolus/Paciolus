@@ -36,6 +36,7 @@ from shared.memo_base import (
     standard_table_style,
     wrap_table_strings,
 )
+from shared.monetary import quantize_monetary
 from shared.safe_paragraph import Paragraph, escape_markup
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -45,6 +46,12 @@ from shared.scope_methodology import (
 
 # _standard_table_style consolidated into shared.memo_base.standard_table_style (Sprint 527)
 _standard_table_style = standard_table_style
+
+
+def _money(value: object) -> str:
+    """Half-up to the cent (shared/monetary.py), as every amount in this memo is shown."""
+    amount = quantize_monetary(value)  # type: ignore[arg-type]
+    return f"${amount:,.2f}"
 
 
 def generate_accrual_completeness_memo(
@@ -110,6 +117,16 @@ def generate_accrual_completeness_memo(
         findings = report_result.get("findings", [])
         procedures = report_result.get("suggested_procedures", [])
 
+        # Sprint 884 (OUT-05): every amount is shown half-up to the cent, and
+        # the total is the sum of the account rows as shown — not a separately
+        # rounded figure from the payload, which a client can send unaligned.
+        account_rows = [a for a in accrual_accounts if isinstance(a, dict)]
+        if account_rows:
+            total_accrued = sum((quantize_monetary(a.get("balance")) for a in account_rows), quantize_monetary(0))
+        deferred_rows = [a for a in deferred_revenue_accounts if isinstance(a, dict)]
+        if deferred_rows:
+            total_deferred = sum((quantize_monetary(a.get("balance")) for a in deferred_rows), quantize_monetary(0))
+
         # ── I. SCOPE ──
         story.append(Paragraph("I. Scope", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
@@ -120,11 +137,11 @@ def generate_accrual_completeness_memo(
         scope_lines = [
             source,
             create_leader_dots("Accrual Accounts Identified", str(accrual_count)),
-            create_leader_dots("Total Accrued Balance", f"${total_accrued:,.2f}"),
+            create_leader_dots("Total Accrued Balance", _money(total_accrued)),
         ]
 
         if deferred_revenue_accounts:
-            scope_lines.append(create_leader_dots("Deferred Revenue (Excluded)", f"${total_deferred:,.2f}"))
+            scope_lines.append(create_leader_dots("Deferred Revenue (Excluded)", _money(total_deferred)))
 
         scope_lines.extend(
             [
@@ -174,7 +191,7 @@ def generate_accrual_completeness_memo(
                         [
                             Paragraph(str(a.get("account_name", "")), cell_style),
                             Paragraph(str(a.get("classification", "Accrued Liability")), cell_style),
-                            Paragraph(f"${a.get('balance', 0):,.2f}", cell_style),
+                            Paragraph(_money(a.get("balance")), cell_style),
                             Paragraph(str(a.get("matched_keyword", "")), cell_style),
                         ]
                     )
@@ -184,7 +201,7 @@ def generate_accrual_completeness_memo(
                 [
                     Paragraph("TOTAL", cell_style),
                     Paragraph("", cell_style),
-                    Paragraph(f"${total_accrued:,.2f}", cell_style),
+                    Paragraph(_money(total_accrued), cell_style),
                     Paragraph("", cell_style),
                 ]
             )
@@ -282,7 +299,7 @@ def generate_accrual_completeness_memo(
                         [
                             Paragraph(str(item.get("expected_name", "")), styles["MemoTableCell"]),
                             "Yes" if detected else "No",
-                            f"${balance:,.2f}" if balance is not None else "\u2014",
+                            _money(balance) if balance is not None else "\u2014",
                             Paragraph(str(item.get("risk_if_absent", "")), styles["MemoTableCell"]),
                         ]
                     )
@@ -305,7 +322,7 @@ def generate_accrual_completeness_memo(
             analysis_data = [["Metric", "Value"]]
             analysis_data.append(["Prior Operating Expenses (Annual)", f"${prior_opex:,.2f}" if prior_opex else "N/A"])
             analysis_data.append(["Monthly Run-Rate", f"${monthly_run_rate:,.2f}"])
-            analysis_data.append(["Total Accrued Balance (excl. Deferred Revenue)", f"${total_accrued:,.2f}"])
+            analysis_data.append(["Total Accrued Balance (excl. Deferred Revenue)", _money(total_accrued)])
             analysis_data.append(["Accrual-to-Run-Rate Ratio", f"{ratio:.1f}%" if ratio is not None else "N/A"])
             analysis_data.append(["Threshold", f"{threshold:.0f}%"])
             analysis_data.append(
@@ -409,7 +426,9 @@ def generate_accrual_completeness_memo(
             dr_revenue = deferred_analysis.get("total_revenue") if isinstance(deferred_analysis, dict) else None
             dr_pct = deferred_analysis.get("deferred_pct_of_revenue") if isinstance(deferred_analysis, dict) else None
 
-            dr_data.append(["Deferred Revenue Balance", f"${dr_balance:,.2f}"])
+            if deferred_rows:
+                dr_balance = total_deferred  # the accounts listed beneath it, as shown
+            dr_data.append(["Deferred Revenue Balance", _money(dr_balance)])
             if dr_revenue is not None:
                 dr_data.append(["Total Revenue", f"${dr_revenue:,.2f}"])
             if dr_pct is not None:
@@ -421,7 +440,7 @@ def generate_accrual_completeness_memo(
                     dr_data.append(
                         [
                             f"  {acct.get('account_name', '')}",
-                            f"${acct.get('balance', 0):,.2f}",
+                            _money(acct.get("balance")),
                         ]
                     )
 

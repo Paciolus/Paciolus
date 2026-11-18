@@ -21,6 +21,7 @@ from decimal import Decimal
 from typing import Optional
 
 from column_detector import detect_columns
+from shared.monetary import quantize_monetary
 from shared.parsing_helpers import safe_decimal
 
 # ═══════════════════════════════════════════════════════════════
@@ -145,13 +146,15 @@ class AccrualAccount:
     classification: str = "Accrued Liability"
 
     def __post_init__(self) -> None:
-        if isinstance(self.balance, (int, float)):
-            self.balance = Decimal(str(self.balance))
+        # Sprint 884 (OUT-05): the balance is held at the cents it is shown
+        # at, half-up, so every total built from accounts is the sum of the
+        # rows on the page (two 0.014 balances showed 0.01 each under 0.03).
+        self.balance = quantize_monetary(self.balance)
 
     def to_dict(self) -> dict:
         return {
             "account_name": self.account_name,
-            "balance": round(self.balance, 2),
+            "balance": self.balance,
             "matched_keyword": self.matched_keyword,
             "classification": self.classification,
         }
@@ -195,7 +198,7 @@ class DeferredRevenueAnalysis:
 
     def to_dict(self) -> dict:
         return {
-            "deferred_balance": round(self.deferred_balance, 2),
+            "deferred_balance": quantize_monetary(self.deferred_balance),
             "total_revenue": round(self.total_revenue, 2) if self.total_revenue is not None else None,
             "deferred_pct_of_revenue": round(self.deferred_pct_of_revenue, 4)
             if self.deferred_pct_of_revenue is not None
@@ -304,10 +307,10 @@ class AccrualCompletenessReport:
     def to_dict(self) -> dict:
         return {
             "accrual_accounts": [a.to_dict() for a in self.accrual_accounts],
-            "total_accrued_balance": round(self.total_accrued_balance, 2),
+            "total_accrued_balance": quantize_monetary(self.total_accrued_balance),
             "accrual_account_count": self.accrual_account_count,
             "deferred_revenue_accounts": [a.to_dict() for a in self.deferred_revenue_accounts],
-            "total_deferred_revenue": round(self.total_deferred_revenue, 2),
+            "total_deferred_revenue": quantize_monetary(self.total_deferred_revenue),
             "monthly_run_rate": round(self.monthly_run_rate, 2) if self.monthly_run_rate is not None else None,
             "accrual_to_run_rate_pct": round(self.accrual_to_run_rate_pct, 2)
             if self.accrual_to_run_rate_pct is not None
@@ -595,7 +598,7 @@ def _build_expected_accrual_checklist(
             ExpectedAccrualCheck(
                 expected_name=expected_name,
                 detected=detected,
-                balance=float(round(total_balance, 2)) if detected else None,
+                balance=float(quantize_monetary(total_balance)) if detected else None,
                 risk_if_absent=risk,
                 basis=basis,
                 recommended_action=recommended_action,

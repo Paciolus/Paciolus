@@ -32,6 +32,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
+from shared.monetary import quantize_monetary
+
 # Interest expense keywords for automatic detection from account descriptions
 INTEREST_EXPENSE_KEYWORDS: list[tuple[str, bool]] = [
     ("interest expense", True),
@@ -396,16 +398,19 @@ class FinancialStatementBuilder:
         self.prior_grouping = prior_lead_sheet_grouping
         self.equity_activity = equity_activity or []
         # Index summaries by lead sheet letter for fast lookup
+        # Sprint 884 (OUT-05): every lead-sheet balance is rounded half-up to
+        # the cent it is shown at before any subtotal is taken, so each
+        # subtotal and total is the sum of the lines printed above it.
         self._balance_map: dict[str, float] = {}
         for summary in self.grouping.get("summaries", []):
             letter = summary.get("lead_sheet", "")
-            self._balance_map[letter] = summary.get("net_balance", 0.0)
+            self._balance_map[letter] = float(quantize_monetary(summary.get("net_balance", 0.0)))
         # Index prior period balances
         self._prior_balance_map: dict[str, float] = {}
         if self.prior_grouping:
             for summary in self.prior_grouping.get("summaries", []):
                 letter = summary.get("lead_sheet", "")
-                self._prior_balance_map[letter] = summary.get("net_balance", 0.0)
+                self._prior_balance_map[letter] = float(quantize_monetary(summary.get("net_balance", 0.0)))
         # Sprint 803: `_account_descriptions` was built here from the same wrong
         # account-name key as `_extract_depreciation`, and never read by anything.
         # Removed rather than corrected — dead code carrying a live bug.
@@ -992,7 +997,7 @@ class FinancialStatementBuilder:
                             balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
                         total += abs(float(balance))
             if total > 0.0:
-                return total
+                return float(quantize_monetary(total))
         return 0.0
 
     def _extract_interest_expense(self) -> float:
@@ -1017,7 +1022,7 @@ class FinancialStatementBuilder:
                         balance = acct.get("net_balance", 0.0)
                         if balance == 0.0:
                             balance = acct.get("debit", 0.0) - acct.get("credit", 0.0)
-                        return float(abs(balance))
+                        return float(quantize_monetary(abs(balance)))
         return 0.0
 
     def _compute_balance_change(self, letter: str) -> float:

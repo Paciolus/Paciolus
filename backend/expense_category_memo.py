@@ -12,6 +12,7 @@ ISA 520 / AU-C § 520 / AS 2305 documentation structure.
 Guardrail: descriptive metrics only.
 """
 
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 from reportlab.lib.units import inch
@@ -36,6 +37,7 @@ from shared.memo_base import (
     standard_table_style,
     wrap_table_strings,
 )
+from shared.monetary import quantize_monetary
 from shared.safe_paragraph import Paragraph, escape_markup
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -70,6 +72,16 @@ _RATIO_KEYS = {
 
 # _standard_table_style consolidated into shared.memo_base.standard_table_style (Sprint 527)
 _standard_table_style = standard_table_style
+
+
+def _money(value: object) -> str:
+    """Half-up to the cent (shared/monetary.py), as every amount in this memo is shown."""
+    return f"${quantize_monetary(value):,.2f}"  # type: ignore[arg-type]
+
+
+def _pct_shown(value: object) -> Decimal:
+    """A percentage as shown: two places, half-up."""
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _pct_change(current: float, prior: float) -> Optional[float]:
@@ -343,6 +355,12 @@ def generate_expense_category_memo(
         category_count = report_result.get("category_count", 0)
         prior_revenue = report_result.get("prior_revenue")
 
+        # Sprint 884 (OUT-05): Total Expenses is the sum of the category rows as
+        # shown, wherever it appears, not the payload's own figure.
+        category_rows = [c for c in categories if isinstance(c, dict)]
+        if category_rows:
+            total_expenses = float(sum((quantize_monetary(c.get("amount")) for c in category_rows), Decimal("0")))
+
         # Pre-compute % change for all categories
         for c in categories:
             if isinstance(c, dict) and c.get("prior_amount") is not None:
@@ -361,7 +379,7 @@ def generate_expense_category_memo(
         scope_lines = [
             source,
             create_leader_dots("Expense Categories", f"{category_count} active"),
-            create_leader_dots("Total Expenses", f"${total_expenses:,.2f}"),
+            create_leader_dots("Total Expenses", _money(total_expenses)),
             create_leader_dots("Total Revenue", f"${total_revenue:,.2f}" if revenue_available else "Not available"),
             create_leader_dots("Materiality Threshold", f"${materiality:,.2f}"),
             create_leader_dots("Prior Period Data", "Included" if prior_available else "Not provided"),
@@ -406,12 +424,21 @@ def generate_expense_category_memo(
                 cat_headers = ["Category", "Amount", "% of Revenue"]
                 col_widths = [3.0 * inch, 2.0 * inch, 1.5 * inch]
 
+            # Sprint 884 (OUT-05): amounts and percentages are shown half-up, and
+            # the TOTAL row is the sum of the rows as shown.
             cat_data = [cat_headers]
+            shown_total = quantize_monetary(0)
+            shown_pcts: list[Decimal] = []
             for c in categories:
                 if isinstance(c, dict):
                     amount = c.get("amount", 0)
+                    shown_total += quantize_monetary(amount)
                     pct = c.get("pct_of_revenue")
-                    pct_str = f"{pct:.2f}%" if pct is not None else "N/A"
+                    pct_str = "N/A"
+                    if pct is not None:
+                        shown_pct = _pct_shown(pct)
+                        shown_pcts.append(shown_pct)
+                        pct_str = f"{shown_pct}%"
 
                     if has_prior:
                         prior_amt = c.get("prior_amount")
@@ -430,10 +457,10 @@ def generate_expense_category_memo(
                         cat_data.append(
                             [
                                 c.get("label", ""),
-                                f"${amount:,.2f}",
+                                _money(amount),
                                 pct_str,
-                                f"${prior_amt:,.2f}" if prior_amt is not None else "N/A",
-                                f"${dollar_change:,.2f}" if dollar_change is not None else "N/A",
+                                _money(prior_amt) if prior_amt is not None else "N/A",
+                                _money(dollar_change) if dollar_change is not None else "N/A",
                                 pct_chg_display,
                                 exceeds_display,
                             ]
@@ -442,20 +469,18 @@ def generate_expense_category_memo(
                         cat_data.append(
                             [
                                 c.get("label", ""),
-                                f"${amount:,.2f}",
+                                _money(amount),
                                 pct_str,
                             ]
                         )
 
             # Total row
-            total_pct = (
-                (total_expenses / total_revenue * 100) if revenue_available and abs(total_revenue) > NEAR_ZERO else None
-            )
-            total_pct_str = f"{total_pct:.2f}%" if total_pct is not None else "N/A"
+            show_pct = revenue_available and abs(total_revenue) > NEAR_ZERO and shown_pcts
+            total_pct_str = f"{sum(shown_pcts, Decimal('0'))}%" if show_pct else "N/A"
             if has_prior:
-                cat_data.append(["TOTAL", f"${total_expenses:,.2f}", total_pct_str, "", "", "", ""])
+                cat_data.append(["TOTAL", _money(shown_total), total_pct_str, "", "", "", ""])
             else:
-                cat_data.append(["TOTAL", f"${total_expenses:,.2f}", total_pct_str])
+                cat_data.append(["TOTAL", _money(shown_total), total_pct_str])
 
             courier_cols = [1, 3, 4] if has_prior else [1]
             cat_data = wrap_table_strings(cat_data, styles)
