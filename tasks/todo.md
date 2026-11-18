@@ -283,7 +283,11 @@ detail is computed from the detail as displayed.
       HIGH tests' flagged entries once per source `row_number` (`_sum_flagged_amounts_once`); an entry with no row
       number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
       by two HIGH tests showed $2,500.00 (25.0%) for $1,500.00 (15.0%) of distinct entries
-      (`test_sprint884_revenue_high_risk.py`, 1 of 3 failed).
+      (`test_sprint884_revenue_high_risk.py`, 1 of 3 failed). Sprint 819 `route_testing_exports` snapshot re-recorded
+      in a follow-up commit: the sample memo's figure fell from $20,986,691.82 (306.7%) to $9,862,237.xx (144.1%).
+      **Still over 100%, not from double counting:** the sample payload carries no `total_revenue`, so the memo takes
+      its denominator from the first test detail with `total_revenue`/`gross_revenue`, which is smaller than the
+      flagged entries' absolute amounts. Not changed; needs its own item.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
