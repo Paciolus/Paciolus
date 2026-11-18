@@ -538,7 +538,11 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
 - [x] **6E** — `price_config.max_additional_seats(tier)` (Professional 13, Enterprise 80); `CheckoutRequest.seat_count`
       and `SeatChangeRequest.seats` bound by the largest (80, was 60 / 22); the add-seats refusal names the tier's
       threshold (21+ / 101+, was "26+"). OpenAPI snapshot regenerated.
-- [ ] **6F (TQ-11)** — PostgreSQL seat-lock test: separate committed sessions, overlapping invites; fails without the lock.
+- [x] **6F (TQ-11)** — `test_sprint_881_seat_lock_pg.py` (PostgreSQL only; skipped on SQLite, run by CI's
+      `backend-tests-postgres`): 2-seat firm, owner seated, hard enforcement; two invitations through the real route at
+      once, each request on its own committed session, 0.5 s pause after the seat count. Exactly one 200, one 403, one
+      pending invitation. With `_lock_org_for_seat_check` made a no-op: fails 3/3 (`[200, 200]`); restored: 3/3 pass
+      (local PostgreSQL 16 via a throwaway `pgserver`). All Sprint 881 + related billing/org tests also pass on it (470).
 - [x] **6G (TQ-17)** — `test_counter_can_increment` reads `professional`/`monthly` from the registry, increments once,
       asserts +1 (a no-op `inc(0)` copy fails).
 - [x] **6H (ST-16)** — median conversion time: one query for all trial starts of the converting users (bisect per

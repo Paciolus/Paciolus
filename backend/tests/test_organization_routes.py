@@ -384,7 +384,9 @@ class TestBug04ConcurrentSeatEnforcement:
         ``get_db`` override — which no production request ever does. The
         requests are now sent in sequence, which is what this always measured.
         Concurrent enforcement needs a session per request, which the
-        in-memory test fixture cannot provide.
+        in-memory test fixture cannot provide. Sprint 881 (TQ-11): it is tested
+        as behaviour, with overlapping requests on PostgreSQL, in
+        ``test_sprint_881_seat_lock_pg.py``.
         """
         from auth import require_current_user
         from database import get_db
