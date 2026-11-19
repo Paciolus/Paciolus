@@ -12,6 +12,7 @@ from security_utils import log_secure_operation
 from shared.document_properties import save_workbook
 from shared.excel_cells import as_date, put, put_ref
 from shared.excel_exact import approximate_note, money
+from shared.materiality_resolver import NOT_AVAILABLE, materiality_source_label
 from shared.monetary import quantize_monetary
 
 
@@ -246,6 +247,10 @@ class PaciolusWorkpaperGenerator:
                 ws[f"B{i}"].style = "currency_style"
             else:
                 ws[f"B{i}"].alignment = Alignment(horizontal="right")
+            if label == "Materiality Threshold":
+                # Sprint 886 (OUT-09): where the threshold came from, beside it.
+                put_ref(ws, f"C{i}", materiality_source_label(self.audit_result.get("materiality_source")))
+                ws[f"C{i}"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         # Consolidated info if applicable
         if self.audit_result.get("is_consolidated"):
@@ -411,7 +416,12 @@ class PaciolusWorkpaperGenerator:
         ws.merge_cells("A1:G1")  # Sprint 53: Extended for Ref column
 
         # Subtitle
-        put_ref(ws, "A2", f"Materiality Threshold: ${self.audit_result.get('materiality_threshold', 0):,.2f}")
+        put_ref(
+            ws,
+            "A2",
+            f"Materiality Threshold: ${self.audit_result.get('materiality_threshold', 0):,.2f}"
+            f" ({materiality_source_label(self.audit_result.get('materiality_source'))})",
+        )
         ws["A2"].style = "subtitle_style"
 
         # Headers - Sprint 53: Added Ref column
@@ -528,8 +538,11 @@ class PaciolusWorkpaperGenerator:
             cell = put(ws, 4, col, header)
             cell.style = "header_style"
 
-        # Get analytics data if available
-        analytics = self.audit_result.get("analytics", {})
+        # Sprint 886 (OUT-09): analytics absent from the request is "Not available",
+        # never "insufficient data" or $0.
+        analytics = self.audit_result.get("analytics")
+        supplied = analytics is not None
+        analytics = analytics or {}
         ratios = analytics.get("ratios", {})
 
         row = 5
@@ -550,13 +563,16 @@ class PaciolusWorkpaperGenerator:
 
             value = ratio_data.get("value")
             if value is not None:
-                # Format based on ratio type
-                if ratio_key == "gross_margin":
-                    put(ws, row, 2, value / 100 if value > 1 else value)
-                    ws.cell(row=row, column=2).style = "percent_style"
+                # Sprint 886 (OUT-09): format by the ratio's declared unit, so the cell
+                # reads as the screen's display value. No unit (an analysis from before
+                # units existed): the screen's text, never a guess from the value's size.
+                unit = ratio_data.get("unit")
+                if unit in _RATIO_NUMBER_FORMATS:
+                    put(ws, row, 2, value / 100 if unit == "percent" else value)
+                    ws.cell(row=row, column=2).number_format = _RATIO_NUMBER_FORMATS[unit]
                 else:
-                    put(ws, row, 2, value)
-                    ws.cell(row=row, column=2).number_format = "0.00"
+                    put(ws, row, 2, ratio_data.get("display_value") or NOT_AVAILABLE)
+                ws.cell(row=row, column=2).alignment = Alignment(horizontal="right")
 
                 # Threshold status with color
                 threshold = ratio_data.get("threshold_status", "neutral")
@@ -571,6 +587,12 @@ class PaciolusWorkpaperGenerator:
                 # Interpretation
                 put(ws, row, 4, ratio_data.get("interpretation", ""))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
+            elif not supplied:
+                put(ws, row, 2, NOT_AVAILABLE)
+                ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
+                put(ws, row, 3, "-")
+                put(ws, row, 4, "Ratios were not included in the analysis results this export was made from")
+                ws.cell(row=row, column=4).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
             else:
                 put(ws, row, 2, "N/A")
                 ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
@@ -618,8 +640,13 @@ class PaciolusWorkpaperGenerator:
         for key, label in categories:
             put(ws, row, 1, label)
             ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600)
-            put(ws, row, 2, category_totals.get(key, 0))
-            ws.cell(row=row, column=2).style = "currency_style"
+            total = category_totals.get(key)
+            if total is None:
+                put(ws, row, 2, NOT_AVAILABLE)
+                ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
+            else:
+                put(ws, row, 2, total)
+                ws.cell(row=row, column=2).style = "currency_style"
             row += 1
 
         # Column widths
@@ -627,6 +654,16 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions["B"].width = 15
         ws.column_dimensions["C"].width = 15
         ws.column_dimensions["D"].width = 50
+
+
+# Sprint 886 (OUT-09): Excel number format per ratio unit (ratio_engine.RATIO_UNITS),
+# each matching the screen's display_value ("2.25", "40.0%", "3.10x", "45 days").
+_RATIO_NUMBER_FORMATS = {
+    "ratio": "0.00",
+    "percent": "0.0%",
+    "times": '0.00"x"',
+    "days": '0" days"',
+}
 
 
 def _fs_amount(ws: Worksheet, row: int, value: Any, label: str) -> None:

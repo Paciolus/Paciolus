@@ -14,6 +14,7 @@ from reportlab.platypus import KeepTogether, Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
+from shared.materiality_resolver import materiality_source_label
 from shared.safe_paragraph import Paragraph, template_markup, user_text
 
 # ---------------------------------------------------------------------------
@@ -201,6 +202,8 @@ def render_executive_summary(story: list, styles: dict, audit_result: dict) -> N
         create_leader_dots("Variance", f"${difference:,.2f}"),
         create_leader_dots("Rows Analyzed", f"{row_count:,}"),
         create_leader_dots("Materiality Threshold", f"${threshold:,.2f}"),
+        # Sprint 886 (OUT-09): where the threshold came from, as the screen had it.
+        create_leader_dots("Materiality Source", materiality_source_label(audit_result.get("materiality_source"))),
     ]
 
     if audit_result.get("is_consolidated"):
@@ -824,14 +827,28 @@ def render_going_concern_indicators(story: list, styles: dict, audit_result: dic
     name, current value, and assessment.  When no indicators are triggered the
     section still appears with an explicit "no indicators identified" message.
     """
-    gc_data = audit_result.get("going_concern", {})
-    indicators = gc_data.get("indicators", []) if gc_data else []
+    gc_data = audit_result.get("going_concern")
 
     story.append(Paragraph("Going Concern Indicators", styles["SectionHeader"]))
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 4))
 
-    # ── No indicators triggered (or no data) ─────────────────────
+    # ── Not supplied: never read as "nothing triggered" (Sprint 886, OUT-09) ──
+    if not gc_data:
+        story.append(
+            Paragraph(
+                "Going concern indicators were not evaluated for this report: the analysis "
+                "results it was produced from did not include them.",
+                styles["BodyText"],
+            )
+        )
+        _render_gc_disclaimer(story, styles, {})
+        story.append(Spacer(1, 12))
+        return
+
+    indicators = gc_data.get("indicators", [])
+
+    # ── Evaluated, none triggered ─────────────────────────────────
     triggered_indicators = [ind for ind in indicators if ind.get("triggered", False)]
 
     if not triggered_indicators:

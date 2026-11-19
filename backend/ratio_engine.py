@@ -133,6 +133,31 @@ class TrendDirection(str, Enum):
     NEUTRAL = "neutral"  # No significant change
 
 
+# Sprint 886 (OUT-09): the unit of each ratio's ``value``, matching its
+# ``display_value``: "ratio" (2.25), "percent" (value 40.0 = 40.0%),
+# "times" (3.10x) and "days" (45 days).
+RATIO_UNITS: dict[str, str] = {
+    "current_ratio": "ratio",
+    "quick_ratio": "ratio",
+    "debt_to_equity": "ratio",
+    "gross_margin": "percent",
+    "net_profit_margin": "percent",
+    "operating_margin": "percent",
+    "interest_coverage": "times",
+    "return_on_assets": "percent",
+    "return_on_equity": "percent",
+    "dso": "days",
+    "dpo": "days",
+    "dio": "days",
+    "ccc": "days",
+    "equity_ratio": "ratio",
+    "long_term_debt_ratio": "ratio",
+    "asset_turnover": "times",
+    "inventory_turnover": "times",
+    "receivables_turnover": "times",
+}
+
+
 @dataclass
 class RatioResult:
     """Result of a ratio calculation with interpretation."""
@@ -1677,9 +1702,14 @@ class RatioEngine:
         }
 
     def to_dict(self) -> dict[str, Any]:
-        """Return all ratios as a serializable dictionary."""
+        """Return all ratios as a serializable dictionary.
+
+        Sprint 886 (OUT-09): each ratio carries its ``unit`` (see ``RATIO_UNITS``)
+        so an export formats it exactly as the screen's ``display_value`` does,
+        instead of guessing from the value's size.
+        """
         ratios = self.calculate_all_ratios()
-        return {key: ratio.to_dict() for key, ratio in ratios.items()}
+        return {key: {**ratio.to_dict(), "unit": RATIO_UNITS[key]} for key, ratio in ratios.items()}
 
 
 class CommonSizeAnalyzer:

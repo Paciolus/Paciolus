@@ -91,6 +91,8 @@
 >       listed under the sprint.
 > - [ ] **Sprint 885** — exported CSV/Excel/PDF files: formula injection, PDF restyling, non-ASCII download names,
 >       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
+> - [ ] **Sprint 886** — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
+>       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -489,6 +491,37 @@ intermittent gate as Sprint 884; the Next.js upgrade is the fix).
 (financial statements 47.7 → 185 KB); (2) at the 300-character maximum in the widest letters the branded footer is cut
 with "…" (two lines at 5pt fit) — allow a third line by moving the disclaimer, or cap footer length lower;
 (3) CJK fonts (deferred, `## Deferred Items`).
+
+### Sprint 886: Each exported document shows what the screen showed for the same run
+**Status:** IN PROGRESS (2026-11-19) — local branch `sprint-886-export-fidelity`, stacked on Sprint 885 (`7251e22c`);
+not pushed. **Priority:** P0 (High findings: a PDF can say "none identified" for an indicator the screen shows as
+triggered). **Source:** read-only review at `ef5e567` (OUT-09/10/11/12/14/15/16/18 + comparison table).
+**Agents:** Executor, Critic, Accounting Expert.
+**Rule (CEO, 2026-11-19):** a value not supplied prints "not available" / "not evaluated" — never 0, Low or "none
+identified". Every fix is tested through the real HTTP export route.
+**Decided (CEO, 2026-11-19):** three-way match drops the uncomputed score and uses the engine's own Low/Medium/High
+classification and wording on screen, PDF and CSV.
+- [x] **11A / OUT-09 — TB export keeps going concern, analytics and materiality source.** `AuditResultInput` now
+      declares `going_concern` (`GoingConcernInput`: triggered/checked counts must match the indicator list, else 422),
+      `analytics` (`AnalyticsInput`: typed ratios, category totals as Decimals) and `materiality_source`. PDF: absent
+      going-concern data prints "were not evaluated for this report", evaluated-none still prints "No going concern
+      indicators identified"; the executive summary adds "Materiality Source" (absent → "Not available"). Excel:
+      ratios formatted by an explicit `unit` the ratio engine now emits (`RATIO_UNITS`: ratio/percent/times/days) —
+      the old `value > 1` guess wrote a 0.5% gross margin as 50%; a ratio without a unit is written as the screen's
+      `display_value` text; analytics absent → "Not available" (not "Insufficient data" / $0); source beside the
+      threshold on the summary and flagged-accounts sheets. Tests: `test_sprint886_tb_export_fidelity.py` (9; 7 failed
+      first) — real `/audit/trial-balance` upload with a triggered net-liability indicator and an engagement
+      materiality, its response posted unchanged to `/export/pdf` and `/export/excel`. Sprint 819
+      `route_export_pipeline` re-recorded: the source line, the "not evaluated" sentence, three sheet digests.
+- [ ] **11B / OUT-10** — bank reconciliation memo keeps tests, score, aging and thresholds.
+- [ ] **11C / OUT-11** — three-way match: no uncomputed score; engine classification everywhere.
+- [ ] **11D / OUT-12** — AP/Payroll/AR supplemental schedules reach the memo.
+- [ ] **11E / OUT-14** — payroll completeness on the 0–100 scale.
+- [ ] **11F / OUT-15** — AR memo column confidence matches the screen.
+- [ ] **11G / OUT-16** — documents name the materiality amount, its purpose and its origin.
+- [ ] **11H / OUT-18** — memos use the client's reporting framework and say which.
+- [ ] **11I** — severity labels, flag/row units, fixed-asset sections, multi-period detail, one score format.
+**Commits:** TBD.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

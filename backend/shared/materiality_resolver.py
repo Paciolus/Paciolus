@@ -52,3 +52,21 @@ def resolve_materiality(
             if pm > 0:
                 return pm, "engagement"
     return 0.0, "none"
+
+
+# Sprint 886 (OUT-09): how every export names where the threshold came from.
+# A source the request did not carry is "Not available" — never a guess.
+_SOURCE_LABELS = {
+    "engagement": "Engagement performance materiality",
+    "manual": "Entered for this run",
+    "none": "No threshold set",
+}
+
+NOT_AVAILABLE = "Not available"
+
+
+def materiality_source_label(source: Optional[str]) -> str:
+    """The printed name of a materiality source; "Not available" when not supplied."""
+    if not source:
+        return NOT_AVAILABLE
+    return _SOURCE_LABELS.get(source, NOT_AVAILABLE)
