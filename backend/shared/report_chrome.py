@@ -36,11 +36,13 @@ from pdf import (
     ClassicalColors,
     format_classical_date,
 )
+from shared.branding_text import TextBand, draw_fitted_text
 from shared.report_styles import (
     FONT_BODY,
     FONT_ITALIC,
     FONT_TITLE,
     MARGIN_LEFT,
+    MARGIN_RIGHT,
     SIZE_DISCLAIMER,
     SIZE_FOOTER,
     SPACE_COVER_AFTER_LOGO,
@@ -529,6 +531,63 @@ def draw_page_header(canvas: Any, doc: Any, title: str = "", reference: str = ""
 
 _DISCLAIMER_LINE = "Prepared using Paciolus. Does not constitute an audit, review, or attestation engagement."
 
+# Sprint 885 (OUT-27): bounded bands for the Enterprise header and footer text.
+# Baselines only: the header stays above the 0.5in gold rule ``draw_page_header``
+# draws; the footer stays between the page number (baseline 0.5in) and the
+# Paciolus disclaimer (baseline 12pt). Inside the 0.75in side margins.
+_BRAND_MIN_SIZE = 5.0
+MEMO_HEADER_BAND = TextBand(
+    left=MARGIN_LEFT * inch,
+    right=letter[0] - MARGIN_RIGHT * inch,
+    bottom=letter[1] - 0.5 * inch + 2.5,
+    top=letter[1] - 0.15 * inch - 6.0,
+    anchor=letter[1] - 0.35 * inch,
+    size=SIZE_FOOTER,
+    min_size=_BRAND_MIN_SIZE,
+)
+MEMO_FOOTER_BAND = TextBand(
+    left=MARGIN_LEFT * inch,
+    right=letter[0] - MARGIN_RIGHT * inch,
+    bottom=19.5,
+    top=28.0,
+    anchor=SPACE_FOOTER_Y - 12,
+    size=SIZE_DISCLAIMER,
+    min_size=_BRAND_MIN_SIZE,
+)
+
+
+@dataclass(frozen=True)
+class BrandingBands:
+    """The header/footer bands of one page layout, for tests and callers."""
+
+    left: float
+    right: float
+    header_bottom: float
+    header_top: float
+    footer_bottom: float
+    footer_top: float
+    header_size: float
+    min_size: float
+
+
+def branding_bands(kind: str = "memo") -> BrandingBands:
+    """``memo`` (memos and the TB diagnostic report) or ``fs`` (financial statements)."""
+    if kind == "fs":
+        from pdf.chrome import FS_FOOTER_BAND as footer
+        from pdf.chrome import FS_HEADER_BAND as header
+    else:
+        header, footer = MEMO_HEADER_BAND, MEMO_FOOTER_BAND
+    return BrandingBands(
+        left=header.left,
+        right=letter[0] - header.right,
+        header_bottom=header.bottom,
+        header_top=header.top,
+        footer_bottom=footer.bottom,
+        footer_top=footer.top,
+        header_size=header.size,
+        min_size=min(header.min_size, footer.min_size),
+    )
+
 
 def draw_page_footer(canvas: Any, doc: Any) -> None:
     """Canvas callback for all pages — default Paciolus disclaimer only.
@@ -565,12 +624,12 @@ def _draw_footer_impl(
         # number on all non-cover pages so auditor-branded workpapers
         # read the firm's name before the generic Paciolus disclaimer.
         if custom_header:
-            canvas.setFont(FONT_BODY, SIZE_FOOTER)
             canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
             # Header sits in the top margin, 0.35in from the top edge — above
             # the 0.5in gold rule ``draw_page_header`` draws, which struck
-            # through it on memos that use both (Sprint 813).
-            canvas.drawCentredString(page_width / 2, letter[1] - 0.35 * inch, custom_header[:200])
+            # through it on memos that use both (Sprint 813). Sprint 885: long
+            # text wraps / shrinks inside its band instead of running off the page.
+            draw_fitted_text(canvas, custom_header[:200], FONT_BODY, MEMO_HEADER_BAND)
 
         # Page number — classical style: — N —
         canvas.setFont(FONT_BODY, SIZE_FOOTER + 1)
@@ -582,9 +641,8 @@ def _draw_footer_impl(
         # second line below the custom text so attribution remains
         # visible — the firm isn't claiming Paciolus' work as its own.
         if custom_footer:
-            canvas.setFont(FONT_BODY, SIZE_DISCLAIMER)
             canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-            canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 12, custom_footer[:300])
+            draw_fitted_text(canvas, custom_footer[:300], FONT_BODY, MEMO_FOOTER_BAND)
             canvas.setFont(FONT_BODY, SIZE_DISCLAIMER - 1)
             canvas.setFillColor(Color(0, 0, 0, alpha=0.4))
             canvas.drawCentredString(page_width / 2, SPACE_FOOTER_Y - 24, _DISCLAIMER_LINE)

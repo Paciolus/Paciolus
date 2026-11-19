@@ -362,7 +362,8 @@ detail is computed from the detail as displayed.
       flagged entries' absolute amounts. Not changed; needs its own item.
 
 ### Sprint 885: Exported CSV, Excel and PDF files are safe to open and render correctly
-**Status:** IN PROGRESS (2026-11-18) — local branch `sprint-885-export-safety`, stacked on Sprint 884 (`4eaac54f`); not pushed.
+**Status:** IN REVIEW (2026-11-18) — code complete on local branch `sprint-885-export-safety`, stacked on Sprint 884
+(`4eaac54f`); not pushed. Merge 883 and 884 first.
 **Priority:** P0 (two Critical findings: uploaded text becomes a live spreadsheet formula). **Source:** read-only review
 at `ef5e567` (OUT-01, OUT-02, OUT-33, OUT-24, OUT-28, OUT-34, OUT-25, OUT-26, OUT-27). **Agents:** Executor, Guardian, Critic.
 **Decided (CEO, 2026-11-18):** PDF fonts cover Latin with accents, Greek and Cyrillic now, with openly licensed fonts;
@@ -465,7 +466,18 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       failed (columns 540pt on a 504pt frame; centred table text began 12pt left of the margin; no header on later
       pages) with a 45-row schedule of long labels and 12-digit amounts. `memo_render_snapshot.json` re-recorded for
       this memo: same page count and text, layout only.
-- [ ] **10I / OUT-27 — long branding text stays on the page.**
+- [x] **10I / OUT-27 — long branding text stays on the page.** `shared/branding_text.py`: `draw_fitted_text` keeps
+      the Enterprise header (≤ 200 chars) and footer (≤ 300) inside a `TextBand` — inside the 0.75in side margins,
+      baselines clear of the gold rule, page number and Paciolus disclaimer: one line at the normal size when it fits
+      (short text is drawn exactly as before), otherwise wrapped onto the lines the band holds while shrinking to 5pt,
+      then an ellipsis; words without spaces break between characters. Used by the memo/report chrome
+      (`shared/report_chrome.py`, bands `MEMO_HEADER_BAND`/`MEMO_FOOTER_BAND`) and the financial-statements chrome
+      (`pdf/chrome.py`, `FS_*_BAND`; with a custom footer the FS disclaimer moves from 15.8pt to 12pt, as the memos
+      already had). Reproduced first: the 200-char header ran from x = −449 to x = 1,061 on a 612pt page; 3 of 4 in
+      `test_sprint885_branding_text_fit.py` failed (memo and FS; spaced and unspaced "W"/"Ж" text at the maximum
+      lengths), checked by measuring every drawn run in the PDF. `memo_render_snapshot.json` re-recorded for
+      `financial_statements[branded]` only (the disclaimer's new position). **Note:** at the 300-character maximum in
+      the widest letters the footer still needs 3 lines at 5pt; the band holds 2, so the end is cut with "…".
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

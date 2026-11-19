@@ -1805,12 +1805,12 @@
     "text": "Particularis de Computis\n— 1 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\n FINANCIAL STATEMENTS\n Meridian Capital Group, LLC\nClient\nMeridian Capital Group, LLC\nFiscal Year End\nDecember 31, 2025\nPeriod\nDecember 31, 2025\nGenerated\n2nd March 2026\nPrepared by (entered by\nuser)\n—\nReviewer (entered by user)\n—\nStatus (entered by user)\nDraft\n Generated analytics, not reviewed by Paciolus. Not an audit, review, compilation or attestation. Prepared-by, reviewer and status fields are entered by\n the user.\n",
     "text_bbox": [
      54.0,
-     15.84,
+     12.0,
      292.5,
      635.08
     ],
-    "runs": "7a275f3fb4e48dd2",
-    "content": "8da23a089fe450bc"
+    "runs": "b10b9ee5f3574920",
+    "content": "5549c6ed5a40bf5a"
    },
    {
     "size": [
@@ -1822,12 +1822,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\n FINANCIAL STATEMENTS\n ─── ◆ ───\n Meridian Capital Group, LLC\n Period Ending December 31, 2025\n Prepared 2nd March 2026 · Ref: PAC-2026-0302-215\nBalance Sheet\nASSETS\nCurrent Assets\nCash and Cash Equivalents (A) ..... $1,245,000.00\nAccounts Receivable (B) ............. $892,000.00\nInventory (C) ....................... $456,000.00\nPrepaid Expenses (D) ................. $78,000.00\nTotal Current Assets ................ $2,671,000.00\nNon-Current Assets\nProperty, Plant & Equipment (E) ... $3,420,000.00\nAccumulated Depreciation (E) ..... $-1,180,000.00\nIntangible Assets (F) ............... $250,000.00\nTotal Non-Current Assets ............ $2,490,000.00\nTOTAL ASSETS .......................... $5,161,000.00\nLIABILITIES AND EQUITY\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      292.5,
      743.04
     ],
-    "runs": "28aae37bf3925e7e",
-    "content": "672d9e0bc7252201"
+    "runs": "c7da2d689531135e",
+    "content": "6227b0e39140e723"
    },
    {
     "size": [
@@ -1839,12 +1839,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\nCurrent Liabilities\nAccounts Payable (G) ................ $634,000.00\nAccrued Expenses (H) ................ $289,000.00\nCurrent Portion of Long-Term Debt (I) ... $120,000.00\nTotal Current Liabilities ........... $1,043,000.00\nNon-Current Liabilities\nLong-Term Debt (J) ................ $1,500,000.00\nDeferred Tax Liability (K) ........... $98,000.00\nTotal Non-Current Liabilities ....... $1,598,000.00\nTOTAL LIABILITIES ..................... $2,641,000.00\nEquity\nCommon Stock (L) .................... $500,000.00\nRetained Earnings (M) ............. $2,020,000.00\nTOTAL EQUITY .......................... $2,520,000.00\nTOTAL LIABILITIES AND EQUITY .......... $5,161,000.00\n ✓ Balanced\nCross-Reference Index\n (A) Cash and Cash Equivalents — See Bank Reconciliation Memo\n (B) Receivables — See AR Aging Analysis Memo\n (C) Inventory — See Inventory Register Analysis Memo\n (D) Prepaid Expenses — See Trial Balance Diagnostic\n (E) Property, Plant & Equipment — See Fixed Asset Testing Memo\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      292.5,
      743.04
     ],
-    "runs": "fdade96a8db0b323",
-    "content": "b9ae824083b61330"
+    "runs": "23d542a456577bd4",
+    "content": "ce610d883f694af6"
    },
    {
     "size": [
@@ -1856,12 +1856,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 4 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\n (F) Other Assets & Intangibles — See Trial Balance Diagnostic\n (G) AP & Accrued Liabilities — See AP Payment Testing Memo\n (H) Other Current Liabilities — See Accrual Completeness Estimator\n (I) Long-term Debt — See Trial Balance Diagnostic\n (J) Other Long-term Liabilities — See Trial Balance Diagnostic\n (K) Stockholders' Equity — See Trial Balance Diagnostic\n ❧\nIncome Statement\nRevenue (N) ........................... $6,850,000.00\nCost of Goods Sold (O) ................ $2,890,000.00\nGROSS PROFIT ........................ $3,960,000.00\nSalaries & Wages ...................... $1,420,000.00\nRent Expense ............................ $360,000.00\nDepreciation Expense .................... $285,000.00\nMarketing & Advertising ................. $195,000.00\nInsurance Expense ........................ $72,000.00\nOffice & Supplies ........................ $48,000.00\nUtilities ................................ $36,000.00\nProfessional Fees ........................ $84,000.00\nTOTAL OPERATING EXPENSES ............ $2,500,000.00\nOPERATING INCOME .................... $1,460,000.00\nInterest Expense ......................... $92,000.00\nOther Income ............................. $15,000.00\nINCOME BEFORE TAX ................... $1,383,000.00\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      300.97,
      743.04
     ],
-    "runs": "5f7101d1a882cb74",
-    "content": "f149879bc9d2a236"
+    "runs": "6b829a7f3dde03f6",
+    "content": "9e4adab557b10364"
    },
    {
     "size": [
@@ -1873,12 +1873,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 5 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\nIncome Tax Expense ...................... $345,750.00\nNET INCOME ............................ $1,037,250.00\nCross-Reference Index\n (N) Operating Expenses — See Expense Category Analysis\n (O) Other Income / (Expense), Net — See Trial Balance Diagnostic\n ❧\nCash Flow Statement\n (Indirect Method)\nCash Flows from Operating Activities\nNet Income ........................ $1,037,250.00\nDepreciation & Amortization ......... $285,000.00\nIncrease in Accounts Receivable .... $-142,000.00\nDecrease in Inventory ................ $38,000.00\nIncrease in Accounts Payable ......... $67,000.00\nIncrease in Accrued Expenses ......... $23,000.00\nNet Cash Flows from Operating Activities ... $1,308,250.00\nCash Flows from Investing Activities\nPurchase of Equipment .............. $-420,000.00\nPurchase of Intangible Assets ....... $-50,000.00\nNet Cash Flows from Investing Activities ... $-470,000.00\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      300.97,
      743.04
     ],
-    "runs": "dbe8612bf8a1bd5e",
-    "content": "33e8e19e8e6de874"
+    "runs": "1ccd2a9931224e3f",
+    "content": "2dfbafebe0d1a7e5"
    },
    {
     "size": [
@@ -1890,12 +1890,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 6 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\nCash Flows from Financing Activities\nRepayment of Long-Term Debt ........ $-120,000.00\nDividends Paid ..................... $-250,000.00\nNet Cash Flows from Financing Activities ... $-370,000.00\nNET CHANGE IN CASH ...................... $468,250.00\nBeginning Cash .......................... $776,750.00\nNet Change in Cash ...................... $468,250.00\nENDING CASH ........................... $1,245,000.00\n ✓ Reconciled\n ❧\nKey Financial Ratios\nGross Profit Margin ....................... 57.8%\nOperating Margin .......................... 21.3%\nNet Margin ................................ 15.1%\nEBITDA ............................ $1,745,000.00\nEBITDA Margin ............................. 25.5%\nDebt-to-Equity Ratio ...................... 1.05x\nInterest Coverage ......................... 15.9x\nAsset Turnover ............................ 1.33x\nCurrent Ratio ............................. 2.56x\nQuick Ratio ............................... 2.05x\nWorking Capital ................... $1,628,000.00\nDays Sales Outstanding (DSO) ............ 48 days\nQuality of Earnings\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      300.97,
      743.04
     ],
-    "runs": "8cf764a56eb47b7f",
-    "content": "2d65a7e81746d58a"
+    "runs": "70fc431ea207f95d",
+    "content": "9289782cb6ba56b1"
    },
    {
     "size": [
@@ -1907,12 +1907,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 7 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\nCash Conversion Ratio (OCF / Net Income) ... 1.26x\n The OCF/NI ratio of 1.26x indicates that cash earnings exceed reported net income — strong earnings quality. Operating cash flow\n ($1,308,250.00) exceeds net income ($1,037,250.00), suggesting conservative accrual practices and reliable cash conversion.\n A Cash Conversion Ratio consistently above 1.0x over multiple periods is generally considered a positive indicator of earnings quality.\n Ratios below 0.8x may indicate aggressive accrual accounting and warrant further analytical procedures.\n ❧\nNotes to Financial Statements\n PLACEHOLDER NOTICE\n \nThe following notes are structural placeholders. Paciolus does not generate note content. The\nengagement team must complete all note disclosures before this document is finalized or distributed.\n Note 1 — Basis of Presentation\nTo be completed by management. Describe the basis of accounting, reporting period, and any significant departures from the applicable\n financial reporting framework.\n Note 2 — Significant Accounting Policies\n Revenue Recognition: [Describe policy per ASC 606]\n Inventory Valuation: [Describe method — FIFO, LIFO, weighted average]\n Depreciation Method: [Describe method and useful life ranges]\n Income Taxes: [Describe tax status — LLC pass-through or corporate]\n Note 3 — Long-Term Debt\n Describe terms, interest rate, maturity date, and collateral for outstanding long-term debt balances and current portions.\n",
     "text_bbox": [
      60.0,
-     15.84,
+     12.0,
      300.97,
      743.04
     ],
-    "runs": "86e175c7909ecb31",
-    "content": "3d413d0b42d1f0bb"
+    "runs": "4948e78755ab2de5",
+    "content": "af879de5edcb23a0"
    },
    {
     "size": [
@@ -1924,12 +1924,12 @@
     "text": "Particularis de Computis\nACME Audit Partners LLP\n— 8 —\nConfidential - Prepared for ACME Client Corp.\nThis output supports professional judgment and internal evaluation. It does not constitute an audit, review, or attestation engagement.\n Note 4 — Related Party Transactions\n Disclose any transactions with related parties during the period, including intercompany receivable/payable balances identified in the\n trial balance.\n Note 5 — Subsequent Events\n Disclose any material events occurring after the period end through the date these statements were prepared.\n \"Particularis de Computis et Scripturis\"\n Generated by Paciolus · 2026-03-02 09:30 UTC\n Uploaded files are processed in memory and not kept after analysis. See paciolus.com/data-handling.\n",
     "text_bbox": [
      63.54,
-     15.84,
+     12.0,
      292.5,
      743.04
     ],
-    "runs": "85f9728385f872d4",
-    "content": "eeea448548bfe698"
+    "runs": "55dd4b9584577848",
+    "content": "55c20494a0aa2ef9"
    }
   ]
  },

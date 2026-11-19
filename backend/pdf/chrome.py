@@ -13,6 +13,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 
 from pdf.styles import ClassicalColors
+from shared.branding_text import TextBand, draw_fitted_text
 
 # ---------------------------------------------------------------------------
 # Diagnostic report chrome
@@ -37,6 +38,31 @@ def draw_diagnostic_watermark(canvas: Any, _doc: Any = None) -> None:
 # ---------------------------------------------------------------------------
 # Financial-statements report chrome
 # ---------------------------------------------------------------------------
+
+
+# Sprint 885 (OUT-27): bands for the Enterprise header and footer text (baselines).
+# Header: below the double gold rule (0.5in / 0.55in from the top), above the
+# 1.0in content margin. Footer: between the page number (baseline 0.5in) and the
+# disclaimer, which moves to 12pt when a custom footer is present.
+_FS_DISCLAIMER_Y_BRANDED = 12.0
+FS_HEADER_BAND = TextBand(
+    left=0.75 * inch,
+    right=letter[0] - 0.75 * inch,
+    bottom=letter[1] - 1.0 * inch + 3.0,
+    top=letter[1] - 0.55 * inch - 6.5,
+    anchor=letter[1] - 0.68 * inch,
+    size=8,
+    min_size=5.0,
+)
+FS_FOOTER_BAND = TextBand(
+    left=0.75 * inch,
+    right=letter[0] - 0.75 * inch,
+    bottom=19.5,
+    top=28.0,
+    anchor=0.36 * inch,
+    size=8,
+    min_size=5.0,
+)
 
 
 def draw_fs_decorations(
@@ -82,9 +108,9 @@ def draw_fs_decorations(
     # Sprint 679: custom header — only on pages after the cover (page 1
     # already carries firm identity via the branded cover logo).
     if custom_header and page_counter[0] > 1:
-        canvas.setFont("Times-Roman", 8)
         canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-        canvas.drawCentredString(page_width / 2, page_height - 0.68 * inch, custom_header[:200])
+        # Sprint 885 (OUT-27): long text wraps / shrinks inside its band.
+        draw_fitted_text(canvas, custom_header[:200], "Times-Roman", FS_HEADER_BAND)
 
     # Bottom rule
     canvas.setStrokeColor(ClassicalColors.LEDGER_RULE)
@@ -101,10 +127,9 @@ def draw_fs_decorations(
     # both visible without overlap.
     disclaimer_y = 0.35 * inch
     if custom_footer:
-        canvas.setFont("Times-Roman", 8)
         canvas.setFillColor(ClassicalColors.OBSIDIAN_500)
-        canvas.drawCentredString(page_width / 2, 0.36 * inch, custom_footer[:300])
-        disclaimer_y = 0.22 * inch
+        draw_fitted_text(canvas, custom_footer[:300], "Times-Roman", FS_FOOTER_BAND)
+        disclaimer_y = _FS_DISCLAIMER_Y_BRANDED
 
     # Paciolus disclaimer — preserved regardless of branding
     canvas.setFont("Times-Roman", 7)
