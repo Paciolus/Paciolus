@@ -168,3 +168,19 @@
 - **A Decimal pipeline can still lose digits in the writer (Sprint 884).** openpyxl writes every number with
   `"%.16g"`, so a Decimal cell holding 9007199254740993.01 reached the file as 9007199254740994 even with no `float()`
   in our code. Check the bytes on disk (the sheet XML), not the value handed to the library.
+- **Find escape-hatch callers by instrumenting the hatch and running the suite (Sprint 885).** Changing the CSV
+  writer from "skip anything that looks like a number" to "escape every str" needed every caller that passed amounts as
+  formatted text. A temporary log line in the writer, run under the full suite, named the exercised sites (cash flow,
+  testing-tool CSVs, multi-period, TB, depreciation) before a static sweep covered the rest.
+- **For "escape user data" across ~1,000 call sites, build the detector first (Sprint 885).** Rendering every memo
+  with white-text markup appended to each free-text input turned a vague review finding into a count per memo
+  (~950 leaks → 0), told the codemods where they were not enough, and caught template text the codemods would have
+  over-escaped (titles with `&amp;`) through the existing memo text snapshots.
+- **AST codemods: `col_offset` counts UTF-8 bytes, not characters (Sprint 885).** A codemod that sliced source by
+  `col_offset` corrupted a line holding "—" earlier on the line. Convert byte columns to character columns per line.
+  Also: ruff here targets Python 3.11, so generated f-strings must not reuse the outer quote inside `{}`.
+- **On this machine pass `--basetemp` to pytest when two runs overlap (Sprint 885).** A second pytest run while
+  another held `pytest-of-<user>/pytest-current` failed with `PermissionError` before collecting anything.
+- **Swapping a font is a layout change only if the metrics differ (Sprint 885).** Registering the metric-compatible
+  Liberation fonts under the standard Times/Helvetica/Courier names changed no page count and moved text < 0.5pt —
+  and exposed that the standard fonts had been printing substitute boxes for ✓ ⚠ ▢ all along.

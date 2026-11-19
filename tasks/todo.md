@@ -478,6 +478,17 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       lengths), checked by measuring every drawn run in the PDF. `memo_render_snapshot.json` re-recorded for
       `financial_statements[branded]` only (the disclaimer's new position). **Note:** at the 300-character maximum in
       the widest letters the footer still needs 3 lines at 5pt; the band holds 2, so the end is cut with "…".
+**Commits:** `02fa6e36` (10A), `6849d097` (10C), `d2b4464c` (10B), `d081c433` (10E), `7ef84ac8` (10D), `8f649de2` (10F),
+`1b94a7d5` (10G), `8a745dc8` (10H), `58bf4cfa` (10I); this record + lessons.
+**Verified (final tree):** backend full suite 11,200 passed, 1 failure — the pre-existing Sprint 819
+`test_engagement_export_routes_unchanged` (fails on `main`); ruff clean on every changed file; mypy 288 = the branch
+baseline (no new errors). Frontend (no file changed): Jest 212 suites / 2,107 passed; `next build` compiled all 70
+routes (`ƒ`) — the first run exited 1 on Next.js's own `SecurityFatalError` advisory gate, the retry passed (same
+intermittent gate as Sprint 884; the Next.js upgrade is the fix).
+**Open for the CEO:** (1) the 4.96 MB of bundled fonts (Liberation 4.2 MB + DejaVu Sans 0.76 MB) and larger PDFs
+(financial statements 47.7 → 185 KB); (2) at the 300-character maximum in the widest letters the branded footer is cut
+with "…" (two lines at 5pt fit) — allow a third line by moving the disclaimer, or cap footer length lower;
+(3) CJK fonts (deferred, `## Deferred Items`).
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
