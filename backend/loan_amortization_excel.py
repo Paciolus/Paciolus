@@ -11,7 +11,6 @@ engagement workpapers. The Schedule header row is frozen.
 
 from __future__ import annotations
 
-import io
 from decimal import Decimal
 
 from openpyxl import Workbook
@@ -21,7 +20,8 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from excel_generator import ExcelColors
 from loan_amortization_engine import AmortizationResult
-from shared.excel_cells import append_row, assert_no_formulas, put
+from shared.document_properties import save_workbook
+from shared.excel_cells import append_row, put
 from shared.excel_exact import APPROXIMATE_HEADER, approximate_note, money
 
 CURRENCY_FORMAT = '"$"#,##0.00'
@@ -242,7 +242,4 @@ def build_amortization_workbook(result: AmortizationResult) -> bytes:
     _build_annual_summary_sheet(annual_ws, result)
     _build_inputs_sheet(inputs_ws, result)
 
-    buffer = io.BytesIO()
-    assert_no_formulas(wb)
-    wb.save(buffer)
-    return buffer.getvalue()
+    return save_workbook(wb, title="Loan Amortization Schedule")

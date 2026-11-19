@@ -26,7 +26,8 @@ from excel_generator import ExcelColors, create_currency_style, create_header_st
 from flux_engine import FluxResult
 from recon_engine import ReconResult, RiskBand
 from security_utils import log_secure_operation
-from shared.excel_cells import assert_no_formulas, put, put_ref
+from shared.document_properties import save_workbook
+from shared.excel_cells import put, put_ref
 
 
 class LeadSheetGenerator:
@@ -85,9 +86,7 @@ class LeadSheetGenerator:
         self._build_index_tab()
         self._build_detail_tabs()
 
-        assert_no_formulas(self.wb)
-        self.wb.save(self.buffer)
-        data = self.buffer.getvalue()
+        data = save_workbook(self.wb, title="Lead Sheets")
         self.buffer.close()
         return data
 

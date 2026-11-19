@@ -28,6 +28,7 @@ from pdf import (
     create_leader_dots,
     format_classical_date,
 )
+from shared.document_properties import pdf_document_properties
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph, user_text
 
@@ -959,6 +960,7 @@ def render_memo(
         rightMargin=margins.right,
         topMargin=margins.top,
         bottomMargin=margins.bottom,
+        **pdf_document_properties(title, author=(cover or {}).get("prepared_by")),
     )
     memo = MemoContext(
         story=[],

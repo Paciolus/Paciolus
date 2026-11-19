@@ -9,7 +9,8 @@ from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Si
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
-from shared.excel_cells import as_date, assert_no_formulas, put, put_ref
+from shared.document_properties import save_workbook
+from shared.excel_cells import as_date, put, put_ref
 from shared.excel_exact import approximate_note, money
 from shared.monetary import quantize_monetary
 
@@ -190,9 +191,8 @@ class PaciolusWorkpaperGenerator:
         self._build_ratios_tab()
 
         # Save to buffer
-        assert_no_formulas(self.wb)
-        self.wb.save(self.buffer)
-        excel_bytes = self.buffer.getvalue()
+        author = self.prepared_by if self.include_signoff else None
+        excel_bytes = save_workbook(self.wb, title="Trial Balance Diagnostic Workpaper", author=author)
         self.buffer.close()
 
         log_secure_operation("excel_generate_complete", f"Excel generated: {len(excel_bytes)} bytes")
@@ -1006,11 +1006,7 @@ def generate_financial_statements_excel(
         mt_ws.column_dimensions["H"].width = 8
 
     # Save
-    buf = io.BytesIO()
-    assert_no_formulas(wb)
-    wb.save(buf)
-    excel_bytes = buf.getvalue()
-    buf.close()
+    excel_bytes = save_workbook(wb, title="Financial Statements", author=prepared_by if include_signoff else None)
 
     log_secure_operation(
         "financial_statements_excel_complete", f"Financial statements Excel generated: {len(excel_bytes)} bytes"

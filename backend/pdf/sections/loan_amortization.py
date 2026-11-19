@@ -26,6 +26,7 @@ from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from loan_amortization_engine import AmortizationResult
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors, create_classical_styles
+from shared.document_properties import pdf_document_properties
 from shared.safe_paragraph import Paragraph, user_text
 
 
@@ -244,7 +245,7 @@ def build_amortization_pdf(result: AmortizationResult) -> bytes:
         bottomMargin=0.6 * inch,
         leftMargin=0.6 * inch,
         rightMargin=0.6 * inch,
-        title="Loan Amortization Schedule",
+        **pdf_document_properties("Loan Amortization Schedule"),
     )
 
     styles = create_classical_styles()

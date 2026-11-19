@@ -40,6 +40,7 @@ from pdf.sections.ratios import render_quality_of_earnings, render_ratios
 from pdf.sections.workpaper_signoff import render_workpaper_signoff
 from pdf.styles import ClassicalColors, create_classical_styles
 from security_utils import log_secure_operation
+from shared.document_properties import pdf_document_properties
 from shared.safe_paragraph import Paragraph, escape_markup, user_text
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -77,6 +78,7 @@ def generate_audit_report(
         leftMargin=0.75 * inch,
         topMargin=1.0 * inch,
         bottomMargin=1.0 * inch,
+        **pdf_document_properties("Trial Balance Diagnostic Summary", author=prepared_by if include_signoff else None),
     )
 
     story: list = []
@@ -195,6 +197,7 @@ def generate_financial_statements_pdf(
         leftMargin=0.75 * inch,
         topMargin=1.0 * inch,
         bottomMargin=1.0 * inch,
+        **pdf_document_properties("Financial Statements", author=prepared_by if include_signoff else None),
     )
 
     story: list = []

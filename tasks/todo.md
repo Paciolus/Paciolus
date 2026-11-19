@@ -431,7 +431,17 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       (`UnicodeEncodeError` in the header), "Café" went out as raw Latin-1 bytes, a 720-char name made a 773-char
       header. Tests: `test_sprint885_download_filenames.py` (15: CSV, PDF and shared downloads; Chinese, Cyrillic,
       accented, quoted, very long).
-- [ ] **10F / OUT-34 — document properties name Paciolus, not the libraries.**
+- [x] **10F / OUT-34 — document properties name Paciolus, not the libraries.** `shared/document_properties.py`:
+      `pdf_document_properties(title, author)` on all four `SimpleDocTemplate`s (memos, TB diagnostic, financial
+      statements, loan schedule) — creator and producer "Paciolus", a title, subject empty, author only what the firm
+      entered as "Prepared by" (memos: the cover's `prepared_by`; reports: only with sign-off on), otherwise empty;
+      `save_workbook(wb, title, author)` for all four workbook saves — creator and last-modified-by "Paciolus", title,
+      a firm-entered author kept separately in the description, and `docProps/app.xml` rewritten to
+      `<Application>Paciolus</Application>` (openpyxl always writes its own name and version there). It also runs
+      `assert_no_formulas`. Reproduced first: 7 of 9 in `test_sprint885_document_properties.py` failed (ReportLab
+      producer, "anonymous" author/creator, openpyxl creator/application); the test also checks no machine user name,
+      home path or working directory appears. Sprint 819 `route_form_exports` / `route_export_pipeline` re-recorded:
+      only `docProps/*.xml` digests and byte counts changed.
 - [ ] **10G / OUT-25 — PDF fonts for accented Latin, Greek and Cyrillic.**
 - [ ] **10H / OUT-26 — analytical-expectations table fits the page.**
 - [ ] **10I / OUT-27 — long branding text stays on the page.**
