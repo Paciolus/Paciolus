@@ -29,6 +29,7 @@ from pdf import (
     format_classical_date,
 )
 from shared.document_properties import pdf_document_properties
+from shared.pdf_fonts import build_pdf
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph, user_text
 
@@ -994,7 +995,7 @@ def render_memo(
             draw_page_header(canvas, doc, title=running_header, reference=reference)
             first_page(canvas, doc)
 
-    doc.build(memo.story, onFirstPage=first_page, onLaterPages=later_pages)
+    build_pdf(doc, memo.story, onFirstPage=first_page, onLaterPages=later_pages)
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes

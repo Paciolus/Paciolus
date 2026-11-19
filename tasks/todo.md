@@ -442,7 +442,22 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       producer, "anonymous" author/creator, openpyxl creator/application); the test also checks no machine user name,
       home path or working directory appears. Sprint 819 `route_form_exports` / `route_export_pipeline` re-recorded:
       only `docProps/*.xml` digests and byte counts changed.
-- [ ] **10G / OUT-25 — PDF fonts for accented Latin, Greek and Cyrillic.**
+- [x] **10G / OUT-25 — PDF fonts for accented Latin, Greek and Cyrillic.** `shared/pdf_fonts.py` embeds the
+      Liberation fonts 2.1.5 (SIL OFL 1.1, `backend/fonts/liberation/`, licence shipped, 4.2 MB) **under the standard
+      names** Times-*, Helvetica-* and Courier-* (all four styles each). They are metric-compatible with those
+      families, so every existing style, table, canvas call and ReportLab default gets the embedded font with no
+      layout change (checked: no memo's page count changed; text boxes moved < 0.5pt). `<b>`/`<i>` resolve through
+      the registered families. Template symbols Liberation lacks (✓ ✗ ⚠ ❧ ◆ ▢) are drawn from DejaVu Sans 2.37
+      (`backend/fonts/dejavu/`, Bitstream Vera licence, 0.76 MB) via `symbol_fallback` in the safe `Paragraph` — the
+      standard fonts never had them either: the old PDFs printed a substitute ■. A character neither font has prints
+      as □ (`CoverageTTFont`), and `build_pdf` (now used by all four PDF builders) adds "Note: some characters in
+      this document are not supported by its fonts and are shown as □." at the end of the document only when that
+      happened. Reproduced first: 7 of 8 in `test_sprint885_pdf_fonts.py` failed (accented/Greek/Cyrillic extract
+      exactly, bold and italic embedded, Courier/Helvetica covered, Chinese → □ + note, no note otherwise).
+      Snapshots re-recorded (`memo_render_snapshot.json`, Sprint 819 `route_testing_exports` /
+      `route_export_pipeline`); text changes are all corrections: bullets extract as "•" (were ``), "∆" → Greek
+      "Δ", ⚠/▢/─ instead of substitute ■. **Cost:** PDFs embed font subsets — the TB diagnostic PDF 42.7 → 43.0 KB,
+      the financial statements 47.7 → 185 KB.
 - [ ] **10H / OUT-26 — analytical-expectations table fits the page.**
 - [ ] **10I / OUT-27 — long branding text stays on the page.**
 

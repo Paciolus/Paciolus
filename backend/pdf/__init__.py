@@ -5,6 +5,7 @@ Re-exports the public surface that was previously provided by the monolithic
 ``pdf_generator`` module so that ``from pdf import ...`` works identically.
 """
 
+import shared.pdf_fonts  # noqa: F401  (registers the embedded fonts — Sprint 885, OUT-25)
 from pdf.components import (
     DoubleRule,
     LedgerRule,

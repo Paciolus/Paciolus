@@ -41,6 +41,7 @@ from pdf.sections.workpaper_signoff import render_workpaper_signoff
 from pdf.styles import ClassicalColors, create_classical_styles
 from security_utils import log_secure_operation
 from shared.document_properties import pdf_document_properties
+from shared.pdf_fonts import build_pdf
 from shared.safe_paragraph import Paragraph, escape_markup, user_text
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -155,7 +156,7 @@ def generate_audit_report(
         branded_footer_cb(canvas, doc)
 
     log_secure_operation("pdf_generate_start", "Starting Classical PDF generation")
-    doc.build(story, onFirstPage=_on_first_page, onLaterPages=_on_later_pages)
+    build_pdf(doc, story, onFirstPage=_on_first_page, onLaterPages=_on_later_pages)
 
     pdf_bytes = buffer.getvalue()
     buffer.close()
@@ -284,7 +285,7 @@ def generate_financial_statements_pdf(
             custom_footer=custom_footer,
         )
 
-    doc.build(story, onFirstPage=_fs_deco, onLaterPages=_fs_deco)
+    build_pdf(doc, story, onFirstPage=_fs_deco, onLaterPages=_fs_deco)
 
     pdf_bytes = buffer.getvalue()
     buffer.close()

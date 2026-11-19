@@ -27,6 +27,7 @@ from loan_amortization_engine import AmortizationResult
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors, create_classical_styles
 from shared.document_properties import pdf_document_properties
+from shared.pdf_fonts import build_pdf
 from shared.safe_paragraph import Paragraph, user_text
 
 
@@ -277,5 +278,5 @@ def build_amortization_pdf(result: AmortizationResult) -> bytes:
     story.append(Spacer(1, 4))
     story.append(_schedule_table(result))
 
-    doc.build(story)
+    build_pdf(doc, story)
     return buffer.getvalue()

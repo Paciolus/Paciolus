@@ -38,6 +38,8 @@ from xml.sax.saxutils import escape as _xml_escape
 
 from reportlab.platypus import Paragraph as _ReportLabParagraph
 
+from shared.pdf_fonts import symbol_fallback  # registers the embedded fonts (Sprint 885, OUT-25)
+
 logger = logging.getLogger(__name__)
 
 _SIMPLE_TAGS = frozenset({"b", "i", "u", "strong", "em", "strike", "super", "sup", "sub"})
@@ -163,7 +165,7 @@ class Paragraph(_ReportLabParagraph):
             return
         raw = str(text)
         try:
-            super().__init__(sanitize_markup(raw), style, *args, **kwargs)
+            super().__init__(symbol_fallback(sanitize_markup(raw)), style, *args, **kwargs)
         except ValueError:
             logger.warning("Paragraph markup could not be parsed; rendering it as plain text")
-            super().__init__(escape_markup(raw), style, *args, **kwargs)
+            super().__init__(symbol_fallback(escape_markup(raw)), style, *args, **kwargs)
