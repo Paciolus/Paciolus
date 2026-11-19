@@ -406,7 +406,14 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       (13; 5 failed first). **Note:** a CSV can only escape "+00123" with the visible `'` mark (same as every other
       escaped cell); "00123" goes out exactly, but whether a spreadsheet then drops its zeros is the spreadsheet's choice.
 - [ ] **10D / OUT-24 — uploaded text cannot restyle a PDF.**
-- [ ] **10E / OUT-28 — non-ASCII download names.**
+- [x] **10E / OUT-28 — non-ASCII download names.** One builder, `shared/filenames.content_disposition`, used by
+      `attachment_response` (every ordinary download) and the share download: a plain `[A-Za-z0-9._-]` name is sent
+      exactly as before; any other gets an ASCII fallback (accents dropped, other characters `_`) plus
+      `filename*=UTF-8''…` (RFC 6266/5987). Stems from client names are capped at 120 UTF-8 bytes (download and share),
+      so a long name cannot make a huge header. Reproduced first over HTTP: Chinese and Cyrillic names 500'd
+      (`UnicodeEncodeError` in the header), "Café" went out as raw Latin-1 bytes, a 720-char name made a 773-char
+      header. Tests: `test_sprint885_download_filenames.py` (15: CSV, PDF and shared downloads; Chinese, Cyrillic,
+      accented, quoted, very long).
 - [ ] **10F / OUT-34 — document properties name Paciolus, not the libraries.**
 - [ ] **10G / OUT-25 — PDF fonts for accented Latin, Greek and Cyrillic.**
 - [ ] **10H / OUT-26 — analytical-expectations table fits the page.**

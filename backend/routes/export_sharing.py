@@ -36,7 +36,7 @@ from models import User
 from security_middleware import get_client_ip, hash_ip_address
 from shared import export_share_storage
 from shared.entitlement_checks import check_export_sharing_access, get_effective_entitlements
-from shared.filenames import SafeCsvWriter
+from shared.filenames import SafeCsvWriter, content_disposition, truncate_utf8
 from shared.organization_schemas import DetailResponse, ExportShareCreateResponse, ExportShareResponse
 from shared.passcode_security import (
     PASSCODE_MAX_LENGTH,
@@ -239,13 +239,13 @@ def _resolve_export_bytes(share: ExportShare) -> bytes:
 def _build_download_response(share: ExportShare) -> Response:
     """Serialize a share's bytes into a safe downloadable Response."""
     content_type = _CONTENT_TYPES.get(share.export_format, "application/octet-stream")
-    safe_name = re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80]
+    safe_name = truncate_utf8(re.sub(r"[^\w\-]", "_", share.tool_name or "export")[:80], 120)
     filename = f"paciolus-{safe_name}.{share.export_format}"
     return Response(
         content=_resolve_export_bytes(share),
         media_type=content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": content_disposition(filename),
             "Cache-Control": "no-store",
             # X-Content-Type-Options and Referrer-Policy set by SecurityHeadersMiddleware
         },

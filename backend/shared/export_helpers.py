@@ -21,7 +21,7 @@ from typing import Any
 
 from fastapi.responses import Response, StreamingResponse
 
-from shared.filenames import number_cell
+from shared.filenames import content_disposition, number_cell
 
 MEDIA_PDF = "application/pdf"
 MEDIA_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -49,7 +49,7 @@ def attachment_response(
             so their headers stay byte-identical.
     """
     body = content.encode("utf-8") if isinstance(content, str) else content
-    disposition = f'attachment; filename="{filename}"' if quote_filename else f"attachment; filename={filename}"
+    disposition = content_disposition(filename, quote_filename=quote_filename)
     return StreamingResponse(
         iter([body]),
         media_type=media_type,

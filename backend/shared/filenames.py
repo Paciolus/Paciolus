@@ -8,6 +8,8 @@ logging so callers do not depend on the large upload-pipeline module.
 import csv
 import hashlib
 import re
+import unicodedata
+import urllib.parse
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
@@ -139,10 +141,59 @@ def get_filename_display(filename: str, max_length: int = 12) -> str:
     return filename[: max_length - 3] + "..."
 
 
+# Longest stem (in UTF-8 bytes) taken from a client-supplied name. Percent-encoded
+# in ``filename*`` a byte becomes three characters, so the header stays short.
+_MAX_STEM_BYTES = 120
+
+
+def truncate_utf8(text: str, max_bytes: int) -> str:
+    return text.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
+
+
 def safe_download_filename(raw_name: str, suffix: str, ext: str) -> str:
-    """Generate sanitized timestamped download filename."""
-    safe = "".join(c for c in raw_name if c.isalnum() or c in "._-")
+    """Generate sanitized timestamped download filename.
+
+    Letters of any script are kept (the browser receives them through
+    ``content_disposition``'s ``filename*``); everything else but ``._-`` is dropped.
+    """
+    safe = truncate_utf8("".join(c for c in raw_name if c.isalnum() or c in "._-"), _MAX_STEM_BYTES)
     if not safe:
         safe = "Export"
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     return f"{safe}_{suffix}_{timestamp}.{ext}"
+
+
+_ASCII_SAFE = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def _ascii_fallback(filename: str) -> str:
+    """An ASCII stand-in for ``filename``: accents dropped, other characters as ``_``."""
+    stem, dot, ext = filename.rpartition(".")
+    if not dot:
+        stem, ext = filename, ""
+    decomposed = unicodedata.normalize("NFKD", stem)
+    stem = "".join(c for c in decomposed if not unicodedata.combining(c))
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem)
+    stem = re.sub(r"_+", "_", stem).strip("_.") or "export"
+    ext = re.sub(r"[^A-Za-z0-9]", "", ext)
+    return f"{stem}.{ext}" if ext else stem
+
+
+def content_disposition(filename: str, *, quote_filename: bool = True) -> str:
+    """The ``Content-Disposition`` value for a download — the one place it is built.
+
+    Sprint 885 (review OUT-28): HTTP header values are Latin-1, so a name with
+    Chinese or Cyrillic letters raised ``UnicodeEncodeError`` (a 500) and an
+    accented one went out as bytes a browser may misread. A name of plain
+    ``[A-Za-z0-9._-]`` is sent exactly as before; any other name is sent as an
+    ASCII fallback plus the standard UTF-8 form (RFC 6266 / RFC 5987)::
+
+        attachment; filename="Cafe_Societe.pdf"; filename*=UTF-8''Caf%C3%A9_Soci%C3%A9t%C3%A9.pdf
+
+    ``quote_filename=False`` keeps the bare ``filename=name`` form the
+    form-input tool exports have always sent, for plain names.
+    """
+    if _ASCII_SAFE.fullmatch(filename):
+        return f'attachment; filename="{filename}"' if quote_filename else f"attachment; filename={filename}"
+    encoded = urllib.parse.quote(filename, safe="")
+    return f"attachment; filename=\"{_ascii_fallback(filename)}\"; filename*=UTF-8''{encoded}"
