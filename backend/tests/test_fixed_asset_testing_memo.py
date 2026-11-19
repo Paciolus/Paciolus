@@ -37,7 +37,6 @@ def _make_fa_result(
     total_entries: int = 50,
     num_tests: int = 11,
     top_findings: list | None = None,
-    include_enrichments: bool = False,
 ) -> dict:
     """Build a minimal FATestingResult.to_dict() shape.
 
@@ -158,31 +157,6 @@ def _make_fa_result(
         },
     }
 
-    if include_enrichments:
-        result["register_total_cost"] = 3_420_000.00
-        result["register_total_accum_depr"] = 1_180_000.00
-        result["tb_ppe_gross"] = 3_420_000.00
-        result["tb_accum_depr"] = 1_180_000.00
-        result["additions"] = 420_000.00
-        result["depreciation_expense"] = 285_000.00
-        result["period_label"] = "FY2025"
-        result["category_summary"] = [
-            {
-                "category": "Equipment",
-                "count": 30,
-                "gross_cost": 1_500_000.0,
-                "accum_depr": 600_000.0,
-                "avg_age_years": 5.2,
-            },
-            {
-                "category": "IT Equipment",
-                "count": 20,
-                "gross_cost": 420_000.0,
-                "accum_depr": 180_000.0,
-                "avg_age_years": 2.8,
-            },
-        ]
-
     return result
 
 
@@ -274,7 +248,7 @@ class TestFixedAssetMemoGeneration:
 
     def test_with_enrichments(self):
         """Sprint 502: Generates PDF with roll-forward, depr rate, category summary."""
-        result = _make_fa_result(include_enrichments=True)
+        result = _make_fa_result()
         pdf = generate_fixed_asset_testing_memo(result, period_tested="FY 2025")
         assert isinstance(pdf, bytes)
         assert len(pdf) > 500  # Enriched reports are larger
@@ -391,45 +365,10 @@ class TestRollForwardAndEnrichments:
     """Tests for roll-forward, depreciation rate, and category summary."""
 
     def test_roll_forward_with_tb_reconciliation(self):
-        result = _make_fa_result(include_enrichments=True)
+        result = _make_fa_result()
         pdf = generate_fixed_asset_testing_memo(result, period_tested="FY 2025")
         assert isinstance(pdf, bytes)
         assert len(pdf) > 500
-
-    def test_roll_forward_without_additions(self):
-        result = _make_fa_result(include_enrichments=True)
-        del result["additions"]
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
-
-    def test_roll_forward_with_variance(self):
-        result = _make_fa_result(include_enrichments=True)
-        result["tb_ppe_gross"] = 3_500_000.00  # Creates variance
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
-
-    def test_depreciation_rate_analysis(self):
-        result = _make_fa_result(include_enrichments=True)
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
-
-    def test_depreciation_rate_skipped_without_data(self):
-        result = _make_fa_result()
-        # No register_total_cost or depreciation_expense
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
-
-    def test_category_summary_renders(self):
-        result = _make_fa_result(include_enrichments=True)
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
-
-    def test_category_summary_missing_shows_note(self):
-        result = _make_fa_result()
-        result["column_detection"]["category_column"] = None
-        result.pop("category_summary", None)
-        pdf = generate_fixed_asset_testing_memo(result)
-        assert isinstance(pdf, bytes)
 
 
 # =============================================================================

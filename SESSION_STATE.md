@@ -28,15 +28,15 @@ vs the draft DPA's 30-day promise; confirm the four `R2_EXPORTS_*` env vars on R
 Vercel (status `success` on the commit). Render workspace `tea-d6ie7bngi27c738fa2ag`, service
 `srv-d6ie9l56ubrc73c7eq2g` — pass `workspaceId` to the Render MCP.
 
-## This Session — 2026-11-14/15, website claims review → Sprints 861–866
+## This Session — 2026-11-19, Sprint 886 (exports match the screen)
 
-- `reports/website-review-2026-11-14.md`: review of the marketing site and app wording; CEO approved every recommendation.
-- Merged: #313 (auth spinner fix) and #314 (Sprints 861–866: claims removed, compliance documents published at
-  `/security`, `/subprocessors`, `/data-handling`, backups disclosed, decorative layer removed, per-tool table on `/sources`).
-- Sprint 865 (screenshots, sample memo, false "Zero-Storage" paragraph removed from every memo PDF) and the
-  `tasks/` cleanup are on the open PR after #314.
-- `tasks/todo.md` and `tasks/lessons.md` cut to the open work and the standing rules; everything moved is in
-  `tasks/archive/` verbatim.
+- Local branch `sprint-886-export-fidelity`, stacked on Sprint 885 (`7251e22c`) → 884 → 883; **not pushed**. Merge
+  883, 884, 885 first. Ten commits, one per review item (OUT-09/10/11/12/14/15/16/18 + comparison table); detail in
+  `tasks/todo.md` Sprint 886.
+- CEO decisions taken this session: three-way match shows the engine's LOW/MEDIUM/HIGH, no score; bank rec tests,
+  score and aging shown on screen; unlinked memos say FASB is the default; scores one decimal everywhere.
+- Not done here (needs a deliberate run): regenerate `sample-reports/` and the public
+  `frontend/public/samples/paciolus-sample-je-testing-memo.pdf` — memo wording changed.
 
 ## Verification
 

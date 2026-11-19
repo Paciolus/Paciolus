@@ -57,7 +57,7 @@ class TestingMemoConfig:
     title: str  # "AP Payment Testing Memo"
     ref_prefix: str  # "APT" (replaces PAC- prefix)
     entry_label: str  # "Total Payments Tested"
-    flagged_label: str  # "Total Payments Flagged"
+    flagged_label: str  # "Payments Flagged (distinct payments)"
     log_prefix: str  # "ap_memo"
     domain: str  # "AP payment testing" (disclaimer)
     test_descriptions: dict[str, str]  # test_key -> description
@@ -65,6 +65,8 @@ class TestingMemoConfig:
     risk_assessments: dict[str, str]  # {low, elevated, moderate, high} -> conclusion text
     isa_reference: str = "applicable professional standards"
     tool_domain: str = ""  # key into authoritative_language YAML (e.g., "journal_entry_testing")
+    # Sprint 886: what one flagged row is ("payment"), for "Flags Raised (one per test per payment)".
+    flag_unit: str = "entry"
 
 
 # Type alias for optional callback hooks
@@ -252,6 +254,7 @@ def generate_testing_memo(
             composite,
             test_results,
             flagged_label=config.flagged_label,
+            flag_unit=config.flag_unit,
         )
 
         # 4a. POST-RESULTS content (e.g., Benford interpretation note)

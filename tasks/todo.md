@@ -91,7 +91,7 @@
 >       listed under the sprint.
 > - [ ] **Sprint 885** — exported CSV/Excel/PDF files: formula injection, PDF restyling, non-ASCII download names,
 >       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
-> - [ ] **Sprint 886** — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
+> - [ ] **Sprint 886** (in review) — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
 >       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
@@ -493,8 +493,8 @@ with "…" (two lines at 5pt fit) — allow a third line by moving the disclaime
 (3) CJK fonts (deferred, `## Deferred Items`).
 
 ### Sprint 886: Each exported document shows what the screen showed for the same run
-**Status:** IN PROGRESS (2026-11-19) — local branch `sprint-886-export-fidelity`, stacked on Sprint 885 (`7251e22c`);
-not pushed. **Priority:** P0 (High findings: a PDF can say "none identified" for an indicator the screen shows as
+**Status:** IN REVIEW (2026-11-19) — code complete on local branch `sprint-886-export-fidelity`, stacked on Sprint 885
+(`7251e22c`); not pushed. Merge 883, 884, 885 first. **Priority:** P0 (High findings: a PDF can say "none identified" for an indicator the screen shows as
 triggered). **Source:** read-only review at `ef5e567` (OUT-09/10/11/12/14/15/16/18 + comparison table).
 **Agents:** Executor, Critic, Accounting Expert.
 **Rule (CEO, 2026-11-19):** a value not supplied prints "not available" / "not evaluated" — never 0, Low or "none
@@ -594,8 +594,45 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       through `/export/ap-testing-memo` and `/export/bank-rec-memo` get different scope text and references; client_id
       alone resolves; another user's engagement is a 404; all 18 memo generators take the framework and all memo inputs
       can name an engagement or client. Jest `linkedEngagement.test.ts` (3).
-- [ ] **11I** — severity labels, flag/row units, fixed-asset sections, multi-period detail, one score format.
-**Commits:** TBD.
+- [x] **11I — labels say what each figure counts.** (1) TB PDF: "Above/Below Materiality" were the high/low
+      **severity** counts and medium was missing — now "High / Medium / Low Severity" (all three); counts the analysis
+      did not carry print "Severity counts: Not available" (was a guess from material/immaterial). The screen's risk
+      dashboard added low into "Medium" — now three badges. (2) Testing tools: `total_flagged` counts distinct rows,
+      severity counts and the CSV count flags — memo "Payments Flagged (distinct payments)" + "Flags Raised (one per
+      test per payment)" + a one-line explanation; CSV summary "… Flagged (distinct …)", "Flags Raised (one row above
+      per flag)", "Flag Rate (distinct flagged / total)"; screen "… flagged (distinct)" and "Flags H / M / L (one per
+      flag)". (3) Fixed assets: the roll-forward, depreciation-rate and category sections read ten fields the engine
+      never computes (and the export dropped), so they printed only in the sample memo, with an "FY2025" fallback —
+      **removed** (the tool has no data for them; category composition could be computed from the register later),
+      with the sample data and the six tests that fed them made-up fields. (4) Multi-period: the page now sends the
+      dormant account names (a count without names prints "Not available"); the memo states that each lead sheet's
+      account detail is on screen and in the movements CSV, not in the memo. (5) **One score format (CEO): one
+      decimal everywhere** — screen score card (`CountUp decimals`), every "TIER (n.n/100)" label (memo base, TB PDF,
+      anomaly summary, engagement dashboard, multi-period), CSV already .1f. Tests: `test_sprint886_labels_and_units.py`
+      (6; 5 failed first), `test_sprint886_fixed_asset_sections.py` (2), `test_sprint886_multi_period_detail.py` (3; 2
+      failed first — the third failed on the page, see Jest); Jest `RiskDashboardSeverity.test.tsx`,
+      `TestingScoreCard.test.tsx` (10.5 stays 10.5), `useMultiPeriodMemoExport.test.ts` (dormant names; failed on the
+      old hook). The bank-rec sample data now uses the engine's real aging and threshold shapes.
+      Also in this commit: snapshot re-records for all of 11B–11I (`memo_render_snapshot.json`; Sprint 819
+      `route_export_pipeline`, `route_testing_exports`, and engine `payroll`/`payroll_ghost` for 11E's 0–100 scale —
+      every diff read: framework line, units, decimals, removed/added sections, page breaks); OpenAPI snapshot
+      regenerated (additive only); `RecFlaggedItemInput` named (a private base showed in the API schema); three mypy
+      fixes to 11B/11H code.
+**Commits:** `b8c86f34` (11A), `fc49317b` (11B), `d506d883` (11C), `c94424ce` (11D), `865e99dc` (11E), `86861042`
+(11F), `2a564021` (11G), `0f951860` (11H), 11I + record: see the commit after `0f951860`. Commits 11B–11H were split
+from one working tree by hunk; each passed the pre-commit Jest gate, and the backend was verified on the final tree.
+**Verified (final tree):** backend full suite 11,239 passed, 3 failed — two were old-contract tests of 11C found only
+by the full run (`test_export_pdf_contract` required a TWM "Composite" label; `test_export_testing_routes` sent
+"Low Risk" as the engine value) and are rewritten in the 11I commit (50/50 pass), plus the pre-existing Sprint 819
+`test_engagement_export_routes_unchanged` (fails on `main`). ruff clean on every changed file; mypy 288 = the Sprint 885
+baseline (ten new errors found and fixed). Frontend: Jest 219 suites / 2,138 passed; `tsc` and eslint clean; `next
+build` compiled every route (`ƒ`) — first run exited 1 on Next.js's `SecurityFatalError` advisory gate, retry passed.
+OpenAPI snapshot: additive only.
+**Open for the CEO:** (1) regenerate `sample-reports/` and the public sample memo
+`frontend/public/samples/paciolus-sample-je-testing-memo.pdf` — the memo wording changed (framework line, unit
+labels, one-decimal tiers); (2) fixed-asset category composition could be computed from the register's category
+column if wanted (removed sections had no data source); (3) the payroll sample still feeds `gl_salaries_wages`, which
+the engine never computes — same class as the removed fixed-asset sections, not in this review.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

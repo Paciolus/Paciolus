@@ -292,7 +292,7 @@ THREE_WAY_MATCH_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Match",
     "Invoice",
     "Results",
-    "Composite",
+    "Risk Assessment",  # Sprint 886 (OUT-11): the engine's classification; TWM has no composite score
 )
 
 

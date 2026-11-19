@@ -86,5 +86,11 @@ def write_testing_csv_summary(writer: Any, composite_score: dict[str, Any], entr
     writer.writerow(["Composite Score", number_cell(composite_score.get("score", 0), ".1f")])
     writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
     writer.writerow([f"Total {entry_label}", composite_score.get("total_entries", 0)])
-    writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
-    writer.writerow(["Flag Rate", number_cell(composite_score.get("flag_rate", 0), ".1%")])
+    # Sprint 886: each count names its unit — distinct items vs one row above per flag.
+    writer.writerow(
+        [f"{entry_label} Flagged (distinct {entry_label.lower()})", composite_score.get("total_flagged", 0)]
+    )
+    writer.writerow(
+        ["Flags Raised (one row above per flag)", sum((composite_score.get("flags_by_severity") or {}).values())]
+    )
+    writer.writerow(["Flag Rate (distinct flagged / total)", number_cell(composite_score.get("flag_rate", 0), ".1%")])

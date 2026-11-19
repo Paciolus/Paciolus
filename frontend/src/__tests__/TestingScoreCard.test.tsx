@@ -19,7 +19,7 @@ jest.mock('framer-motion', () => ({
 }))
 
 jest.mock('@/utils/marketingMotion', () => ({
-  CountUp: ({ target }: any) => <span>{target}</span>,
+  CountUp: ({ target, decimals }: any) => <span>{decimals === undefined ? target : target.toFixed(decimals)}</span>,
 }))
 
 jest.mock('@/utils/motionTokens', () => ({
@@ -57,7 +57,7 @@ const defaultProps = {
 describe('TestingScoreCard', () => {
   it('renders score', () => {
     render(<TestingScoreCard {...defaultProps} />)
-    expect(screen.getByText('85')).toBeInTheDocument()
+    expect(screen.getByText('85.0')).toBeInTheDocument() // Sprint 886: one decimal, as in the memo and CSV
     expect(screen.getByText('/ 100')).toBeInTheDocument()
   })
 
@@ -84,7 +84,7 @@ describe('TestingScoreCard', () => {
   it('renders flagged count', () => {
     render(<TestingScoreCard {...defaultProps} />)
     expect(screen.getByText('25')).toBeInTheDocument()
-    expect(screen.getByText('Flagged')).toBeInTheDocument()
+    expect(screen.getByText('journal entries flagged (distinct)')).toBeInTheDocument() // Sprint 886: unit named
   })
 
   it('renders flag rate', () => {
@@ -95,7 +95,7 @@ describe('TestingScoreCard', () => {
 
   it('renders severity counts', () => {
     render(<TestingScoreCard {...defaultProps} />)
-    expect(screen.getByText('H / M / L')).toBeInTheDocument()
+    expect(screen.getByText('Flags H / M / L (one per flag)')).toBeInTheDocument()
   })
 
   it('renders top findings', () => {
@@ -108,5 +108,12 @@ describe('TestingScoreCard', () => {
   it('does not render findings section when empty', () => {
     render(<TestingScoreCard {...defaultProps} top_findings={[]} />)
     expect(screen.queryByText('Top flagged items')).not.toBeInTheDocument()
+  })
+})
+
+describe('TestingScoreCard score format (Sprint 886)', () => {
+  it('shows one decimal — 10.5 is not rounded to 10 next to a Moderate tier', () => {
+    render(<TestingScoreCard {...defaultProps} score={10.5} risk_tier="moderate" />)
+    expect(screen.getByText('10.5')).toBeInTheDocument()
   })
 })

@@ -497,7 +497,7 @@ def _build_key_findings(
     doc_width: float,
     rec_result: dict,
     summary: dict,
-    composite: dict,
+    composite: Optional[dict],
 ) -> None:
     """Build Section VI: Key Findings."""
     story.append(Paragraph("VI. Key Items Flagged", styles["MemoSection"]))

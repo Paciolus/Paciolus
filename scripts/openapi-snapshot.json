@@ -414,6 +414,18 @@
       "APTestingExportInput": {
         "description": "Input model for AP testing exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -446,6 +458,28 @@
             "additionalProperties": true,
             "title": "Data Quality",
             "type": "object"
+          },
+          "duplicate_payment_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DuplicatePaymentSummaryInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "ap_testing",
@@ -620,6 +654,16 @@
               }
             ]
           },
+          "duplicate_payment_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DuplicatePaymentSummaryResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "settings_applied": {
             "additionalProperties": {
               "anyOf": [
@@ -667,9 +711,88 @@
         "title": "APTestingResponse",
         "type": "object"
       },
+      "ARAgingBucketInput": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "bucket": {
+            "title": "Bucket",
+            "type": "string"
+          },
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "percentage": {
+            "title": "Percentage",
+            "type": "number"
+          }
+        },
+        "required": [
+          "bucket",
+          "count",
+          "amount",
+          "percentage"
+        ],
+        "title": "ARAgingBucketInput",
+        "type": "object"
+      },
+      "ARAgingBucketResponse": {
+        "description": "One bucket of the AR ``aging_schedule`` (sub-ledger runs only).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "bucket": {
+            "title": "Bucket",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "percentage": {
+            "title": "Percentage",
+            "type": "number"
+          }
+        },
+        "required": [
+          "bucket",
+          "count",
+          "amount",
+          "percentage"
+        ],
+        "title": "ARAgingBucketResponse",
+        "type": "object"
+      },
       "ARAgingExportInput": {
         "description": "Input model for AR aging exports.",
         "properties": {
+          "aging_schedule": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ARAgingBucketInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aging Schedule"
+          },
           "ar_summary": {
             "anyOf": [
               {
@@ -681,6 +804,18 @@
               }
             ],
             "title": "Ar Summary"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
           },
           "client_name": {
             "anyOf": [
@@ -702,6 +837,18 @@
             "additionalProperties": true,
             "title": "Data Quality",
             "type": "object"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "ar_aging",
@@ -831,6 +978,20 @@
       "ARAgingResponse": {
         "description": "Complete AR aging analysis response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
+          "aging_schedule": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ARAgingBucketResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aging Schedule"
+          },
           "ar_summary": {
             "anyOf": [
               {
@@ -962,6 +1123,8 @@
         "description": "AR data quality — differs from shared (tb/subledger counts).",
         "properties": {
           "completeness_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
             "title": "Completeness Score",
             "type": "number"
           },
@@ -2252,6 +2415,18 @@
             "title": "Below Threshold",
             "type": "boolean"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -2280,6 +2455,18 @@
               }
             ],
             "title": "Deferred Revenue Analysis"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "expected_accrual_checklist": {
             "default": [],
@@ -4139,6 +4326,48 @@
         "title": "AnalyticalExpectationUpdate",
         "type": "object"
       },
+      "AnalyticsInput": {
+        "additionalProperties": true,
+        "description": "The analysis ``analytics`` block the Excel ratios tab is built from (Sprint 886, OUT-09).",
+        "properties": {
+          "category_totals": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Category Totals",
+            "type": "object"
+          },
+          "equity_basis_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equity Basis Note"
+          },
+          "ratios": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RatioInput"
+            },
+            "default": {},
+            "title": "Ratios",
+            "type": "object"
+          }
+        },
+        "title": "AnalyticsInput",
+        "type": "object"
+      },
       "ApplyAdjustmentsRequest": {
         "properties": {
           "adjustment_ids": {
@@ -4316,6 +4545,16 @@
             ],
             "title": "All Accounts"
           },
+          "analytics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalyticsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "balanced": {
             "title": "Balanced",
             "type": "boolean"
@@ -4352,6 +4591,16 @@
             "default": "audit",
             "title": "Filename",
             "type": "string"
+          },
+          "going_concern": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoingConcernInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "has_risk_alerts": {
             "title": "Has Risk Alerts",
@@ -4392,6 +4641,27 @@
           "material_count": {
             "title": "Material Count",
             "type": "integer"
+          },
+          "materiality_basis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaterialityBasisInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "materiality_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality Source"
           },
           "materiality_threshold": {
             "title": "Materiality Threshold",
@@ -4770,18 +5040,168 @@
         "title": "BankColumnDetectionResponse",
         "type": "object"
       },
-      "BankRecExportInput": {
-        "description": "Input model for bank reconciliation CSV export.",
+      "BankRecCompositeInput": {
+        "additionalProperties": true,
+        "description": "The bank rec composite diagnostic score (``compute_bank_rec_diagnostic_score``).",
         "properties": {
+          "flag_rate": {
+            "default": 0.0,
+            "title": "Flag Rate",
+            "type": "number"
+          },
+          "flags_by_severity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Flags By Severity",
+            "type": "object"
+          },
+          "risk_tier": {
+            "enum": [
+              "low",
+              "moderate",
+              "elevated",
+              "high"
+            ],
+            "title": "Risk Tier",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
+          "tests_run": {
+            "minimum": 0.0,
+            "title": "Tests Run",
+            "type": "integer"
+          },
+          "top_findings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Top Findings",
+            "type": "array"
+          },
+          "total_entries": {
+            "default": 0,
+            "title": "Total Entries",
+            "type": "integer"
+          },
+          "total_flagged": {
+            "minimum": 0.0,
+            "title": "Total Flagged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "score",
+          "risk_tier",
+          "total_flagged",
+          "tests_run"
+        ],
+        "title": "BankRecCompositeInput",
+        "type": "object"
+      },
+      "BankRecExportInput": {
+        "description": "Input model for bank reconciliation CSV export.\n\nSprint 886 (OUT-10): the same result model as the memo, plus the match list.",
+        "properties": {
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankRecThresholdsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bank_column_detection": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Column Detection"
+          },
+          "composite_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankRecCompositeInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "filename": {
             "default": "bank_reconciliation",
             "title": "Filename",
             "type": "string"
           },
+          "ledger_column_detection": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Column Detection"
+          },
           "matches": {
             "items": {},
             "title": "Matches",
             "type": "array"
+          },
+          "outstanding_aging": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OutstandingAgingInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outstanding Aging"
+          },
+          "rec_tests": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RecTestInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rec Tests"
+          },
+          "split_search": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Search"
           },
           "summary": {
             "additionalProperties": true,
@@ -4799,6 +5219,16 @@
       "BankRecMemoInput": {
         "description": "Input model for bank reconciliation memo export.",
         "properties": {
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankRecThresholdsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "bank_column_detection": {
             "anyOf": [
               {
@@ -4811,6 +5241,18 @@
             ],
             "title": "Bank Column Detection"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -4821,6 +5263,28 @@
               }
             ],
             "title": "Client Name"
+          },
+          "composite_score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankRecCompositeInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "bank_reconciliation",
@@ -4855,6 +5319,20 @@
             ],
             "title": "Ledger Column Detection"
           },
+          "outstanding_aging": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OutstandingAgingInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outstanding Aging"
+          },
           "period_tested": {
             "anyOf": [
               {
@@ -4876,6 +5354,20 @@
               }
             ],
             "title": "Prepared By"
+          },
+          "rec_tests": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RecTestInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rec Tests"
           },
           "reviewed_by": {
             "anyOf": [
@@ -5042,6 +5534,123 @@
           "ledger_column_detection"
         ],
         "title": "BankRecResponse",
+        "type": "object"
+      },
+      "BankRecThresholdSourcesInput": {
+        "additionalProperties": true,
+        "description": "Per threshold: supplied for this run (\"caller\") or the Paciolus default.",
+        "properties": {
+          "materiality": {
+            "enum": [
+              "caller",
+              "default"
+            ],
+            "title": "Materiality",
+            "type": "string"
+          },
+          "performance_materiality": {
+            "enum": [
+              "caller",
+              "default"
+            ],
+            "title": "Performance Materiality",
+            "type": "string"
+          }
+        },
+        "required": [
+          "materiality",
+          "performance_materiality"
+        ],
+        "title": "BankRecThresholdSourcesInput",
+        "type": "object"
+      },
+      "BankRecThresholdsInput": {
+        "additionalProperties": true,
+        "description": "The thresholds the bank rec engine applied (``BankRecResult.active_thresholds``).",
+        "properties": {
+          "amount_tolerance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Tolerance"
+          },
+          "date_tolerance_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Tolerance Days"
+          },
+          "materiality": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Materiality"
+          },
+          "materiality_source": {
+            "enum": [
+              "caller",
+              "default"
+            ],
+            "title": "Materiality Source",
+            "type": "string"
+          },
+          "performance_materiality": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Performance Materiality"
+          },
+          "split_match_max_candidates": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Match Max Candidates"
+          },
+          "threshold_sources": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankRecThresholdSourcesInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "materiality",
+          "performance_materiality",
+          "materiality_source"
+        ],
+        "title": "BankRecThresholdsInput",
         "type": "object"
       },
       "BenchmarkComparisonRequest": {
@@ -6273,6 +6882,22 @@
             "default": false,
             "title": "Force Resubmit",
             "type": "boolean"
+          },
+          "materiality_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "engagement",
+                  "entered"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality Origin"
           },
           "materiality_threshold": {
             "default": 0.0,
@@ -9005,6 +9630,18 @@
             "title": "Balance Imbalance",
             "type": "number"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -9042,6 +9679,18 @@
             "items": {},
             "title": "Currency Exposure",
             "type": "array"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "currency_conversion",
@@ -9530,6 +10179,8 @@
         "description": "Data quality assessment — shared by JE and AP.",
         "properties": {
           "completeness_score": {
+            "maximum": 100.0,
+            "minimum": 0.0,
             "title": "Completeness Score",
             "type": "number"
           },
@@ -10382,6 +11033,204 @@
           "mrr"
         ],
         "title": "DunningRecovery",
+        "type": "object"
+      },
+      "DuplicatePaymentMonthInput": {
+        "properties": {
+          "duplicate_payments": {
+            "minimum": 0.0,
+            "title": "Duplicate Payments",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "duplicate_payments"
+        ],
+        "title": "DuplicatePaymentMonthInput",
+        "type": "object"
+      },
+      "DuplicatePaymentMonthResponse": {
+        "properties": {
+          "duplicate_payments": {
+            "title": "Duplicate Payments",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "duplicate_payments"
+        ],
+        "title": "DuplicatePaymentMonthResponse",
+        "type": "object"
+      },
+      "DuplicatePaymentSummaryInput": {
+        "description": "AP ``duplicate_payment_summary``.",
+        "properties": {
+          "distinct_flagged_payments": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Distinct Flagged Payments",
+            "type": "integer"
+          },
+          "exact_duplicate_count": {
+            "minimum": 0.0,
+            "title": "Exact Duplicate Count",
+            "type": "integer"
+          },
+          "fuzzy_duplicate_count": {
+            "minimum": 0.0,
+            "title": "Fuzzy Duplicate Count",
+            "type": "integer"
+          },
+          "monthly_trend": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DuplicatePaymentMonthInput"
+            },
+            "title": "Monthly Trend",
+            "type": "array"
+          },
+          "recovery_value_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Recovery Value Total"
+          },
+          "vendor_rates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DuplicatePaymentVendorRateInput"
+            },
+            "title": "Vendor Rates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "exact_duplicate_count",
+          "fuzzy_duplicate_count",
+          "recovery_value_total"
+        ],
+        "title": "DuplicatePaymentSummaryInput",
+        "type": "object"
+      },
+      "DuplicatePaymentSummaryResponse": {
+        "description": "AP ``duplicate_payment_summary`` — the memo's Duplicate Payment Recovery Summary.",
+        "properties": {
+          "distinct_flagged_payments": {
+            "default": 0,
+            "title": "Distinct Flagged Payments",
+            "type": "integer"
+          },
+          "exact_duplicate_count": {
+            "title": "Exact Duplicate Count",
+            "type": "integer"
+          },
+          "fuzzy_duplicate_count": {
+            "title": "Fuzzy Duplicate Count",
+            "type": "integer"
+          },
+          "monthly_trend": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DuplicatePaymentMonthResponse"
+            },
+            "title": "Monthly Trend",
+            "type": "array"
+          },
+          "recovery_value_total": {
+            "title": "Recovery Value Total",
+            "type": "number"
+          },
+          "vendor_rates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DuplicatePaymentVendorRateResponse"
+            },
+            "title": "Vendor Rates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "exact_duplicate_count",
+          "fuzzy_duplicate_count",
+          "recovery_value_total"
+        ],
+        "title": "DuplicatePaymentSummaryResponse",
+        "type": "object"
+      },
+      "DuplicatePaymentVendorRateInput": {
+        "properties": {
+          "duplicate_payments": {
+            "minimum": 0.0,
+            "title": "Duplicate Payments",
+            "type": "integer"
+          },
+          "duplicate_rate": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Duplicate Rate",
+            "type": "number"
+          },
+          "total_payments": {
+            "minimum": 0.0,
+            "title": "Total Payments",
+            "type": "integer"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor",
+          "duplicate_payments",
+          "total_payments",
+          "duplicate_rate"
+        ],
+        "title": "DuplicatePaymentVendorRateInput",
+        "type": "object"
+      },
+      "DuplicatePaymentVendorRateResponse": {
+        "description": "One vendor's duplicate-payment rate (Sprint 643; declared Sprint 886, OUT-12).",
+        "properties": {
+          "duplicate_payments": {
+            "title": "Duplicate Payments",
+            "type": "integer"
+          },
+          "duplicate_rate": {
+            "title": "Duplicate Rate",
+            "type": "number"
+          },
+          "total_payments": {
+            "title": "Total Payments",
+            "type": "integer"
+          },
+          "vendor": {
+            "title": "Vendor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor",
+          "duplicate_payments",
+          "total_payments",
+          "duplicate_rate"
+        ],
+        "title": "DuplicatePaymentVendorRateResponse",
         "type": "object"
       },
       "EmailVerifyResponse": {
@@ -11237,6 +12086,18 @@
             "title": "Category Count",
             "type": "integer"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -11247,6 +12108,18 @@
               }
             ],
             "title": "Client Name"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "expense_category",
@@ -12280,6 +13153,18 @@
       "FixedAssetExportInput": {
         "description": "Input model for fixed asset testing exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -12319,6 +13204,18 @@
               }
             ],
             "title": "Data Quality"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "fixed_asset_testing",
@@ -12604,6 +13501,18 @@
       "FluxExpectationsMemoInput": {
         "description": "Input for ISA 520 flux expectations memo PDF export.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -12614,6 +13523,18 @@
               }
             ],
             "title": "Client Name"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "expectations": {
             "additionalProperties": {
@@ -13591,6 +14512,96 @@
         "title": "GLColumnDetectionResponse",
         "type": "object"
       },
+      "GoingConcernIndicatorInput": {
+        "additionalProperties": true,
+        "description": "One indicator of the analysis ``going_concern`` profile (Sprint 886, OUT-09).",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "indicator_name": {
+            "title": "Indicator Name",
+            "type": "string"
+          },
+          "metric_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Value"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "triggered": {
+            "title": "Triggered",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "indicator_name",
+          "triggered"
+        ],
+        "title": "GoingConcernIndicatorInput",
+        "type": "object"
+      },
+      "GoingConcernInput": {
+        "additionalProperties": true,
+        "description": "The analysis ``going_concern`` profile, as the screen showed it (Sprint 886, OUT-09).\n\nAbsent from an export request means \"not evaluated\", never \"none triggered\":\nthe PDF says which. The counts must agree with the indicators, so a profile\nedited in transit cannot print a total the list contradicts.",
+        "properties": {
+          "disclaimer": {
+            "default": "",
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/GoingConcernIndicatorInput"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "indicators_checked": {
+            "title": "Indicators Checked",
+            "type": "integer"
+          },
+          "indicators_triggered": {
+            "title": "Indicators Triggered",
+            "type": "integer"
+          },
+          "narrative": {
+            "default": "",
+            "title": "Narrative",
+            "type": "string"
+          },
+          "prior_period_available": {
+            "default": false,
+            "title": "Prior Period Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "indicators",
+          "indicators_triggered",
+          "indicators_checked"
+        ],
+        "title": "GoingConcernInput",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -13602,6 +14613,107 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HeadcountRollforwardInput": {
+        "properties": {
+          "beginning_headcount": {
+            "minimum": 0.0,
+            "title": "Beginning Headcount",
+            "type": "integer"
+          },
+          "computed_ending": {
+            "title": "Computed Ending",
+            "type": "integer"
+          },
+          "final_period_headcount": {
+            "minimum": 0.0,
+            "title": "Final Period Headcount",
+            "type": "integer"
+          },
+          "new_hires": {
+            "minimum": 0.0,
+            "title": "New Hires",
+            "type": "integer"
+          },
+          "period_end": {
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "title": "Period Start",
+            "type": "string"
+          },
+          "terminations": {
+            "minimum": 0.0,
+            "title": "Terminations",
+            "type": "integer"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "beginning_headcount",
+          "new_hires",
+          "terminations",
+          "computed_ending",
+          "final_period_headcount",
+          "variance"
+        ],
+        "title": "HeadcountRollforwardInput",
+        "type": "object"
+      },
+      "HeadcountRollforwardResponse": {
+        "description": "The payroll ``headcount_rollforward`` (needs hire and termination dates).",
+        "properties": {
+          "beginning_headcount": {
+            "title": "Beginning Headcount",
+            "type": "integer"
+          },
+          "computed_ending": {
+            "title": "Computed Ending",
+            "type": "integer"
+          },
+          "final_period_headcount": {
+            "title": "Final Period Headcount",
+            "type": "integer"
+          },
+          "new_hires": {
+            "title": "New Hires",
+            "type": "integer"
+          },
+          "period_end": {
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "title": "Period Start",
+            "type": "string"
+          },
+          "terminations": {
+            "title": "Terminations",
+            "type": "integer"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "beginning_headcount",
+          "new_hires",
+          "terminations",
+          "computed_ending",
+          "final_period_headcount",
+          "variance"
+        ],
+        "title": "HeadcountRollforwardResponse",
         "type": "object"
       },
       "HealthResponse": {
@@ -14397,6 +15509,18 @@
       "InventoryExportInput": {
         "description": "Input model for inventory testing exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -14436,6 +15560,18 @@
               }
             ],
             "title": "Data Quality"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "inventory_testing",
@@ -14947,6 +16083,18 @@
             ],
             "title": "Benford Result"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -14979,6 +16127,18 @@
             "additionalProperties": true,
             "title": "Data Quality",
             "type": "object"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "je_testing",
@@ -16036,6 +17196,78 @@
         "title": "MaterialityBasis",
         "type": "string"
       },
+      "MaterialityBasisInput": {
+        "description": "The threshold's amount, purpose and origin, as the analysis reported it (Sprint 886, OUT-16).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "origin": {
+            "enum": [
+              "software_default",
+              "firm_setting",
+              "engagement",
+              "entered",
+              "none"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "overall_materiality",
+              "performance_materiality",
+              "test_threshold"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "purpose",
+          "origin"
+        ],
+        "title": "MaterialityBasisInput",
+        "type": "object"
+      },
+      "MaterialityBasisResponse": {
+        "description": "The threshold the analysis used: its amount, purpose and origin (Sprint 886, OUT-16).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "number"
+          },
+          "origin": {
+            "enum": [
+              "software_default",
+              "firm_setting",
+              "engagement",
+              "entered",
+              "none"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "overall_materiality",
+              "performance_materiality",
+              "test_threshold"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "purpose",
+          "origin"
+        ],
+        "title": "MaterialityBasisResponse",
+        "type": "object"
+      },
       "MaterialityFormulaInput": {
         "properties": {
           "max_threshold": {
@@ -16634,6 +17866,18 @@
             ],
             "title": "Budget Label"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -16662,6 +17906,18 @@
             },
             "title": "Dormant Accounts",
             "type": "array"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "multi_period_comparison",
@@ -17170,6 +18426,82 @@
           "owner_user_id"
         ],
         "title": "OrganizationWithMemberCountResponse",
+        "type": "object"
+      },
+      "OutstandingAgingInput": {
+        "additionalProperties": true,
+        "description": "Aging of one category of unmatched items (``BankRecResult.outstanding_aging``).",
+        "properties": {
+          "category": {
+            "enum": [
+              "bank_only",
+              "ledger_only"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "oldest_item_amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Item Amount"
+          },
+          "oldest_item_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Item Date"
+          },
+          "oldest_item_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Item Days"
+          },
+          "over_10_days": {
+            "minimum": 0.0,
+            "title": "Over 10 Days",
+            "type": "integer"
+          },
+          "over_30_days": {
+            "minimum": 0.0,
+            "title": "Over 30 Days",
+            "type": "integer"
+          },
+          "total_count": {
+            "minimum": 0.0,
+            "title": "Total Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "category",
+          "total_count",
+          "over_10_days",
+          "over_30_days"
+        ],
+        "title": "OutstandingAgingInput",
         "type": "object"
       },
       "POColumnDetectionResponse": {
@@ -17925,6 +19257,71 @@
         "title": "PayrollCompositeScoreResponse",
         "type": "object"
       },
+      "PayrollDepartmentSummaryInput": {
+        "properties": {
+          "department": {
+            "title": "Department",
+            "type": "string"
+          },
+          "employee_count": {
+            "minimum": 0.0,
+            "title": "Employee Count",
+            "type": "integer"
+          },
+          "pct_of_total": {
+            "title": "Pct Of Total",
+            "type": "number"
+          },
+          "total_gross_pay": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Total Gross Pay"
+          }
+        },
+        "required": [
+          "department",
+          "employee_count",
+          "total_gross_pay",
+          "pct_of_total"
+        ],
+        "title": "PayrollDepartmentSummaryInput",
+        "type": "object"
+      },
+      "PayrollDepartmentSummaryResponse": {
+        "description": "One department of the payroll ``department_summary``.",
+        "properties": {
+          "department": {
+            "title": "Department",
+            "type": "string"
+          },
+          "employee_count": {
+            "title": "Employee Count",
+            "type": "integer"
+          },
+          "pct_of_total": {
+            "title": "Pct Of Total",
+            "type": "number"
+          },
+          "total_gross_pay": {
+            "title": "Total Gross Pay",
+            "type": "number"
+          }
+        },
+        "required": [
+          "department",
+          "employee_count",
+          "total_gross_pay",
+          "pct_of_total"
+        ],
+        "title": "PayrollDepartmentSummaryResponse",
+        "type": "object"
+      },
       "PayrollEntryResponse": {
         "description": "Individual parsed payroll entry.",
         "properties": {
@@ -18203,6 +19600,18 @@
       "PayrollTestingExportInput": {
         "description": "Input model for payroll testing exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -18236,6 +19645,32 @@
             "title": "Data Quality",
             "type": "object"
           },
+          "department_summary": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PayrollDepartmentSummaryInput"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Summary"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
+          },
           "filename": {
             "default": "payroll_testing",
             "title": "Filename",
@@ -18252,10 +19687,34 @@
             ],
             "title": "Fiscal Year End"
           },
+          "headcount_rollforward": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeadcountRollforwardInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "include_signoff": {
             "default": false,
             "title": "Include Signoff",
             "type": "boolean"
+          },
+          "payroll_register_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payroll Register Total"
           },
           "period_tested": {
             "anyOf": [
@@ -18409,9 +19868,44 @@
               }
             ]
           },
+          "department_summary": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PayrollDepartmentSummaryResponse"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department Summary"
+          },
           "filename": {
             "title": "Filename",
             "type": "string"
+          },
+          "headcount_rollforward": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeadcountRollforwardResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payroll_register_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payroll Register Total"
           },
           "settings_applied": {
             "additionalProperties": {
@@ -19163,6 +20657,18 @@
             "title": "Buckets",
             "type": "array"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -19185,6 +20691,18 @@
               }
             ],
             "title": "Data Quality"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "exception_flags": {
             "anyOf": [
@@ -19912,6 +21430,18 @@
       "PreFlightMemoInput": {
         "description": "Input model for pre-flight report memo export.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -19933,6 +21463,18 @@
             "items": {},
             "title": "Columns",
             "type": "array"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "preflight_report",
@@ -20404,6 +21946,62 @@
         "title": "RateTableUploadResponse",
         "type": "object"
       },
+      "RatioInput": {
+        "additionalProperties": true,
+        "description": "One ratio of the analysis ``analytics.ratios`` (Sprint 886, OUT-09).\n\n``unit`` says what ``value`` is (\"percent\": 40.0 means 40.0%). A ratio sent\nwithout one (an analysis made before units existed) is written as the\nscreen's ``display_value`` text rather than guessed from its size.",
+        "properties": {
+          "display_value": {
+            "default": "",
+            "title": "Display Value",
+            "type": "string"
+          },
+          "interpretation": {
+            "default": "",
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "is_calculable": {
+            "default": false,
+            "title": "Is Calculable",
+            "type": "boolean"
+          },
+          "threshold_status": {
+            "default": "neutral",
+            "title": "Threshold Status",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ratio",
+                  "percent",
+                  "times",
+                  "days"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "title": "RatioInput",
+        "type": "object"
+      },
       "RatioVarianceResponse": {
         "description": "Financial ratio variance between periods.",
         "properties": {
@@ -20643,6 +22241,47 @@
           "recorded_balance"
         ],
         "title": "ReasonablenessResultResponse",
+        "type": "object"
+      },
+      "RecFlaggedItemInput": {
+        "additionalProperties": true,
+        "description": "One item a reconciliation test flagged (kept as sent; the exports read the counts).",
+        "properties": {},
+        "title": "RecFlaggedItemInput",
+        "type": "object"
+      },
+      "RecTestInput": {
+        "additionalProperties": true,
+        "description": "One reconciliation test of the bank rec run (``BankRecResult.rec_tests``).",
+        "properties": {
+          "flagged_count": {
+            "minimum": 0.0,
+            "title": "Flagged Count",
+            "type": "integer"
+          },
+          "flagged_items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RecFlaggedItemInput"
+            },
+            "title": "Flagged Items",
+            "type": "array"
+          },
+          "severity": {
+            "default": "low",
+            "title": "Severity",
+            "type": "string"
+          },
+          "test_name": {
+            "title": "Test Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "test_name",
+          "flagged_count"
+        ],
+        "title": "RecTestInput",
         "type": "object"
       },
       "ReceiptColumnDetectionResponse": {
@@ -21974,6 +23613,18 @@
       "RevenueTestingExportInput": {
         "description": "Input model for revenue testing exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -22006,6 +23657,18 @@
             "additionalProperties": true,
             "title": "Data Quality",
             "type": "object"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "revenue_testing",
@@ -22411,6 +24074,18 @@
             "title": "Calculated Sample Size",
             "type": "integer"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -22431,6 +24106,18 @@
             "default": 0.95,
             "title": "Confidence Level",
             "type": "number"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "expected_misstatement": {
             "default": 0.0,
@@ -22759,6 +24446,18 @@
             "title": "Basic Precision",
             "type": "number"
           },
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -22796,6 +24495,18 @@
               }
             ],
             "title": "Design Result"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "errors": {
             "default": [],
@@ -24964,6 +26675,18 @@
       "ThreeWayMatchExportInput": {
         "description": "Input model for three-way match exports.",
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "client_name": {
             "anyOf": [
               {
@@ -24986,6 +26709,18 @@
             "default": {},
             "title": "Data Quality",
             "type": "object"
+          },
+          "engagement_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
           },
           "filename": {
             "default": "three_way_match",
@@ -26240,6 +27975,16 @@
           "material_count": {
             "title": "Material Count",
             "type": "integer"
+          },
+          "materiality_basis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaterialityBasisResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "materiality_source": {
             "anyOf": [

@@ -77,7 +77,9 @@ export function RiskDashboard({
   }
 
   // Compute badge counts
-  const mediumCount = (riskSummary?.medium_severity ?? 0) + (riskSummary?.low_severity ?? 0)
+  // Sprint 886: medium and low are separate severity counts (low was shown as "Medium").
+  const mediumCount = riskSummary?.medium_severity ?? 0
+  const lowCount = riskSummary?.low_severity ?? 0
   const notesCount = riskSummary?.informational_count ?? 0
 
   return (
@@ -127,6 +129,12 @@ export function RiskDashboard({
               <div className="text-content-secondary">
                 <span className="text-lg font-bold">{mediumCount}</span>
                 <span className="block text-content-tertiary font-sans">Medium</span>
+              </div>
+            )}
+            {lowCount > 0 && (
+              <div className="text-content-tertiary">
+                <span className="text-lg font-bold">{lowCount}</span>
+                <span className="block text-content-tertiary font-sans">Low</span>
               </div>
             )}
             {notesCount > 0 && (

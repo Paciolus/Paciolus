@@ -157,7 +157,7 @@ def _memo_export_handler(
         framework = (
             resolve_export_framework(
                 current_user,
-                db,  # type: ignore[arg-type]
+                db,
                 engagement_id=getattr(payload, "engagement_id", None),
                 client_id=getattr(payload, "client_id", None),
             )

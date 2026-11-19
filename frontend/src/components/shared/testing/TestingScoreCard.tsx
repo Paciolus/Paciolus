@@ -107,7 +107,8 @@ export function TestingScoreCard({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              <CountUp target={Math.round(score)} />
+              {/* Sprint 886: one decimal, as in the memo and CSV */}
+              <CountUp target={Number(score.toFixed(1))} decimals={1} />
             </motion.span>
             <span className="text-content-secondary text-xs font-sans">/ 100</span>
           </div>
@@ -136,7 +137,8 @@ export function TestingScoreCard({
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <span className="type-num text-content-primary">{total_flagged.toLocaleString()}</span>
-                <p className="text-content-secondary text-xs font-sans">Flagged</p>
+                {/* Sprint 886: distinct items; the severity counts and CSV count flags */}
+                <p className="text-content-secondary text-xs font-sans">{entity_label} flagged (distinct)</p>
               </div>
               <div>
                 <span className="type-num text-content-primary">{(flag_rate * 100).toFixed(1)}%</span>
@@ -146,7 +148,7 @@ export function TestingScoreCard({
                 <span className="type-num text-clay-600">{flags_by_severity.high}</span>
                 <span className="type-num-sm text-content-secondary"> / {flags_by_severity.medium}</span>
                 <span className="type-num-sm text-content-tertiary"> / {flags_by_severity.low}</span>
-                <p className="text-content-secondary text-xs font-sans">H / M / L</p>
+                <p className="text-content-secondary text-xs font-sans">Flags H / M / L (one per flag)</p>
               </div>
             </div>
           )}

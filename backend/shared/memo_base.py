@@ -160,7 +160,7 @@ def format_risk_tier_label(composite: dict) -> tuple[str, Any]:
     risk_tier = str(composite.get("risk_tier", "low")).lower()
     score = composite.get("score", 0)
     base_label, color = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-    tier_label = f"{base_label} ({score:.0f}/100)"
+    tier_label = f"{base_label} ({score:.1f}/100)"  # Sprint 886: one decimal everywhere
     return tier_label, color
 
 
@@ -572,7 +572,8 @@ def build_results_summary_section(
     doc_width: float,
     composite: dict[str, Any],
     test_results: list[dict],
-    flagged_label: str = "Total Entries Flagged",
+    flagged_label: str = "Entries Flagged (distinct entries)",
+    flag_unit: str = "entry",
 ) -> None:
     """Build the Results Summary section (III. Results Summary)."""
     story.append(Paragraph("III. Results Summary", styles["MemoSection"]))
@@ -602,9 +603,18 @@ def build_results_summary_section(
     for reason in composite.get("score_basis") or []:
         story.append(Paragraph(f"<i>{xml_escape(str(reason))}</i>", styles["MemoBodySmall"]))
     story.append(Spacer(1, 2))
+    # Sprint 886: name each count's unit. The flagged total counts distinct items; the
+    # severity counts and the CSV count flags (an item can be flagged by several tests).
+    sev = composite.get("flags_by_severity", {})
     story.append(
         Paragraph(
             create_leader_dots(flagged_label, f"{composite.get('total_flagged', 0):,}"),
+            styles["MemoLeader"],
+        )
+    )
+    story.append(
+        Paragraph(
+            create_leader_dots(f"Flags Raised (one per test per {flag_unit})", f"{sum(sev.values()):,}"),
             styles["MemoLeader"],
         )
     )
@@ -615,7 +625,6 @@ def build_results_summary_section(
         )
     )
 
-    sev = composite.get("flags_by_severity", {})
     story.append(
         Paragraph(
             create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
@@ -632,6 +641,13 @@ def build_results_summary_section(
         Paragraph(
             create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
             styles["MemoLeader"],
+        )
+    )
+    story.append(
+        Paragraph(
+            f"An {flag_unit} flagged by more than one test is counted once in the flagged total and once per "
+            "flag in the severity counts and in the CSV export (one row per flag).",
+            styles["MemoBodySmall"],
         )
     )
     story.append(Spacer(1, 6))

@@ -94,6 +94,8 @@ describe('useMultiPeriodMemoExport', () => {
     ])
     expect(options.body.client_name).toBe('Meridian')
     expect(options.body.dormant_account_count).toBe(2)
+    // Sprint 886: the dormant names the screen lists, not only their count.
+    expect(options.body.dormant_accounts).toEqual([{ account: 'X' }, { account: 'Y' }])
   })
 
   it('falls back to "Not specified" when metadata fields are blank', async () => {

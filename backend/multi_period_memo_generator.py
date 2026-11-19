@@ -1143,7 +1143,7 @@ def generate_multi_period_memo(
             risk_tier = score_to_risk_tier(risk_score).value
 
         base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_DEEP))
-        tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
+        tier_label = f"{base_tier_label} ({risk_score:.1f}/100)"
 
         story.append(
             Paragraph(create_leader_dots("Composite Diagnostic Score", f"{risk_score:.1f} / 100"), styles["MemoLeader"])
@@ -1187,6 +1187,9 @@ def generate_multi_period_memo(
 
         # Dormant Account Detail
         _build_dormant_accounts_detail(story, styles, dormant_accounts)
+        if dormant_count > 0 and not dormant_accounts:
+            # Sprint 886: a count without the names — say so, never an empty list.
+            story.append(Paragraph(create_leader_dots("Dormant account names", "Not available"), styles["MemoLeader"]))
 
         # New and Closed Account Detail
         _build_new_closed_account_detail(story, styles, new_accounts, closed_accounts)
@@ -1215,6 +1218,14 @@ def generate_multi_period_memo(
             story.append(Paragraph(f"{user_text(section_num)}. Lead Sheet Summary", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
             _build_lead_sheet_table(story, styles, stripped_summaries)
+            # Sprint 886: the screen lists each lead sheet's accounts; the memo does not.
+            story.append(
+                Paragraph(
+                    "Account-level detail for each lead sheet is not reproduced in this memo. It is shown on "
+                    "screen and in the movements CSV export (Lead Sheet column).",
+                    styles["MemoBodySmall"],
+                )
+            )
             story.append(Spacer(1, 8))
             section_num = "VI"
 

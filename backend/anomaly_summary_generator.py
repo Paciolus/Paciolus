@@ -313,7 +313,7 @@ class AnomalySummaryGenerator:
             len(not_executed_tools),
         )
         base_risk_label, _risk_color = RISK_TIER_DISPLAY.get(risk_tier_key, ("LOW", ClassicalColors.SAGE))
-        risk_label = f"{base_risk_label} ({risk_score:.0f}/100)"
+        risk_label = f"{base_risk_label} ({risk_score:.1f}/100)"
 
         # --- Section I: Scope ---
         story.append(Paragraph("I. Scope", styles["MemoSection"]))

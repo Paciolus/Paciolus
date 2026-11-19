@@ -273,7 +273,7 @@ class TestExportCsvThreeWayMatch:
         "partial_match_count": 1,
         "full_match_rate": 0.8,
         "net_variance": 500.0,
-        "risk_assessment": "Low Risk",
+        "risk_assessment": "low",  # the engine's value
     }
 
     @pytest.mark.asyncio
@@ -294,7 +294,7 @@ class TestExportCsvThreeWayMatch:
         assert "Match Type" in content
         assert "SUMMARY" in content
         assert "Full Match Rate" in content
-        assert "Low Risk" in content
+        assert "Risk Assessment,LOW" in content  # Sprint 886 (OUT-11): engine wording, upper case
 
     @pytest.mark.asyncio
     async def test_full_match_written_as_row(self, override_auth_verified):

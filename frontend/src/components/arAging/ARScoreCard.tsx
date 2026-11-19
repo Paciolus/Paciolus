@@ -32,7 +32,7 @@ export function ARScoreCard({ score }: ARScoreCardProps) {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <span className="font-mono text-lg text-content-primary">{score.total_flagged.toLocaleString()}</span>
-            <p className="text-content-secondary text-xs font-sans">Flagged</p>
+            <p className="text-content-secondary text-xs font-sans">AR items flagged (distinct)</p>
           </div>
           <div>
             <span className="font-mono text-lg text-content-primary">
@@ -44,7 +44,7 @@ export function ARScoreCard({ score }: ARScoreCardProps) {
             <span className="font-mono text-lg text-clay-600">{score.flags_by_severity.high}</span>
             <span className="font-mono text-sm text-content-secondary"> / {score.flags_by_severity.medium}</span>
             <span className="font-mono text-sm text-content-tertiary"> / {score.flags_by_severity.low}</span>
-            <p className="text-content-secondary text-xs font-sans">H / M / L</p>
+            <p className="text-content-secondary text-xs font-sans">Flags H / M / L (one per flag)</p>
           </div>
         </div>
       }

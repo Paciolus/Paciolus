@@ -411,8 +411,6 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
     immaterial_count = audit_result.get("immaterial_count", 0)
     informational_count = audit_result.get("informational_count", 0)
     total_anomalies = risk_summary.get("total_anomalies", material_count + immaterial_count + informational_count)
-    high_severity = risk_summary.get("high_severity", material_count)
-    low_severity = risk_summary.get("low_severity", immaterial_count)
     informational_severity = risk_summary.get("informational_count", informational_count)
 
     # Change 3: Composite Diagnostic Score
@@ -448,10 +446,10 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
         )
     risk_tier = get_diagnostic_tier(risk_score)
     base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
+    tier_label = f"{base_tier_label} ({risk_score:.1f}/100)"
 
     score_lines = [
-        create_leader_dots("Composite Diagnostic Score", f"{risk_score} / 100"),
+        create_leader_dots("Composite Diagnostic Score", f"{risk_score:.1f} / 100"),  # Sprint 886: one decimal
         create_leader_dots("Diagnostic Tier", tier_label),
     ]
     for line in score_lines:
@@ -480,13 +478,21 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
 
     story.append(Spacer(1, 6))
 
-    # Risk metrics table (Sprint 537: 4-column with informational)
+    # Severity counts (Sprint 886): high, medium and low are severity counts, not
+    # "above / below materiality" — labelled as severity, all three shown. Counts the
+    # analysis did not carry print "Not available", never a guess from materiality.
+    severity_keys = ("high_severity", "medium_severity", "low_severity")
+    if not all(isinstance(risk_summary.get(k), int) for k in severity_keys):
+        story.append(Paragraph(create_leader_dots("Severity counts", "Not available"), styles["LeaderLine"]))
+        story.append(Spacer(1, 6))
+        return
+
     risk_data = [
-        ["Items Flagged", "Above Materiality", "Below Materiality", "Informational Notes"],
-        [str(total_anomalies), str(high_severity), str(low_severity), str(informational_severity)],
+        ["Items Flagged", "High Severity", "Medium Severity", "Low Severity", "Informational Notes"],
+        [str(total_anomalies), *(str(risk_summary[k]) for k in severity_keys), str(informational_severity)],
     ]
 
-    risk_table = Table(risk_data, colWidths=[1.5 * inch, 1.5 * inch, 1.5 * inch, 1.5 * inch])
+    risk_table = Table(risk_data, colWidths=[1.2 * inch] * 5)
     risk_table.setStyle(
         TableStyle(
             [
@@ -498,8 +504,8 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
                 ("FONTSIZE", (0, 1), (-1, 1), 22),
                 ("TEXTCOLOR", (0, 1), (0, 1), ClassicalColors.OBSIDIAN_DEEP),
                 ("TEXTCOLOR", (1, 1), (1, 1), ClassicalColors.CLAY),
-                ("TEXTCOLOR", (2, 1), (2, 1), ClassicalColors.OBSIDIAN_500),
-                ("TEXTCOLOR", (3, 1), (3, 1), ClassicalColors.LEDGER_RULE),
+                ("TEXTCOLOR", (2, 1), (3, 1), ClassicalColors.OBSIDIAN_500),
+                ("TEXTCOLOR", (4, 1), (4, 1), ClassicalColors.LEDGER_RULE),
                 ("ALIGN", (0, 1), (-1, 1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),

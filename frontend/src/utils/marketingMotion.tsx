@@ -121,10 +121,13 @@ export function CountUp({
   target,
   suffix = '',
   pad,
+  decimals,
 }: {
   target: number
   suffix?: string
   pad?: number
+  /** Sprint 886: fixed decimals (scores show one, as in the memo and CSV) */
+  decimals?: number
 }) {
   const ref = useRef<HTMLSpanElement>(null)
   const isVisible = useInView(ref, { once: true })
@@ -143,7 +146,8 @@ export function CountUp({
     const totalFrames = 40
     const interval = setInterval(() => {
       frame++
-      setCount(Math.round((frame / totalFrames) * target))
+      const step = (frame / totalFrames) * target
+      setCount(decimals === undefined ? Math.round(step) : Number(step.toFixed(decimals)))
       if (frame >= totalFrames) {
         clearInterval(interval)
         setCount(target)
@@ -151,9 +155,13 @@ export function CountUp({
     }, 30)
 
     return () => clearInterval(interval)
-  }, [isVisible, target, prefersReducedMotion])
+  }, [isVisible, target, prefersReducedMotion, decimals])
 
-  const display = pad ? String(count).padStart(pad, '0') : count.toLocaleString()
+  const display = pad
+    ? String(count).padStart(pad, '0')
+    : decimals !== undefined
+      ? count.toFixed(decimals)
+      : count.toLocaleString()
 
   return <span ref={ref}>{display}{suffix}</span>
 }

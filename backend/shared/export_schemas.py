@@ -338,13 +338,17 @@ class InventoryExportInput(_CompletenessInRange, WorkpaperMetadata):
 # --- Memo-Only Models ---
 
 
+class RecFlaggedItemInput(_ExportItem):
+    """One item a reconciliation test flagged (kept as sent; the exports read the counts)."""
+
+
 class RecTestInput(_ExportItem):
     """One reconciliation test of the bank rec run (``BankRecResult.rec_tests``)."""
 
     test_name: str
     flagged_count: int = Field(ge=0)
     severity: str = "low"
-    flagged_items: list[_ExportItem] = []
+    flagged_items: list[RecFlaggedItemInput] = []
 
 
 class OutstandingAgingInput(_ExportItem):

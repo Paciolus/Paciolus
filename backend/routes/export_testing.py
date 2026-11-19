@@ -203,7 +203,11 @@ def _ar_aging_summary_writer(writer: Any, composite_score: dict[str, Any]) -> No
     writer.writerow(["SUMMARY"])
     writer.writerow(["Composite Score", number_cell(composite_score.get("score", 0), ".1f")])
     writer.writerow(["Diagnostic Tier", composite_score.get("risk_tier", "")])
-    writer.writerow(["Total Flagged", composite_score.get("total_flagged", 0)])
+    # Sprint 886: each count names its unit (distinct items vs one row above per flag).
+    writer.writerow(["AR Items Flagged (distinct items)", composite_score.get("total_flagged", 0)])
+    writer.writerow(
+        ["Flags Raised (one row above per flag)", sum((composite_score.get("flags_by_severity") or {}).values())]
+    )
     writer.writerow(["Tests Run", composite_score.get("tests_run", 0)])
     writer.writerow(["Tests Skipped", composite_score.get("tests_skipped", 0)])
     writer.writerow(["Has Sub-Ledger", composite_score.get("has_subledger", False)])

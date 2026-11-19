@@ -77,7 +77,7 @@ def generate_engagement_dashboard_memo(
         overall_tier = dashboard_result.get("overall_risk_tier", "low")
 
         base_tier_label, _ = RISK_TIER_DISPLAY.get(str(overall_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-        tier_label = f"{base_tier_label} ({overall_score:.0f}/100)"
+        tier_label = f"{base_tier_label} ({overall_score:.1f}/100)"
 
         summary_lines = [
             create_leader_dots("Reports Analyzed", str(report_count)),

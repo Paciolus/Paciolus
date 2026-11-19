@@ -1716,42 +1716,8 @@ def gen_fixed_asset_testing() -> None:
         amount_parse_errors=1,
     )
 
-    # IMP-01: Roll-forward data
-    result["register_total_cost"] = 3_420_000.00
-    result["register_total_accum_depr"] = 1_180_000.00
-    result["tb_ppe_gross"] = 3_420_000.00
-    result["tb_accum_depr"] = 1_180_000.00
-    result["additions"] = 420_000.00
-    result["disposals"] = 0
-    result["depreciation_expense"] = 285_000.00
-    result["period_label"] = "FY2025"
-
-    # IMP-04: Category summary
-    result["category_summary"] = [
-        {
-            "category": "Building Improvements",
-            "count": 28,
-            "gross_cost": 1_240_000.00,
-            "accum_depr": 412_000.00,
-            "avg_age_years": 8.2,
-        },
-        {
-            "category": "Equipment",
-            "count": 95,
-            "gross_cost": 980_000.00,
-            "accum_depr": 385_000.00,
-            "avg_age_years": 5.7,
-        },
-        {
-            "category": "IT Equipment",
-            "count": 72,
-            "gross_cost": 540_000.00,
-            "accum_depr": 298_000.00,
-            "avg_age_years": 3.1,
-        },
-        {"category": "Furniture", "count": 38, "gross_cost": 420_000.00, "accum_depr": 62_000.00, "avg_age_years": 2.4},
-        {"category": "Vehicles", "count": 17, "gross_cost": 240_000.00, "accum_depr": 23_000.00, "avg_age_years": 1.8},
-    ]
+    # Sprint 886: no roll-forward, depreciation-rate or category data — the engine
+    # computes none of it, so the sample memo no longer shows sections a real run cannot.
 
     # Column detection with category
     result["column_detection"] = {
@@ -2037,7 +2003,7 @@ def gen_bank_rec() -> None:
         "total_flagged": 44,
         "flag_rate": 0.118,
         "flags_by_severity": {"high": 4, "medium": 37, "low": 3},
-        "tests_run": 8,
+        "tests_run": len(rec_tests),
         "total_entries": 372,
         "top_findings": [
             "Stale Deposits (>10 days): 11 items flagged",
@@ -2045,12 +2011,38 @@ def gen_bank_rec() -> None:
         ],
     }
 
-    # Aging summary
-    aging_summary = {
-        "deposits_over_10_days": {"count": 11, "amount": 19520.00, "pct": 42.7},
-        "deposits_over_30_days": {"count": 4, "amount": 4600.00, "pct": 10.1},
-        "checks_over_30_days": {"count": 5, "amount": 10070.00, "pct": 25.9},
-        "checks_over_90_days": {"count": 3, "amount": 5770.00, "pct": 14.8},
+    # Sprint 886 (OUT-10): the engine's own aging shape (``outstanding_aging``)
+    # and the thresholds it applied — the memo no longer reads the old
+    # ``aging_summary`` / ``outstanding_deposits`` lists, which no run produces.
+    outstanding_aging = [
+        {
+            "category": "bank_only",
+            # Counted from the outstanding_deposits list above.
+            "total_count": 18,
+            "over_10_days": 11,
+            "over_30_days": 4,
+            "oldest_item_days": 77,
+            "oldest_item_date": "2025-10-15",
+            "oldest_item_amount": 500.00,
+        },
+        {
+            "category": "ledger_only",
+            # Counted from the outstanding_checks list above.
+            "total_count": 12,
+            "over_10_days": 9,
+            "over_30_days": 5,
+            "oldest_item_days": 183,
+            "oldest_item_date": "2025-07-01",
+            "oldest_item_amount": -1000.00,
+        },
+    ]
+    active_thresholds = {
+        "materiality": 50_000.00,
+        "performance_materiality": 37_500.00,
+        "amount_tolerance": 0.01,
+        "date_tolerance_days": 3,
+        "materiality_source": "caller",
+        "threshold_sources": {"materiality": "caller", "performance_materiality": "caller"},
     }
 
     rec_result = {
@@ -2077,9 +2069,8 @@ def gen_bank_rec() -> None:
         "test_results": test_results,
         "composite_score": composite_score,
         "rec_tests": rec_tests,
-        "outstanding_deposits": outstanding_deposits,
-        "outstanding_checks": outstanding_checks,
-        "aging_summary": aging_summary,
+        "outstanding_aging": outstanding_aging,
+        "active_thresholds": active_thresholds,
         "ending_balance_reconciliation": {
             "bank_ending_balance": 1_251_750.00,
             "gl_ending_balance": 1_245_000.00,

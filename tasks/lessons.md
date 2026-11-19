@@ -184,3 +184,22 @@
 - **Swapping a font is a layout change only if the metrics differ (Sprint 885).** Registering the metric-compatible
   Liberation fonts under the standard Times/Helvetica/Courier names changed no page count and moved text < 0.5pt —
   and exposed that the standard fonts had been printing substitute boxes for ✓ ⚠ ▢ all along.
+- **A field can be dropped at three layers; check all three (Sprint 886).** The review found AP/payroll/AR schedules
+  missing from the export model. The analysis *response model* (`extra="ignore"`) dropped them first, so the browser
+  never had them, and the page did not send them either. For any "the document lacks X", trace X from the engine's
+  `to_dict()` through the response model, the page's request body and the export model — a test through the real
+  analysis route then the real export route is the only one that sees every layer.
+- **A default in a document generator is a claim (Sprint 886).** `composite.get("score", 0)`, `.get("risk_tier",
+  "low")`, `.get("going_concern", {})` and `.get("completeness_score", 0)` printed 0/100, LOW, "none identified" and
+  0% for things nobody computed. Rule: in output code, absent is `None` and prints "Not available"/"Not evaluated";
+  a test removes the field and asserts the wording.
+- **Sample data written to a generator's expectations hides dead sections (Sprint 886).** The sample bank-rec, TWM and
+  fixed-asset memos fed fields the engines never emit (`aging_summary`, a TWM score, register roll-forward), so those
+  sections looked alive in every sample while no customer could get them. Build sample and test results from the
+  engine's real output shape, and list each generator's `.get` keys against the engine's `to_dict()`.
+- **Splitting one tree into per-item commits: stage computed blobs, not partial `-U0` patches (Sprint 886).**
+  `git apply --cached --unidiff-zero` fails once an earlier hunk is skipped (line offsets shift). Stage the intended
+  content instead — the working file with the later item's text reverted — via `git hash-object -w` + `git
+  update-index --cacheinfo`; lint-staged keeps the unstaged remainder. On Windows, pipe patches as bytes (text mode
+  turns LF into CRLF) and normalise CRLF before matching.
+
