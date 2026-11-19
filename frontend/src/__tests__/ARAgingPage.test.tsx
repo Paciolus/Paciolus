@@ -46,4 +46,7 @@ runStandardToolPageScenarios({
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, tb_column_detection: {}, sl_column_detection: {}, ar_summary: {} },
   hasTierGating: true,
+  memoBodyFields: {
+    aging_schedule: [{ bucket: 'Current (0-30)', count: 1, amount: 4000, percentage: 44.4 }],
+  },
 })

@@ -68,11 +68,22 @@ export interface APColumnDetection extends BaseColumnDetection {
   requires_mapping: boolean
 }
 
+/** Sprint 886 (OUT-12): the duplicate-payment recovery summary the memo prints. */
+export interface DuplicatePaymentSummary {
+  exact_duplicate_count: number
+  fuzzy_duplicate_count: number
+  recovery_value_total: number
+  vendor_rates: Array<{ vendor: string; duplicate_payments: number; total_payments: number; duplicate_rate: number }>
+  monthly_trend: Array<{ month: string; duplicate_payments: number }>
+  distinct_flagged_payments: number
+}
+
 export interface APTestingResult extends SavedSettingsDisclosure {
   composite_score: APCompositeScore
   test_results: APTestResult[]
   data_quality: APDataQuality
   column_detection: APColumnDetection
+  duplicate_payment_summary?: DuplicatePaymentSummary | null
 }
 
 // Re-export standardized color maps (backward compat — consumers import from here)

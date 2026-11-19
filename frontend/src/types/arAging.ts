@@ -68,6 +68,8 @@ export interface ARAgingResult {
     allowance_ratio: number
     ar_account_count: number
   } | null
+  /** Sprint 886 (OUT-12): the sub-ledger aging schedule the memo prints (sub-ledger runs only). */
+  aging_schedule?: Array<{ bucket: string; count: number; amount: number; percentage: number }> | null
 }
 
 // Re-export standardized color maps (backward compat)

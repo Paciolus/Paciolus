@@ -272,7 +272,7 @@ def _build_department_summary(
 
     table_data = [["Department", "Employee Count", "Total Gross Pay", "% of Total Payroll"]]
     total_count = 0
-    total_pay = 0.0
+    total_pay = Decimal("0")  # Sprint 886: amounts arrive as exact Decimals
     high_concentration = None
 
     for dept in dept_data:
@@ -280,7 +280,7 @@ def _build_department_summary(
         pay = dept["total_gross_pay"]
         pct = dept["pct_of_total"]
         total_count += count
-        total_pay += pay
+        total_pay += Decimal(str(pay))
         if pct > 40:
             high_concentration = (dept["department"], pct)
         table_data.append(

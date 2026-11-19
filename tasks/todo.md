@@ -545,7 +545,15 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       and CSV; all failed first, High with the 500); Jest `MatchSummaryCardRisk.test.tsx` (3). `test_twm_memo.py`
       encoded the old contract (MODERATE mapping, score function, composite findings): those tests were replaced by
       tests of the engine's levels.
-- [ ] **11D / OUT-12** — AP/Payroll/AR supplemental schedules reach the memo.
+- [x] **11D / OUT-12 — AP, payroll and AR supplemental schedules reach the memo.** Dropped at three layers, not one:
+      the analysis **response models** did not declare them (so the browser never received them), the pages did not send
+      them, and the export models did not declare them. Now typed at each layer: AP `duplicate_payment_summary`; payroll
+      `payroll_register_total`, `department_summary`, `headcount_rollforward`; AR `aging_schedule` (sub-ledger runs).
+      The payroll department table summed exact Decimals into a float and 500'd once the schedule arrived — summed as
+      Decimal. Tests: `test_sprint886_supplemental_schedules.py` (7; all failed first) — real AP / payroll / AR runs,
+      their responses posted to the memo routes, each section and its figures checked; invalid schedules are a 422.
+      Jest: the shared page-scenario harness gains `memoBodyFields` (each page must send the schedule) — 3 failed on
+      the old pages.
 - [ ] **11E / OUT-14** — payroll completeness on the 0–100 scale.
 - [ ] **11F / OUT-15** — AR memo column confidence matches the screen.
 - [ ] **11G / OUT-16** — documents name the materiality amount, its purpose and its origin.

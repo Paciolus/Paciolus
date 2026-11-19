@@ -58,4 +58,12 @@ runStandardToolPageScenarios({
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Fraud Indicators'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
   hasTierGating: true,
+  memoBodyFields: {
+    payroll_register_total: 230123.45,
+    department_summary: [{ department: 'Dept 1', employee_count: 8, total_gross_pay: 76000.12, pct_of_total: 33.0 }],
+    headcount_rollforward: {
+      period_start: '2025-01-28', period_end: '2025-03-28', beginning_headcount: 23, new_hires: 1, terminations: 1,
+      computed_ending: 23, final_period_headcount: 23, variance: 0,
+    },
+  },
 })

@@ -272,6 +272,31 @@ class APColumnDetectionResponse(BaseModel):
     detection_notes: list[str]
 
 
+class DuplicatePaymentVendorRateResponse(BaseModel):
+    """One vendor's duplicate-payment rate (Sprint 643; declared Sprint 886, OUT-12)."""
+
+    vendor: str
+    duplicate_payments: int
+    total_payments: int
+    duplicate_rate: float
+
+
+class DuplicatePaymentMonthResponse(BaseModel):
+    month: str
+    duplicate_payments: int
+
+
+class DuplicatePaymentSummaryResponse(BaseModel):
+    """AP ``duplicate_payment_summary`` — the memo's Duplicate Payment Recovery Summary."""
+
+    exact_duplicate_count: int
+    fuzzy_duplicate_count: int
+    recovery_value_total: ExactMoney
+    vendor_rates: list[DuplicatePaymentVendorRateResponse] = []
+    monthly_trend: list[DuplicatePaymentMonthResponse] = []
+    distinct_flagged_payments: int = 0
+
+
 class APTestingResponse(BaseModel):
     """Complete AP payment testing response.
 
@@ -286,6 +311,8 @@ class APTestingResponse(BaseModel):
     column_detection: Optional[APColumnDetectionResponse] = None
     settings_applied: dict[str, SettingsAppliedValue] = {}
     settings_ignored: list[SettingIgnoredResponse] = []
+    # Sprint 886 (OUT-12): emitted since Sprint 643 but undeclared, so it was dropped here.
+    duplicate_payment_summary: Optional[DuplicatePaymentSummaryResponse] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -747,6 +774,15 @@ class ARSummaryResponse(BaseModel):
     unique_customers: Optional[int] = None
 
 
+class ARAgingBucketResponse(BaseModel):
+    """One bucket of the AR ``aging_schedule`` (sub-ledger runs only)."""
+
+    bucket: str
+    count: int
+    amount: ExactMoney
+    percentage: float
+
+
 class ARAgingResponse(BaseModel):
     """Complete AR aging analysis response.
 
@@ -761,6 +797,8 @@ class ARAgingResponse(BaseModel):
     tb_column_detection: Optional[ARTBColumnDetectionResponse] = None
     sl_column_detection: Optional[ARSLColumnDetectionResponse] = None
     ar_summary: Optional[ARSummaryResponse] = None
+    # Sprint 886 (OUT-12): emitted by the engine but undeclared, so it was dropped here.
+    aging_schedule: Optional[list[ARAgingBucketResponse]] = None
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -860,6 +898,28 @@ class PayrollCompositeScoreResponse(BaseModel):
     score_basis: list[str] = []
 
 
+class PayrollDepartmentSummaryResponse(BaseModel):
+    """One department of the payroll ``department_summary``."""
+
+    department: str
+    employee_count: int
+    total_gross_pay: ExactMoney
+    pct_of_total: float
+
+
+class HeadcountRollforwardResponse(BaseModel):
+    """The payroll ``headcount_rollforward`` (needs hire and termination dates)."""
+
+    period_start: str
+    period_end: str
+    beginning_headcount: int
+    new_hires: int
+    terminations: int
+    computed_ending: int
+    final_period_headcount: int
+    variance: int
+
+
 class PayrollTestingResponse(BaseModel):
     """Complete payroll testing response.
 
@@ -875,6 +935,10 @@ class PayrollTestingResponse(BaseModel):
     filename: str
     settings_applied: dict[str, SettingsAppliedValue] = {}
     settings_ignored: list[SettingIgnoredResponse] = []
+    # Sprint 886 (OUT-12): emitted by the engine but undeclared, so they were dropped here.
+    payroll_register_total: Optional[ExactMoney] = None
+    department_summary: Optional[list[PayrollDepartmentSummaryResponse]] = None
+    headcount_rollforward: Optional[HeadcountRollforwardResponse] = None
 
 
 # ═══════════════════════════════════════════════════════════════

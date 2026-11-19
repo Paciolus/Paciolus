@@ -42,6 +42,8 @@ export default function ARAgingPage() {
     tb_column_detection: result.tb_column_detection,
     sl_column_detection: result.sl_column_detection,
     ar_summary: result.ar_summary,
+    // Sprint 886 (OUT-12): the sub-ledger aging schedule.
+    aging_schedule: result.aging_schedule ?? null,
     filename: tbFile?.name.replace(/\.[^.]+$/, '') || 'ar_aging',
   } : null
 

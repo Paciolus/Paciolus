@@ -56,4 +56,11 @@ runStandardToolPageScenarios({
   successTestIds: ['ap-score-card', 'ap-test-grid', 'ap-flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Fraud Indicators'],
   mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, column_detection: {} },
+  memoBodyFields: {
+    duplicate_payment_summary: {
+      exact_duplicate_count: 2, fuzzy_duplicate_count: 0, recovery_value_total: 151.42,
+      vendor_rates: [{ vendor: 'Vendor 3', duplicate_payments: 2, total_payments: 6, duplicate_rate: 0.3333 }],
+      monthly_trend: [{ month: '2025-03', duplicate_payments: 2 }], distinct_flagged_payments: 2,
+    },
+  },
 })

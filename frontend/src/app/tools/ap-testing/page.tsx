@@ -37,6 +37,8 @@ export default function APTestingPage() {
     // Sprint 836: the memo states which thresholds differed from the defaults.
     settings_applied: result.settings_applied ?? null,
     settings_ignored: result.settings_ignored ?? null,
+    // Sprint 886 (OUT-12): the memo's Duplicate Payment Recovery Summary.
+    duplicate_payment_summary: result.duplicate_payment_summary ?? null,
     filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'ap_testing',
   } : null
 

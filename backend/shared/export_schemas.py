@@ -166,6 +166,59 @@ class SavedSettingsDisclosure(BaseModel):
     settings_ignored: Optional[list[SettingIgnoredInput]] = Field(default=None, max_length=100)
 
 
+# --- Supplemental schedules (Sprint 886, OUT-12) ---
+# Typed copies of what the engines emit and the memos print. Absent stays absent:
+# the memo then omits the section rather than printing zeros.
+
+
+class DuplicatePaymentVendorRateInput(BaseModel):
+    vendor: str
+    duplicate_payments: int = Field(ge=0)
+    total_payments: int = Field(ge=0)
+    duplicate_rate: float = Field(ge=0, le=1)
+
+
+class DuplicatePaymentMonthInput(BaseModel):
+    month: str
+    duplicate_payments: int = Field(ge=0)
+
+
+class DuplicatePaymentSummaryInput(BaseModel):
+    """AP ``duplicate_payment_summary``."""
+
+    exact_duplicate_count: int = Field(ge=0)
+    fuzzy_duplicate_count: int = Field(ge=0)
+    recovery_value_total: Decimal
+    vendor_rates: list[DuplicatePaymentVendorRateInput] = []
+    monthly_trend: list[DuplicatePaymentMonthInput] = []
+    distinct_flagged_payments: int = Field(default=0, ge=0)
+
+
+class PayrollDepartmentSummaryInput(BaseModel):
+    department: str
+    employee_count: int = Field(ge=0)
+    total_gross_pay: Decimal
+    pct_of_total: float
+
+
+class HeadcountRollforwardInput(BaseModel):
+    period_start: str
+    period_end: str
+    beginning_headcount: int = Field(ge=0)
+    new_hires: int = Field(ge=0)
+    terminations: int = Field(ge=0)
+    computed_ending: int
+    final_period_headcount: int = Field(ge=0)
+    variance: int
+
+
+class ARAgingBucketInput(BaseModel):
+    bucket: str
+    count: int = Field(ge=0)
+    amount: Decimal
+    percentage: float
+
+
 class JETestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for JE testing exports."""
 
@@ -185,6 +238,7 @@ class APTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     test_results: list
     data_quality: dict
     column_detection: Optional[dict] = None
+    duplicate_payment_summary: Optional[DuplicatePaymentSummaryInput] = None
     filename: str = "ap_testing"
 
 
@@ -195,6 +249,9 @@ class PayrollTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     test_results: list
     data_quality: dict
     column_detection: Optional[dict] = None
+    payroll_register_total: Optional[Decimal] = None
+    department_summary: Optional[list[PayrollDepartmentSummaryInput]] = None
+    headcount_rollforward: Optional[HeadcountRollforwardInput] = None
     filename: str = "payroll_testing"
 
 
@@ -234,6 +291,7 @@ class ARAgingExportInput(WorkpaperMetadata):
     tb_column_detection: Optional[dict] = None
     sl_column_detection: Optional[dict] = None
     ar_summary: Optional[dict] = None
+    aging_schedule: Optional[list[ARAgingBucketInput]] = None
     filename: str = "ar_aging"
 
 
@@ -327,6 +385,15 @@ class BankRecExportResult(BaseModel):
     ledger_column_detection: Optional[dict] = None
     # Sprint 833: split-match search bounds, disclosed in the memo methodology.
     split_search: Optional[dict] = None
+    rec_tests: Optional[list[RecTestInput]] = None
+    outstanding_aging: Optional[list[OutstandingAgingInput]] = None
+    composite_score: Optional[BankRecCompositeInput] = None
+    active_thresholds: Optional[BankRecThresholdsInput] = None
+
+
+class BankRecMemoInput(BankRecExportResult, WorkpaperMetadata):
+    """Input model for bank reconciliation memo export."""
+
     filename: str = "bank_reconciliation"
 
 
@@ -405,15 +472,6 @@ class SamplingEvaluationMemoInput(WorkpaperMetadata):
     projected_misstatement: float = 0.0
     basic_precision: float = 0.0
     incremental_allowance: float = 0.0
-    rec_tests: Optional[list[RecTestInput]] = None
-    outstanding_aging: Optional[list[OutstandingAgingInput]] = None
-    composite_score: Optional[BankRecCompositeInput] = None
-    active_thresholds: Optional[BankRecThresholdsInput] = None
-
-
-class BankRecMemoInput(BankRecExportResult, WorkpaperMetadata):
-    """Input model for bank reconciliation memo export."""
-
     upper_error_limit: float = 0.0
     conclusion: str = ""
     conclusion_detail: str = ""

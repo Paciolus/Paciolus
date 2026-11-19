@@ -39,6 +39,10 @@ export default function PayrollTestingPage() {
     // Sprint 836: the memo states which thresholds differed from the defaults.
     settings_applied: result.settings_applied ?? null,
     settings_ignored: result.settings_ignored ?? null,
+    // Sprint 886 (OUT-12): register total, department distribution, headcount roll-forward.
+    payroll_register_total: result.payroll_register_total ?? null,
+    department_summary: result.department_summary ?? null,
+    headcount_rollforward: result.headcount_rollforward ?? null,
     filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'payroll_testing',
   } : null
 

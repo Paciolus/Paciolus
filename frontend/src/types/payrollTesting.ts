@@ -94,6 +94,19 @@ export interface PayrollTestingResult extends SavedSettingsDisclosure {
   data_quality: PayrollDataQuality
   column_detection: PayrollColumnDetection
   filename: string
+  /** Sprint 886 (OUT-12): supplemental schedules the memo prints. */
+  payroll_register_total?: number | null
+  department_summary?: Array<{ department: string; employee_count: number; total_gross_pay: number; pct_of_total: number }> | null
+  headcount_rollforward?: {
+    period_start: string
+    period_end: string
+    beginning_headcount: number
+    new_hires: number
+    terminations: number
+    computed_ending: number
+    final_period_headcount: number
+    variance: number
+  } | null
 }
 
 // Re-export standardized color maps (backward compat)

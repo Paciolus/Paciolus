@@ -5,7 +5,8 @@
  * from all testing tool pages into a reusable runner.
  */
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { render, screen } from '@/test-utils'
+import { useTestingExport } from '@/hooks/useTestingExport'
+import { fireEvent, render, screen } from '@/test-utils'
 
 // Re-export for convenience
 export { render, screen }
@@ -31,6 +32,11 @@ export interface ToolPageTestConfig {
   mockSuccessResult: Record<string, unknown>
   /** Whether this tool has tier gating (free users see upgrade CTA) */
   hasTierGating?: boolean
+  /**
+   * Sprint 886 (OUT-12): result fields the memo export body must carry unchanged.
+   * The page must have `@/hooks/useTestingExport` mocked.
+   */
+  memoBodyFields?: Record<string, unknown>
 }
 
 /**
@@ -137,6 +143,23 @@ export function runStandardToolPageScenarios(config: ToolPageTestConfig) {
       expect(screen.getByText('Export Flagged CSV')).toBeInTheDocument()
       expect(screen.getByText('New Test')).toBeInTheDocument()
     })
+
+    if (config.memoBodyFields) {
+      it('sends every memo field of the result to the memo export (Sprint 886)', () => {
+        const handleExportMemo = jest.fn()
+        ;(useTestingExport as jest.Mock).mockReturnValue({ exporting: null, handleExportMemo, handleExportCSV: jest.fn() })
+        config.getToolHookMock().mockReturnValue({
+          status: 'success',
+          error: null,
+          runTests: jest.fn(),
+          reset: jest.fn(),
+          result: { ...config.mockSuccessResult, ...config.memoBodyFields },
+        })
+        render(<config.Component />)
+        fireEvent.click(screen.getByText('Download Testing Memo'))
+        expect(handleExportMemo).toHaveBeenCalledWith(expect.objectContaining(config.memoBodyFields))
+      })
+    }
 
     it('shows info cards in idle state', () => {
       render(<config.Component />)
