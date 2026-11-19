@@ -4,7 +4,8 @@
 import BankRecPage from '@/app/tools/bank-rec/page'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
-import { fireEvent, render, screen } from '@/test-utils'
+import { apiDownload } from '@/utils'
+import { fireEvent, render, screen, waitFor } from '@/test-utils'
 
 const mockRunReconciliation = jest.fn()
 const mockReset = jest.fn()
@@ -31,6 +32,7 @@ jest.mock('@/components/bankRec', () => ({
   BankRecMatchTable: () => <div data-testid="match-table">Matches</div>,
   ReconciliationBridge: () => <div data-testid="rec-bridge">Bridge</div>,
   SplitSearchNotice: ({ disclosure }: any) => <div data-testid="split-search-notice">{disclosure.note}</div>,
+  BankRecTestsPanel: () => <div data-testid="bank-rec-tests-panel">Tests</div>,
 }))
 
 jest.mock('@/components/shared', () => ({
@@ -138,6 +140,45 @@ describe('BankRecPage', () => {
     render(<BankRecPage />)
     expect(screen.getByText('Exact Matching')).toBeInTheDocument()
     expect(screen.getByText('CSV Export')).toBeInTheDocument()
+  })
+
+  // Sprint 886 (OUT-10): both exports carry every result of the run.
+  describe('export bodies', () => {
+    const result = {
+      summary: { matched_count: 1, matched_amount: 5, bank_only_count: 1, bank_only_amount: 10, ledger_only_count: 0, ledger_only_amount: 0, reconciling_difference: 10, total_bank: 15, total_ledger: 5, matches: [{ match_type: 'bank_only' }] },
+      bank_column_detection: { requires_mapping: false, detection_notes: [] },
+      ledger_column_detection: { requires_mapping: false, detection_notes: [] },
+      rec_tests: [{ test_name: 'High Value (>Materiality)', flagged_count: 1, severity: 'high' }],
+      outstanding_aging: [{ category: 'bank_only', total_count: 1, over_10_days: 0, over_30_days: 0, oldest_item_days: 0, oldest_item_date: '2026-03-31', oldest_item_amount: 10 }],
+      composite_score: { score: 20, risk_tier: 'moderate', total_flagged: 1, flag_rate: 0.5, flags_by_severity: { high: 1, medium: 0, low: 0 }, tests_run: 1, total_entries: 2, top_findings: [] },
+      active_thresholds: { materiality: '1000', performance_materiality: '750', amount_tolerance: '0.01', date_tolerance_days: 3, materiality_source: 'caller' },
+    }
+    const resultKeys = ['rec_tests', 'outstanding_aging', 'composite_score', 'active_thresholds'] as const
+
+    beforeEach(() => {
+      ;(apiDownload as jest.Mock).mockClear()
+      mockUseBankRec.mockReturnValue({ status: 'success', error: null, reconcile: mockRunReconciliation, reset: mockReset, result })
+    })
+
+    it('sends tests, aging, score and thresholds to the memo (no match list)', async () => {
+      render(<BankRecPage />)
+      fireEvent.click(screen.getByText('Download Memo'))
+      await waitFor(() => expect(apiDownload).toHaveBeenCalled())
+      const [path, , opts] = (apiDownload as jest.Mock).mock.calls[0]
+      expect(path).toBe('/export/bank-rec-memo')
+      for (const key of resultKeys) expect(opts.body[key]).toEqual(result[key])
+      expect(opts.body.summary.matches).toBeUndefined()
+    })
+
+    it('sends the same results and the match list to the CSV', async () => {
+      render(<BankRecPage />)
+      fireEvent.click(screen.getByText('Export CSV'))
+      await waitFor(() => expect(apiDownload).toHaveBeenCalled())
+      const [path, , opts] = (apiDownload as jest.Mock).mock.calls[0]
+      expect(path).toBe('/export/csv/bank-rec')
+      for (const key of resultKeys) expect(opts.body[key]).toEqual(result[key])
+      expect(opts.body.matches).toEqual(result.summary.matches)
+    })
   })
 
   // Sprint 839: per-run materiality

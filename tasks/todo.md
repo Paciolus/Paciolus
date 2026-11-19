@@ -500,7 +500,9 @@ triggered). **Source:** read-only review at `ef5e567` (OUT-09/10/11/12/14/15/16/
 **Rule (CEO, 2026-11-19):** a value not supplied prints "not available" / "not evaluated" — never 0, Low or "none
 identified". Every fix is tested through the real HTTP export route.
 **Decided (CEO, 2026-11-19):** three-way match drops the uncomputed score and uses the engine's own Low/Medium/High
-classification and wording on screen, PDF and CSV.
+classification and wording on screen, PDF and CSV. Asked during the sprint: bank rec tests, score and aging go **on
+screen** too; a memo with no client or engagement linked uses FASB **labelled as the default**; scores print with
+**one decimal everywhere**.
 - [x] **11A / OUT-09 — TB export keeps going concern, analytics and materiality source.** `AuditResultInput` now
       declares `going_concern` (`GoingConcernInput`: triggered/checked counts must match the indicator list, else 422),
       `analytics` (`AnalyticsInput`: typed ratios, category totals as Decimals) and `materiality_source`. PDF: absent
@@ -513,7 +515,23 @@ classification and wording on screen, PDF and CSV.
       first) — real `/audit/trial-balance` upload with a triggered net-liability indicator and an engagement
       materiality, its response posted unchanged to `/export/pdf` and `/export/excel`. Sprint 819
       `route_export_pipeline` re-recorded: the source line, the "not evaluated" sentence, three sheet digests.
-- [ ] **11B / OUT-10** — bank reconciliation memo keeps tests, score, aging and thresholds.
+- [x] **11B / OUT-10 — bank reconciliation memo and CSV keep tests, score, aging and thresholds.** One result model,
+      `BankRecExportResult` (typed `RecTestInput`, `OutstandingAgingInput`, `BankRecCompositeInput`,
+      `BankRecThresholdsInput`), for both the memo (`BankRecMemoInput`) and the CSV (`BankRecExportInput`); the page
+      sends every result (`bankRecExportBody`). Memo: Section IV reads the engine's real `outstanding_aging` (bank only /
+      ledger only, over 10 and 30 days, oldest item) — the old code read an `aging_summary`/`outstanding_deposits`
+      structure the engine never emits; methodology prints "Thresholds applied" (materiality, performance materiality,
+      tolerances, each with "entered for this run" / "Paciolus default"); a missing score prints "Not available" and
+      "Not evaluated", never LOW (0/100); score one decimal beside the tier. CSV gains RECONCILIATION TESTS, OUTSTANDING
+      ITEMS AGING, DIAGNOSTIC SCORE and THRESHOLDS APPLIED sections. Engine `tests_run` was a hard-coded 8 for 5 tests;
+      now `len(rec_tests)` (old test rewritten). **CEO decision 2026-11-19: show them on screen** — new
+      `BankRecTestsPanel` (score, tier, per-test counts, aging). Shared: the memo Proof Summary takes per-tool
+      `ProofFigures` and prints "Not available" for a figure the export did not carry (was 0%; two old tests encoded
+      that and were rewritten); `mean_confidence` / `meanConfidence` give screen and PDF one column-confidence rule;
+      bank rec's screen proof uses the run's real tests. Tests: `test_sprint886_bank_rec_export.py` (6; 5 failed
+      first) — real `/audit/bank-reconciliation` with stale, high-value and unmatched items and custom thresholds;
+      Jest `BankRecTestsPanel.test.tsx` (4) and two export-body tests in `BankRecPage.test.tsx` (failed on the old
+      page). Sprint 819 `route_form_exports` re-recorded (the four new CSV sections only).
 - [ ] **11C / OUT-11** — three-way match: no uncomputed score; engine classification everywhere.
 - [ ] **11D / OUT-12** — AP/Payroll/AR supplemental schedules reach the memo.
 - [ ] **11E / OUT-14** — payroll completeness on the 0–100 scale.

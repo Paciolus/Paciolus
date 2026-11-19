@@ -13,7 +13,6 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from auth import require_verified_user
@@ -25,6 +24,7 @@ from bank_reconciliation import (
     ReconciliationMatch,
     ReconciliationSummary,
     export_reconciliation_csv,
+    export_reconciliation_results_csv,
     reconcile_bank_statement,
 )
 from database import get_db
@@ -32,6 +32,7 @@ from models import User
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
 from shared.export_helpers import csv_response
+from shared.export_schemas import BankRecExportResult
 from shared.filenames import safe_download_filename
 from shared.helpers import parse_json_mapping
 from shared.rate_limits import RATE_LIMIT_AUDIT, RATE_LIMIT_EXPORT, limiter
@@ -141,10 +142,12 @@ async def audit_bank_reconciliation(
             raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", "bank_rec_error"))
 
 
-class BankRecExportInput(BaseModel):
-    """Input model for bank reconciliation CSV export."""
+class BankRecExportInput(BankRecExportResult):
+    """Input model for bank reconciliation CSV export.
 
-    summary: dict
+    Sprint 886 (OUT-10): the same result model as the memo, plus the match list.
+    """
+
     matches: list
     filename: str = "bank_reconciliation"
 
@@ -221,6 +224,17 @@ def export_csv_bank_rec(
         )
 
         csv_content = export_reconciliation_csv(summary)
+        # Sprint 886 (OUT-10): the tests, aging, score and thresholds of the run.
+        csv_content += export_reconciliation_results_csv(
+            rec_tests=[t.model_dump() for t in export_input.rec_tests] if export_input.rec_tests is not None else None,
+            outstanding_aging=(
+                [a.model_dump() for a in export_input.outstanding_aging]
+                if export_input.outstanding_aging is not None
+                else None
+            ),
+            composite_score=export_input.composite_score.model_dump() if export_input.composite_score else None,
+            active_thresholds=export_input.active_thresholds.model_dump() if export_input.active_thresholds else None,
+        )
         csv_bytes = csv_content.encode("utf-8-sig")
 
         download_filename = safe_download_filename(export_input.filename, "BankRec", "csv")

@@ -46,6 +46,17 @@ function countRunnable(results: StandardTestResult[]): number {
   return results.filter((tr) => !tr.skipped).length
 }
 
+/**
+ * Sprint 886 (OUT-15): the mean of the column detections a two-file tool carried;
+ * one alone if only one was carried; null (shown "Not available") if none — never 0.
+ * The PDF memos apply the same rule (`shared/memo_base.mean_confidence`).
+ */
+export function meanConfidence(...values: unknown[]): number | null {
+  const present = values.filter((v): v is number => typeof v === 'number')
+  if (present.length === 0) return null
+  return present.reduce((a, b) => a + b, 0) / present.length
+}
+
 function formatNumber(n: number): string {
   return n.toLocaleString('en-US')
 }
@@ -202,10 +213,11 @@ export function extractBankRecProof(result: BankRecResult): ProofSummary {
   const totalItems = summary.matched_count + summary.bank_only_count + summary.ledger_only_count
   const matchRate = totalItems > 0 ? summary.matched_count / totalItems : 0
 
-  // Bank rec has no formal "test battery" — treat match rate as pass rate
-  const bankConf = result.bank_column_detection?.overall_confidence ?? 0
-  const ledgerConf = result.ledger_column_detection?.overall_confidence ?? 0
-  const avgColumnConf = (bankConf + ledgerConf) / 2
+  // Column confidence: the mean of the bank and ledger detections (same rule as the PDF memo).
+  const avgColumnConf = meanConfidence(
+    result.bank_column_detection?.overall_confidence,
+    result.ledger_column_detection?.overall_confidence,
+  )
 
   // Completeness: proxy from match rate (high match = complete data)
   const completenessProxy = matchRate * 100
@@ -213,12 +225,20 @@ export function extractBankRecProof(result: BankRecResult): ProofSummary {
   // Unresolved = unmatched items
   const unresolved = summary.bank_only_count + summary.ledger_only_count
 
-  // Test details: synthesize from reconciliation categories
-  const testDetails: ProofTestDetail[] = [
-    { testName: 'Exact Match', testKey: 'matched', status: 'clear', flaggedCount: 0 },
-    { testName: 'Bank-Only Items', testKey: 'bank_only', status: summary.bank_only_count > 0 ? 'flagged' : 'clear', flaggedCount: summary.bank_only_count },
-    { testName: 'Ledger-Only Items', testKey: 'ledger_only', status: summary.ledger_only_count > 0 ? 'flagged' : 'clear', flaggedCount: summary.ledger_only_count },
-  ]
+  // Sprint 886 (OUT-10): the run's reconciliation tests — the same tests the memo
+  // and CSV list. A result without them falls back to the reconciliation categories.
+  const testDetails: ProofTestDetail[] = result.rec_tests
+    ? result.rec_tests.map((t) => ({
+        testName: t.test_name,
+        testKey: t.test_name,
+        status: t.flagged_count > 0 ? 'flagged' : 'clear',
+        flaggedCount: t.flagged_count,
+      }))
+    : [
+        { testName: 'Exact Match', testKey: 'matched', status: 'clear', flaggedCount: 0 },
+        { testName: 'Bank-Only Items', testKey: 'bank_only', status: summary.bank_only_count > 0 ? 'flagged' : 'clear', flaggedCount: summary.bank_only_count },
+        { testName: 'Ledger-Only Items', testKey: 'ledger_only', status: summary.ledger_only_count > 0 ? 'flagged' : 'clear', flaggedCount: summary.ledger_only_count },
+      ]
 
   return extractProofSummary({
     completenessScore: completenessProxy,

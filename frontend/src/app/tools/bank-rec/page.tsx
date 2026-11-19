@@ -2,13 +2,13 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
-import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice } from '@/components/bankRec'
+import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice, BankRecTestsPanel } from '@/components/bankRec'
 import { BankRecRunSettings, BankRecThresholdsApplied, validateBankRecThresholds, type BankRecThresholdInputs } from '@/components/bankRec/BankRecRunSettings'
 import { FileDropZone, GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/shared/proof'
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import type { BankColumnDetectionData } from '@/types/bankRec'
+import { bankRecExportBody, type BankColumnDetectionData } from '@/types/bankRec'
 import { apiDownload, downloadBlob } from '@/utils'
 
 /**
@@ -95,11 +95,7 @@ export default function BankRecPage() {
         token,
         {
           method: 'POST',
-          body: {
-            summary: result.summary,
-            matches: result.summary.matches,
-            filename: bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
-          },
+          body: bankRecExportBody(result, bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation', true),
         },
       )
       if (ok && blob) {
@@ -121,13 +117,7 @@ export default function BankRecPage() {
         token,
         {
           method: 'POST',
-          body: {
-            summary: result.summary,
-            bank_column_detection: result.bank_column_detection,
-            ledger_column_detection: result.ledger_column_detection,
-            split_search: result.split_search ?? null,
-            filename: bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation',
-          },
+          body: bankRecExportBody(result, bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation', false),
         },
       )
       if (memoResult.ok && memoResult.blob) {
@@ -292,6 +282,9 @@ export default function BankRecPage() {
 
                 {/* Sprint 839: which materiality figures this run used, and where each came from */}
                 {result.active_thresholds && <BankRecThresholdsApplied thresholds={result.active_thresholds} />}
+
+                {/* Sprint 886: the run's tests, score and aging — the same figures the memo and CSV carry */}
+                <BankRecTestsPanel result={result} />
 
                 {/* Column Detection Warnings */}
                 {(result.bank_column_detection.requires_mapping || result.bank_column_detection.detection_notes.length > 0) && (

@@ -753,7 +753,8 @@ class TestBankRecDiagnosticScore:
         result = compute_bank_rec_diagnostic_score(rec_tests, summary)
         assert result["score"] == 33.0  # 15 (diff) + 8 (>20 outstanding) + 6 (stale dep) + 4 (stale chk)
         assert result["risk_tier"] == "elevated"
-        assert result["tests_run"] == 8
+        # Sprint 886 (OUT-10): the tests the run actually ran (was a hard-coded 8 for 5 tests).
+        assert result["tests_run"] == len(rec_tests) == 5
 
     def test_low_diagnostic_score(self):
         from bank_reconciliation import (

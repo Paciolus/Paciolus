@@ -145,21 +145,21 @@ class TestBuildProofSummarySection:
         assert len(clear_row) == 1
         assert clear_row[0][1] == "1"
 
-    def test_missing_column_detection_uses_zero(self):
+    def test_missing_column_detection_is_not_available(self):
         story = []
         styles = _make_styles()
         result = _make_result()
         del result["column_detection"]
         build_proof_summary_section(story, styles, 468.0, result)
-        # Should still work — just shows 0%
+        # Sprint 886 (OUT-15): not supplied prints "Not available", never 0%.
         from reportlab.platypus import Table as RLTable
 
         table = [item for item in story if isinstance(item, RLTable)][0]
         conf_row = [row for row in table._cellvalues if row[0] == "Column Confidence"]
         assert len(conf_row) == 1
-        assert conf_row[0][1] == "0%"
+        assert conf_row[0][1] == "Not available"
 
-    def test_missing_data_quality_uses_zero(self):
+    def test_missing_data_quality_is_not_available(self):
         story = []
         styles = _make_styles()
         result = _make_result()
@@ -169,7 +169,7 @@ class TestBuildProofSummarySection:
 
         table = [item for item in story if isinstance(item, RLTable)][0]
         comp_row = [row for row in table._cellvalues if row[0] == "Data Completeness"]
-        assert comp_row[0][1] == "0%"
+        assert comp_row[0][1] == "Not available"  # Sprint 886 (OUT-14): never 0%
 
     def test_empty_test_results_counts_via_composite(self):
         story = []

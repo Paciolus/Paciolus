@@ -703,11 +703,74 @@ def build_workpaper_signoff(
     story.append(Spacer(1, 8))
 
 
+# Sprint 886: what every memo prints for a figure its export did not carry.
+NOT_AVAILABLE = "Not available"
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def mean_confidence(*values: Any) -> Optional[float]:
+    """The mean of the column-detection confidences a result carried (Sprint 886, OUT-15).
+
+    One value alone if only one was carried; ``None`` ("Not available") if none
+    — never 0. The screen's ``meanConfidence`` (proofAdapters.ts) applies the
+    same rule, so a two-file tool shows the same figure on screen and in the PDF.
+    """
+    present = [float(v) for v in values if _is_number(v)]
+    return sum(present) / len(present) if present else None
+
+
+@dataclass(frozen=True)
+class ProofFigures:
+    """The figures of a memo's Proof Summary (Sprint 886, OUT-14/15).
+
+    ``None`` means the export did not carry the figure; it prints "Not
+    available", never 0. ``completeness`` is on the 0–100 scale every tool
+    uses; ``column_confidence`` is 0–1.
+    """
+
+    completeness: Optional[float]
+    column_confidence: Optional[float]
+    tests_executed: Optional[int]
+    tests_clear: Optional[int]
+    items_for_review: Optional[int]
+
+
+def standard_proof_figures(result: dict[str, Any]) -> ProofFigures:
+    """Proof figures from a standard testing-tool result, with the screen's meaning.
+
+    Only what the result carries: a missing ``data_quality``, ``column_detection``
+    or ``composite_score`` gives ``None`` for its figures. "Tests with no
+    exceptions" is counted from ``test_results``; without them it is not
+    available (the old fallback guessed it from the flag total).
+    """
+    composite = result.get("composite_score") or {}
+    data_quality = result.get("data_quality") or {}
+    column_detection = result.get("column_detection") or {}
+    test_results = result.get("test_results") or []
+
+    tests_clear: Optional[int] = None
+    if test_results:
+        tests_clear = sum(
+            1 for tr in test_results if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False)
+        )
+    return ProofFigures(
+        completeness=data_quality.get("completeness_score"),
+        column_confidence=column_detection.get("overall_confidence"),
+        tests_executed=composite.get("tests_run"),
+        tests_clear=tests_clear,
+        items_for_review=composite.get("total_flagged"),
+    )
+
+
 def build_proof_summary_section(
     story: list,
     styles: dict,
     doc_width: float,
     result: dict[str, Any],
+    figures: Optional[ProofFigures] = None,
 ) -> None:
     """Build the Proof Summary section — compact evidence quality table.
 
@@ -716,35 +779,26 @@ def build_proof_summary_section(
     from the existing tool result dict. No new computation.
 
     Sprint 392: Phase LIII — Proof Architecture.
+    Sprint 886 (OUT-14/15): a tool whose result has another shape passes the
+    ``figures`` its screen shows; a figure the export did not carry prints
+    "Not available" instead of 0.
     """
-    composite = result.get("composite_score", {})
-    data_quality = result.get("data_quality", {})
-    column_detection = result.get("column_detection", {})
+    if figures is None:
+        figures = standard_proof_figures(result)
 
-    # Extract metrics with safe defaults
-    completeness = data_quality.get("completeness_score", 0)
-    col_confidence = column_detection.get("overall_confidence", 0) if column_detection else 0
-    tests_run = composite.get("tests_run", 0)
-    total_flagged = composite.get("total_flagged", 0)
-    tests_clear = max(0, tests_run - (1 if total_flagged > 0 else 0))
-
-    # For standard tools, count tests with zero flags for "clear" count
-    test_results = result.get("test_results", [])
-    if test_results:
-        tests_clear = sum(
-            1 for tr in test_results if tr.get("entries_flagged", 0) == 0 and not tr.get("skipped", False)
-        )
+    def _shown(value: Any, fmt: str) -> str:
+        return format(value, fmt) if _is_number(value) else NOT_AVAILABLE
 
     story.append(Paragraph("Proof Summary", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     proof_data = [
         ["Metric", "Value"],
-        ["Data Completeness", f"{completeness:.0f}%"],
-        ["Column Confidence", f"{col_confidence:.0%}" if isinstance(col_confidence, (int, float)) else "N/A"],
-        ["Tests Executed", str(tests_run)],
-        ["Tests With No Exceptions Flagged", str(tests_clear)],
-        ["Items for Review", str(total_flagged)],
+        ["Data Completeness", _shown(figures.completeness, ".0f") + ("%" if _is_number(figures.completeness) else "")],
+        ["Column Confidence", _shown(figures.column_confidence, ".0%")],
+        ["Tests Executed", _shown(figures.tests_executed, "d")],
+        ["Tests With No Exceptions Flagged", _shown(figures.tests_clear, "d")],
+        ["Items for Review", _shown(figures.items_for_review, "d")],
     ]
 
     proof_table = Table(proof_data, colWidths=[3.0 * inch, 3.0 * inch])

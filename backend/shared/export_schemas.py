@@ -6,7 +6,8 @@ All 18 export input models live here; routes/export.py re-exports them for backw
 """
 
 from datetime import date
-from typing import Optional
+from decimal import Decimal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -259,8 +260,67 @@ class InventoryExportInput(WorkpaperMetadata):
 # --- Memo-Only Models ---
 
 
-class BankRecMemoInput(WorkpaperMetadata):
-    """Input model for bank reconciliation memo export."""
+class RecTestInput(_ExportItem):
+    """One reconciliation test of the bank rec run (``BankRecResult.rec_tests``)."""
+
+    test_name: str
+    flagged_count: int = Field(ge=0)
+    severity: str = "low"
+    flagged_items: list[_ExportItem] = []
+
+
+class OutstandingAgingInput(_ExportItem):
+    """Aging of one category of unmatched items (``BankRecResult.outstanding_aging``)."""
+
+    category: Literal["bank_only", "ledger_only"]
+    total_count: int = Field(ge=0)
+    over_10_days: int = Field(ge=0)
+    over_30_days: int = Field(ge=0)
+    oldest_item_days: Optional[int] = None
+    oldest_item_date: Optional[str] = None
+    oldest_item_amount: ExportAmount = None
+
+
+class BankRecCompositeInput(_ExportItem):
+    """The bank rec composite diagnostic score (``compute_bank_rec_diagnostic_score``)."""
+
+    score: float = Field(ge=0, le=100)
+    risk_tier: Literal["low", "moderate", "elevated", "high"]
+    total_flagged: int = Field(ge=0)
+    flag_rate: float = 0.0
+    flags_by_severity: dict[str, int] = {}
+    tests_run: int = Field(ge=0)
+    total_entries: int = 0
+    top_findings: list[str] = []
+
+
+class BankRecThresholdSourcesInput(_ExportItem):
+    """Per threshold: supplied for this run ("caller") or the Paciolus default."""
+
+    materiality: Literal["caller", "default"]
+    performance_materiality: Literal["caller", "default"]
+
+
+class BankRecThresholdsInput(_ExportItem):
+    """The thresholds the bank rec engine applied (``BankRecResult.active_thresholds``)."""
+
+    materiality: Decimal
+    performance_materiality: Decimal
+    amount_tolerance: Optional[Decimal] = None
+    date_tolerance_days: Optional[int] = None
+    split_match_max_candidates: Optional[int] = None
+    materiality_source: Literal["caller", "default"]
+    threshold_sources: Optional[BankRecThresholdSourcesInput] = None
+
+
+class BankRecExportResult(BaseModel):
+    """Sprint 886 (OUT-10): one model for everything a bank rec run produced.
+
+    The memo and the CSV both take it, so neither can silently drop a result
+    the screen shows. Every result block is optional: one the request did not
+    carry prints as "Not available", never as a LOW tier, a zero score or an
+    empty aging.
+    """
 
     summary: dict
     bank_column_detection: Optional[dict] = None
@@ -345,6 +405,15 @@ class SamplingEvaluationMemoInput(WorkpaperMetadata):
     projected_misstatement: float = 0.0
     basic_precision: float = 0.0
     incremental_allowance: float = 0.0
+    rec_tests: Optional[list[RecTestInput]] = None
+    outstanding_aging: Optional[list[OutstandingAgingInput]] = None
+    composite_score: Optional[BankRecCompositeInput] = None
+    active_thresholds: Optional[BankRecThresholdsInput] = None
+
+
+class BankRecMemoInput(BankRecExportResult, WorkpaperMetadata):
+    """Input model for bank reconciliation memo export."""
+
     upper_error_limit: float = 0.0
     conclusion: str = ""
     conclusion_detail: str = ""

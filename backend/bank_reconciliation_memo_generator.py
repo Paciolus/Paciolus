@@ -24,6 +24,11 @@ from xml.sax.saxutils import escape as xml_escape
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
+from bank_reconciliation import (
+    AGING_CATEGORY_LABELS,
+    THRESHOLD_SOURCE_LABELS,
+    threshold_source,
+)
 from pdf import (
     ClassicalColors,
     LedgerRule,
@@ -33,14 +38,17 @@ from security_utils import log_secure_operation
 from shared.follow_up_procedures import get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
+    NOT_AVAILABLE,
     RISK_SCALE_LEGEND,
     RISK_TIER_DISPLAY,
     TESTING_MEMO_MARGINS,
     MemoContext,
+    ProofFigures,
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
     build_workpaper_signoff,
+    mean_confidence,
     render_memo,
     source_line,
     wrap_table_strings,
@@ -57,7 +65,6 @@ from shared.scope_methodology import (
 # CONSTANTS
 # =============================================================================
 
-_MAX_AGING_ROWS = 20
 
 # Methodology descriptions for all 8 tests
 _TEST_DESCRIPTIONS: dict[str, str] = {
@@ -362,7 +369,14 @@ def _build_outstanding_aging_tables(
     rec_result: dict,
     summary: dict,
 ) -> None:
-    """Build Section IV: Outstanding Items with full aging tables."""
+    """Build Section IV: Outstanding Items, aged as the engine aged them.
+
+    Sprint 886 (OUT-10): reads ``outstanding_aging`` — one entry per category
+    (bank only, ledger only) with counts over 10 and 30 days and the oldest
+    item, aged to the statement's closing date. The previous code read an
+    ``aging_summary`` / ``outstanding_deposits`` structure the engine never
+    emits, so the aging never printed.
+    """
     bank_only = summary.get("bank_only_count", 0)
     ledger_only = summary.get("ledger_only_count", 0)
     bank_only_amount = summary.get("bank_only_amount", 0)
@@ -373,183 +387,46 @@ def _build_outstanding_aging_tables(
 
     story.append(Paragraph("IV. Outstanding Items", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
+    for label, count, amount in (
+        ("Bank-only items (in the bank statement, not the ledger)", bank_only, bank_only_amount),
+        ("Ledger-only items (in the ledger, not the bank statement)", ledger_only, ledger_only_amount),
+    ):
+        story.append(Paragraph(create_leader_dots(label, f"{count:,}   ${abs(amount):,.2f}"), styles["MemoLeader"]))
+    story.append(Spacer(1, 6))
 
-    # Outstanding Deposits aging table
-    deposits = rec_result.get("outstanding_deposits", [])
-    if deposits:
-        story.append(Paragraph("Outstanding Deposits (Bank-Only) — Aging Analysis", styles["MemoSection"]))
-        story.append(Spacer(1, 4))
-
-        # Sort by days outstanding descending
-        sorted_deposits = sorted(deposits, key=lambda d: d.get("days_outstanding", 0), reverse=True)
-        display_deposits = sorted_deposits[:_MAX_AGING_ROWS]
-
-        cell_style = styles["MemoTableCell"]
-        dep_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
-        for dep in display_deposits:
-            days = dep.get("days_outstanding")
-            if days is not None and days > 30:
-                tier_key = "high"
-            elif days is not None and days > 10:
-                tier_key = "moderate"
-            else:
-                tier_key = "low"
-            tier_label = RISK_TIER_DISPLAY[tier_key][0]
-            priority = f"{tier_label} ({days}d)" if days is not None else tier_label
-
-            dep_data.append(
+    aging = rec_result.get("outstanding_aging")
+    if aging is None:
+        story.append(Paragraph(create_leader_dots("Aging", NOT_AVAILABLE), styles["MemoLeader"]))
+    else:
+        cell = styles["MemoTableCell"]
+        rows = [["Category", "Items", "Over 10 Days", "Over 30 Days", "Oldest Item"]]
+        for a in aging:
+            oldest = NOT_AVAILABLE
+            if a.get("oldest_item_days") is not None:
+                oldest = f"{a['oldest_item_days']} days ({a.get('oldest_item_date') or 'date not available'})"
+                if a.get("oldest_item_amount") is not None:
+                    oldest += f", ${abs(a['oldest_item_amount']):,.2f}"
+            rows.append(
                 [
-                    Paragraph(user_text(str(dep.get("date", "N/A"))), cell_style),
-                    Paragraph(str(days) if days is not None else "N/A", cell_style),
-                    Paragraph(user_text(dep.get("description", "")[:40]), cell_style),
-                    Paragraph(f"${abs(dep.get('amount', 0)):,.2f}", cell_style),
-                    Paragraph(priority, cell_style),
+                    Paragraph(user_text(AGING_CATEGORY_LABELS.get(a["category"], a["category"])), cell),
+                    Paragraph(str(a["total_count"]), cell),
+                    Paragraph(str(a["over_10_days"]), cell),
+                    Paragraph(str(a["over_30_days"]), cell),
+                    Paragraph(user_text(oldest), cell),
                 ]
             )
-
-        dep_data.append(
-            [
-                Paragraph("Total", cell_style),
-                Paragraph("", cell_style),
-                Paragraph("", cell_style),
-                Paragraph(f"${abs(bank_only_amount):,.2f}", cell_style),
-                Paragraph("", cell_style),
-            ]
-        )
-
-        dep_table = Table(
-            dep_data,
-            colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
-            repeatRows=1,
-        )
-        dep_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
-        # Bold total row
-        dep_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
-        story.append(dep_table)
-
-        if len(sorted_deposits) > _MAX_AGING_ROWS:
-            story.append(Spacer(1, 2))
-            story.append(
-                Paragraph(
-                    f"Showing {user_text(_MAX_AGING_ROWS)} of {len(sorted_deposits)} items. "
-                    "Full listing available in source data export.",
-                    styles["MemoBodySmall"],
-                )
-            )
-        story.append(Spacer(1, 8))
-    elif bank_only > 0:
-        # Fallback: summary only
+        table = Table(rows, colWidths=[1.2 * inch, 0.7 * inch, 1.0 * inch, 1.0 * inch, 2.3 * inch], repeatRows=1)
+        table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (3, -1), "RIGHT")]))
+        story.append(table)
+        story.append(Spacer(1, 2))
         story.append(
             Paragraph(
-                f"Outstanding Deposits: {bank_only:,} items totaling ${abs(bank_only_amount):,.2f}",
-                styles["MemoBody"],
+                "Ages are measured to the latest date in the bank statement. Every unmatched item is listed in "
+                "the CSV export.",
+                styles["MemoBodySmall"],
             )
         )
-        story.append(Spacer(1, 4))
-
-    # Outstanding Checks aging table
-    checks = rec_result.get("outstanding_checks", [])
-    if checks:
-        story.append(Paragraph("Outstanding Checks (Ledger-Only) — Aging Analysis", styles["MemoSection"]))
-        story.append(Spacer(1, 4))
-
-        sorted_checks = sorted(checks, key=lambda c: c.get("days_outstanding", 0), reverse=True)
-        display_checks = sorted_checks[:_MAX_AGING_ROWS]
-
-        cell_style_chk = styles["MemoTableCell"]
-        chk_data = [["Transaction Date", "Days Outstanding", "Description", "Amount", "Priority"]]
-        for chk in display_checks:
-            days = chk.get("days_outstanding")
-            if days is not None and days > 90:
-                tier_key = "high"
-            elif days is not None and days > 30:
-                tier_key = "moderate"
-            else:
-                tier_key = "low"
-            tier_label = RISK_TIER_DISPLAY[tier_key][0]
-            priority = f"{tier_label} ({days}d)" if days is not None else tier_label
-
-            chk_data.append(
-                [
-                    Paragraph(user_text(str(chk.get("date", "N/A"))), cell_style_chk),
-                    Paragraph(str(days) if days is not None else "N/A", cell_style_chk),
-                    Paragraph(user_text(chk.get("description", "")[:40]), cell_style_chk),
-                    Paragraph(f"${abs(chk.get('amount', 0)):,.2f}", cell_style_chk),
-                    Paragraph(priority, cell_style_chk),
-                ]
-            )
-
-        chk_data.append(
-            [
-                Paragraph("Total", cell_style_chk),
-                Paragraph("", cell_style_chk),
-                Paragraph("", cell_style_chk),
-                Paragraph(f"${abs(ledger_only_amount):,.2f}", cell_style_chk),
-                Paragraph("", cell_style_chk),
-            ]
-        )
-
-        chk_table = Table(
-            chk_data,
-            colWidths=[1.2 * inch, 1.0 * inch, 2.0 * inch, 1.2 * inch, 0.8 * inch],
-            repeatRows=1,
-        )
-        chk_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
-        chk_table.setStyle(TableStyle([("FONTNAME", (0, -1), (-1, -1), "Times-Bold")]))
-        story.append(chk_table)
-
-        if len(sorted_checks) > _MAX_AGING_ROWS:
-            story.append(Spacer(1, 2))
-            story.append(
-                Paragraph(
-                    f"Showing {user_text(_MAX_AGING_ROWS)} of {len(sorted_checks)} items. "
-                    "Full listing available in source data export.",
-                    styles["MemoBodySmall"],
-                )
-            )
-        story.append(Spacer(1, 8))
-    elif ledger_only > 0:
-        story.append(
-            Paragraph(
-                f"Outstanding Checks: {ledger_only:,} items totaling ${abs(ledger_only_amount):,.2f}",
-                styles["MemoBody"],
-            )
-        )
-        story.append(Spacer(1, 4))
-
-    # Outstanding Items Summary block
-    aging_summary = rec_result.get("aging_summary")
-    if aging_summary:
-        story.append(Paragraph("Outstanding Items Summary", styles["MemoSection"]))
-        story.append(Spacer(1, 4))
-
-        dep_over_10 = aging_summary.get("deposits_over_10_days", {})
-        dep_over_30 = aging_summary.get("deposits_over_30_days", {})
-        chk_over_30 = aging_summary.get("checks_over_30_days", {})
-        chk_over_90 = aging_summary.get("checks_over_90_days", {})
-
-        summary_lines = [
-            create_leader_dots(
-                "Deposits > 10 days old",
-                f"{dep_over_10.get('count', 0)}   ${dep_over_10.get('amount', 0):,.2f}"
-                f"   ({dep_over_10.get('pct', 0):.0f}% of total deposits)",
-            ),
-            create_leader_dots(
-                "Deposits > 30 days old",
-                f"{dep_over_30.get('count', 0)}   ${dep_over_30.get('amount', 0):,.2f}   Priority: HIGH",
-            ),
-            create_leader_dots(
-                "Checks > 90 days old",
-                f"{chk_over_90.get('count', 0)}   ${chk_over_90.get('amount', 0):,.2f}   Priority: HIGH (stale)",
-            ),
-            create_leader_dots(
-                "Checks > 30 days old",
-                f"{chk_over_30.get('count', 0)}   ${chk_over_30.get('amount', 0):,.2f}",
-            ),
-        ]
-        for line in summary_lines:
-            story.append(Paragraph(line, styles["MemoLeader"]))
-        story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     story.append(
         Paragraph(
@@ -559,6 +436,59 @@ def _build_outstanding_aging_tables(
         )
     )
     story.append(Spacer(1, 8))
+
+
+def _build_thresholds_applied(story: list, styles: dict, rec_result: dict) -> None:
+    """The thresholds the run applied and where each came from (Sprint 886, OUT-10/16)."""
+    thresholds = rec_result.get("active_thresholds")
+    story.append(Paragraph("<b>Thresholds applied</b>", styles["MemoBodySmall"]))
+    if thresholds is None:
+        story.append(Paragraph(create_leader_dots("Thresholds", NOT_AVAILABLE), styles["MemoLeader"]))
+        story.append(Spacer(1, 6))
+        return
+    lines = []
+    for label, key in (
+        ("Materiality (overall)", "materiality"),
+        ("Performance materiality", "performance_materiality"),
+    ):
+        origin = THRESHOLD_SOURCE_LABELS.get(threshold_source(thresholds, key), NOT_AVAILABLE)
+        if origin != "Paciolus default":
+            origin = origin.lower()
+        lines.append((label, f"${thresholds[key]:,.2f} \u2014 {origin}"))
+    if thresholds.get("amount_tolerance") is not None:
+        lines.append(("Amount tolerance", f"${thresholds['amount_tolerance']:,.2f} \u2014 Paciolus default"))
+    if thresholds.get("date_tolerance_days") is not None:
+        lines.append(("Date tolerance", f"{thresholds['date_tolerance_days']} days \u2014 Paciolus default"))
+    for label, value in lines:
+        story.append(Paragraph(create_leader_dots(label, value), styles["MemoLeader"]))
+    story.append(Spacer(1, 6))
+
+
+def _bank_rec_proof_figures(rec_result: dict, summary: dict) -> ProofFigures:
+    """The Proof Summary figures, with the meaning the screen's ``extractBankRecProof`` gives them.
+
+    Completeness is the match rate; column confidence the mean of the bank and
+    ledger detections (``mean_confidence``); tests are the
+    run's reconciliation tests; items for review are the unmatched items.
+    """
+    matched = summary.get("matched_count", 0)
+    bank_only = summary.get("bank_only_count", 0)
+    ledger_only = summary.get("ledger_only_count", 0)
+    total = matched + bank_only + ledger_only
+
+    confidence = mean_confidence(
+        (rec_result.get("bank_column_detection") or {}).get("overall_confidence"),
+        (rec_result.get("ledger_column_detection") or {}).get("overall_confidence"),
+    )
+
+    rec_tests = rec_result.get("rec_tests")
+    return ProofFigures(
+        completeness=matched / total * 100 if total else None,
+        column_confidence=confidence,
+        tests_executed=len(rec_tests) if rec_tests is not None else None,
+        tests_clear=sum(1 for t in rec_tests if t["flagged_count"] == 0) if rec_tests is not None else None,
+        items_for_review=bank_only + ledger_only,
+    )
 
 
 def _build_key_findings(
@@ -632,8 +562,8 @@ def _build_key_findings(
         story.append(
             Paragraph(
                 f"{user_text(total_outstanding)} outstanding items remain unmatched "
-                f"({user_text(bank_only)} deposits totaling ${abs(bank_only_amount):,.2f}; "
-                f"{user_text(ledger_only)} checks totaling ${abs(ledger_only_amount):,.2f}). "
+                f"({user_text(bank_only)} bank-only items totaling ${abs(bank_only_amount):,.2f}; "
+                f"{user_text(ledger_only)} ledger-only items totaling ${abs(ledger_only_amount):,.2f}). "
                 f"Aging analysis in Section IV identifies items requiring priority investigation.",
                 styles["MemoBody"],
             )
@@ -644,7 +574,7 @@ def _build_key_findings(
         story.append(Spacer(1, 4))
 
     # Dynamic findings from rec_tests
-    rec_tests = rec_result.get("rec_tests", [])
+    rec_tests = rec_result.get("rec_tests") or []
     test_key_map = {
         "Stale Deposits (>10 days)": "stale_deposits",
         "Stale Checks (>90 days)": "stale_checks",
@@ -730,7 +660,9 @@ def generate_bank_rec_memo(
         bank_detection = rec_result.get("bank_column_detection", {})
         ledger_detection = rec_result.get("ledger_column_detection", {})
         test_results = rec_result.get("test_results", [])
-        composite = rec_result.get("composite_score", {})
+        # Sprint 886 (OUT-10): None when the export did not carry it — printed
+        # as "Not available", never as a LOW tier or a zero score.
+        composite = rec_result.get("composite_score")
 
         matched = summary.get("matched_count", 0)
         bank_only = summary.get("bank_only_count", 0)
@@ -783,7 +715,9 @@ def generate_bank_rec_memo(
         )
 
         # Proof Summary (uses test_results for accurate counts)
-        build_proof_summary_section(story, styles, doc_width, rec_result)
+        build_proof_summary_section(
+            story, styles, doc_width, rec_result, figures=_bank_rec_proof_figures(rec_result, summary)
+        )
 
         # ──────────────────────────────────────────────────────────────
         # II. METHODOLOGY
@@ -806,6 +740,8 @@ def generate_bank_rec_memo(
         # Sprint 833: the split-match search is bounded (a Paciolus convention);
         # disclose the bounds and how many open bank items were not searched
         # exhaustively. Those items remain reconciling items in Section IV.
+        _build_thresholds_applied(story, styles, rec_result)
+
         split_search = rec_result.get("split_search") or {}
         split_note = split_search.get("note")
         if split_note:
@@ -835,79 +771,55 @@ def generate_bank_rec_memo(
         # ──────────────────────────────────────────────────────────────
         # V. RESULTS SUMMARY
         # ──────────────────────────────────────────────────────────────
-        if composite:
-            # Override section title to "V." (shared builder defaults to "III.")
-            story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
-            story.append(LedgerRule(doc_width))
-
-            risk_tier = str(composite.get("risk_tier", "low")).lower()
+        story.append(Paragraph("V. Results Summary", styles["MemoSection"]))
+        story.append(LedgerRule(doc_width))
+        if composite is None:
+            story.append(
+                Paragraph(create_leader_dots("Composite Diagnostic Score", NOT_AVAILABLE), styles["MemoLeader"])
+            )
+            story.append(Paragraph(create_leader_dots("Diagnostic Tier", "Not evaluated"), styles["MemoLeader"]))
+            story.append(Spacer(1, 6))
+        else:
+            risk_tier = str(composite["risk_tier"]).lower()
             base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-            tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
-
-            story.append(
-                Paragraph(
-                    create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
-                    styles["MemoLeader"],
-                )
-            )
-            story.append(
-                Paragraph(
-                    create_leader_dots("Diagnostic Tier", tier_label),
-                    styles["MemoLeader"],
-                )
-            )
+            score = f"{composite['score']:.1f}"
+            for label, value in (
+                ("Composite Diagnostic Score", f"{score} / 100"),
+                ("Diagnostic Tier", f"{base_tier_label} ({score}/100)"),
+            ):
+                story.append(Paragraph(create_leader_dots(label, value), styles["MemoLeader"]))
             story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
             story.append(Spacer(1, 2))
-            story.append(
-                Paragraph(
-                    create_leader_dots("Total Items Flagged", f"{composite.get('total_flagged', 0):,}"),
-                    styles["MemoLeader"],
-                )
-            )
-
             sev = composite.get("flags_by_severity", {})
-            story.append(
-                Paragraph(
-                    create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
-                    styles["MemoLeader"],
-                )
-            )
-            story.append(
-                Paragraph(
-                    create_leader_dots("Medium Severity Flags", str(sev.get("medium", 0))),
-                    styles["MemoLeader"],
-                )
-            )
-            story.append(
-                Paragraph(
-                    create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
-                    styles["MemoLeader"],
-                )
-            )
+            for label, value in (
+                ("Total Flags Raised (one per flag)", f"{composite['total_flagged']:,}"),
+                ("High Severity Flags", str(sev.get("high", 0))),
+                ("Medium Severity Flags", str(sev.get("medium", 0))),
+                ("Low Severity Flags", str(sev.get("low", 0))),
+            ):
+                story.append(Paragraph(create_leader_dots(label, value), styles["MemoLeader"]))
             story.append(Spacer(1, 6))
 
-            # Results by test table (from rec_tests)
-            rec_tests = rec_result.get("rec_tests", [])
-            if rec_tests:
-                cell_style_rt = styles["MemoTableCell"]
-                results_data = [["Test", "Flagged", "Severity"]]
-                for rt in rec_tests:
-                    results_data.append(
-                        [
-                            Paragraph(user_text(str(rt.get("test_name", ""))), cell_style_rt),
-                            Paragraph(user_text(str(rt.get("flagged_count", 0))), cell_style_rt),
-                            Paragraph(user_text(rt.get("severity", "low").upper()), cell_style_rt),
-                        ]
-                    )
-
-                results_table = Table(
-                    results_data,
-                    colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch],
+        # Results by test (from rec_tests)
+        rec_tests = rec_result.get("rec_tests")
+        if rec_tests is None:
+            story.append(Paragraph(create_leader_dots("Reconciliation tests", NOT_AVAILABLE), styles["MemoLeader"]))
+        else:
+            cell_style_rt = styles["MemoTableCell"]
+            results_data = [["Test", "Items Flagged", "Severity"]]
+            for rt in rec_tests:
+                results_data.append(
+                    [
+                        Paragraph(user_text(str(rt["test_name"])), cell_style_rt),
+                        Paragraph(str(rt["flagged_count"]), cell_style_rt),
+                        Paragraph(user_text(str(rt.get("severity", "low")).upper()), cell_style_rt),
+                    ]
                 )
-                results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
-                story.append(results_table)
+            results_table = Table(results_data, colWidths=[3.5 * inch, 1.0 * inch, 1.5 * inch])
+            results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
+            story.append(results_table)
 
-            story.append(Spacer(1, 8))
+        story.append(Spacer(1, 8))
 
         # ──────────────────────────────────────────────────────────────
         # VI. KEY FINDINGS
@@ -933,11 +845,10 @@ def generate_bank_rec_memo(
         story.append(Paragraph("VIII. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        risk_tier = str(composite.get("risk_tier", "low")).lower() if composite else "low"
-
-        base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("LOW", ClassicalColors.SAGE))
-        score_val = composite.get("score", 0) if composite else 0
-        tier_label = f"{base_tier_label} ({score_val:.0f}/100)"
+        risk_tier = str(composite["risk_tier"]).lower() if composite else ""
+        base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
+        score_text = f"{composite['score']:.1f}" if composite else ""
+        tier_label = f"{base_tier_label} ({score_text}/100)"
 
         # BUG-002: dict-based conclusion lookup (replaces if/elif chain)
         _bank_rec_suffixes = {
@@ -966,13 +877,19 @@ def generate_bank_rec_memo(
             ),
         }
 
-        suffix = _bank_rec_suffixes.get(risk_tier, _bank_rec_suffixes["low"])
-        assessment = (
-            f"Based on the automated reconciliation procedures applied, "
-            f"the bank reconciliation returned {tier_label} flag density "
-            f"(Composite Diagnostic Score: {score_val:.1f}/100) across the automated tests. "
-            f"{suffix}"
-        )
+        if composite is None:
+            assessment = (
+                "No composite diagnostic score was available for this memo, so no flag-density "
+                "indicator is stated. Review the reconciliation results and outstanding items above."
+            )
+        else:
+            suffix = _bank_rec_suffixes.get(risk_tier, _bank_rec_suffixes["low"])
+            assessment = (
+                f"Based on the automated reconciliation procedures applied, "
+                f"the bank reconciliation returned {tier_label} flag density "
+                f"(Composite Diagnostic Score: {score_text}/100) across the automated tests. "
+                f"{suffix}"
+            )
 
         story.append(Paragraph(assessment, styles["MemoBody"]))
         story.append(Spacer(1, 12))

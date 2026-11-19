@@ -75,8 +75,12 @@ function buildCompletenessMetric(score: number): ProofMetric {
   }
 }
 
-function buildColumnConfidenceMetric(confidence: number): ProofMetric {
-  // confidence is 0–1 from column_detection.overall_confidence
+function buildColumnConfidenceMetric(confidence: number | null): ProofMetric {
+  // confidence is 0–1 from column_detection.overall_confidence.
+  // Sprint 886 (OUT-15): null = the result carried no detection — "Not available", not 0.
+  if (confidence === null) {
+    return { label: 'Column Mapping', displayValue: 'Not available', numericValue: 0, level: 'insufficient' }
+  }
   const clamped = Math.max(0, Math.min(1, confidence))
   return {
     label: 'Column Mapping',
@@ -112,8 +116,8 @@ function buildUnresolvedMetric(count: number): ProofMetric {
 export interface ProofExtractionInput {
   /** 0–100 data completeness score */
   completenessScore: number
-  /** 0–1 column detection confidence */
-  columnConfidence: number
+  /** 0–1 column detection confidence; null when the result carried no detection */
+  columnConfidence: number | null
   /** Number of tests that passed (no flags) */
   testsPassed: number
   /** Total number of tests run */

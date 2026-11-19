@@ -1208,6 +1208,99 @@ def export_reconciliation_csv(summary: ReconciliationSummary) -> str:
     return output.getvalue()
 
 
+# Sprint 886 (OUT-10/16): the labels every bank rec export uses, matching the screen.
+NOT_AVAILABLE = "Not available"
+AGING_CATEGORY_LABELS = {"bank_only": "Bank only", "ledger_only": "Ledger only"}
+THRESHOLD_SOURCE_LABELS = {"caller": "Entered for this run", "default": "Paciolus default"}
+
+
+def threshold_source(thresholds: dict, key: str) -> str:
+    """Where one bank rec threshold came from: its own source, else the run's."""
+    sources = thresholds.get("threshold_sources") or {}
+    return str(sources.get(key) or thresholds.get("materiality_source") or "")
+
+
+def export_reconciliation_results_csv(
+    rec_tests: Optional[list[dict]],
+    outstanding_aging: Optional[list[dict]],
+    composite_score: Optional[dict],
+    active_thresholds: Optional[dict],
+) -> str:
+    """The run's tests, aging, score and thresholds as CSV sections (Sprint 886, OUT-10).
+
+    Appended after ``export_reconciliation_csv``. A block the request did not
+    carry is written as "Not available" — never as zero or a LOW tier.
+    """
+    output = StringIO()
+    writer = safe_csv_writer(output)
+
+    writer.writerow([])
+    writer.writerow(["RECONCILIATION TESTS"])
+    writer.writerow(["Test", "Items Flagged", "Severity"])
+    if rec_tests is None:
+        writer.writerow([NOT_AVAILABLE])
+    for t in rec_tests or []:
+        writer.writerow([t["test_name"], t["flagged_count"], str(t.get("severity", "")).upper()])
+
+    writer.writerow([])
+    writer.writerow(["OUTSTANDING ITEMS AGING"])
+    writer.writerow(
+        ["Category", "Items", "Over 10 Days", "Over 30 Days", "Oldest (Days)", "Oldest Date", "Oldest Amount"]
+    )
+    if outstanding_aging is None:
+        writer.writerow([NOT_AVAILABLE])
+    for a in outstanding_aging or []:
+        amount = a.get("oldest_item_amount")
+        writer.writerow(
+            [
+                AGING_CATEGORY_LABELS.get(a["category"], a["category"]),
+                a["total_count"],
+                a["over_10_days"],
+                a["over_30_days"],
+                a.get("oldest_item_days") if a.get("oldest_item_days") is not None else "",
+                a.get("oldest_item_date") or "",
+                number_cell(amount, ".2f") if amount is not None else "",
+            ]
+        )
+
+    writer.writerow([])
+    writer.writerow(["DIAGNOSTIC SCORE"])
+    writer.writerow(["Metric", "Value"])
+    if composite_score is None:
+        writer.writerow(["Composite Diagnostic Score", NOT_AVAILABLE])
+        writer.writerow(["Diagnostic Tier", NOT_AVAILABLE])
+    else:
+        writer.writerow(["Composite Diagnostic Score", number_cell(composite_score["score"], ".1f")])
+        writer.writerow(["Diagnostic Tier", str(composite_score["risk_tier"]).upper()])
+        writer.writerow(["Items Flagged (one per flag)", composite_score["total_flagged"]])
+
+    writer.writerow([])
+    writer.writerow(["THRESHOLDS APPLIED"])
+    writer.writerow(["Threshold", "Amount", "Source"])
+    if active_thresholds is None:
+        writer.writerow(["Thresholds", NOT_AVAILABLE])
+    else:
+        for label, key in (
+            ("Materiality (overall)", "materiality"),
+            ("Performance materiality", "performance_materiality"),
+        ):
+            writer.writerow(
+                [
+                    label,
+                    number_cell(active_thresholds[key], ".2f"),
+                    THRESHOLD_SOURCE_LABELS.get(threshold_source(active_thresholds, key), NOT_AVAILABLE),
+                ]
+            )
+        if active_thresholds.get("amount_tolerance") is not None:
+            writer.writerow(
+                ["Amount tolerance", number_cell(active_thresholds["amount_tolerance"], ".2f"), "Paciolus default"]
+            )
+        if active_thresholds.get("date_tolerance_days") is not None:
+            writer.writerow(["Date tolerance (days)", active_thresholds["date_tolerance_days"], "Paciolus default"])
+
+    return output.getvalue()
+
+
 # Sprint 838: per-row note on a BANK_ONLY item whose split-match candidate
 # pool exceeded the cap (Sprint 833) -- mirrors the UI badge wording intent.
 SPLIT_SEARCH_LIMITED_CSV_NOTE = (
@@ -1672,7 +1765,8 @@ def compute_bank_rec_diagnostic_score(
         "total_flagged": total_flagged,
         "flag_rate": flag_rate,
         "flags_by_severity": {"high": high_sev, "medium": med_sev, "low": low_sev},
-        "tests_run": 8,
+        # Sprint 886 (OUT-10): the tests this run actually ran (was a hard-coded 8).
+        "tests_run": len(rec_tests),
         "total_entries": total_txns,
         "top_findings": top_findings,
     }

@@ -155,6 +155,37 @@ export interface BankRecActiveThresholds {
   }
 }
 
+/** Sprint 886 (OUT-10): one reconciliation test of the run. */
+export interface BankRecTest {
+  test_name: string
+  flagged_count: number
+  severity: string
+  flagged_items?: Array<Record<string, unknown>>
+}
+
+/** Sprint 886 (OUT-10): aging of one category of unmatched items, to the statement's closing date. */
+export interface BankRecOutstandingAging {
+  category: 'bank_only' | 'ledger_only'
+  total_count: number
+  over_10_days: number
+  over_30_days: number
+  oldest_item_days: number | null
+  oldest_item_date: string | null
+  oldest_item_amount: number | null
+}
+
+/** Sprint 886 (OUT-10): the composite diagnostic score of the run. */
+export interface BankRecCompositeScore {
+  score: number
+  risk_tier: 'low' | 'moderate' | 'elevated' | 'high'
+  total_flagged: number
+  flag_rate: number
+  flags_by_severity: { high: number; medium: number; low: number }
+  tests_run: number
+  total_entries: number
+  top_findings: string[]
+}
+
 export interface BankRecResult {
   summary: ReconciliationSummaryData
   bank_column_detection: BankColumnDetectionData
@@ -162,4 +193,29 @@ export interface BankRecResult {
   split_search?: SplitSearchDisclosure | null
   suggested_journal_entries?: SuggestedJournalEntry[] | null
   active_thresholds?: BankRecActiveThresholds | null
+  rec_tests?: BankRecTest[] | null
+  outstanding_aging?: BankRecOutstandingAging[] | null
+  composite_score?: BankRecCompositeScore | null
+}
+
+/**
+ * Sprint 886 (OUT-10): the body of both bank rec exports — every result of the
+ * run, so the memo and CSV show what the screen shows. The memo omits the
+ * match list (the CSV lists every item).
+ */
+export function bankRecExportBody(result: BankRecResult, filename: string, withMatches: boolean): Record<string, unknown> {
+  const { matches, ...summaryTotals } = result.summary
+  const body: Record<string, unknown> = {
+    summary: withMatches ? result.summary : summaryTotals,
+    bank_column_detection: result.bank_column_detection,
+    ledger_column_detection: result.ledger_column_detection,
+    split_search: result.split_search ?? null,
+    rec_tests: result.rec_tests ?? null,
+    outstanding_aging: result.outstanding_aging ?? null,
+    composite_score: result.composite_score ?? null,
+    active_thresholds: result.active_thresholds ?? null,
+    filename,
+  }
+  if (withMatches) body.matches = matches
+  return body
 }
