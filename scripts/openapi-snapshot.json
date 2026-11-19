@@ -4296,14 +4296,18 @@
         "description": "Input model for PDF/Excel/CSV export - accepts audit result JSON.",
         "properties": {
           "abnormal_balances": {
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/FlaggedAccountInput"
+            },
             "title": "Abnormal Balances",
             "type": "array"
           },
           "all_accounts": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "$ref": "#/components/schemas/TrialBalanceAccountInput"
+                },
                 "type": "array"
               },
               {
@@ -4438,7 +4442,9 @@
           "selected_sheets": {
             "anyOf": [
               {
-                "items": {},
+                "items": {
+                  "type": "string"
+                },
                 "type": "array"
               },
               {
@@ -4485,6 +4491,7 @@
           "workpaper_date": {
             "anyOf": [
               {
+                "format": "date",
                 "type": "string"
               },
               {
@@ -12089,9 +12096,7 @@
             "type": "boolean"
           },
           "lead_sheet_grouping": {
-            "additionalProperties": true,
-            "title": "Lead Sheet Grouping",
-            "type": "object"
+            "$ref": "#/components/schemas/LeadSheetGroupingInput"
           },
           "period_end": {
             "anyOf": [
@@ -12118,14 +12123,12 @@
           "prior_lead_sheet_grouping": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/LeadSheetGroupingInput"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Prior Lead Sheet Grouping"
+            ]
           },
           "reviewed_by": {
             "anyOf": [
@@ -12141,6 +12144,7 @@
           "workpaper_date": {
             "anyOf": [
               {
+                "format": "date",
                 "type": "string"
               },
               {
@@ -12414,6 +12418,141 @@
           "test_results"
         ],
         "title": "FixedAssetExportInput",
+        "type": "object"
+      },
+      "FlaggedAccountInput": {
+        "additionalProperties": true,
+        "description": "One entry of ``abnormal_balances`` (a flag raised against an account).",
+        "properties": {
+          "account": {
+            "default": "Unknown",
+            "title": "Account",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "anomaly_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anomaly Type"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debit"
+          },
+          "issue": {
+            "default": "",
+            "title": "Issue",
+            "type": "string"
+          },
+          "materiality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "FlaggedAccountInput",
         "type": "object"
       },
       "FluxAnalysisResponse": {
@@ -15234,6 +15373,86 @@
         "title": "JournalEntryResponse",
         "type": "object"
       },
+      "LeadSheetAccountInput": {
+        "additionalProperties": true,
+        "description": "One account inside a lead-sheet summary (Sprint 885, OUT-02).",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debit"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "LeadSheetAccountInput",
+        "type": "object"
+      },
+      "LeadSheetGroupingInput": {
+        "additionalProperties": true,
+        "description": "The TB analysis ``lead_sheet_grouping``: its summaries are typed (Sprint 885, OUT-02).",
+        "properties": {
+          "summaries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LeadSheetSummaryInput"
+            },
+            "title": "Summaries",
+            "type": "array"
+          }
+        },
+        "title": "LeadSheetGroupingInput",
+        "type": "object"
+      },
       "LeadSheetInput": {
         "properties": {
           "filename": {
@@ -15316,6 +15535,55 @@
           "movements"
         ],
         "title": "LeadSheetMovementSummaryResponse",
+        "type": "object"
+      },
+      "LeadSheetSummaryInput": {
+        "additionalProperties": true,
+        "description": "One lead sheet (A–Z) of the grouping the financial statements are built from.",
+        "properties": {
+          "accounts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LeadSheetAccountInput"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "lead_sheet": {
+            "default": "",
+            "title": "Lead Sheet",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "net_balance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Balance"
+          }
+        },
+        "title": "LeadSheetSummaryInput",
         "type": "object"
       },
       "LeaseAccountingRequest": {
@@ -25672,6 +25940,64 @@
           "row_number"
         ],
         "title": "TransactionResponse",
+        "type": "object"
+      },
+      "TrialBalanceAccountInput": {
+        "additionalProperties": true,
+        "description": "One entry of ``all_accounts`` (every account in the trial balance).",
+        "properties": {
+          "account": {
+            "default": "Unknown",
+            "title": "Account",
+            "type": "string"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debit"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "TrialBalanceAccountInput",
         "type": "object"
       },
       "TrialBalanceResponse": {

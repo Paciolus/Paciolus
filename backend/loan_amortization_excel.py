@@ -21,6 +21,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from excel_generator import ExcelColors
 from loan_amortization_engine import AmortizationResult
+from shared.excel_cells import append_row, assert_no_formulas, put
 from shared.excel_exact import APPROXIMATE_HEADER, approximate_note, money
 
 CURRENCY_FORMAT = '"$"#,##0.00'
@@ -52,9 +53,9 @@ def _note_beside(ws: Worksheet, row: int, col: int, items: list[tuple[str, objec
     if note is None:
         return
     if ws.cell(row=1, column=col).value is None:
-        ws.cell(row=1, column=col, value=APPROXIMATE_HEADER)
+        put(ws, 1, col, APPROXIMATE_HEADER)
         _apply_header([ws.cell(row=1, column=col)])
-    ws.cell(row=row, column=col, value=note)
+    put(ws, row, col, note)
 
 
 def _apply_header(row_cells) -> None:
@@ -88,7 +89,7 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         "Extra Principal",
         "Ending Balance",
     ]
-    ws.append(headers)
+    append_row(ws, headers)
     _apply_header(ws[1])
     ws.freeze_panes = "A2"
 
@@ -101,12 +102,13 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
             entry.extra_principal,
             entry.ending_balance,
         ]
-        ws.append(
+        append_row(
+            ws,
             [
                 entry.period_number,
                 entry.payment_date.isoformat() if entry.payment_date else "",
                 *(money(a) for a in amounts),
-            ]
+            ],
         )
         _note_beside(ws, ws.max_row, 9, list(zip(headers[2:8], amounts)))
 
@@ -120,9 +122,9 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     # the final ending balance is shown on its own row.
     totals = result.column_totals()
     total_row = ws.max_row + 2
-    ws.cell(row=total_row, column=1, value="Totals").font = _TOTAL_FONT
+    put(ws, total_row, 1, "Totals").font = _TOTAL_FONT
     for col, key in ((4, "scheduled_payment"), (5, "interest"), (6, "principal"), (7, "extra_principal")):
-        cell = ws.cell(row=total_row, column=col, value=money(totals[key]))
+        cell = put(ws, total_row, col, money(totals[key]))
         cell.number_format = CURRENCY_FORMAT
         cell.font = _TOTAL_FONT
     _note_beside(
@@ -135,8 +137,8 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         ],
     )
     final_row = total_row + 1
-    ws.cell(row=final_row, column=1, value="Final Ending Balance").font = _TOTAL_FONT
-    final = ws.cell(row=final_row, column=8, value=money(result.final_ending_balance))
+    put(ws, final_row, 1, "Final Ending Balance").font = _TOTAL_FONT
+    final = put(ws, final_row, 8, money(result.final_ending_balance))
     final.number_format = CURRENCY_FORMAT
     final.font = _TOTAL_FONT
     _note_beside(ws, final_row, 9, [("Ending Balance", result.final_ending_balance)])
@@ -149,17 +151,18 @@ def _build_schedule_sheet(ws: Worksheet, result: AmortizationResult) -> None:
 
 def _build_annual_summary_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     headers = ["Year", "Calendar Year", "Total Payments", "Total Interest", "Total Principal", "Ending Balance"]
-    ws.append(headers)
+    append_row(ws, headers)
     _apply_header(ws[1])
 
     for entry in result.annual_summary:
         amounts = [entry.total_payments, entry.total_interest, entry.total_principal, entry.ending_balance]
-        ws.append(
+        append_row(
+            ws,
             [
                 entry.year_index,
                 entry.calendar_year if entry.calendar_year else "",
                 *(money(a) for a in amounts),
-            ]
+            ],
         )
         _note_beside(ws, ws.max_row, 7, list(zip(headers[2:6], amounts)))
 
@@ -173,7 +176,7 @@ def _build_annual_summary_sheet(ws: Worksheet, result: AmortizationResult) -> No
 
 def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
     cfg = result.config
-    ws.append(["Field", "Value"])
+    append_row(ws, ["Field", "Value"])
     _apply_header(ws[1])
 
     rows: list[tuple[str, object]] = [
@@ -189,7 +192,7 @@ def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
         ("Payoff Date", result.payoff_date.isoformat() if result.payoff_date else ""),
     ]
     for label, value in rows:
-        ws.append([label, value])
+        append_row(ws, [label, value])
         if isinstance(value, Decimal) and label != "Annual Rate":
             _note_beside(ws, ws.max_row, 3, [(label, value)])
 
@@ -202,24 +205,24 @@ def _build_inputs_sheet(ws: Worksheet, result: AmortizationResult) -> None:
 
     if cfg.extra_payments:
         start = ws.max_row + 2
-        ws.cell(row=start, column=1, value="Extra Payments").font = _TOTAL_FONT
-        ws.cell(row=start + 1, column=1, value="Period")
-        ws.cell(row=start + 1, column=2, value="Amount")
+        put(ws, start, 1, "Extra Payments").font = _TOTAL_FONT
+        put(ws, start + 1, 1, "Period")
+        put(ws, start + 1, 2, "Amount")
         _apply_header([ws.cell(row=start + 1, column=1), ws.cell(row=start + 1, column=2)])
         for i, extra in enumerate(cfg.extra_payments, start=2):
-            ws.cell(row=start + i, column=1, value=extra.period_number)
-            cell = ws.cell(row=start + i, column=2, value=money(extra.amount))
+            put(ws, start + i, 1, extra.period_number)
+            cell = put(ws, start + i, 2, money(extra.amount))
             cell.number_format = CURRENCY_FORMAT
 
     if cfg.rate_changes:
         start = ws.max_row + 2
-        ws.cell(row=start, column=1, value="Rate Changes").font = _TOTAL_FONT
-        ws.cell(row=start + 1, column=1, value="Period")
-        ws.cell(row=start + 1, column=2, value="New Annual Rate")
+        put(ws, start, 1, "Rate Changes").font = _TOTAL_FONT
+        put(ws, start + 1, 1, "Period")
+        put(ws, start + 1, 2, "New Annual Rate")
         _apply_header([ws.cell(row=start + 1, column=1), ws.cell(row=start + 1, column=2)])
         for i, chg in enumerate(cfg.rate_changes, start=2):
-            ws.cell(row=start + i, column=1, value=chg.period_number)
-            cell = ws.cell(row=start + i, column=2, value=_exact(chg.new_annual_rate))
+            put(ws, start + i, 1, chg.period_number)
+            cell = put(ws, start + i, 2, _exact(chg.new_annual_rate))
             cell.number_format = PERCENT_FORMAT
 
     ws.column_dimensions["A"].width = 22
@@ -240,5 +243,6 @@ def build_amortization_workbook(result: AmortizationResult) -> bytes:
     _build_inputs_sheet(inputs_ws, result)
 
     buffer = io.BytesIO()
+    assert_no_formulas(wb)
     wb.save(buffer)
     return buffer.getvalue()

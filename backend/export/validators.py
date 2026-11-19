@@ -16,6 +16,6 @@ def validate_financial_statements_input(payload: FinancialStatementsInput) -> No
 
     Raises HTTPException(400) if lead_sheet_grouping contains no summaries.
     """
-    summaries = payload.lead_sheet_grouping.get("summaries", [])
+    summaries = payload.lead_sheet_grouping.summaries
     if not summaries:
         raise HTTPException(status_code=400, detail="lead_sheet_grouping must contain non-empty 'summaries' list")

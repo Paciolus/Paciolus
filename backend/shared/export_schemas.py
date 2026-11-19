@@ -5,9 +5,12 @@ Extracted from routes/export.py (Sprint 155) to support sub-module decomposition
 All 18 export input models live here; routes/export.py re-exports them for backward compat.
 """
 
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
+from shared.schemas import ExportAmount, _ExportItem
 
 # --- Workpaper Metadata Base ---
 
@@ -102,18 +105,42 @@ class FluxExpectationsMemoInput(WorkpaperMetadata):
     expectations: dict[str, ExpectationEntry] = {}  # keyed by account name
 
 
+class LeadSheetAccountInput(_ExportItem):
+    """One account inside a lead-sheet summary (Sprint 885, OUT-02)."""
+
+    account: Optional[str] = None
+    name: Optional[str] = None
+    debit: ExportAmount = None
+    credit: ExportAmount = None
+
+
+class LeadSheetSummaryInput(_ExportItem):
+    """One lead sheet (A–Z) of the grouping the financial statements are built from."""
+
+    lead_sheet: str = ""
+    name: Optional[str] = None
+    net_balance: ExportAmount = None
+    accounts: list[LeadSheetAccountInput] = []
+
+
+class LeadSheetGroupingInput(_ExportItem):
+    """The TB analysis ``lead_sheet_grouping``: its summaries are typed (Sprint 885, OUT-02)."""
+
+    summaries: list[LeadSheetSummaryInput] = []
+
+
 class FinancialStatementsInput(BaseModel):
     """Input model for financial statements export."""
 
-    lead_sheet_grouping: dict
-    prior_lead_sheet_grouping: Optional[dict] = None
+    lead_sheet_grouping: LeadSheetGroupingInput
+    prior_lead_sheet_grouping: Optional[LeadSheetGroupingInput] = None
     filename: str = "financial_statements"
     entity_name: Optional[str] = None
     period_end: Optional[str] = None
     # Deprecated (Sprint 7): signoff fields are ignored unless include_signoff=True.
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
-    workpaper_date: Optional[str] = None
+    workpaper_date: Optional[date] = None  # Sprint 885 (OUT-02): a date, not free text
     include_signoff: bool = False
 
 

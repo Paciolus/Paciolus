@@ -224,11 +224,12 @@ def export_financial_statements(
     validate_financial_statements_input(payload)
 
     def _serialize() -> bytes:
+        prior = payload.prior_lead_sheet_grouping
         builder = FinancialStatementBuilder(
-            payload.lead_sheet_grouping,
+            payload.lead_sheet_grouping.model_dump(exclude_unset=True),
             entity_name=payload.entity_name or "",
             period_end=payload.period_end or "",
-            prior_lead_sheet_grouping=payload.prior_lead_sheet_grouping,
+            prior_lead_sheet_grouping=prior.model_dump(exclude_unset=True) if prior is not None else None,
         )
         statements = builder.build()
         if fmt == "excel":

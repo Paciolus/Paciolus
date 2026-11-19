@@ -373,7 +373,26 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       quote or line break broke the record. Each row now goes through `safe_csv_writer` as three values (count an int).
       Reproduced first: 3 of 3 in `test_sprint885_convergence_csv.py` failed over HTTP (commas, quotes, LF, CRLF,
       `;@`, `=HYPERLINK`, `,+1,-2`).
-- [ ] **10B / OUT-02 — every Excel cell through one typed writer.**
+- [x] **10B / OUT-02 — every Excel cell through one typed writer.** `shared/excel_cells.py`: `put` / `put_ref` /
+      `append_row` decide by Python type — `str` is written as text (`t="s"`, never a formula; text starting with a
+      formula trigger also gets Excel's invisible `quotePrefix`, so the cell stays text if re-entered; no visible `'`),
+      int/float/Decimal stay numbers (non-finite refused), `date` is a date cell, anything else is a `TypeError`;
+      XML-illegal control characters print as U+FFFD instead of a 500. A codemod routed all 170 writes in
+      `excel_generator.py`, `leadsheet_generator.py` and `loan_amortization_excel.py` through it and removed their
+      `sanitize_csv_value` wrappers (which put a visible `'` in the cell). Second layer: `assert_no_formulas(wb)`
+      before every save (it caught the cash-flow sheet writes the first codemod pass missed). Dates: `workpaper_date`
+      is `Optional[date]` on `AuditResultInput` and `FinancialStatementsInput` (a 422 for "=1+1"; the generators also
+      refuse a non-ISO string) and is written as a date cell; the PDFs still get the same ISO text. Models replace the
+      untyped nested inputs: `FlaggedAccountInput` (`abnormal_balances`), `TrialBalanceAccountInput` (`all_accounts`),
+      `LeadSheetGroupingInput`/`LeadSheetSummaryInput`/`LeadSheetAccountInput` (`lead_sheet_grouping`, prior too),
+      `selected_sheets: list[str]` — typed fields, `extra="allow"` for the keys the PDFs read, numbers coerced to text
+      for text fields; exporters read them via `model_dump(exclude_unset=True)` so unsent keys stay absent. Guard test
+      fails the build if a generator writes a cell any other way. Tests: `test_sprint885_excel_typed_cells.py` (19;
+      15 failed first). Old contract rewritten: `test_export_csv_serializers.py` (non-dict list entries were silently
+      skipped; now a validation error). `route_export_pipeline` snapshot re-recorded: every cell value, type and number
+      format compared before/after — identical; only the style table differs (`quotePrefix`). OpenAPI snapshot
+      regenerated. **Not typed (PDF-only, not read by any workbook):** `classification_summary`, `column_detection`,
+      `risk_summary`, `sheet_results`.
 - [x] **10C / OUT-33 — CSV text protected by column, not by content.** `SafeCsvWriter` left any str matching
       `_PLAIN_NUMBER` bare, so a text identifier "+00123"/"-00123" became a number. Now every `str` is text and is
       escaped; numbers, Decimals and `NumberCell` pass bare. `number_cell(value, spec, suffix)` gives exactly the old

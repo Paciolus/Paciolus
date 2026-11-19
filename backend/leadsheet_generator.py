@@ -26,7 +26,7 @@ from excel_generator import ExcelColors, create_currency_style, create_header_st
 from flux_engine import FluxResult
 from recon_engine import ReconResult, RiskBand
 from security_utils import log_secure_operation
-from shared.filenames import sanitize_csv_value
+from shared.excel_cells import assert_no_formulas, put, put_ref
 
 
 class LeadSheetGenerator:
@@ -85,6 +85,7 @@ class LeadSheetGenerator:
         self._build_index_tab()
         self._build_detail_tabs()
 
+        assert_no_formulas(self.wb)
         self.wb.save(self.buffer)
         data = self.buffer.getvalue()
         self.buffer.close()
@@ -95,10 +96,10 @@ class LeadSheetGenerator:
         ws = self.wb.create_sheet("Lead Sheet Index", 0)
 
         # Header Info
-        ws["A1"] = "Lead Sheet Summary / Index"
+        put_ref(ws, "A1", "Lead Sheet Summary / Index")
         ws["A1"].style = "ls_title"
-        ws["A2"] = f"Client File: {self.filename}"
-        ws["A3"] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d')}"
+        put_ref(ws, "A2", f"Client File: {self.filename}")
+        put_ref(ws, "A3", f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d')}")
 
         # Table Headers
         headers = [
@@ -114,7 +115,7 @@ class LeadSheetGenerator:
         ]
 
         for col, text in enumerate(headers, 1):
-            cell = ws.cell(row=5, column=col, value=text)
+            cell = put(ws, 5, col, text)
             cell.style = "header_style"
 
         # Data Rows
@@ -123,36 +124,36 @@ class LeadSheetGenerator:
             recon = self.recon_map.get(item.account_name)
 
             # Account Name
-            ws.cell(row=row_idx, column=1, value=sanitize_csv_value(item.account_name))
-            ws.cell(row=row_idx, column=2, value=sanitize_csv_value(item.account_type))
+            put(ws, row_idx, 1, item.account_name)
+            put(ws, row_idx, 2, item.account_type)
 
             # Financials
-            c_py = ws.cell(row=row_idx, column=3, value=item.prior_balance)
+            c_py = put(ws, row_idx, 3, item.prior_balance)
             c_py.style = "currency_style"
 
-            c_cy = ws.cell(row=row_idx, column=4, value=item.current_balance)
+            c_cy = put(ws, row_idx, 4, item.current_balance)
             c_cy.style = "currency_style"
 
-            c_var = ws.cell(row=row_idx, column=5, value=item.delta_amount)
+            c_var = put(ws, row_idx, 5, item.delta_amount)
             c_var.style = "currency_style"
 
             # Variance %
             pct_val = item.delta_percent / 100.0 if item.prior_balance != 0 else 0
-            c_pct = ws.cell(row=row_idx, column=6, value=pct_val)
+            c_pct = put(ws, row_idx, 6, pct_val)
             c_pct.number_format = "0.0%"
 
             # Risk Info
             if recon:
-                risk_cell = ws.cell(row=row_idx, column=7, value=recon.risk_band.value.upper())
-                ws.cell(row=row_idx, column=8, value=recon.risk_score)
+                risk_cell = put(ws, row_idx, 7, recon.risk_band.value.upper())
+                put(ws, row_idx, 8, recon.risk_score)
 
                 if recon.risk_band == RiskBand.HIGH:
                     risk_cell.style = "risk_high"
                 elif recon.risk_band == RiskBand.MEDIUM:
                     risk_cell.style = "risk_med"
             else:
-                ws.cell(row=row_idx, column=7, value="-")
-                ws.cell(row=row_idx, column=8, value="-")
+                put(ws, row_idx, 7, "-")
+                put(ws, row_idx, 8, "-")
 
             # Annotations (from Flux/Recon factors)
             notes = []
@@ -163,7 +164,7 @@ class LeadSheetGenerator:
             if recon and recon.factors:
                 notes.extend(recon.factors)
 
-            ws.cell(row=row_idx, column=9, value=", ".join(notes))
+            put(ws, row_idx, 9, ", ".join(notes))
 
             row_idx += 1
 
@@ -198,44 +199,44 @@ class LeadSheetGenerator:
             recon = self.recon_map.get(item.account_name)
 
             # Header
-            ws["A1"] = f"Lead Sheet: {sanitize_csv_value(item.account_name)}"
+            put_ref(ws, "A1", f"Lead Sheet: {item.account_name}")
             ws["A1"].style = "ls_title"
-            ws["A2"] = f"Risk Assessment: {recon.risk_band.value.upper() if recon else 'N/A'}"
+            put_ref(ws, "A2", f"Risk Assessment: {recon.risk_band.value.upper() if recon else 'N/A'}")
             if recon and recon.risk_band == RiskBand.HIGH:
                 ws["A2"].style = "risk_high"
 
             # Rollforward Table
-            ws["A5"] = "Beginning Balance (PY)"
-            ws["B5"] = item.prior_balance
+            put_ref(ws, "A5", "Beginning Balance (PY)")
+            put_ref(ws, "B5", item.prior_balance)
             ws["B5"].style = "currency_style"
 
-            ws["A6"] = "Activity / Variance"
-            ws["B6"] = item.delta_amount
+            put_ref(ws, "A6", "Activity / Variance")
+            put_ref(ws, "B6", item.delta_amount)
             ws["B6"].style = "currency_style"
 
-            ws["A7"] = "Ending Balance (CY)"
-            ws["B7"] = item.current_balance
+            put_ref(ws, "A7", "Ending Balance (CY)")
+            put_ref(ws, "B7", item.current_balance)
             ws["B7"].style = "currency_style"
             ws["B7"].font = Font(bold=True)
             ws["B7"].border = Border(top=Side(style="thin"), bottom=Side(style="double"))
 
             # Risk Factors
-            ws["A10"] = "Detected Risk Factors:"
+            put_ref(ws, "A10", "Detected Risk Factors:")
             ws["A10"].font = Font(bold=True)
 
             row = 11
             if recon and recon.factors:
                 for factor in recon.factors:
-                    ws.cell(row=row, column=1, value=f"• {factor}")
+                    put(ws, row, 1, f"• {factor}")
                     row += 1
             if item.variance_indicators:
                 for indicator in item.variance_indicators:
-                    ws.cell(row=row, column=1, value=f"• Flux: {indicator}")
+                    put(ws, row, 1, f"• Flux: {indicator}")
                     row += 1
 
             # Audit Procedures / Notes
             row += 2
-            ws["A" + str(row)] = "Auditor Notes / Procedures Performed:"
+            put_ref(ws, "A" + str(row), "Auditor Notes / Procedures Performed:")
             ws["A" + str(row)].font = Font(bold=True)
 
             # Make columns wide

@@ -33,9 +33,14 @@ class MissingAccountListError(ValueError):
         super().__init__(ALL_ACCOUNTS_REQUIRED)
 
 
+def _as_dicts(items: list | None) -> list[dict]:
+    """Nested export items (typed models since Sprint 885) as plain dicts."""
+    return [i.model_dump(exclude_unset=True) if hasattr(i, "model_dump") else i for i in (items or [])]
+
+
 def flag_counts(abnormal_balances: list) -> Counter[str]:
     """How many flags each account carries (one per abnormal_balances entry)."""
-    return Counter(a.get("account", "Unknown") for a in abnormal_balances if isinstance(a, dict))
+    return Counter(a.get("account", "Unknown") for a in _as_dicts(abnormal_balances) if isinstance(a, dict))
 
 
 def flag_label(count: int) -> str:
@@ -81,7 +86,7 @@ def serialize_trial_balance_csv(audit_result: AuditResultInput) -> bytes:
     total_debit = total_credit = total_net = quantize_monetary(0)
     ref_idx = 1
 
-    for acct in audit_result.all_accounts:
+    for acct in _as_dicts(audit_result.all_accounts):
         if not isinstance(acct, dict):
             continue
         account = acct.get("account", "Unknown")
@@ -141,7 +146,7 @@ def serialize_anomalies_csv(audit_result: AuditResultInput) -> bytes:
     material_idx = 1
     immaterial_idx = 1
 
-    for anomaly in audit_result.abnormal_balances:
+    for anomaly in _as_dicts(audit_result.abnormal_balances):
         if isinstance(anomaly, dict):
             materiality = anomaly.get("materiality", "immaterial")
 

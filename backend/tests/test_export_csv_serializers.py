@@ -115,15 +115,15 @@ class TestSerializeTrialBalanceCsv:
         row = [r for r in rows if r and r[0].startswith("TB-")][0]
         assert row[5] == "fallback_type"
 
-    def test_non_dict_entries_are_skipped(self):
-        result = _make_audit_result(
-            abnormal_balances=["not a dict", 42, None],
-            all_accounts=["not a dict", {"account": "Cash", "debit": 10.0, "credit": 0, "type": "asset"}],
-        )
-        rows = _parse(serialize_trial_balance_csv(result))
-        account_rows = [r for r in rows if r and r[0].startswith("TB-")]
-        assert [r[1] for r in account_rows] == ["Cash"]
-        assert rows[-1][0] == "TOTALS"
+    def test_non_dict_entries_are_refused(self):
+        # Sprint 885 (OUT-02): nested export items are typed models; a list entry
+        # that is not an object is a validation error, not silently skipped.
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            _make_audit_result(abnormal_balances=["not a dict", 42, None])
+        with pytest.raises(ValidationError):
+            _make_audit_result(all_accounts=["not a dict"])
 
     def test_without_the_account_list_raises(self):
         with pytest.raises(ValueError, match="all_accounts"):

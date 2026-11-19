@@ -20,7 +20,7 @@ def serialize_audit_excel(audit_result: AuditResultInput) -> bytes:
 
     Returns raw .xlsx bytes.
     """
-    result_dict = audit_result.model_dump()
+    result_dict = audit_result.export_dict()
     return generate_workpaper(
         result_dict,
         audit_result.filename,

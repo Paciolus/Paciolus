@@ -1,7 +1,7 @@
 """Multi-tab Excel workpaper generator using Oat & Obsidian theme."""
 
 import io
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, Optional
 
 from openpyxl import Workbook
@@ -9,8 +9,8 @@ from openpyxl.styles import Alignment, Border, Font, NamedStyle, PatternFill, Si
 from openpyxl.worksheet.worksheet import Worksheet
 
 from security_utils import log_secure_operation
+from shared.excel_cells import as_date, assert_no_formulas, put, put_ref
 from shared.excel_exact import approximate_note, money
-from shared.filenames import sanitize_csv_value
 from shared.monetary import quantize_monetary
 
 
@@ -136,7 +136,7 @@ class PaciolusWorkpaperGenerator:
         filename: str = "workpaper",
         prepared_by: Optional[str] = None,
         reviewed_by: Optional[str] = None,
-        workpaper_date: Optional[str] = None,
+        workpaper_date: Optional[str | date] = None,
         include_signoff: bool = False,
     ):
         self.audit_result = audit_result
@@ -146,7 +146,8 @@ class PaciolusWorkpaperGenerator:
         # Sprint 53: Workpaper fields (deprecated Sprint 7 — gated by include_signoff)
         self.prepared_by = prepared_by
         self.reviewed_by = reviewed_by
-        self.workpaper_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
+        # Sprint 885 (OUT-02): a real date (written as a date cell), never free text.
+        self.workpaper_date = as_date(workpaper_date) or datetime.now().date()
         self.include_signoff = include_signoff
 
         # Remove default sheet (will create named sheets)
@@ -189,6 +190,7 @@ class PaciolusWorkpaperGenerator:
         self._build_ratios_tab()
 
         # Save to buffer
+        assert_no_formulas(self.wb)
         self.wb.save(self.buffer)
         excel_bytes = self.buffer.getvalue()
         self.buffer.close()
@@ -202,27 +204,27 @@ class PaciolusWorkpaperGenerator:
         ws = self.wb.create_sheet("Summary", 0)
 
         # Title
-        ws["A1"] = "Paciolus Diagnostic Summary"
+        put_ref(ws, "A1", "Paciolus Diagnostic Summary")
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:D1")
 
         # Subtitle
-        ws["A2"] = f"Analysis Intelligence Report for {sanitize_csv_value(self.filename)}"
+        put_ref(ws, "A2", f"Analysis Intelligence Report for {self.filename}")
         ws["A2"].style = "subtitle_style"
         ws.merge_cells("A2:D2")
 
         # Timestamp
-        ws["A3"] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        put_ref(ws, "A3", f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
         ws["A3"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         # Balance Status
         is_balanced = self.audit_result.get("balanced", False)
-        ws["A5"] = "Balance Status:"
-        ws["B5"] = "BALANCED" if is_balanced else "OUT OF BALANCE"
+        put_ref(ws, "A5", "Balance Status:")
+        put_ref(ws, "B5", "BALANCED" if is_balanced else "OUT OF BALANCE")
         ws["B5"].style = "balanced_style" if is_balanced else "unbalanced_style"
 
         # Key Metrics Section
-        ws["A7"] = "Key Metrics"
+        put_ref(ws, "A7", "Key Metrics")
         ws["A7"].style = "title_style"
         ws.merge_cells("A7:B7")
 
@@ -237,9 +239,9 @@ class PaciolusWorkpaperGenerator:
         ]
 
         for i, (label, value, is_currency) in enumerate(metrics, start=9):
-            ws[f"A{i}"] = label
+            put_ref(ws, f"A{i}", label)
             ws[f"A{i}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            ws[f"B{i}"] = value
+            put_ref(ws, f"B{i}", value)
             if is_currency:
                 ws[f"B{i}"].style = "currency_style"
             else:
@@ -248,29 +250,29 @@ class PaciolusWorkpaperGenerator:
         # Consolidated info if applicable
         if self.audit_result.get("is_consolidated"):
             row = len(metrics) + 10
-            ws[f"A{row}"] = "Sheets Consolidated"
-            ws[f"B{row}"] = self.audit_result.get("sheet_count", 0)
+            put_ref(ws, f"A{row}", "Sheets Consolidated")
+            put_ref(ws, f"B{row}", self.audit_result.get("sheet_count", 0))
 
         # Sprint 53: Workpaper signoff section (deprecated Sprint 7 — gated by include_signoff)
         signoff_start = 17
         if self.include_signoff and (self.prepared_by or self.reviewed_by):
-            ws[f"A{signoff_start}"] = "Workpaper Sign-Off"
+            put_ref(ws, f"A{signoff_start}", "Workpaper Sign-Off")
             ws[f"A{signoff_start}"].style = "title_style"
             ws.merge_cells(f"A{signoff_start}:B{signoff_start}")
 
             row = signoff_start + 1
             if self.prepared_by:
-                ws[f"A{row}"] = "Prepared By:"
+                put_ref(ws, f"A{row}", "Prepared By:")
                 ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                ws[f"B{row}"] = sanitize_csv_value(self.prepared_by)
-                ws[f"C{row}"] = self.workpaper_date
+                put_ref(ws, f"B{row}", self.prepared_by)
+                put_ref(ws, f"C{row}", self.workpaper_date)
                 row += 1
 
             if self.reviewed_by:
-                ws[f"A{row}"] = "Reviewed By:"
+                put_ref(ws, f"A{row}", "Reviewed By:")
                 ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                ws[f"B{row}"] = sanitize_csv_value(self.reviewed_by)
-                ws[f"C{row}"] = self.workpaper_date
+                put_ref(ws, f"B{row}", self.reviewed_by)
+                put_ref(ws, f"C{row}", self.workpaper_date)
                 row += 1
 
             disclaimer_start = row + 2
@@ -278,13 +280,17 @@ class PaciolusWorkpaperGenerator:
             disclaimer_start = 20
 
         # Legal disclaimer
-        ws[f"A{disclaimer_start}"] = (
-            "DISCLAIMER: This output is generated by an automated analytical system and supports"
+        put_ref(
+            ws,
+            f"A{disclaimer_start}",
+            "DISCLAIMER: This output is generated by an automated analytical system and supports",
         )
-        ws[f"A{disclaimer_start + 1}"] = (
-            "internal evaluation and professional judgment. It does not constitute an audit, review,"
+        put_ref(
+            ws,
+            f"A{disclaimer_start + 1}",
+            "internal evaluation and professional judgment. It does not constitute an audit, review,",
         )
-        ws[f"A{disclaimer_start + 2}"] = "or attestation engagement and provides no assurance."
+        put_ref(ws, f"A{disclaimer_start + 2}", "or attestation engagement and provides no assurance.")
         for row in [disclaimer_start, disclaimer_start + 1, disclaimer_start + 2]:
             ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_500, size=8, italic=True)
 
@@ -306,15 +312,17 @@ class PaciolusWorkpaperGenerator:
         ws = self.wb.create_sheet("Trial Balance", 1)
 
         # Title
-        ws["A1"] = "Trial Balance"
+        put_ref(ws, "A1", "Trial Balance")
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:F1")
 
         all_accounts = [a for a in (self.audit_result.get("all_accounts") or []) if isinstance(a, dict)]
         if not all_accounts:
-            ws["A3"] = (
+            put_ref(
+                ws,
+                "A3",
                 "The full account list was not supplied with this export, so the trial balance is not shown. "
-                "Re-export from the analysis to include it. Flagged accounts are on the Flagged Accounts tab."
+                "Re-export from the analysis to include it. Flagged accounts are on the Flagged Accounts tab.",
             )
             ws["A3"].alignment = Alignment(wrap_text=True)
             ws.merge_cells("A3:F3")
@@ -324,7 +332,7 @@ class PaciolusWorkpaperGenerator:
         # Headers
         headers = ["Account", "Category", "Debit", "Credit", "Net", "Flagged"]
         for col, header in enumerate(headers, start=1):
-            cell = ws.cell(row=3, column=col, value=header)
+            cell = put(ws, 3, col, header)
             cell.style = "header_style"
 
         flag_counts: dict[str, int] = {}
@@ -347,13 +355,13 @@ class PaciolusWorkpaperGenerator:
             total_credit += credit
             total_net += net
 
-            ws.cell(row=row, column=1, value=sanitize_csv_value(name))
-            ws.cell(row=row, column=2, value=sanitize_csv_value(acct.get("type", "Unknown")))
+            put(ws, row, 1, name)
+            put(ws, row, 2, acct.get("type", "Unknown"))
             for col, value in ((3, debit), (4, credit), (5, net)):
-                ws.cell(row=row, column=col, value=float(value)).style = "currency_style"
+                put(ws, row, col, float(value)).style = "currency_style"
             count = flag_counts.get(name, 0)
             if count:
-                ws.cell(row=row, column=6, value=f"Yes ({count})")
+                put(ws, row, 6, f"Yes ({count})")
 
             # Material flags keep their row highlight.
             if name in material_accounts:
@@ -365,10 +373,10 @@ class PaciolusWorkpaperGenerator:
 
         # Totals row — the sum of the rows above it.
         row += 1
-        ws.cell(row=row, column=1, value="TOTALS")
+        put(ws, row, 1, "TOTALS")
         ws.cell(row=row, column=1).font = Font(bold=True)
         for col, value in ((3, total_debit), (4, total_credit), (5, total_net)):
-            cell = ws.cell(row=row, column=col, value=float(value))
+            cell = put(ws, row, col, float(value))
             cell.style = "currency_style"
             cell.font = Font(bold=True)
 
@@ -382,8 +390,8 @@ class PaciolusWorkpaperGenerator:
 
     def _write_flag_subtotal(self, ws: Worksheet, row: int, label: str, amount: Any) -> None:
         """Sprint 884 (OUT-04): a labelled subtotal under the Amount column."""
-        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
-        cell = ws.cell(row=row, column=5, value=float(amount))
+        put(ws, row, 1, label).font = Font(bold=True)
+        cell = put(ws, row, 5, float(amount))
         cell.style = "currency_style"
         cell.font = Font(bold=True)
 
@@ -398,18 +406,18 @@ class PaciolusWorkpaperGenerator:
         ws = self.wb.create_sheet("Flagged Accounts", 2)
 
         # Title
-        ws["A1"] = "Flagged Accounts"
+        put_ref(ws, "A1", "Flagged Accounts")
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:G1")  # Sprint 53: Extended for Ref column
 
         # Subtitle
-        ws["A2"] = f"Materiality Threshold: ${self.audit_result.get('materiality_threshold', 0):,.2f}"
+        put_ref(ws, "A2", f"Materiality Threshold: ${self.audit_result.get('materiality_threshold', 0):,.2f}")
         ws["A2"].style = "subtitle_style"
 
         # Headers - Sprint 53: Added Ref column
         headers = ["Ref", "Account", "Type", "Issue", "Amount", "Severity", "Classification"]
         for col, header in enumerate(headers, start=1):
-            cell = ws.cell(row=4, column=col, value=header)
+            cell = put(ws, 4, col, header)
             cell.style = "header_style"
 
         abnormal_balances = self.audit_result.get("abnormal_balances", [])
@@ -423,7 +431,7 @@ class PaciolusWorkpaperGenerator:
 
         # Material anomalies section
         if material:
-            ws.cell(row=row, column=1, value=f"MATERIAL RISKS ({len(material)})")
+            put(ws, row, 1, f"MATERIAL RISKS ({len(material)})")
             ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.CLAY, size=11)
             ws.merge_cells(f"A{row}:G{row}")  # Sprint 53: Extended
             row += 1
@@ -431,18 +439,18 @@ class PaciolusWorkpaperGenerator:
             for idx, ab in enumerate(material, start=1):
                 # Sprint 53: Reference number
                 ref_num = f"TB-M{idx:03d}"
-                ws.cell(row=row, column=1, value=ref_num)
+                put(ws, row, 1, ref_num)
                 ws.cell(row=row, column=1).font = _ANOMALY_REF_FONT
-                ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get("account", "Unknown")))
-                ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
-                ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
+                put(ws, row, 2, ab.get("account", "Unknown"))
+                put(ws, row, 3, ab.get("type", "Unknown"))
+                put(ws, row, 4, ab.get("issue", ""))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
                 amount = quantize_monetary(ab.get("amount"))
                 material_subtotal += amount
-                ws.cell(row=row, column=5, value=float(amount))
+                put(ws, row, 5, float(amount))
                 ws.cell(row=row, column=5).style = "currency_style"
-                ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
-                ws.cell(row=row, column=7, value="MATERIAL")
+                put(ws, row, 6, ab.get("severity", "unknown").upper())
+                put(ws, row, 7, "MATERIAL")
                 ws.cell(row=row, column=7).font = _MATERIAL_LABEL_FONT
 
                 # Apply material styling
@@ -457,7 +465,7 @@ class PaciolusWorkpaperGenerator:
 
         # Immaterial anomalies section
         if immaterial:
-            ws.cell(row=row, column=1, value=f"IMMATERIAL ITEMS ({len(immaterial)})")
+            put(ws, row, 1, f"IMMATERIAL ITEMS ({len(immaterial)})")
             ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_500, size=11)
             ws.merge_cells(f"A{row}:G{row}")  # Sprint 53: Extended
             row += 1
@@ -465,18 +473,18 @@ class PaciolusWorkpaperGenerator:
             for idx, ab in enumerate(immaterial, start=1):
                 # Sprint 53: Reference number
                 ref_num = f"TB-I{idx:03d}"
-                ws.cell(row=row, column=1, value=ref_num)
+                put(ws, row, 1, ref_num)
                 ws.cell(row=row, column=1).font = _ANOMALY_REF_FONT
-                ws.cell(row=row, column=2, value=sanitize_csv_value(ab.get("account", "Unknown")))
-                ws.cell(row=row, column=3, value=sanitize_csv_value(ab.get("type", "Unknown")))
-                ws.cell(row=row, column=4, value=sanitize_csv_value(ab.get("issue", "")))
+                put(ws, row, 2, ab.get("account", "Unknown"))
+                put(ws, row, 3, ab.get("type", "Unknown"))
+                put(ws, row, 4, ab.get("issue", ""))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
                 amount = quantize_monetary(ab.get("amount"))
                 immaterial_subtotal += amount
-                ws.cell(row=row, column=5, value=float(amount))
+                put(ws, row, 5, float(amount))
                 ws.cell(row=row, column=5).style = "currency_style"
-                ws.cell(row=row, column=6, value=ab.get("severity", "unknown").upper())
-                ws.cell(row=row, column=7, value="IMMATERIAL")
+                put(ws, row, 6, ab.get("severity", "unknown").upper())
+                put(ws, row, 7, "IMMATERIAL")
                 ws.cell(row=row, column=7).font = _IMMATERIAL_LABEL_FONT
 
                 row += 1
@@ -489,7 +497,7 @@ class PaciolusWorkpaperGenerator:
 
         # If no anomalies
         if not material and not immaterial:
-            ws.cell(row=row, column=1, value="No anomalies detected. Trial balance appears healthy.")
+            put(ws, row, 1, "No anomalies detected. Trial balance appears healthy.")
             ws.cell(row=row, column=1).font = Font(color=ExcelColors.SAGE, size=11, italic=True)
             ws.merge_cells(f"A{row}:F{row}")
 
@@ -506,18 +514,18 @@ class PaciolusWorkpaperGenerator:
         ws = self.wb.create_sheet("Key Ratios", 3)
 
         # Title
-        ws["A1"] = "Key Financial Ratios"
+        put_ref(ws, "A1", "Key Financial Ratios")
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:D1")
 
         # Subtitle
-        ws["A2"] = "Based on standardized trial balance categories"
+        put_ref(ws, "A2", "Based on standardized trial balance categories")
         ws["A2"].style = "subtitle_style"
 
         # Headers
         headers = ["Ratio", "Value", "Health Status", "Interpretation"]
         for col, header in enumerate(headers, start=1):
-            cell = ws.cell(row=4, column=col, value=header)
+            cell = put(ws, 4, col, header)
             cell.style = "header_style"
 
         # Get analytics data if available
@@ -537,22 +545,22 @@ class PaciolusWorkpaperGenerator:
         for ratio_key, ratio_name, formula in ratio_definitions:
             ratio_data = ratios.get(ratio_key, {})
 
-            ws.cell(row=row, column=1, value=ratio_name)
+            put(ws, row, 1, ratio_name)
             ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN)
 
             value = ratio_data.get("value")
             if value is not None:
                 # Format based on ratio type
                 if ratio_key == "gross_margin":
-                    ws.cell(row=row, column=2, value=value / 100 if value > 1 else value)
+                    put(ws, row, 2, value / 100 if value > 1 else value)
                     ws.cell(row=row, column=2).style = "percent_style"
                 else:
-                    ws.cell(row=row, column=2, value=value)
+                    put(ws, row, 2, value)
                     ws.cell(row=row, column=2).number_format = "0.00"
 
                 # Threshold status with color
                 threshold = ratio_data.get("threshold_status", "neutral")
-                ws.cell(row=row, column=3, value=threshold.upper().replace("_", " "))
+                put(ws, row, 3, threshold.upper().replace("_", " "))
                 if threshold == "above_threshold":
                     ws.cell(row=row, column=3).font = Font(bold=True, color=ExcelColors.SAGE)
                 elif threshold == "at_threshold":
@@ -561,18 +569,18 @@ class PaciolusWorkpaperGenerator:
                     ws.cell(row=row, column=3).font = Font(bold=True, color=ExcelColors.CLAY)
 
                 # Interpretation
-                ws.cell(row=row, column=4, value=ratio_data.get("interpretation", ""))
+                put(ws, row, 4, ratio_data.get("interpretation", ""))
                 ws.cell(row=row, column=4).alignment = Alignment(wrap_text=True)
             else:
-                ws.cell(row=row, column=2, value="N/A")
+                put(ws, row, 2, "N/A")
                 ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
-                ws.cell(row=row, column=3, value="-")
-                ws.cell(row=row, column=4, value="Insufficient data to calculate")
+                put(ws, row, 3, "-")
+                put(ws, row, 4, "Insufficient data to calculate")
                 ws.cell(row=row, column=4).font = Font(color=ExcelColors.OBSIDIAN_500, italic=True)
 
             # Add formula note below
             row += 1
-            ws.cell(row=row, column=1, value=f"  Formula: {formula}")
+            put(ws, row, 1, f"  Formula: {formula}")
             ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
             ws.merge_cells(f"A{row}:D{row}")
 
@@ -581,7 +589,7 @@ class PaciolusWorkpaperGenerator:
         # Sprint 832: equity-basis disclosure beside the ratios that use equity.
         equity_note = analytics.get("equity_basis_note")
         if equity_note:
-            ws.cell(row=row, column=1, value=equity_note)
+            put(ws, row, 1, equity_note)
             ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
             ws.cell(row=row, column=1).alignment = Alignment(wrap_text=True)
             ws.merge_cells(f"A{row}:D{row}")
@@ -589,7 +597,7 @@ class PaciolusWorkpaperGenerator:
 
         # Category totals section
         row += 2
-        ws.cell(row=row, column=1, value="Category Totals (Used in Calculations)")
+        put(ws, row, 1, "Category Totals (Used in Calculations)")
         ws.cell(row=row, column=1).style = "title_style"
         ws.merge_cells(f"A{row}:D{row}")
 
@@ -608,9 +616,9 @@ class PaciolusWorkpaperGenerator:
         ]
 
         for key, label in categories:
-            ws.cell(row=row, column=1, value=label)
+            put(ws, row, 1, label)
             ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600)
-            ws.cell(row=row, column=2, value=category_totals.get(key, 0))
+            put(ws, row, 2, category_totals.get(key, 0))
             ws.cell(row=row, column=2).style = "currency_style"
             row += 1
 
@@ -630,17 +638,17 @@ def _fs_amount(ws: Worksheet, row: int, value: Any, label: str) -> None:
     says the number in column B is approximate.
     """
     amount = money(value)
-    ws.cell(row=row, column=2, value=amount)
+    put(ws, row, 2, amount)
     note = approximate_note([(str(label).strip(), amount)]) if amount is not None else None
     if note:
-        ws.cell(row=row, column=4, value=note)
+        put(ws, row, 4, note)
 
 
 def generate_financial_statements_excel(
     statements: Any,
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
-    workpaper_date: Optional[str] = None,
+    workpaper_date: Optional[str | date] = None,
     include_signoff: bool = False,
 ) -> bytes:
     """
@@ -675,33 +683,33 @@ def generate_financial_statements_excel(
     def _write_statement_sheet(ws: Worksheet, title: str, line_items: Any, sheet_index: int) -> int:
         """Write a financial statement to a worksheet."""
         # Title
-        ws["A1"] = title
+        put_ref(ws, "A1", title)
         ws["A1"].style = "title_style"
         ws.merge_cells("A1:C1")
 
         # Entity name
-        entity = sanitize_csv_value(statements.entity_name or "")
+        entity = statements.entity_name or ""
         if entity:
-            ws["A2"] = entity
+            put_ref(ws, "A2", entity)
             ws["A2"].style = "subtitle_style"
             ws.merge_cells("A2:C2")
 
         # Period
         if statements.period_end:
-            ws["A3"] = f"Period Ending: {statements.period_end}"
+            put_ref(ws, "A3", f"Period Ending: {statements.period_end}")
             ws["A3"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         # Timestamp
-        ws["A4"] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        put_ref(ws, "A4", f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}")
         ws["A4"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         row = 6
         for item in line_items:
             # Column A: label (with indentation, sanitized for formula injection)
             indent = "    " * item.indent_level
-            label = f"{indent}{sanitize_csv_value(item.label)}"
+            label = f"{indent}{item.label}"
 
-            ws.cell(row=row, column=1, value=label)
+            put(ws, row, 1, label)
 
             # Style based on line type
             if item.is_total:
@@ -729,7 +737,7 @@ def generate_financial_statements_excel(
 
             # Column C: lead sheet reference
             if item.lead_sheet_ref:
-                ws.cell(row=row, column=3, value=item.lead_sheet_ref)
+                put(ws, row, 3, item.lead_sheet_ref)
                 ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=8, italic=True)
                 ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
 
@@ -744,31 +752,31 @@ def generate_financial_statements_excel(
     # Balance verification row
     end_row += 1
     if statements.is_balanced:
-        bs_ws.cell(row=end_row, column=1, value="✓ BALANCED")
+        put(bs_ws, end_row, 1, "✓ BALANCED")
         bs_ws.cell(row=end_row, column=1).style = "balanced_style"
     else:
-        bs_ws.cell(row=end_row, column=1, value=f"⚠ OUT OF BALANCE (${statements.balance_difference:,.2f})")
+        put(bs_ws, end_row, 1, f"⚠ OUT OF BALANCE (${statements.balance_difference:,.2f})")
         bs_ws.cell(row=end_row, column=1).style = "unbalanced_style"
     bs_ws.merge_cells(f"A{end_row}:C{end_row}")
 
     # Workpaper signoff (deprecated Sprint 7 — gated by include_signoff)
     if include_signoff and (prepared_by or reviewed_by):
         end_row += 2
-        wp_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
-        bs_ws.cell(row=end_row, column=1, value="Workpaper Sign-Off")
+        wp_date = as_date(workpaper_date) or datetime.now().date()
+        put(bs_ws, end_row, 1, "Workpaper Sign-Off")
         bs_ws.cell(row=end_row, column=1).style = "title_style"
         end_row += 1
         if prepared_by:
-            bs_ws.cell(row=end_row, column=1, value="Prepared By:")
+            put(bs_ws, end_row, 1, "Prepared By:")
             bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            bs_ws.cell(row=end_row, column=2, value=sanitize_csv_value(prepared_by))
-            bs_ws.cell(row=end_row, column=3, value=wp_date)
+            put(bs_ws, end_row, 2, prepared_by)
+            put(bs_ws, end_row, 3, wp_date)
             end_row += 1
         if reviewed_by:
-            bs_ws.cell(row=end_row, column=1, value="Reviewed By:")
+            put(bs_ws, end_row, 1, "Reviewed By:")
             bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-            bs_ws.cell(row=end_row, column=2, value=sanitize_csv_value(reviewed_by))
-            bs_ws.cell(row=end_row, column=3, value=wp_date)
+            put(bs_ws, end_row, 2, reviewed_by)
+            put(bs_ws, end_row, 3, wp_date)
 
     bs_ws.column_dimensions["A"].width = 40
     bs_ws.column_dimensions["B"].width = 18
@@ -788,27 +796,27 @@ def generate_financial_statements_excel(
         cf_ws = wb.create_sheet("Cash Flow Statement", 2)
 
         # Title
-        cf_ws["A1"] = "Cash Flow Statement (Indirect Method)"
+        put_ref(cf_ws, "A1", "Cash Flow Statement (Indirect Method)")
         cf_ws["A1"].style = "title_style"
         cf_ws.merge_cells("A1:C1")
 
-        entity_cf = sanitize_csv_value(statements.entity_name or "")
+        entity_cf = statements.entity_name or ""
         if entity_cf:
-            cf_ws["A2"] = entity_cf
+            put_ref(cf_ws, "A2", entity_cf)
             cf_ws["A2"].style = "subtitle_style"
             cf_ws.merge_cells("A2:C2")
 
         if statements.period_end:
-            cf_ws["A3"] = f"Period Ending: {statements.period_end}"
+            put_ref(cf_ws, "A3", f"Period Ending: {statements.period_end}")
             cf_ws["A3"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
-        cf_ws["A4"] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        put_ref(cf_ws, "A4", f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}")
         cf_ws["A4"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         row = 6
         for section in [cf.operating, cf.investing, cf.financing]:
             # Section header
-            cf_ws.cell(row=row, column=1, value=section.label)
+            put(cf_ws, row, 1, section.label)
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
             cf_ws.cell(row=row, column=1).fill = PatternFill("solid", fgColor=ExcelColors.OATMEAL)
             row += 1
@@ -816,19 +824,19 @@ def generate_financial_statements_excel(
             # Line items
             for item in section.items:
                 indent = "    " * item.indent_level
-                cf_ws.cell(row=row, column=1, value=f"{indent}{sanitize_csv_value(item.label)}")
+                put(cf_ws, row, 1, f"{indent}{item.label}")
                 cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                 _fs_amount(cf_ws, row, item.amount, item.label)
                 cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
                 cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                 if item.source:
-                    cf_ws.cell(row=row, column=3, value=item.source)
+                    put(cf_ws, row, 3, item.source)
                     cf_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=8, italic=True)
                     cf_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
                 row += 1
 
             # Section subtotal
-            cf_ws.cell(row=row, column=1, value=f"    Net {section.label}")
+            put(cf_ws, row, 1, f"    Net {section.label}")
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
             _fs_amount(cf_ws, row, section.subtotal, f"Net {section.label}")
             cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
@@ -837,7 +845,7 @@ def generate_financial_statements_excel(
             row += 2
 
         # Net Change in Cash
-        cf_ws.cell(row=row, column=1, value="NET CHANGE IN CASH")
+        put(cf_ws, row, 1, "NET CHANGE IN CASH")
         cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
         _fs_amount(cf_ws, row, cf.net_change, "Net change in cash")
         cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
@@ -847,26 +855,26 @@ def generate_financial_statements_excel(
 
         # Reconciliation
         if cf.has_prior_period:
-            cf_ws.cell(row=row, column=1, value="Reconciliation")
+            put(cf_ws, row, 1, "Reconciliation")
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=10)
             cf_ws.cell(row=row, column=1).fill = PatternFill("solid", fgColor=ExcelColors.OATMEAL)
             row += 1
 
-            cf_ws.cell(row=row, column=1, value="    Beginning Cash")
+            put(cf_ws, row, 1, "    Beginning Cash")
             cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             _fs_amount(cf_ws, row, cf.beginning_cash, "Beginning cash")
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             row += 1
 
-            cf_ws.cell(row=row, column=1, value="    Net Change in Cash")
+            put(cf_ws, row, 1, "    Net Change in Cash")
             cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             _fs_amount(cf_ws, row, cf.net_change, "Net change in cash")
             cf_ws.cell(row=row, column=2).number_format = '"$"#,##0.00'
             cf_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             row += 1
 
-            cf_ws.cell(row=row, column=1, value="ENDING CASH")
+            put(cf_ws, row, 1, "ENDING CASH")
             cf_ws.cell(row=row, column=1).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
             _fs_amount(cf_ws, row, cf.ending_cash, "Ending cash")
             cf_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN, size=11)
@@ -876,10 +884,10 @@ def generate_financial_statements_excel(
 
             # Reconciliation status
             if cf.is_reconciled:
-                cf_ws.cell(row=row, column=1, value="✓ RECONCILED")
+                put(cf_ws, row, 1, "✓ RECONCILED")
                 cf_ws.cell(row=row, column=1).style = "balanced_style"
             else:
-                cf_ws.cell(row=row, column=1, value=f"⚠ UNRECONCILED (${cf.reconciliation_difference:,.2f})")
+                put(cf_ws, row, 1, f"⚠ UNRECONCILED (${cf.reconciliation_difference:,.2f})")
                 cf_ws.cell(row=row, column=1).style = "unbalanced_style"
             cf_ws.merge_cells(f"A{row}:C{row}")
             row += 1
@@ -888,7 +896,7 @@ def generate_financial_statements_excel(
         if cf.notes:
             row += 1
             for note in cf.notes:
-                cf_ws.cell(row=row, column=1, value=f"Note: {sanitize_csv_value(note)}")
+                put(cf_ws, row, 1, f"Note: {note}")
                 cf_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
                 row += 1
 
@@ -901,28 +909,28 @@ def generate_financial_statements_excel(
         mt_ws = wb.create_sheet("Mapping Trace", 3)
 
         # Title
-        mt_ws["A1"] = "Account-to-Statement Mapping Trace"
+        put_ref(mt_ws, "A1", "Account-to-Statement Mapping Trace")
         mt_ws["A1"].style = "title_style"
         mt_ws.merge_cells("A1:H1")
 
-        entity_mt = sanitize_csv_value(statements.entity_name or "")
+        entity_mt = statements.entity_name or ""
         if entity_mt:
-            mt_ws["A2"] = entity_mt
+            put_ref(mt_ws, "A2", entity_mt)
             mt_ws["A2"].style = "subtitle_style"
             mt_ws.merge_cells("A2:H2")
 
         if statements.period_end:
-            mt_ws["A3"] = f"Period Ending: {statements.period_end}"
+            put_ref(mt_ws, "A3", f"Period Ending: {statements.period_end}")
             mt_ws["A3"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
-        mt_ws["A4"] = f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}"
+        put_ref(mt_ws, "A4", f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}")
         mt_ws["A4"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         # Header row
         row = 6
         headers = ["Statement", "Line Item", "Ref", "Account", "Debit", "Credit", "Net", "Tied"]
         for col_idx, header in enumerate(headers, 1):
-            cell = mt_ws.cell(row=row, column=col_idx, value=header)
+            cell = put(mt_ws, row, col_idx, header)
             cell.font = Font(bold=True, color=ExcelColors.OATMEAL, size=10)
             cell.fill = PatternFill("solid", fgColor=ExcelColors.OBSIDIAN)
             cell.alignment = Alignment(horizontal="center", vertical="center")
@@ -933,57 +941,57 @@ def generate_financial_statements_excel(
             if entry.account_count > 0 and entry.accounts:
                 for acct in entry.accounts:
                     if first_row:
-                        mt_ws.cell(row=row, column=1, value=entry.statement)
+                        put(mt_ws, row, 1, entry.statement)
                         mt_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                        mt_ws.cell(row=row, column=2, value=entry.line_label)
+                        put(mt_ws, row, 2, entry.line_label)
                         mt_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                        mt_ws.cell(row=row, column=3, value=entry.lead_sheet_ref)
+                        put(mt_ws, row, 3, entry.lead_sheet_ref)
                         mt_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
                         mt_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
                         first_row = False
 
-                    mt_ws.cell(row=row, column=4, value=sanitize_csv_value(acct.account_name))
+                    put(mt_ws, row, 4, acct.account_name)
                     mt_ws.cell(row=row, column=4).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                    mt_ws.cell(row=row, column=5, value=acct.debit)
+                    put(mt_ws, row, 5, acct.debit)
                     mt_ws.cell(row=row, column=5).number_format = '"$"#,##0.00'
                     mt_ws.cell(row=row, column=5).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                    mt_ws.cell(row=row, column=6, value=acct.credit)
+                    put(mt_ws, row, 6, acct.credit)
                     mt_ws.cell(row=row, column=6).number_format = '"$"#,##0.00'
                     mt_ws.cell(row=row, column=6).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                    mt_ws.cell(row=row, column=7, value=acct.net_balance)
+                    put(mt_ws, row, 7, acct.net_balance)
                     mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
                     mt_ws.cell(row=row, column=7).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                     row += 1
 
                 # Subtotal row
-                mt_ws.cell(row=row, column=2, value=f"Subtotal: {entry.line_label}")
+                put(mt_ws, row, 2, f"Subtotal: {entry.line_label}")
                 mt_ws.cell(row=row, column=2).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
-                mt_ws.cell(row=row, column=7, value=entry.statement_amount)
+                put(mt_ws, row, 7, entry.statement_amount)
                 mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
                 mt_ws.cell(row=row, column=7).font = Font(bold=True, color=ExcelColors.OBSIDIAN_600, size=10)
                 mt_ws.cell(row=row, column=7).border = Border(top=Side(style="thin", color=ExcelColors.OBSIDIAN_500))
 
                 # Tied indicator
                 if entry.is_tied:
-                    mt_ws.cell(row=row, column=8, value="✓")
+                    put(mt_ws, row, 8, "✓")
                     mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.SAGE, size=10, bold=True)
                 else:
-                    mt_ws.cell(row=row, column=8, value="⚠")
+                    put(mt_ws, row, 8, "⚠")
                     mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.CLAY, size=10, bold=True)
                 mt_ws.cell(row=row, column=8).alignment = Alignment(horizontal="center")
                 row += 1
             else:
                 # Empty lead sheet — single row
-                mt_ws.cell(row=row, column=1, value=entry.statement)
+                put(mt_ws, row, 1, entry.statement)
                 mt_ws.cell(row=row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
-                mt_ws.cell(row=row, column=2, value=entry.line_label)
+                put(mt_ws, row, 2, entry.line_label)
                 mt_ws.cell(row=row, column=2).font = Font(color=ExcelColors.OBSIDIAN_500, size=10, italic=True)
-                mt_ws.cell(row=row, column=3, value=entry.lead_sheet_ref)
+                put(mt_ws, row, 3, entry.lead_sheet_ref)
                 mt_ws.cell(row=row, column=3).font = Font(color=ExcelColors.OBSIDIAN_500, size=9)
                 mt_ws.cell(row=row, column=3).alignment = Alignment(horizontal="center")
-                mt_ws.cell(row=row, column=7, value=0.0)
+                put(mt_ws, row, 7, 0.0)
                 mt_ws.cell(row=row, column=7).number_format = '"$"#,##0.00'
-                mt_ws.cell(row=row, column=8, value="✓")
+                put(mt_ws, row, 8, "✓")
                 mt_ws.cell(row=row, column=8).font = Font(color=ExcelColors.SAGE, size=10, bold=True)
                 mt_ws.cell(row=row, column=8).alignment = Alignment(horizontal="center")
                 row += 1
@@ -999,6 +1007,7 @@ def generate_financial_statements_excel(
 
     # Save
     buf = io.BytesIO()
+    assert_no_formulas(wb)
     wb.save(buf)
     excel_bytes = buf.getvalue()
     buf.close()
@@ -1015,7 +1024,7 @@ def generate_workpaper(
     filename: str = "workpaper",
     prepared_by: Optional[str] = None,
     reviewed_by: Optional[str] = None,
-    workpaper_date: Optional[str] = None,
+    workpaper_date: Optional[str | date] = None,
     include_signoff: bool = False,
 ) -> bytes:
     """
