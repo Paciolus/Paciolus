@@ -18,6 +18,7 @@ from database import get_db
 from models import User
 from security_utils import log_secure_operation
 from shared.error_messages import sanitize_error
+from shared.exact_json import exact_numbers
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.saved_testing_config import (
     TWM_CONFIG_BOUNDS,
@@ -253,6 +254,13 @@ async def audit_three_way_match(
             maybe_record_tool_run(db, engagement_id, current_user.id, "three_way_match", True, consumes_upload=True)
 
             response: dict[str, Any] = result.to_dict()
+            # Sprint 886: an unmatched document is a free-form dict in the response
+            # model, where a Decimal amount went out as a string ("1000.00") — the
+            # memo then 500'd on any unmatched PO or invoice. Send exact JSON numbers,
+            # as Sprint 884 did for the lead-sheet grouping.
+            for key in ("unmatched_pos", "unmatched_invoices", "unmatched_receipts"):
+                if response.get(key) is not None:
+                    response[key] = exact_numbers(response[key])
             response.update(saved.result_fields())
             # Sprint 839: disclose every value supplied for this run, as
             # applied (the saved value it replaced is in settings_ignored).

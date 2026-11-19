@@ -421,7 +421,9 @@ def export_csv_three_way_match(
         writer.writerow(["Partial Matches", s.get("partial_match_count", 0)])
         writer.writerow(["Full Match Rate", number_cell(s.get("full_match_rate", 0), ".1%")])
         writer.writerow(["Net Variance", f"${s.get('net_variance', 0):,.2f}"])
-        writer.writerow(["Risk Assessment", sanitize_csv_value(s.get("risk_assessment", ""))])
+        # Sprint 886 (OUT-11): the engine's classification, worded as on screen and in the memo.
+        risk = s.get("risk_assessment")
+        writer.writerow(["Risk Assessment", str(risk).upper() if risk else "Not available"])
 
     return diagnostic_csv_export(
         body_writer=_body,

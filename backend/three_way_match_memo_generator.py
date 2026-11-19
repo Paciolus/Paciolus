@@ -27,18 +27,18 @@ from pdf import (
     create_leader_dots,
 )
 from security_utils import log_secure_operation
-from shared.follow_up_procedures import get_follow_up_procedure
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
-    RISK_SCALE_LEGEND,
-    RISK_TIER_DISPLAY,
+    NOT_AVAILABLE,
     TESTING_MEMO_MARGINS,
     MemoContext,
+    ProofFigures,
     build_disclaimer,
     build_intelligence_stamp,
     build_proof_summary_section,
     build_saved_settings_disclosure,
     build_workpaper_signoff,
+    mean_confidence,
     render_memo,
     source_line,
 )
@@ -55,13 +55,15 @@ from shared.scope_methodology import (
 # CONSTANTS
 # =============================================================================
 
-# Map engine risk levels (LOW/MEDIUM/HIGH) to the standard 4-tier scale
-_ENGINE_TIER_MAPPING = {
-    "low": "low",
-    "medium": "moderate",
-    "high": "elevated",
-    "critical": "high",
-}
+# Sprint 886 (OUT-11): the engine's own classification (``summary.risk_assessment``),
+# printed in its own words on screen, in this memo and in the CSV. The engine
+# computes no composite score, so none is printed.
+_RISK_LEVELS = ("low", "medium", "high")
+RISK_ASSESSMENT_RULE = (
+    "The engine classifies the run LOW when the match rate (full matches plus half of partial "
+    "matches) is at least 90% with no material variances, MEDIUM when it is at least 70% with "
+    "at most five material variances, and HIGH otherwise. These cut-offs are Paciolus conventions."
+)
 
 _TEST_DESCRIPTIONS: dict[str, str] = {
     "three_way_full_match": (
@@ -104,20 +106,12 @@ _MATCH_RATE_THRESHOLDS = [
     (0.00, "Below 80% threshold \u2014 match-rate anomaly indicator; auditor judgment required to determine cause"),
 ]
 
-# Conclusion text by risk tier (4-tier scale) — BUG-002: score-aware
+# Conclusion text by the engine's risk assessment (Sprint 886, OUT-11).
 _RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
-    # PR #235 review: the tier is a composite, not a statement about each variance.
-    "low": (
-        "The automated tests returned a low flag-density indicator. Review any variances "
-        "flagged above; a low indicator does not mean no variance exceeded a threshold."
-    ),
-    "moderate": (
+    # PR #235 review: the classification is a summary, not a statement about each variance.
+    "low": ("Review any variances flagged above; a LOW assessment does not mean no variance exceeded a threshold."),
+    "medium": (
         "Select variances and unmatched documents should be reviewed for proper authorization and documentation."
-    ),
-    "elevated": (
-        "Material variances and unmatched documents were detected that require "
-        "focused investigation. The engagement team should evaluate whether additional "
-        "procedures are appropriate per ISA 500 and PCAOB AS 1105."
     ),
     "high": (
         "Significant variances and/or unmatched documents were detected that require "
@@ -127,71 +121,17 @@ _RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
 }
 
 
-def _build_risk_conclusion(risk_tier: str, score: float) -> str:
-    """Build score-aware risk conclusion text (BUG-002)."""
-    tier_upper = risk_tier.upper() if risk_tier else "LOW"
-    suffix = _RISK_CONCLUSION_SUFFIXES.get(risk_tier, _RISK_CONCLUSION_SUFFIXES["low"])
+def _build_risk_conclusion(risk_assessment: str | None) -> str:
+    """The conclusion, in the engine's classification (Sprint 886, OUT-11)."""
+    if risk_assessment not in _RISK_LEVELS:
+        return (
+            "No risk assessment was available for this memo. Review the match results, "
+            "variances and unmatched documents above."
+        )
     return (
-        f"Based on the automated three-way matching procedures applied, "
-        f"the procurement cycle returned {tier_upper} flag density "
-        f"(Composite Diagnostic Score: {score:.1f}/100) across the automated tests. "
-        f"{suffix}"
+        f"Based on the automated three-way matching procedures applied, the procurement cycle "
+        f"returned a {risk_assessment.upper()} risk assessment. {_RISK_CONCLUSION_SUFFIXES[risk_assessment]}"
     )
-
-
-# =============================================================================
-# DIAGNOSTIC SCORING
-# =============================================================================
-
-
-def compute_twm_diagnostic_score(
-    full_match_rate: float,
-    material_variance_count: int,
-    high_variance_count: int,
-    net_variance_amount: float,
-    unmatched_invoices: int,
-    unmatched_pos: int,
-    unmatched_receipts: int,
-    has_date_variance_high: bool,
-    performance_materiality: float = 50_000,
-) -> float:
-    """Compute a composite diagnostic score (0-100) for three-way match results."""
-    score = 0.0
-
-    # Match rate component (max 20)
-    if full_match_rate < 0.70:
-        score += 20
-    elif full_match_rate < 0.80:
-        score += 12
-    elif full_match_rate < 0.85:
-        score += 6
-    elif full_match_rate < 0.90:
-        score += 3
-
-    # Material variance components (max 30)
-    score += min(material_variance_count * 3, 15)
-    score += min(high_variance_count * 5, 15)
-
-    # Net variance vs materiality (max 10)
-    if net_variance_amount >= performance_materiality:
-        score += 10
-    elif net_variance_amount >= performance_materiality * 0.5:
-        score += 5
-
-    # Unmatched documents (max 21)
-    score += min(unmatched_invoices * 2, 10)
-    score += min(unmatched_pos * 1, 5)
-    score += min(unmatched_receipts * 2, 6)
-
-    # Date variance (max 8)
-    if has_date_variance_high:
-        score += 8
-
-    return min(score, 100)
-
-
-# Backward-compatible alias
-compute_twm_risk_score = compute_twm_diagnostic_score
 
 
 # =============================================================================
@@ -256,8 +196,6 @@ def _build_match_results(
     styles: dict,
     doc_width: float,
     summary: dict,
-    risk_tier: str,
-    risk_score: float = 0,
 ) -> None:
     """Build Section III: Match Results with benchmark context."""
     story.append(Paragraph("III. Match Results", styles["MemoSection"]))
@@ -268,19 +206,20 @@ def _build_match_results(
     full_rate = summary.get("full_match_rate", 0)
     partial_rate = summary.get("partial_match_rate", 0)
 
-    base_tier_label, _ = RISK_TIER_DISPLAY.get(str(risk_tier).lower(), ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-    tier_label = f"{base_tier_label} ({risk_score:.0f}/100)"
+    risk_assessment = summary.get("risk_assessment")
+    risk_label = risk_assessment.upper() if risk_assessment in _RISK_LEVELS else NOT_AVAILABLE
 
     result_lines = [
         create_leader_dots("Full Matches (3-way)", f"{full_count:,} ({full_rate:.1%})"),
         create_leader_dots("Partial Matches (2-way)", f"{partial_count:,} ({partial_rate:.1%})"),
         create_leader_dots("Material Variances", f"{summary.get('material_variances_count', 0):,}"),
         create_leader_dots("Net Variance", f"${summary.get('net_variance', 0):,.2f}"),
-        create_leader_dots("Risk Assessment", tier_label),
+        create_leader_dots("Risk Assessment", risk_label),
     ]
 
     for line in result_lines:
         story.append(Paragraph(line, styles["MemoLeader"]))
+    story.append(Paragraph(RISK_ASSESSMENT_RULE, styles["MemoBodySmall"]))
     story.append(Spacer(1, 4))
 
     # Match rate benchmark
@@ -319,93 +258,6 @@ def _build_match_results(
     story.append(Spacer(1, 8))
 
 
-def _build_results_summary(
-    story: list,
-    styles: dict,
-    doc_width: float,
-    composite: dict,
-    test_results: list[dict],
-) -> None:
-    """Build Section IV: Results Summary with diagnostic score and severity counts."""
-    story.append(Paragraph("IV. Results Summary", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    risk_tier = str(composite.get("risk_tier", "low")).lower()
-    base_tier_label, _ = RISK_TIER_DISPLAY.get(risk_tier, ("UNKNOWN", ClassicalColors.OBSIDIAN_500))
-    tier_label = f"{base_tier_label} ({composite.get('score', 0):.0f}/100)"
-
-    story.append(
-        Paragraph(
-            create_leader_dots("Composite Diagnostic Score", f"{composite.get('score', 0):.1f} / 100"),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(
-        Paragraph(
-            create_leader_dots("Diagnostic Tier", tier_label),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(Paragraph(RISK_SCALE_LEGEND, styles["MemoBodySmall"]))
-    story.append(Spacer(1, 2))
-
-    story.append(
-        Paragraph(
-            create_leader_dots("Total Items Flagged", f"{composite.get('total_flagged', 0):,}"),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(
-        Paragraph(
-            create_leader_dots("Overall Flag Rate", f"{composite.get('flag_rate', 0):.1%}"),
-            styles["MemoLeader"],
-        )
-    )
-
-    sev = composite.get("flags_by_severity", {})
-    story.append(
-        Paragraph(
-            create_leader_dots("High Severity Flags", str(sev.get("high", 0))),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(
-        Paragraph(
-            create_leader_dots("Medium Severity Flags", str(sev.get("medium", 0))),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(
-        Paragraph(
-            create_leader_dots("Low Severity Flags", str(sev.get("low", 0))),
-            styles["MemoLeader"],
-        )
-    )
-    story.append(Spacer(1, 6))
-
-    # Results by test table
-    if test_results:
-        results_data = [["Test", "Flagged", "Rate", "Severity"]]
-        for tr in sorted(test_results, key=lambda t: t.get("flag_rate", 0), reverse=True):
-            results_data.append(
-                [
-                    tr.get("test_name", ""),
-                    str(tr.get("entries_flagged", 0)),
-                    f"{tr.get('flag_rate', 0):.1%}",
-                    tr.get("severity", "low").upper(),
-                ]
-            )
-
-        results_table = Table(
-            results_data,
-            colWidths=[2.8 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch],
-            repeatRows=1,
-        )
-        results_table.setStyle(TableStyle(ledger_table_style() + [("ALIGN", (1, 0), (-1, -1), "RIGHT")]))
-        story.append(results_table)
-        story.append(Spacer(1, 8))
-
-
 _VARIANCE_FIELD_LABELS = {"quantity": "Qty", "billed_quantity": "Billed Qty"}
 
 
@@ -425,7 +277,7 @@ def _build_material_variances(
     if not material_variances:
         return
 
-    story.append(Paragraph("V. Material Variances", styles["MemoSection"]))
+    story.append(Paragraph("IV. Material Variances", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     story.append(
@@ -515,45 +367,6 @@ def _build_material_variances(
     story.append(Spacer(1, 8))
 
 
-def _build_key_findings(
-    story: list,
-    styles: dict,
-    doc_width: float,
-    composite: dict,
-) -> None:
-    """Build Section VI: Key Findings with suggested procedures."""
-    top_findings = composite.get("top_findings", [])
-    if not top_findings:
-        return
-
-    story.append(Paragraph("VI. Key Items Flagged", styles["MemoSection"]))
-    story.append(LedgerRule(doc_width))
-
-    # Map finding text to procedure keys
-    _FINDING_PROCEDURE_KEYS = [
-        "twm_net_overbilling",
-        "twm_full_match_rate",
-        "twm_unmatched_invoice",
-        "twm_date_gap",
-    ]
-
-    for i, finding in enumerate(top_findings[:5], 1):
-        story.append(Paragraph(f"{user_text(i)}. {user_text(finding)}", styles["MemoBody"]))
-
-        # Look up procedure by index mapping or keyword match
-        proc_key = _FINDING_PROCEDURE_KEYS[i - 1] if i - 1 < len(_FINDING_PROCEDURE_KEYS) else ""
-        procedure = get_follow_up_procedure(proc_key, rotation_index=i)
-        if procedure:
-            story.append(
-                Paragraph(
-                    f"<i>Suggested follow-up: {user_text(procedure)}</i>",
-                    styles["MemoBodySmall"],
-                )
-            )
-
-    story.append(Spacer(1, 8))
-
-
 def _build_unmatched_documents(
     story: list,
     styles: dict,
@@ -569,7 +382,7 @@ def _build_unmatched_documents(
     if total_unmatched == 0:
         return
 
-    story.append(Paragraph("VII. Unmatched Documents", styles["MemoSection"]))
+    story.append(Paragraph("V. Unmatched Documents", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     unmatched_lines = [
@@ -759,12 +572,7 @@ def generate_three_way_match_memo(
         variances = twm_result.get("variances", [])
         config = twm_result.get("config", {})
         data_quality = twm_result.get("data_quality", {})
-        composite = twm_result.get("composite_score", {})
         test_results = twm_result.get("test_results", [])
-
-        # Map engine risk tier to standard 4-tier scale
-        engine_risk = summary.get("risk_assessment", "low")
-        risk_tier = composite.get("risk_tier", _ENGINE_TIER_MAPPING.get(engine_risk, "low"))
 
         # ---- I. SCOPE ----
         story.append(Paragraph("I. Scope", styles["MemoSection"]))
@@ -811,63 +619,31 @@ def generate_three_way_match_memo(
             domain_label="three-way match validation",
         )
 
-        # Proof summary
-        col_detection = twm_result.get("column_detection", {})
-        po_conf = col_detection.get("po", {}).get("overall_confidence", 0) if col_detection else 0
-        inv_conf = col_detection.get("invoice", {}).get("overall_confidence", 0) if col_detection else 0
-        rcpt_conf = col_detection.get("receipt", {}).get("overall_confidence", 0) if col_detection else 0
-        avg_conf = (po_conf + inv_conf + rcpt_conf) / 3 if col_detection else 0
-
-        unmatched_count = (
-            len(twm_result.get("unmatched_pos", []))
-            + len(twm_result.get("unmatched_invoices", []))
-            + len(twm_result.get("unmatched_receipts", []))
-        )
-
-        _proof_result = {
-            "composite_score": {
-                "tests_run": composite.get("tests_run", 6),
-                "total_flagged": composite.get(
-                    "total_flagged", unmatched_count + summary.get("material_variances_count", 0)
-                ),
-            },
-            "data_quality": {
-                "completeness_score": data_quality.get("overall_quality_score", 0),
-            },
-            "column_detection": {
-                "overall_confidence": avg_conf,
-            },
-            "test_results": test_results
-            or [
-                {"test_name": "Full Matches", "entries_flagged": 0, "skipped": False},
-                {
-                    "test_name": "Partial Matches",
-                    "entries_flagged": len(twm_result.get("partial_matches", [])),
-                    "skipped": False,
-                },
-                {
-                    "test_name": "Material Variances",
-                    "entries_flagged": summary.get("material_variances_count", 0),
-                    "skipped": False,
-                },
-                {
-                    "test_name": "Unmatched POs",
-                    "entries_flagged": len(twm_result.get("unmatched_pos", [])),
-                    "skipped": False,
-                },
-                {
-                    "test_name": "Unmatched Invoices",
-                    "entries_flagged": len(twm_result.get("unmatched_invoices", [])),
-                    "skipped": False,
-                },
-                {
-                    "test_name": "Unmatched Receipts",
-                    "entries_flagged": len(twm_result.get("unmatched_receipts", [])),
-                    "skipped": False,
-                },
-            ],
+        # Proof summary — the figures the screen's extractTWMProof shows (Sprint 886).
+        col_detection = twm_result.get("column_detection") or {}
+        unmatched = {
+            key: len(twm_result.get(key) or []) for key in ("unmatched_pos", "unmatched_invoices", "unmatched_receipts")
         }
-        build_proof_summary_section(story, styles, doc_width, _proof_result)
+        categories = [
+            len(twm_result.get("partial_matches") or []),
+            summary.get("material_variances_count", 0),
+            *unmatched.values(),
+        ]
+        build_proof_summary_section(
+            story,
+            styles,
+            doc_width,
+            twm_result,
+            figures=ProofFigures(
+                completeness=data_quality.get("overall_quality_score") if data_quality else None,
+                column_confidence=mean_confidence(
+                    *((col_detection.get(k) or {}).get("overall_confidence") for k in ("po", "invoice", "receipt"))
+                ),
+                tests_executed=1 + len(categories),
+                tests_clear=1 + sum(1 for c in categories if c == 0),
+                items_for_review=sum(unmatched.values()),
+            ),
+        )
 
         # ---- II. METHODOLOGY ----
         if test_results:
@@ -889,22 +665,15 @@ def generate_three_way_match_memo(
         )
 
         # ---- III. MATCH RESULTS ----
-        _build_match_results(story, styles, doc_width, summary, risk_tier, composite.get("score", 0))
+        _build_match_results(story, styles, doc_width, summary)
 
-        # ---- IV. RESULTS SUMMARY ----
-        if composite:
-            _build_results_summary(story, styles, doc_width, composite, test_results)
-
-        # ---- V. MATERIAL VARIANCES ----
+        # ---- IV. MATERIAL VARIANCES ----
         _build_material_variances(story, styles, doc_width, variances, summary)
 
-        # ---- VI. KEY FINDINGS ----
-        _build_key_findings(story, styles, doc_width, composite)
-
-        # ---- VII. UNMATCHED DOCUMENTS ----
+        # ---- V. UNMATCHED DOCUMENTS ----
         _build_unmatched_documents(story, styles, doc_width, twm_result)
 
-        # ---- VIII. AUTHORITATIVE REFERENCES ----
+        # ---- VI. AUTHORITATIVE REFERENCES ----
         build_authoritative_reference_block(
             story,
             styles,
@@ -912,14 +681,14 @@ def generate_three_way_match_memo(
             tool_domain="three_way_match",
             framework=resolved_framework,
             domain_label="three-way match validation",
-            section_label="VIII.",
+            section_label="VI.",
         )
 
-        # ---- IX. CONCLUSION ----
-        story.append(Paragraph("IX. Summary of Results", styles["MemoSection"]))
+        # ---- VII. CONCLUSION ----
+        story.append(Paragraph("VII. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        assessment = _build_risk_conclusion(risk_tier, composite.get("score", 0))
+        assessment = _build_risk_conclusion(summary.get("risk_assessment"))
         story.append(Paragraph(assessment, styles["MemoBody"]))
         story.append(Spacer(1, 12))
 

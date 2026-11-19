@@ -5,22 +5,18 @@ Tests:
 - PDF generation and validation
 - Section II Methodology table
 - Section III Match Results with benchmark
-- Section IV Results Summary with risk scoring
-- Section V Material Variances with vendor columns and net direction
-- Section VI Key Findings with suggested procedures
-- Section VII Unmatched Documents detail tables
-- Risk tier mapping (engine MEDIUM → standard MODERATE)
-- Diagnostic scoring function
-- Conclusion text per tier
+- Section IV Material Variances with vendor columns and net direction
+- Section V Unmatched Documents detail tables
+- Conclusion text per engine risk assessment (Sprint 886, OUT-11: the engine's
+  LOW / MEDIUM / HIGH in its own words; no composite score — the engine has none)
 - Guardrails (terminology, ISA references)
 """
 
 from three_way_match_memo_generator import (
-    _ENGINE_TIER_MAPPING,
     _RISK_CONCLUSION_SUFFIXES,
+    _RISK_LEVELS,
     _TEST_DESCRIPTIONS,
     _build_risk_conclusion,
-    compute_twm_diagnostic_score,
     generate_three_way_match_memo,
 )
 
@@ -154,20 +150,6 @@ def _make_twm_result(
                 "severity": "low",
             },
         ],
-        "composite_score": {
-            "score": 66.0,
-            "risk_tier": "high",
-            "total_flagged": 62,
-            "flag_rate": 0.397,
-            "tests_run": 6,
-            "flags_by_severity": {"high": 18, "medium": 38, "low": 6},
-            "top_findings": [
-                "7 Material Variances — Net Overbilling $23,450.00",
-                "75.6% Full Match Rate — Below 80% best practice threshold",
-                "5 Unmatched Invoices — Unauthorized payment risk",
-                "66-Day Date Gap — Potential backdating",
-            ],
-        },
     }
 
 
@@ -294,167 +276,6 @@ class TestMatchResults:
 # =============================================================================
 
 
-class TestResultsSummary:
-    """Section IV: Results Summary with risk scoring."""
-
-    def test_composite_score_present(self):
-        result = _make_twm_result()
-        assert result["composite_score"]["score"] == 66.0
-        assert result["composite_score"]["risk_tier"] == "high"
-
-    def test_severity_counts_present(self):
-        result = _make_twm_result()
-        sev = result["composite_score"]["flags_by_severity"]
-        assert sev["high"] == 18
-        assert sev["medium"] == 38
-        assert sev["low"] == 6
-
-
-# =============================================================================
-# RISK TIER MAPPING TESTS
-# =============================================================================
-
-
-class TestRiskTierMapping:
-    """BUG-01: Engine MEDIUM maps to standard MODERATE."""
-
-    def test_engine_medium_maps_to_moderate(self):
-        assert _ENGINE_TIER_MAPPING["medium"] == "moderate"
-
-    def test_engine_low_maps_to_low(self):
-        assert _ENGINE_TIER_MAPPING["low"] == "low"
-
-    def test_engine_high_maps_to_elevated(self):
-        assert _ENGINE_TIER_MAPPING["high"] == "elevated"
-
-    def test_engine_critical_maps_to_high(self):
-        assert _ENGINE_TIER_MAPPING["critical"] == "high"
-
-    def test_all_engine_tiers_mapped(self):
-        assert set(_ENGINE_TIER_MAPPING.keys()) == {"low", "medium", "high", "critical"}
-
-
-# =============================================================================
-# DIAGNOSTIC SCORING TESTS
-# =============================================================================
-
-
-class TestDiagnosticScoring:
-    """Diagnostic score computation function."""
-
-    def test_low_risk_scenario(self):
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.95,
-            material_variance_count=0,
-            high_variance_count=0,
-            net_variance_amount=0,
-            unmatched_invoices=0,
-            unmatched_pos=0,
-            unmatched_receipts=0,
-            has_date_variance_high=False,
-        )
-        assert score <= 10
-
-    def test_moderate_risk_scenario(self):
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.88,
-            material_variance_count=2,
-            high_variance_count=0,
-            net_variance_amount=5000,
-            unmatched_invoices=1,
-            unmatched_pos=2,
-            unmatched_receipts=0,
-            has_date_variance_high=False,
-        )
-        assert 11 <= score <= 25
-
-    def test_elevated_risk_scenario(self):
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.82,
-            material_variance_count=4,
-            high_variance_count=1,
-            net_variance_amount=30000,
-            unmatched_invoices=3,
-            unmatched_pos=3,
-            unmatched_receipts=1,
-            has_date_variance_high=True,
-        )
-        assert 26 <= score <= 50
-
-    def test_high_risk_scenario(self):
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.65,
-            material_variance_count=10,
-            high_variance_count=5,
-            net_variance_amount=80000,
-            unmatched_invoices=8,
-            unmatched_pos=10,
-            unmatched_receipts=5,
-            has_date_variance_high=True,
-        )
-        assert score > 50
-
-    def test_score_capped_at_100(self):
-        """Maximum possible score is sum of all caps: 20+15+15+10+10+5+6+8=89."""
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.50,
-            material_variance_count=20,
-            high_variance_count=20,
-            net_variance_amount=200000,
-            unmatched_invoices=20,
-            unmatched_pos=20,
-            unmatched_receipts=20,
-            has_date_variance_high=True,
-        )
-        assert score <= 100
-        assert score >= 80  # All caps hit
-
-    def test_meridian_sample_approximation(self):
-        """Meridian sample: ~66 expected."""
-        score = compute_twm_diagnostic_score(
-            full_match_rate=0.756,
-            material_variance_count=7,
-            high_variance_count=2,
-            net_variance_amount=23450,
-            unmatched_invoices=5,
-            unmatched_pos=9,
-            unmatched_receipts=3,
-            has_date_variance_high=True,
-        )
-        assert 55 <= score <= 75
-
-
-# =============================================================================
-# KEY FINDINGS TESTS
-# =============================================================================
-
-
-class TestKeyFindings:
-    """Section VI: Key Findings with suggested procedures."""
-
-    def test_four_findings_in_sample(self):
-        result = _make_twm_result()
-        findings = result["composite_score"]["top_findings"]
-        assert len(findings) == 4
-
-    def test_finding_1_material_variances(self):
-        result = _make_twm_result()
-        assert "Material Variances" in result["composite_score"]["top_findings"][0]
-        assert "$23,450" in result["composite_score"]["top_findings"][0]
-
-    def test_finding_2_match_rate(self):
-        result = _make_twm_result()
-        assert "75.6%" in result["composite_score"]["top_findings"][1]
-
-    def test_finding_3_unmatched_invoices(self):
-        result = _make_twm_result()
-        assert "Unmatched Invoices" in result["composite_score"]["top_findings"][2]
-
-    def test_finding_4_date_gap(self):
-        result = _make_twm_result()
-        assert "Date Gap" in result["composite_score"]["top_findings"][3]
-
-
 # =============================================================================
 # MATERIAL VARIANCES TESTS
 # =============================================================================
@@ -527,29 +348,27 @@ class TestUnmatchedDocuments:
 
 
 class TestConclusion:
-    """Section IX: Conclusion text per risk tier (BUG-002: score-aware)."""
+    """Conclusion in the engine's own classification (Sprint 886, OUT-11)."""
 
-    def test_low_conclusion_exists(self):
-        assert "LOW" in _build_risk_conclusion("low", 5.0)
+    def test_each_engine_level_is_named_in_its_own_word(self):
+        for level in ("low", "medium", "high"):
+            assert f"returned a {level.upper()} risk assessment" in _build_risk_conclusion(level)
 
-    def test_moderate_conclusion_exists(self):
-        assert "MODERATE" in _build_risk_conclusion("moderate", 20.0)
+    def test_conclusions_cover_exactly_the_engine_levels(self):
+        from three_way_match_engine import MatchRiskLevel
 
-    def test_elevated_conclusion_exists(self):
-        assert "ELEVATED" in _build_risk_conclusion("elevated", 35.0)
+        assert set(_RISK_CONCLUSION_SUFFIXES) == set(_RISK_LEVELS) == {lvl.value for lvl in MatchRiskLevel}
 
-    def test_high_conclusion_exists(self):
-        assert "HIGH" in _build_risk_conclusion("high", 60.0)
+    def test_no_score_and_no_renamed_tiers(self):
+        for level in _RISK_LEVELS:
+            text = _build_risk_conclusion(level)
+            assert "/100" not in text
+            assert "MODERATE" not in text and "ELEVATED" not in text
 
-    def test_score_included_in_conclusion(self):
-        """BUG-002: Conclusion must include numeric score."""
-        assert "20.0/100" in _build_risk_conclusion("moderate", 20.0)
-
-    def test_no_medium_in_conclusions(self):
-        """BUG-01: No 'MEDIUM' tier in any conclusion text."""
-        for tier in _RISK_CONCLUSION_SUFFIXES:
-            text = _build_risk_conclusion(tier, 50.0)
-            assert "MEDIUM" not in text, f"MEDIUM found in {tier} conclusion"
+    def test_missing_assessment_is_not_reported_as_low(self):
+        text = _build_risk_conclusion(None)
+        assert "No risk assessment was available" in text
+        assert "LOW" not in text
 
 
 # =============================================================================
@@ -560,20 +379,9 @@ class TestConclusion:
 class TestGuardrails:
     """Guardrail compliance tests."""
 
-    def test_no_medium_tier_in_conclusions(self):
-        for tier in _RISK_CONCLUSION_SUFFIXES:
-            text = _build_risk_conclusion(tier, 50.0)
-            assert "MEDIUM" not in text
-
     def test_all_test_descriptions_reference_audit_concept(self):
         audit_terms = ["PO", "invoice", "GRN", "fraud", "ISA", "control", "match", "variance", "billing"]
         for key, desc in _TEST_DESCRIPTIONS.items():
             lower = desc.lower()
             has_term = any(t.lower() in lower for t in audit_terms)
             assert has_term, f"{key} description lacks audit terminology"
-
-    def test_engine_tier_mapping_covers_all_engine_values(self):
-        """Ensure we handle all values from MatchRiskLevel enum."""
-        assert "low" in _ENGINE_TIER_MAPPING
-        assert "medium" in _ENGINE_TIER_MAPPING
-        assert "high" in _ENGINE_TIER_MAPPING

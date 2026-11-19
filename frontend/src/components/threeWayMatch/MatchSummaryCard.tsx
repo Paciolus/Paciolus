@@ -25,7 +25,8 @@ export function MatchSummaryCard({ summary }: MatchSummaryCardProps) {
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-serif text-lg text-content-primary">Match Summary</h2>
         <div className={`px-3 py-1 rounded-full border text-sm font-sans font-medium ${riskBg} ${riskColor}`}>
-          {summary.risk_assessment.toUpperCase()} RISK
+          {/* Sprint 886 (OUT-11): the engine's classification, worded as in the memo and CSV */}
+          Risk assessment: {summary.risk_assessment.toUpperCase()}
         </div>
       </div>
 

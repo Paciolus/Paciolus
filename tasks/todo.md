@@ -532,7 +532,19 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       first) — real `/audit/bank-reconciliation` with stale, high-value and unmatched items and custom thresholds;
       Jest `BankRecTestsPanel.test.tsx` (4) and two export-body tests in `BankRecPage.test.tsx` (failed on the old
       page). Sprint 819 `route_form_exports` re-recorded (the four new CSV sections only).
-- [ ] **11C / OUT-11** — three-way match: no uncomputed score; engine classification everywhere.
+- [x] **11C / OUT-11 — three-way match: no uncomputed score; the engine's classification everywhere.** The memo read
+      `composite.get("score", 0)` from a composite the engine never emits, so every memo printed "(0/100)" and "Composite
+      Diagnostic Score: 0.0/100", and renamed MEDIUM → MODERATE, HIGH → ELEVATED. Removed: the score, the tier mapping,
+      the never-reached Results Summary and Key Findings sections (both read the absent composite) and
+      `compute_twm_diagnostic_score` (no caller). Memo, CSV and screen now say "Risk Assessment: LOW / MEDIUM / HIGH"
+      (`summary.risk_assessment`), and the memo states the engine's rule; missing → "Not available"/no claim. Sections
+      renumbered I–VII. Proof Summary uses the screen's figures. **Found on the way:** unmatched documents are a
+      free-form dict in the response, so their Decimal amounts left the API as strings — the memo 500'd on any unmatched
+      PO or invoice, and the screen's unmatched panel showed $0.00; now exact JSON numbers (as Sprint 884 did for lead
+      sheets). Tests: `test_sprint886_twm_classification.py` (7, Low/Medium/High through `/audit/three-way-match`, memo
+      and CSV; all failed first, High with the 500); Jest `MatchSummaryCardRisk.test.tsx` (3). `test_twm_memo.py`
+      encoded the old contract (MODERATE mapping, score function, composite findings): those tests were replaced by
+      tests of the engine's levels.
 - [ ] **11D / OUT-12** — AP/Payroll/AR supplemental schedules reach the memo.
 - [ ] **11E / OUT-14** — payroll completeness on the 0–100 scale.
 - [ ] **11F / OUT-15** — AR memo column confidence matches the screen.

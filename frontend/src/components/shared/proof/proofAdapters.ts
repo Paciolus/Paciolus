@@ -260,11 +260,12 @@ export function extractTWMProof(result: ThreeWayMatchResult): ProofSummary {
 
   const totalDocs = summary.total_pos + summary.total_invoices + summary.total_receipts
 
-  // Column confidence: average of 3 detection results
-  const poConf = column_detection?.po?.overall_confidence ?? 0
-  const invConf = column_detection?.invoice?.overall_confidence ?? 0
-  const rcptConf = column_detection?.receipt?.overall_confidence ?? 0
-  const avgColumnConf = (poConf + invConf + rcptConf) / 3
+  // Column confidence: mean of the detections carried (same rule as the PDF memo — Sprint 886)
+  const avgColumnConf = meanConfidence(
+    column_detection?.po?.overall_confidence,
+    column_detection?.invoice?.overall_confidence,
+    column_detection?.receipt?.overall_confidence,
+  )
 
   // Completeness from data_quality.overall_quality_score (0-100)
   const completenessScore = data_quality?.overall_quality_score ?? 0
