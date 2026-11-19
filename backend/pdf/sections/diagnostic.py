@@ -14,7 +14,7 @@ from reportlab.platypus import KeepTogether, Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
-from shared.materiality_resolver import materiality_source_label
+from shared.materiality_resolver import materiality_basis_label
 from shared.safe_paragraph import Paragraph, template_markup, user_text
 
 # ---------------------------------------------------------------------------
@@ -203,7 +203,10 @@ def render_executive_summary(story: list, styles: dict, audit_result: dict) -> N
         create_leader_dots("Rows Analyzed", f"{row_count:,}"),
         create_leader_dots("Materiality Threshold", f"${threshold:,.2f}"),
         # Sprint 886 (OUT-09): where the threshold came from, as the screen had it.
-        create_leader_dots("Materiality Source", materiality_source_label(audit_result.get("materiality_source"))),
+        create_leader_dots(
+            "Materiality Source",
+            materiality_basis_label(audit_result.get("materiality_basis"), audit_result.get("materiality_source")),
+        ),
     ]
 
     if audit_result.get("is_consolidated"):

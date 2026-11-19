@@ -745,6 +745,14 @@ class SheetResultResponse(BaseModel):
     column_detection: Optional[ColumnDetectionResponse] = None
 
 
+class MaterialityBasisResponse(BaseModel):
+    """The threshold the analysis used: its amount, purpose and origin (Sprint 886, OUT-16)."""
+
+    amount: float
+    purpose: Literal["overall_materiality", "performance_materiality", "test_threshold"]
+    origin: Literal["software_default", "firm_setting", "engagement", "entered", "none"]
+
+
 class TrialBalanceResponse(BaseModel):
     """Complete trial balance audit response.
 
@@ -801,8 +809,11 @@ class TrialBalanceResponse(BaseModel):
     cutoff_risk: Optional[dict[str, Any]] = None
     going_concern: Optional[dict[str, Any]] = None
 
-    # Sprint 310: Materiality source ('manual', 'engagement', 'none')
+    # Sprint 310 / 886: where the threshold came from — "software_default",
+    # "firm_setting", "engagement", "entered" or "none" (was "manual" for any amount).
     materiality_source: Optional[str] = None
+    # Sprint 886 (OUT-16): amount, purpose and origin, printed by every export.
+    materiality_basis: Optional[MaterialityBasisResponse] = None
 
     # Optional: single-sheet only (added post-engine by route handler)
     lead_sheet_grouping: Optional[dict[str, Any]] = None

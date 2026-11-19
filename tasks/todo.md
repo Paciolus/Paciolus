@@ -570,7 +570,18 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       0.8 + 1.0 → 90%, TB-only 0.8 → 80%, none → Not available; 2 failed first); Jest `ARProofColumnConfidence.test.ts`
       (0.90 / 0.80 / Not available). Screen shows 0.90 and the PDF 90%: the same figure in each surface's existing
       format.
-- [ ] **11G / OUT-16** — documents name the materiality amount, its purpose and its origin.
+- [x] **11G / OUT-16 — documents name the materiality amount, its purpose and its origin.** Trial balance: the page
+      sends `materiality_origin` ("default" / "engagement" / "entered"); `resolve_materiality_basis` checks each claim
+      (the user's **saved** practice setting — the settings API returns a fixed $500 even when nothing was saved, so only
+      a stored `default_materiality` counts; the engagement's performance materiality; the $500 software default) and
+      reports anything it cannot confirm, or no claim, as entered for this run. The response carries
+      `materiality_basis` {amount, purpose, origin}; `materiality_source` is now the origin (was "manual" for any
+      amount). PDF and Excel print e.g. "Test threshold — Saved firm setting", "Performance materiality — Engagement";
+      an analysis without a basis prints "Not available" (its old "manual" said nothing true). Bank rec (done in 11B):
+      materiality and performance materiality each print "entered for this run" or "Paciolus default". Tests:
+      `test_sprint886_materiality_origin.py` (9: first-use default, saved firm setting, engagement, explicit entry —
+      each named in PDF and Excel; unconfirmable claims → entered; all failed first); Jest
+      `useTrialBalanceUploadOrigin.test.ts` (4: the hook sends the right origin) and a form-data case.
 - [ ] **11H / OUT-18** — memos use the client's reporting framework and say which.
 - [ ] **11I** — severity labels, flag/row units, fixed-asset sections, multi-period detail, one score format.
 **Commits:** TBD.

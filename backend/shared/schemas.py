@@ -114,6 +114,14 @@ class AnalyticsInput(_ExportItem):
     equity_basis_note: Optional[str] = None
 
 
+class MaterialityBasisInput(BaseModel):
+    """The threshold's amount, purpose and origin, as the analysis reported it (Sprint 886, OUT-16)."""
+
+    amount: float
+    purpose: Literal["overall_materiality", "performance_materiality", "test_threshold"]
+    origin: Literal["software_default", "firm_setting", "engagement", "entered", "none"]
+
+
 class ErrorResponse(BaseModel):
     """Unified error envelope returned by all exception handlers.
 
@@ -167,6 +175,7 @@ class AuditResultInput(BaseModel):
     going_concern: Optional[GoingConcernInput] = None
     analytics: Optional[AnalyticsInput] = None
     materiality_source: Optional[str] = None
+    materiality_basis: Optional[MaterialityBasisInput] = None
     # Workpaper signoff fields (deprecated Sprint 7 — ignored unless include_signoff=True)
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None

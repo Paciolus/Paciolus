@@ -7,7 +7,7 @@ import hashlib
 import json
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
@@ -30,7 +30,7 @@ from shared.helpers import (
     parse_json_list,
     parse_json_mapping,
 )
-from shared.materiality_resolver import resolve_materiality
+from shared.materiality_resolver import resolve_materiality_basis
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.tb_post_processor import apply_currency_conversion, apply_lead_sheet_grouping
 from shared.tool_run_recorder import maybe_record_tool_run
@@ -54,6 +54,9 @@ async def audit_trial_balance(
     column_mapping: Optional[str] = Form(default=None),
     selected_sheets: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
+    # Sprint 886 (OUT-16): how the page set a positive threshold — "default",
+    # "engagement" or "entered". Checked server-side; see resolve_materiality_basis.
+    materiality_origin: Optional[Literal["default", "engagement", "entered"]] = Form(default=None),
     preflight_token: Optional[str] = Form(default=None),
     force_resubmit: bool = Form(default=False),
     current_user: User = Depends(check_diagnostic_limit),
@@ -153,12 +156,16 @@ async def audit_trial_balance(
     )
 
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
-    materiality_threshold, materiality_source = resolve_materiality(
+    # Sprint 886 (OUT-16): amount, purpose and real origin (was "manual" for any amount).
+    materiality_basis = resolve_materiality_basis(
         materiality_threshold,
         engagement_id,
-        current_user.id,
+        current_user,
         db,
+        claimed_origin=materiality_origin,
     )
+    materiality_threshold = materiality_basis.amount
+    materiality_source = materiality_basis.origin
 
     log_secure_operation(
         "audit_upload_streaming",
@@ -207,6 +214,7 @@ async def audit_trial_balance(
 
             # Sprint 310: Include materiality source in response
             analysis_result["materiality_source"] = materiality_source
+            analysis_result["materiality_basis"] = materiality_basis.to_dict()
 
             # Sprint 884 (TQ-12): the lead-sheet grouping is a free-form dict in the
             # response model, where a Decimal would go out as a string; send its

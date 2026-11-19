@@ -14,7 +14,7 @@ import type { DisplayMode } from '@/components/sensitivity'
 import { useSettings } from '@/hooks/useSettings'
 import type { AuditResult, AuditResultResponse } from '@/types/diagnostic'
 import type { UploadStatus } from '@/types/shared'
-import { uploadTrialBalance } from '@/utils/trialBalanceUpload'
+import { uploadTrialBalance, type MaterialityOrigin } from '@/utils/trialBalanceUpload'
 import { apiPost } from '@/utils'
 
 export interface UseTrialBalanceUploadReturn {
@@ -74,7 +74,14 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   const [isRecalculating, setIsRecalculating] = useState(false)
 
   // Materiality threshold state
-  const [materialityThreshold, setMaterialityThreshold] = useState(500)
+  const [materialityThreshold, setThresholdValue] = useState(500)
+  // Sprint 886 (OUT-16): how the threshold was set, so exports can name its origin.
+  const materialityOriginRef = useRef<MaterialityOrigin>('default')
+  /** The user's own entry. Pre-fills below set the value without changing the origin. */
+  const setMaterialityThreshold = useCallback((v: number) => {
+    materialityOriginRef.current = 'entered'
+    setThresholdValue(v)
+  }, [])
   const [showImmaterial, setShowImmaterial] = useState(false)
   const [thresholdInitialized, setThresholdInitialized] = useState(false)
   const [displayMode, setDisplayMode] = useState<DisplayMode>('strict')
@@ -100,7 +107,8 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
       const formula = practiceSettings.default_materiality
       if (formula) {
         if (formula.type === 'fixed' && formula.value > 0) {
-          setMaterialityThreshold(formula.value)
+          materialityOriginRef.current = 'default'
+          setThresholdValue(formula.value)
         }
         if (practiceSettings.show_immaterial_by_default !== undefined) {
           setShowImmaterial(practiceSettings.show_immaterial_by_default)
@@ -115,7 +123,8 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   useEffect(() => {
     const pm = engagement?.materiality?.performance_materiality
     if (pm && pm > 0) {
-      setMaterialityThreshold(pm)
+      materialityOriginRef.current = 'engagement'
+      setThresholdValue(pm)
     }
   }, [engagement?.materiality?.performance_materiality])
 
@@ -170,6 +179,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
           selectedSheets: sheets ?? null,
           engagementId: engagement?.engagementId ?? null,
           preflightToken: preflightToken ?? null,
+          materialityOrigin: materialityOriginRef.current,
         },
         token ?? null,
       )

@@ -112,13 +112,13 @@ class TestScreenPdfExcelAgree:
 
         pdf = _pdf_text((await _post("/export/pdf", json=screen)).content)
         assert "$1,500.00" in pdf
-        assert "Engagement performance materiality" in pdf
+        assert "Performance materiality — Engagement" in pdf
 
         wb = _workbook((await _post("/export/excel", json=screen)).content)
         summary_text = " ".join(
             str(c.value) for ws in wb.worksheets for row in ws.iter_rows() for c in row if c.value is not None
         )
-        assert "Engagement performance materiality" in summary_text
+        assert "Performance materiality — Engagement" in summary_text
 
     async def test_excel_ratios_match_the_screen(self, engagement):
         screen = await _analyse(engagement.id)
@@ -169,9 +169,10 @@ class TestNotSuppliedIsNotNone:
     async def test_materiality_source_not_supplied_says_not_available(self, engagement):
         screen = await _analyse(engagement.id)
         screen.pop("materiality_source")
+        screen.pop("materiality_basis")  # Sprint 886 / 11G: the structured basis
 
         text = _pdf_text((await _post("/export/pdf", json=screen)).content)
-        assert "Engagement performance materiality" not in text
+        assert "Performance materiality — Engagement" not in text
         assert re.search(r"Materiality Source\s*\.*\s*Not available", text)
 
     async def test_analytics_not_supplied_says_not_available_not_zero(self, engagement):

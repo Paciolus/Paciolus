@@ -30,7 +30,15 @@ export interface TrialBalanceUploadArgs {
   selectedSheets?: string[] | null
   engagementId?: number | null
   preflightToken?: string | null
+  /**
+   * Sprint 886 (OUT-16): how the page set the threshold — pre-filled default (saved
+   * firm setting or the Paciolus default), the engagement's performance materiality,
+   * or entered by the user. The server checks it and names the origin in every export.
+   */
+  materialityOrigin?: MaterialityOrigin | null
 }
+
+export type MaterialityOrigin = 'default' | 'engagement' | 'entered'
 
 /** Build the FormData body expected by POST /audit/trial-balance. */
 export function buildTrialBalanceFormData(args: TrialBalanceUploadArgs): FormData {
@@ -52,6 +60,9 @@ export function buildTrialBalanceFormData(args: TrialBalanceUploadArgs): FormDat
   }
   if (args.preflightToken) {
     fd.append('preflight_token', args.preflightToken)
+  }
+  if (args.materialityOrigin) {
+    fd.append('materiality_origin', args.materialityOrigin)
   }
   return fd
 }

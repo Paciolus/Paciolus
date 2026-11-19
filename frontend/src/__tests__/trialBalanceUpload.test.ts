@@ -22,6 +22,12 @@ const makeFile = (name = 'tb.csv'): File =>
   new File(['account,debit,credit\n'], name, { type: 'text/csv' })
 
 describe('buildTrialBalanceFormData', () => {
+  it('sends how the threshold was set (Sprint 886, OUT-16)', () => {
+    const fd = buildTrialBalanceFormData({ file: makeFile(), materialityThreshold: 1500, materialityOrigin: 'engagement' })
+    expect(fd.get('materiality_origin')).toBe('engagement')
+    expect(buildTrialBalanceFormData({ file: makeFile(), materialityThreshold: 1 }).get('materiality_origin')).toBeNull()
+  })
+
   it('includes file + threshold', () => {
     const fd = buildTrialBalanceFormData({ file: makeFile(), materialityThreshold: 500 })
     expect(fd.get('file')).toBeInstanceOf(File)

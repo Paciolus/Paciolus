@@ -12,7 +12,7 @@ from security_utils import log_secure_operation
 from shared.document_properties import save_workbook
 from shared.excel_cells import as_date, put, put_ref
 from shared.excel_exact import approximate_note, money
-from shared.materiality_resolver import NOT_AVAILABLE, materiality_source_label
+from shared.materiality_resolver import NOT_AVAILABLE, materiality_basis_label
 from shared.monetary import quantize_monetary
 
 
@@ -249,7 +249,7 @@ class PaciolusWorkpaperGenerator:
                 ws[f"B{i}"].alignment = Alignment(horizontal="right")
             if label == "Materiality Threshold":
                 # Sprint 886 (OUT-09): where the threshold came from, beside it.
-                put_ref(ws, f"C{i}", materiality_source_label(self.audit_result.get("materiality_source")))
+                put_ref(ws, f"C{i}", self._materiality_label())
                 ws[f"C{i}"].font = Font(color=ExcelColors.OBSIDIAN_500, size=9, italic=True)
 
         # Consolidated info if applicable
@@ -420,7 +420,7 @@ class PaciolusWorkpaperGenerator:
             ws,
             "A2",
             f"Materiality Threshold: ${self.audit_result.get('materiality_threshold', 0):,.2f}"
-            f" ({materiality_source_label(self.audit_result.get('materiality_source'))})",
+            f" ({self._materiality_label()})",
         )
         ws["A2"].style = "subtitle_style"
 
@@ -518,6 +518,12 @@ class PaciolusWorkpaperGenerator:
         ws.column_dimensions["D"].width = 15
         ws.column_dimensions["E"].width = 12
         ws.column_dimensions["F"].width = 15
+
+    def _materiality_label(self) -> str:
+        """Sprint 886 (OUT-09/16): the threshold's purpose and origin, as the PDF prints them."""
+        return materiality_basis_label(
+            self.audit_result.get("materiality_basis"), self.audit_result.get("materiality_source")
+        )
 
     def _build_ratios_tab(self) -> None:
         """Build the Key Ratios tab with financial ratio analysis."""
