@@ -39,6 +39,7 @@ from preflight_memo_generator import generate_preflight_memo
 from revenue_testing_memo_generator import generate_revenue_testing_memo
 from sampling_memo_generator import generate_sampling_design_memo, generate_sampling_evaluation_memo
 from shared.error_messages import sanitize_error
+from shared.export_framework import apply_framework_disclosure, resolve_export_framework
 from shared.export_helpers import pdf_response
 from shared.export_schemas import (
     AccrualCompletenessMemoInput,
@@ -151,6 +152,21 @@ def _memo_export_handler(
             "include_signoff": payload.include_signoff,  # type: ignore[attr-defined]
         }
 
+        # Sprint 886 (OUT-18): the client's reporting framework, from the linked
+        # engagement or client (access-checked); FASB, labelled default, if none.
+        framework = (
+            resolve_export_framework(
+                current_user,
+                db,  # type: ignore[arg-type]
+                engagement_id=getattr(payload, "engagement_id", None),
+                client_id=getattr(payload, "client_id", None),
+            )
+            if current_user is not None and db is not None
+            else None
+        )
+        if framework is not None:
+            common_kwargs["resolved_framework"] = framework.framework
+
         # Sprint 679: resolve branding for the caller and scope it to the
         # PDF-generation call via ContextVar. Falls back to blank
         # (Paciolus default) when user/db aren't supplied or the tier
@@ -159,7 +175,11 @@ def _memo_export_handler(
         if current_user is not None and db is not None:
             branding = load_pdf_branding_context(current_user, db)
 
-        with apply_pdf_branding(branding), track_memo_memory(entry.log_label):
+        with (
+            apply_pdf_branding(branding),
+            apply_framework_disclosure(framework.disclosure if framework else None),
+            track_memo_memory(entry.log_label),
+        ):
             pdf_bytes: bytes = entry.generator(
                 **{entry.result_kwarg: result_dict},
                 **common_kwargs,

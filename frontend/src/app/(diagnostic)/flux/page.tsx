@@ -4,9 +4,11 @@ import { useState, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext';
 import { GuestCTA } from '@/components/shared';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
 import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
+import { withLinkedEngagement } from '@/utils/linkedEngagement';
 import { getRiskLevelClasses, type ThresholdRiskLevel } from '@/utils/themeUtils';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
 
@@ -30,6 +32,8 @@ interface FluxAnalysisResponse {
 
 export default function FluxPage() {
     const { token, isAuthenticated } = useAuthSession();
+    // Sprint 886 (OUT-18): the memo resolves the client's reporting framework from it.
+    const engagementId = useOptionalEngagementContext()?.engagementId ?? null;
     const { result, setResult, isLoading, setIsLoading } = useDiagnostic();
 
     // Local state for files
@@ -125,11 +129,11 @@ export default function FluxPage() {
             token,
             {
                 method: 'POST',
-                body: {
+                body: withLinkedEngagement({
                     flux: result.flux,
                     expectations,
                     filename: result.filename,
-                },
+                }, engagementId),
             }
         );
 

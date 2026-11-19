@@ -8,8 +8,10 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useSonification } from '@/hooks/useSonification'
+import { withLinkedEngagement } from '@/utils/linkedEngagement'
 import { apiDownload, downloadBlob } from '@/utils'
 
 export type ExportType = 'pdf' | 'csv' | null
@@ -32,6 +34,8 @@ export function useTestingExport(
   fallbackCsvFilename: string = 'flagged_entries.csv',
 ): UseTestingExportReturn {
   const { token } = useAuthSession()
+  // Sprint 886 (OUT-18): the memo resolves the client's reporting framework from it.
+  const engagementId = useOptionalEngagementContext()?.engagementId ?? null
   const toast = useToast()
   const { playTone } = useSonification()
   const [exporting, setExporting] = useState<ExportType>(null)
@@ -55,7 +59,7 @@ export function useTestingExport(
       const { blob, filename, ok } = await apiDownload(
         memoEndpoint,
         token,
-        { method: 'POST', body: body as Record<string, unknown> },
+        { method: 'POST', body: withLinkedEngagement(body as Record<string, unknown>, engagementId) },
       )
       if (ok && blob) {
         downloadBlob(blob, filename || fallbackMemoFilename)
@@ -67,7 +71,7 @@ export function useTestingExport(
     } finally {
       setExporting(null)
     }
-  }, [token, memoEndpoint, fallbackMemoFilename, markComplete, toast])
+  }, [token, memoEndpoint, fallbackMemoFilename, markComplete, toast, engagementId])
 
   const handleExportCSV = useCallback(async (body: unknown) => {
     if (!token) return

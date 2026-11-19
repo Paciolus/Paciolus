@@ -19,6 +19,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf import ClassicalColors, LedgerRule, create_leader_dots
 from shared.drill_down import format_currency
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.parsing_helpers import safe_decimal
@@ -708,6 +709,7 @@ def generate_payroll_testing_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     fiscal_year_end: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for payroll testing results."""
@@ -746,5 +748,6 @@ def generate_payroll_testing_memo(
         build_post_results=_build_benford_note,
         build_extra_sections=_build_high_severity_detail,
         format_finding=_format_payroll_finding,
+        resolved_framework=resolved_framework,  # Sprint 886 (OUT-18)
         include_signoff=include_signoff,
     )

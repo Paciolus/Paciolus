@@ -582,7 +582,18 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       `test_sprint886_materiality_origin.py` (9: first-use default, saved firm setting, engagement, explicit entry —
       each named in PDF and Excel; unconfirmable claims → entered; all failed first); Jest
       `useTrialBalanceUploadOrigin.test.ts` (4: the hook sends the right origin) and a form-data case.
-- [ ] **11H / OUT-18** — memos use the client's reporting framework and say which.
+- [x] **11H / OUT-18 — memos use the client's reporting framework and say which.** Every memo request may carry
+      `engagement_id` (or `client_id`) — `WorkpaperMetadata`; the pages send the linked engagement
+      (`withLinkedEngagement`: the shared testing-export hook, bank rec, the four TB memos, multi-period, flux). The memo
+      route checks access (404 for an engagement or client the user may not see), resolves the framework with
+      `resolve_reporting_framework` (`shared/export_framework.py`), passes `resolved_framework` to the generator — the
+      seven testing generators gained the parameter — and every memo's scope prints "Reporting Framework: GASB — the
+      client is a governmental entity" (or "FASB (US GAAP) — set on the client", …). **Nothing linked (CEO decision):**
+      "FASB (US GAAP) — default; no client or engagement was linked to this run". Tests:
+      `test_sprint886_reporting_framework.py` (10; all failed first) — otherwise identical FASB and GASB engagements
+      through `/export/ap-testing-memo` and `/export/bank-rec-memo` get different scope text and references; client_id
+      alone resolves; another user's engagement is a 404; all 18 memo generators take the framework and all memo inputs
+      can name an engagement or client. Jest `linkedEngagement.test.ts` (3).
 - [ ] **11I** — severity labels, flag/row units, fixed-asset sections, multi-period detail, one score format.
 **Commits:** TBD.
 

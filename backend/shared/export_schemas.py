@@ -30,6 +30,10 @@ class WorkpaperMetadata(BaseModel):
     workpaper_date: Optional[str] = None
     fiscal_year_end: Optional[str] = None
     include_signoff: bool = False
+    # Sprint 886 (OUT-18): the engagement (or client) the run belongs to. The
+    # memo's reporting framework is resolved from it, after an access check.
+    engagement_id: Optional[int] = Field(default=None, ge=1)
+    client_id: Optional[int] = Field(default=None, ge=1)
 
 
 # --- Diagnostics Models ---

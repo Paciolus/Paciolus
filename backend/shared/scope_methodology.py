@@ -191,6 +191,13 @@ def build_scope_statement(
     the proof summary or methodology section.
     """
     content = get_tool_content(tool_domain, framework, domain_label)
+    # Sprint 886 (OUT-18): say which framework the memo's language follows, and why.
+    from pdf import create_leader_dots
+    from shared.export_framework import framework_disclosure
+
+    story.append(
+        Paragraph(create_leader_dots("Reporting Framework", framework_disclosure(framework)), styles["MemoLeader"])
+    )
     story.append(Paragraph(content.scope_statement, styles["MemoBody"]))
     story.append(Spacer(1, 6))
 

@@ -9,7 +9,9 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { type MovementSummaryResponse } from '@/hooks'
+import { withLinkedEngagement } from '@/utils/linkedEngagement'
 import { apiDownload, downloadBlob } from '@/utils'
 
 export interface MemoMetadata {
@@ -29,6 +31,8 @@ export interface UseMultiPeriodMemoExportReturn {
 
 export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMemoExportReturn {
   const [exporting, setExporting] = useState(false)
+  // Sprint 886 (OUT-18): the memo resolves the client's reporting framework from it.
+  const engagementId = useOptionalEngagementContext()?.engagementId ?? null
 
   const exportMemo = useCallback(
     async (comparison: MovementSummaryResponse, metadata: MemoMetadata) => {
@@ -46,7 +50,7 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
 
         const result = await apiDownload('/export/multi-period-memo', token, {
           method: 'POST',
-          body: {
+          body: withLinkedEngagement({
             prior_label: comparison.prior_label,
             current_label: comparison.current_label,
             budget_label: comparison.budget_label || null,
@@ -60,7 +64,7 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
             period_tested: metadata.fiscalYearEnd || 'Not specified',
             prepared_by: metadata.practitioner || 'Not specified',
             reviewed_by: metadata.reviewer || 'Not specified',
-          },
+          }, engagementId),
         })
 
         if (result.ok && result.blob) {
@@ -74,7 +78,7 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
         setExporting(false)
       }
     },
-    [token],
+    [token, engagementId],
   )
 
   return { exporting, exportMemo }

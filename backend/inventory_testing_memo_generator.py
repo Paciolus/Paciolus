@@ -14,6 +14,7 @@ from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf import LedgerRule
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.report_styles import ledger_table_style
 from shared.safe_paragraph import Paragraph, user_text
@@ -229,6 +230,7 @@ def generate_inventory_testing_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     fiscal_year_end: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for inventory testing results."""
@@ -246,5 +248,6 @@ def generate_inventory_testing_memo(
         fiscal_year_end=fiscal_year_end,
         build_extra_sections=_build_inventory_extra_sections,
         build_post_results=_build_risk_score_note,
+        resolved_framework=resolved_framework,  # Sprint 886 (OUT-18)
         include_signoff=include_signoff,
     )

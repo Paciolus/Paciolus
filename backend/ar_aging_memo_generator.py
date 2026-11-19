@@ -19,6 +19,7 @@ from shared.drill_down import (
     format_currency,
     safe_str_value,
 )
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import mean_confidence, standard_proof_figures
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.safe_paragraph import Paragraph, user_text
@@ -325,6 +326,7 @@ def generate_ar_aging_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     fiscal_year_end: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for AR aging analysis results."""
@@ -353,5 +355,6 @@ def generate_ar_aging_memo(
         build_scope=_build_ar_scope_section,
         build_extra_sections=_build_ar_extra_sections,
         proof_figures=proof,
+        resolved_framework=resolved_framework,  # Sprint 886 (OUT-18)
         include_signoff=include_signoff,
     )

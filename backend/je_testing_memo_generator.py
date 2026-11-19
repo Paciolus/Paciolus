@@ -24,6 +24,7 @@ from shared.drill_down import (
     safe_str_value,
 )
 from shared.follow_up_procedures import get_follow_up_procedure
+from shared.framework_resolution import ResolvedFramework
 from shared.memo_template import (
     TestingMemoConfig,
     _roman,
@@ -406,6 +407,7 @@ def generate_je_testing_memo(
     source_document_title: Optional[str] = None,
     source_context_note: Optional[str] = None,
     fiscal_year_end: Optional[str] = None,
+    resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for JE testing results."""
@@ -422,5 +424,6 @@ def generate_je_testing_memo(
         source_context_note=source_context_note,
         fiscal_year_end=fiscal_year_end,
         build_extra_sections=_build_je_extra_sections,
+        resolved_framework=resolved_framework,  # Sprint 886 (OUT-18)
         include_signoff=include_signoff,
     )

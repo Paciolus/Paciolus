@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
+import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice, BankRecTestsPanel } from '@/components/bankRec'
 import { BankRecRunSettings, BankRecThresholdsApplied, validateBankRecThresholds, type BankRecThresholdInputs } from '@/components/bankRec/BankRecRunSettings'
 import { FileDropZone, GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
@@ -9,6 +10,7 @@ import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/s
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { bankRecExportBody, type BankColumnDetectionData } from '@/types/bankRec'
+import { withLinkedEngagement } from '@/utils/linkedEngagement'
 import { apiDownload, downloadBlob } from '@/utils'
 
 /**
@@ -61,6 +63,7 @@ function ColumnDetectionWarning({ label, detection }: {
 
 export default function BankRecPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
+  const engagementId = useOptionalEngagementContext()?.engagementId ?? null
   // Sprint 839: optional per-run materiality / performance materiality.
   const [thresholdInputs, setThresholdInputs] = useState<BankRecThresholdInputs>({ materiality: '', performanceMateriality: '' })
   const validated = useMemo(() => validateBankRecThresholds(thresholdInputs), [thresholdInputs])
@@ -117,7 +120,10 @@ export default function BankRecPage() {
         token,
         {
           method: 'POST',
-          body: bankRecExportBody(result, bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation', false),
+          body: withLinkedEngagement(
+            bankRecExportBody(result, bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation', false),
+            engagementId,
+          ),
         },
       )
       if (memoResult.ok && memoResult.blob) {
@@ -128,7 +134,7 @@ export default function BankRecPage() {
     } finally {
       setExportingMemo(false)
     }
-  }, [result, token, bankFile])
+  }, [result, token, bankFile, engagementId])
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">
