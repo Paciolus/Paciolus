@@ -554,7 +554,14 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       their responses posted to the memo routes, each section and its figures checked; invalid schedules are a 422.
       Jest: the shared page-scenario harness gains `memoBodyFields` (each page must send the schedule) — 3 failed on
       the old pages.
-- [ ] **11E / OUT-14** — payroll completeness on the 0–100 scale.
+- [x] **11E / OUT-14 — payroll completeness on the 0–100 scale.** `assess_payroll_data_quality` divided the shared
+      0–100 score by 100, so a complete register showed as 1% in the badge, proof summary and memo. Now 0–100 like every
+      tool (rounded to one decimal like the others). Range enforced: `DataQualityResponse` / `ARDataQualityResponse`
+      (`ge=0, le=100`) and every testing export model (`_CompletenessInRange`: 422 outside 0–100). The memo scope line
+      "Data Quality Score" prints "Not available" when not supplied (was 0%). Tests:
+      `test_sprint886_payroll_completeness_scale.py` (7; 4 failed first — 100 not 1, the memo at 0/50/100 exactly, 150
+      refused); Jest `PayrollCompletenessScale.test.tsx` (badge and proof summary at 0/50/100; the screen code was
+      already right — the API scale was the bug).
 - [ ] **11F / OUT-15** — AR memo column confidence matches the screen.
 - [ ] **11G / OUT-16** — documents name the materiality amount, its purpose and its origin.
 - [ ] **11H / OUT-18** — memos use the client's reporting framework and say which.

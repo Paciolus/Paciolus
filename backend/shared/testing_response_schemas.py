@@ -16,7 +16,7 @@ Typed Pydantic models replacing response_model=dict for:
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # Sprint 884 (TQ-12, OUT-19): amounts validate as Decimal and go out as exact
 # JSON numbers (they were float fields, which rounded to 17 digits).
@@ -45,7 +45,8 @@ class CompositeScoreResponse(BaseModel):
 class DataQualityResponse(BaseModel):
     """Data quality assessment — shared by JE and AP."""
 
-    completeness_score: float
+    # Sprint 886 (OUT-14): a percentage, 0–100, for every tool.
+    completeness_score: float = Field(ge=0, le=100)
     field_fill_rates: dict[str, float]
     detected_issues: list[str]
     total_rows: int
@@ -717,7 +718,7 @@ class ARCompositeScoreResponse(BaseModel):
 class ARDataQualityResponse(BaseModel):
     """AR data quality — differs from shared (tb/subledger counts)."""
 
-    completeness_score: float
+    completeness_score: float = Field(ge=0, le=100)  # Sprint 886 (OUT-14): 0–100
     field_fill_rates: dict[str, float]
     detected_issues: list[str]
     total_tb_accounts: int

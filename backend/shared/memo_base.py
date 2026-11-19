@@ -363,7 +363,13 @@ def build_scope_section(
     scope_lines = [
         create_leader_dots(entry_label, f"{total_entries:,}"),
         create_leader_dots("Tests Applied", str(tests_run)),
-        create_leader_dots("Data Quality Score", f"{data_quality.get('completeness_score', 0):.0f}%"),
+        # Sprint 886 (OUT-14): not supplied is "Not available", never 0%.
+        create_leader_dots(
+            "Data Quality Score",
+            f"{completeness:.0f}%"
+            if _is_number(completeness := (data_quality or {}).get("completeness_score"))
+            else NOT_AVAILABLE,
+        ),
     ]
     if period_tested:
         scope_lines.insert(0, create_leader_dots("Period Tested", period_tested))

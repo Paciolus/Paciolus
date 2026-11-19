@@ -9,7 +9,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from shared.schemas import ExportAmount, _ExportItem
 
@@ -219,7 +219,23 @@ class ARAgingBucketInput(BaseModel):
     percentage: float
 
 
-class JETestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
+class _CompletenessInRange(BaseModel):
+    """Sprint 886 (OUT-14): ``data_quality.completeness_score`` is a percentage, 0–100, for every tool.
+
+    Payroll sent 0–1 (complete data printed as 1%); a value outside 0–100 is refused.
+    """
+
+    @field_validator("data_quality", check_fields=False)
+    @classmethod
+    def _completeness_is_a_percentage(cls, value: object) -> object:
+        if isinstance(value, dict) and value.get("completeness_score") is not None:
+            score = value["completeness_score"]
+            if isinstance(score, bool) or not isinstance(score, (int, float)) or not 0 <= score <= 100:
+                raise ValueError("data_quality.completeness_score must be a percentage from 0 to 100")
+        return value
+
+
+class JETestingExportInput(_CompletenessInRange, SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for JE testing exports."""
 
     composite_score: dict
@@ -231,7 +247,7 @@ class JETestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     filename: str = "je_testing"
 
 
-class APTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
+class APTestingExportInput(_CompletenessInRange, SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for AP testing exports."""
 
     composite_score: dict
@@ -242,7 +258,7 @@ class APTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     filename: str = "ap_testing"
 
 
-class PayrollTestingExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
+class PayrollTestingExportInput(_CompletenessInRange, SavedSettingsDisclosure, WorkpaperMetadata):
     """Input model for payroll testing exports."""
 
     composite_score: dict
@@ -272,7 +288,7 @@ class ThreeWayMatchExportInput(SavedSettingsDisclosure, WorkpaperMetadata):
     filename: str = "three_way_match"
 
 
-class RevenueTestingExportInput(WorkpaperMetadata):
+class RevenueTestingExportInput(_CompletenessInRange, WorkpaperMetadata):
     """Input model for revenue testing exports."""
 
     composite_score: dict
@@ -282,7 +298,7 @@ class RevenueTestingExportInput(WorkpaperMetadata):
     filename: str = "revenue_testing"
 
 
-class ARAgingExportInput(WorkpaperMetadata):
+class ARAgingExportInput(_CompletenessInRange, WorkpaperMetadata):
     """Input model for AR aging exports."""
 
     composite_score: dict
@@ -295,7 +311,7 @@ class ARAgingExportInput(WorkpaperMetadata):
     filename: str = "ar_aging"
 
 
-class FixedAssetExportInput(WorkpaperMetadata):
+class FixedAssetExportInput(_CompletenessInRange, WorkpaperMetadata):
     """Input model for fixed asset testing exports."""
 
     composite_score: dict
@@ -305,7 +321,7 @@ class FixedAssetExportInput(WorkpaperMetadata):
     filename: str = "fixed_asset_testing"
 
 
-class InventoryExportInput(WorkpaperMetadata):
+class InventoryExportInput(_CompletenessInRange, WorkpaperMetadata):
     """Input model for inventory testing exports."""
 
     composite_score: dict

@@ -720,7 +720,7 @@ class PayrollDataQuality:
 
     def to_dict(self) -> dict:
         return {
-            "completeness_score": round(self.completeness_score, 2),
+            "completeness_score": round(self.completeness_score, 1),
             "field_fill_rates": {k: round(v, 2) for k, v in self.field_fill_rates.items()},
             "detected_issues": self.detected_issues,
             "total_rows": self.total_rows,
@@ -897,7 +897,8 @@ def assess_payroll_data_quality(
             issues.append(f"{zero_pay} entries with zero gross pay")
 
     return PayrollDataQuality(
-        completeness_score=min(result.completeness_score / 100.0, 1.0),
+        # Sprint 886 (OUT-14): 0–100 like every other tool (was / 100, so complete data showed as 1%).
+        completeness_score=result.completeness_score,
         field_fill_rates=result.field_fill_rates,
         detected_issues=issues,
         total_rows=result.total_rows,
