@@ -458,7 +458,13 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       `route_export_pipeline`); text changes are all corrections: bullets extract as "•" (were ``), "∆" → Greek
       "Δ", ⚠/▢/─ instead of substitute ■. **Cost:** PDFs embed font subsets — the TB diagnostic PDF 42.7 → 43.0 KB,
       the financial statements 47.7 → 185 KB.
-- [ ] **10H / OUT-26 — analytical-expectations table fits the page.**
+- [x] **10H / OUT-26 — analytical-expectations table fits the page.** The schedule's seven columns are now shares
+      of the real frame width (`_SCHEDULE_COLUMN_SHARES`, same proportions as before) instead of fixed widths totalling
+      7.5in on a 7in frame; the header row repeats on every page (`repeatRows=1`); the section heading, its rule and
+      each type heading keep with the next flowable. Reproduced first: 3 of 3 in `test_sprint885_analytical_table_fit.py`
+      failed (columns 540pt on a 504pt frame; centred table text began 12pt left of the margin; no header on later
+      pages) with a 45-row schedule of long labels and 12-digit amounts. `memo_render_snapshot.json` re-recorded for
+      this memo: same page count and text, layout only.
 - [ ] **10I / OUT-27 — long branding text stays on the page.**
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent

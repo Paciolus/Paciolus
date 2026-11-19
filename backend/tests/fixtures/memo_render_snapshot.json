@@ -242,13 +242,13 @@
     ],
     "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nSign-Off\n",
     "text_bbox": [
-     42.0,
+     60.0,
      12.0,
-     510.0,
+     493.44,
      766.8
     ],
-    "runs": "439be9d2f117bbf6",
-    "content": "03e61e1b1999a790"
+    "runs": "475aae834a20850d",
+    "content": "c16510ee3689f33f"
    },
    {
     "size": [
@@ -298,13 +298,13 @@
     ],
     "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nSign-Off\n",
     "text_bbox": [
-     42.0,
+     60.0,
      24.0,
-     510.0,
+     493.44,
      721.0
     ],
-    "runs": "5f91fe6b742776a4",
-    "content": "50c4233e276fed27"
+    "runs": "4d881fb9e568ef21",
+    "content": "ce0c5f7025693b3c"
    },
    {
     "size": [

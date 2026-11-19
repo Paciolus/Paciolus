@@ -67,6 +67,16 @@ _TARGET_TYPE_LABEL = {
     ExpectationTargetType.FLUX_LINE: "Flux Line",
 }
 
+# Column shares of the frame width: Target, Expected, Threshold, Basis Tags,
+# Actual, Variance, Status (Sprint 885, OUT-26). They sum to 1.
+_SCHEDULE_COLUMN_SHARES = (0.21, 0.13, 0.11, 0.17, 0.13, 0.11, 0.14)
+
+
+def _KEEP_WITH_NEXT(style: ParagraphStyle) -> ParagraphStyle:  # noqa: N802 (reads as a style)
+    """A copy of ``style`` that keeps its paragraph on the page with the next flowable."""
+    return ParagraphStyle(f"{style.name}_KeepWithNext", parent=style, keepWithNext=1)
+
+
 _STATUS_LABEL = {
     ExpectationResultStatus.NOT_EVALUATED: "Not Evaluated",
     ExpectationResultStatus.WITHIN_THRESHOLD: "Within Threshold",
@@ -285,8 +295,10 @@ class AnalyticalExpectationMemoGenerator:
         story.append(Spacer(1, 8))
 
         # --- Section II: Expectations Table ---
-        story.append(Paragraph("II. Analytical Expectations", styles["MemoSection"]))
-        story.append(LedgerRule(doc_width))
+        story.append(Paragraph("II. Analytical Expectations", _KEEP_WITH_NEXT(styles["MemoSection"])))
+        section_rule = LedgerRule(doc_width)
+        section_rule.keepWithNext = 1
+        story.append(section_rule)
 
         if not expectations:
             story.append(
@@ -306,10 +318,11 @@ class AnalyticalExpectationMemoGenerator:
                 if not items:
                     continue
 
+                # Sprint 885 (OUT-26): the type heading never sits alone at the foot of a page.
                 story.append(
                     Paragraph(
                         f"<b>{user_text(_TARGET_TYPE_LABEL[target_type])}</b> ({len(items)})",
-                        styles["MemoBody"],
+                        _KEEP_WITH_NEXT(styles["MemoBody"]),
                     )
                 )
 
@@ -340,17 +353,13 @@ class AnalyticalExpectationMemoGenerator:
                         ]
                     )
 
+                # Sprint 885 (OUT-26): the widths added up to 7.5in on a 7in frame, so the
+                # table ran past the margins. They are now shares of the real frame
+                # width, and the header row repeats on every page.
                 table = Table(
                     table_data,
-                    colWidths=[
-                        1.6 * inch,
-                        0.95 * inch,
-                        0.85 * inch,
-                        1.3 * inch,
-                        0.95 * inch,
-                        0.85 * inch,
-                        1.0 * inch,
-                    ],
+                    colWidths=[share * doc_width for share in _SCHEDULE_COLUMN_SHARES],
+                    repeatRows=1,
                 )
                 table.setStyle(
                     TableStyle(
