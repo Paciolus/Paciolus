@@ -562,7 +562,14 @@ screen** too; a memo with no client or engagement linked uses FASB **labelled as
       `test_sprint886_payroll_completeness_scale.py` (7; 4 failed first — 100 not 1, the memo at 0/50/100 exactly, 150
       refused); Jest `PayrollCompletenessScale.test.tsx` (badge and proof summary at 0/50/100; the screen code was
       already right — the API scale was the bug).
-- [ ] **11F / OUT-15** — AR memo column confidence matches the screen.
+- [x] **11F / OUT-15 — AR memo column confidence matches the screen.** The shared Proof Summary read
+      `result["column_detection"]`; AR carries `tb_column_detection` and `sl_column_detection`, so every AR memo said 0%.
+      The AR memo now passes `ProofFigures` with `mean_confidence(tb, sl)` (the screen's rule: mean of the detections
+      carried, one alone on a TB-only run); `generate_testing_memo` takes `proof_figures`. No detection: "Not available"
+      on both (the screen showed 0.00). Tests: `test_sprint886_ar_column_confidence.py` (3, through `/export/ar-aging-memo`:
+      0.8 + 1.0 → 90%, TB-only 0.8 → 80%, none → Not available; 2 failed first); Jest `ARProofColumnConfidence.test.ts`
+      (0.90 / 0.80 / Not available). Screen shows 0.90 and the PDF 90%: the same figure in each surface's existing
+      format.
 - [ ] **11G / OUT-16** — documents name the materiality amount, its purpose and its origin.
 - [ ] **11H / OUT-18** — memos use the client's reporting framework and say which.
 - [ ] **11I** — severity labels, flag/row units, fixed-asset sections, multi-period detail, one score format.

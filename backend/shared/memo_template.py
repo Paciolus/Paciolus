@@ -25,6 +25,7 @@ from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
     TESTING_MEMO_MARGINS,
     MemoContext,
+    ProofFigures,
     build_disclaimer,
     build_intelligence_stamp,
     build_methodology_section,
@@ -144,6 +145,7 @@ def generate_testing_memo(
     build_extra_sections: Optional[ExtraSectionBuilder] = None,
     build_post_results: Optional[ExtraSectionBuilder] = None,
     format_finding: Optional[FindingFormatter] = None,
+    proof_figures: Optional[ProofFigures] = None,
     resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
     include_signoff: bool = False,
     branding_context: Any = None,  # Sprint 679: Optional PDFBrandingContext
@@ -168,6 +170,8 @@ def generate_testing_memo(
         build_post_results: Optional callback for content after results summary
             (e.g., Benford interpretation note). Same signature as build_extra_sections.
         format_finding: Optional finding formatter (e.g., for Payroll dict findings)
+        proof_figures: Proof Summary figures for a tool whose result has another
+            shape than the standard one (Sprint 886: AR's two column detections)
 
     Returns:
         PDF bytes
@@ -212,7 +216,7 @@ def generate_testing_memo(
             )
 
         # 2b. PROOF SUMMARY (between Scope and Methodology)
-        build_proof_summary_section(story, styles, doc_width, result)
+        build_proof_summary_section(story, styles, doc_width, result, figures=proof_figures)
 
         # 3. METHODOLOGY
         build_methodology_section(

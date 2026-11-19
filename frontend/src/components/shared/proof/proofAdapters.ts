@@ -159,12 +159,11 @@ export function extractARProof(result: ARAgingResult): ProofSummary {
   const totalEntries = result.data_quality.total_tb_accounts +
     (result.data_quality.total_subledger_entries ?? 0)
 
-  // Column confidence from tb_column_detection (loosely typed)
+  // Column confidence: the mean of the TB and sub-ledger detections the run carried
+  // (the PDF memo uses the same rule — Sprint 886, OUT-15). None carried → "Not available", not 0.
   const tbConf = (result.tb_column_detection as Record<string, unknown> | null)?.overall_confidence
   const slConf = (result.sl_column_detection as Record<string, unknown> | null)?.overall_confidence
-  const columnConfidence = typeof tbConf === 'number'
-    ? (typeof slConf === 'number' ? (tbConf + slConf) / 2 : tbConf)
-    : 0
+  const columnConfidence = meanConfidence(tbConf, slConf)
 
   return extractProofSummary({
     completenessScore: result.data_quality.completeness_score,

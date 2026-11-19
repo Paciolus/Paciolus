@@ -7,6 +7,7 @@ Domain: ISA 500 / ISA 540 / PCAOB AS 2501.
 Uses custom scope builder for dual-input mode (TB + optional sub-ledger).
 """
 
+import dataclasses
 from typing import Any, Optional
 
 from reportlab.lib.units import inch
@@ -18,6 +19,7 @@ from shared.drill_down import (
     format_currency,
     safe_str_value,
 )
+from shared.memo_base import mean_confidence, standard_proof_figures
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.safe_paragraph import Paragraph, user_text
 
@@ -326,6 +328,16 @@ def generate_ar_aging_memo(
     include_signoff: bool = False,
 ) -> bytes:
     """Generate a PDF testing memo for AR aging analysis results."""
+    # Sprint 886 (OUT-15): AR carries two column detections (TB and sub-ledger),
+    # not ``column_detection``; the Proof Summary shows their mean, as the screen does.
+    proof = dataclasses.replace(
+        standard_proof_figures(ar_result),
+        column_confidence=mean_confidence(
+            (ar_result.get("tb_column_detection") or {}).get("overall_confidence"),
+            (ar_result.get("sl_column_detection") or {}).get("overall_confidence"),
+        ),
+    )
+
     return generate_testing_memo(
         ar_result,
         _AR_CONFIG,
@@ -340,5 +352,6 @@ def generate_ar_aging_memo(
         fiscal_year_end=fiscal_year_end,
         build_scope=_build_ar_scope_section,
         build_extra_sections=_build_ar_extra_sections,
+        proof_figures=proof,
         include_signoff=include_signoff,
     )
