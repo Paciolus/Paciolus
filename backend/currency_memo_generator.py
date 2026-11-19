@@ -37,7 +37,7 @@ from shared.memo_base import (
 )
 from shared.memo_template import _roman
 from shared.monetary import quantize_monetary
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -161,7 +161,7 @@ def generate_currency_conversion_memo(
         # ── SECTION I: SCOPE ──
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"{_roman(section_num)}. Scope", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_num))}. Scope", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         params = [
@@ -177,7 +177,7 @@ def generate_currency_conversion_memo(
         for label, value in params:
             story.append(
                 Paragraph(
-                    f"<b>{label}:</b> {value}",
+                    f"<b>{user_text(label)}:</b> {user_text(value)}",
                     styles["MemoBody"],
                 )
             )
@@ -198,7 +198,7 @@ def generate_currency_conversion_memo(
         if rates_applied:
             story.append(LedgerRule())
             story.append(Spacer(1, 6))
-            story.append(Paragraph(f"{_roman(section_num)}. Exchange Rates Applied", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(_roman(section_num))}. Exchange Rates Applied", styles["MemoSection"]))
             story.append(Spacer(1, 8))
 
             headers = ["Currency Pair", "Rate"]
@@ -231,7 +231,7 @@ def generate_currency_conversion_memo(
         # ── SECTION III: CONVERSION OUTPUT ──
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"{_roman(section_num)}. Conversion Output", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_num))}. Conversion Output", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         if currency_exposure:
@@ -241,7 +241,7 @@ def generate_currency_conversion_memo(
             story.append(
                 Paragraph(
                     f"{converted_count:,} of {total_accounts:,} accounts ({pct_converted:.1f}%) "
-                    f"were successfully converted to {pres_currency}.",
+                    f"were successfully converted to {user_text(pres_currency)}.",
                     styles["MemoBody"],
                 )
             )
@@ -260,7 +260,7 @@ def generate_currency_conversion_memo(
         if truly_unconverted:
             story.append(LedgerRule())
             story.append(Spacer(1, 6))
-            story.append(Paragraph(f"{_roman(section_num)}. Unconverted Items", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(_roman(section_num))}. Unconverted Items", styles["MemoSection"]))
             story.append(Spacer(1, 8))
 
             story.append(
@@ -282,10 +282,10 @@ def generate_currency_conversion_memo(
                 story.append(Spacer(1, 6))
                 story.append(
                     Paragraph(
-                        f"<i>HIGH severity unconverted items ({currencies}) relate to intercompany balances. "
+                        f"<i>HIGH severity unconverted items ({user_text(currencies)}) relate to intercompany balances. "
                         "These require immediate rate resolution \u2014 intercompany balances that remain "
                         "unconverted will cause the consolidated trial balance to be out of balance in "
-                        f"{pres_currency}. Add the missing rates and rerun the conversion before finalizing.</i>",
+                        f"{user_text(pres_currency)}. Add the missing rates and rerun the conversion before finalizing.</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -307,13 +307,15 @@ def generate_currency_conversion_memo(
         # ── SECTION V: METHODOLOGY & LIMITATIONS ──
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"{_roman(section_num)}. Methodology &amp; Limitations", styles["MemoSection"]))
+        story.append(
+            Paragraph(f"{user_text(_roman(section_num))}. Methodology &amp; Limitations", styles["MemoSection"])
+        )
         story.append(Spacer(1, 8))
 
         story.append(
             Paragraph(
                 f"This memo documents the currency conversion applied to the uploaded trial balance. "
-                f"All amounts were converted to {pres_currency} using closing exchange rates provided "
+                f"All amounts were converted to {user_text(pres_currency)} using closing exchange rates provided "
                 f"by the practitioner. "
                 f"{converted_count:,} of {total_accounts:,} accounts ({pct_converted:.0f}%) "
                 f"were successfully converted.",
@@ -372,7 +374,7 @@ def generate_currency_conversion_memo(
                 "<b>Cumulative Translation Adjustment (CTA):</b> "
                 "Under ASC 830-30 and IAS 21, the translation adjustment arising from "
                 "the conversion of foreign currency financial statements to the reporting "
-                f"currency ({pres_currency}) must be recognized in Other Comprehensive Income (OCI) "
+                f"currency ({user_text(pres_currency)}) must be recognized in Other Comprehensive Income (OCI) "
                 "as a cumulative translation adjustment. "
                 "CTA computation requires prior period closing rates and opening "
                 "net assets by currency. These were not provided in the current conversion. "
@@ -410,24 +412,26 @@ def generate_currency_conversion_memo(
         # ── SECTION VII: CONCLUSION ──
         story.append(LedgerRule())
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"{_roman(section_num)}. Summary of Results", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_num))}. Summary of Results", styles["MemoSection"]))
         story.append(Spacer(1, 8))
 
         conclusion_parts = [
             f"Based on the automated multi-currency conversion procedures applied, "
             f"{converted_count:,} of {total_accounts:,} accounts ({pct_converted:.1f}%) "
-            f"were successfully converted to {pres_currency} using closing rates"
+            f"were successfully converted to {user_text(pres_currency)} using closing rates"
         ]
 
         if period_tested:
-            conclusion_parts.append(f" as of {period_tested}")
+            conclusion_parts.append(f" as of {user_text(period_tested)}")
         conclusion_parts.append(". ")
 
         if unconverted_count > 0:
             missing_currencies = sorted(
                 {i.get("original_currency", "?") for i in truly_unconverted if i.get("issue") == "missing_rate"}
             )
-            curr_list = ", ".join(missing_currencies) if missing_currencies else "unknown currencies"
+            curr_list = (
+                ", ".join(user_text(c) for c in missing_currencies) if missing_currencies else "unknown currencies"
+            )
             conclusion_parts.append(
                 f"{unconverted_count} account(s) could not be converted due to missing exchange rates "
                 f"for {curr_list} \u2014 these accounts retain their unconverted foreign currency "
@@ -583,12 +587,12 @@ def _build_unconverted_items_table(
 
         data.append(
             [
-                Paragraph(str(item.get("account_number", "")), cell_style),
-                Paragraph(str(item.get("account_name", "")), cell_style),
-                Paragraph(currency, cell_style),
-                Paragraph(issue_text, cell_style),
+                Paragraph(user_text(str(item.get("account_number", ""))), cell_style),
+                Paragraph(user_text(str(item.get("account_name", ""))), cell_style),
+                Paragraph(user_text(currency), cell_style),
+                Paragraph(user_text(issue_text), cell_style),
                 Paragraph(severity_text, cell_style),
-                Paragraph(rate_source, cell_style),
+                Paragraph(user_text(rate_source), cell_style),
             ]
         )
 
@@ -621,7 +625,7 @@ def _build_unconverted_items_table(
         story.append(Spacer(1, 4))
         story.append(
             Paragraph(
-                f"... and {len(items) - 50} more unconverted items.",
+                f"... and {user_text(len(items) - 50)} more unconverted items.",
                 styles["MemoBodySmall"],
             )
         )

@@ -29,7 +29,7 @@ from shared.memo_template import (
     _roman,
     generate_testing_memo,
 )
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 TEST_DESCRIPTIONS = {
     "unbalanced_entries": "Identifies journal entries where total debits do not equal total credits.",
@@ -106,7 +106,7 @@ def _build_benford_section(
         return section_counter
 
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. Benford's Law Analysis", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(section_label)}. Benford's Law Analysis", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     story.append(
@@ -208,7 +208,7 @@ def _build_high_severity_detail(
         return section_counter
 
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. High Severity Entry Detail", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(section_label)}. High Severity Entry Detail", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     for finding_idx, tr in enumerate(high_sev_tests):
@@ -246,7 +246,7 @@ def _build_high_severity_detail(
             )
             procedure = get_follow_up_procedure("unbalanced_entries", rotation_index=finding_idx)
             if procedure:
-                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
         elif test_key == "holiday_postings":
             rows = []
@@ -278,7 +278,7 @@ def _build_high_severity_detail(
             )
             procedure = get_follow_up_procedure("holiday_postings", rotation_index=finding_idx)
             if procedure:
-                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
         else:
             # Generic high-severity detail table
@@ -342,12 +342,12 @@ def _build_preparer_analysis(
         return section_counter
 
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. Preparer Concentration Analysis", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(section_label)}. Preparer Concentration Analysis", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     story.append(
         Paragraph(
-            f"{total_flagged_with_preparer} of {total_flagged_count} flagged entries "
+            f"{user_text(total_flagged_with_preparer)} of {user_text(total_flagged_count)} flagged entries "
             f"({total_flagged_with_preparer / total_flagged_count:.0%}) include preparer identification. "
             "The following table shows the top preparers by flagged entry count:",
             styles["MemoBody"],

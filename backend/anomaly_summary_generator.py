@@ -42,7 +42,7 @@ from shared.report_chrome import (
     find_logo,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_methodology_statement,
     build_scope_statement,
@@ -322,17 +322,17 @@ class AnomalySummaryGenerator:
         # Engagement-level summary metrics
         story.append(
             Paragraph(
-                f"<b>Tools Executed:</b> {tools_run_count} of {MARKETING_AUDIT_TOOL_COUNT} available tools",
+                f"<b>Tools Executed:</b> {user_text(tools_run_count)} of {user_text(MARKETING_AUDIT_TOOL_COUNT)} available tools",
                 styles["MemoBody"],
             )
         )
-        story.append(Paragraph(f"<b>Total Tool Runs:</b> {total_runs}", styles["MemoBody"]))
+        story.append(Paragraph(f"<b>Total Tool Runs:</b> {user_text(total_runs)}", styles["MemoBody"]))
         story.append(
             Paragraph(
                 f"<b>Total Anomalies Identified:</b> {len(follow_up_items)} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"High: {severity_counts['high']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"Medium: {severity_counts['medium']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                f"Low: {severity_counts['low']}",
+                f"High: {user_text(severity_counts['high'])} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                f"Medium: {user_text(severity_counts['medium'])} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                f"Low: {user_text(severity_counts['low'])}",
                 styles["MemoBody"],
             )
         )
@@ -340,13 +340,13 @@ class AnomalySummaryGenerator:
             clean_names = ", ".join(TOOL_LABELS.get(t, t.value) for t in clean_result_tools)
             story.append(
                 Paragraph(
-                    f"<b>Tools with Clean Results:</b> {len(clean_result_tools)} ({clean_names})",
+                    f"<b>Tools with Clean Results:</b> {len(clean_result_tools)} ({user_text(clean_names)})",
                     styles["MemoBody"],
                 )
             )
         story.append(
             Paragraph(
-                f"<b>Engagement Risk Indicator:</b> {risk_label}",
+                f"<b>Engagement Risk Indicator:</b> {user_text(risk_label)}",
                 styles["MemoBody"],
             )
         )
@@ -363,7 +363,7 @@ class AnomalySummaryGenerator:
                     last_date = latest.run_at.strftime("%b %d, %Y %H:%M") if latest.run_at else "N/A"
                     scope_data.append(
                         [
-                            Paragraph(TOOL_LABELS.get(tool_name, tool_name.value), styles["MemoTableCell"]),
+                            Paragraph(user_text(TOOL_LABELS.get(tool_name, tool_name.value)), styles["MemoTableCell"]),
                             Paragraph(str(len(runs)), styles["MemoTableCell"]),
                             Paragraph(last_date, styles["MemoTableCell"]),
                         ]
@@ -384,7 +384,7 @@ class AnomalySummaryGenerator:
             for tool_name in not_executed_tools:
                 not_exec_data.append(
                     [
-                        Paragraph(TOOL_LABELS.get(tool_name, tool_name.value), styles["MemoTableCell"]),
+                        Paragraph(user_text(TOOL_LABELS.get(tool_name, tool_name.value)), styles["MemoTableCell"]),
                         Paragraph("Not Run", styles["MemoTableCell"]),
                         Paragraph("\u2014", styles["MemoTableCell"]),
                     ]
@@ -441,9 +441,9 @@ class AnomalySummaryGenerator:
                 story.append(
                     Paragraph(
                         f"<b>Total Anomalies:</b> {len(follow_up_items)} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                        f"High: {severity_counts['high']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                        f"Medium: {severity_counts['medium']} &nbsp;&nbsp;|&nbsp;&nbsp; "
-                        f"Low: {severity_counts['low']}",
+                        f"High: {user_text(severity_counts['high'])} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                        f"Medium: {user_text(severity_counts['medium'])} &nbsp;&nbsp;|&nbsp;&nbsp; "
+                        f"Low: {user_text(severity_counts['low'])}",
                         styles["MemoBody"],
                     )
                 )
@@ -455,9 +455,9 @@ class AnomalySummaryGenerator:
                 tool_label = TOOL_LABELS.get(resolved_tn, tool_source) if resolved_tn else tool_source
                 cross_ref = TOOL_CROSS_REFERENCES.get(resolved_tn, "") if resolved_tn else ""
 
-                header_text = f"<b>{tool_label}</b> ({len(items)} items)"
+                header_text = f"<b>{user_text(tool_label)}</b> ({len(items)} items)"
                 if cross_ref:
-                    header_text += f" &nbsp;\u2014&nbsp; {cross_ref}"
+                    header_text += f" &nbsp;\u2014&nbsp; {user_text(cross_ref)}"
                 story.append(Paragraph(header_text, styles["MemoBody"]))
 
                 # Table with Ref column
@@ -468,9 +468,9 @@ class AnomalySummaryGenerator:
                     anomaly_data.append(
                         [
                             Paragraph(cross_ref, styles["MemoTableCell"]),
-                            Paragraph(str(idx), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(idx)), styles["MemoTableCell"]),
                             Paragraph(sev, styles["MemoTableCell"]),
-                            Paragraph(desc, styles["MemoTableCell"]),
+                            Paragraph(user_text(desc), styles["MemoTableCell"]),
                         ]
                     )
 
@@ -490,7 +490,7 @@ class AnomalySummaryGenerator:
                     ref_note = f" See {cross_ref} for detail." if cross_ref else ""
                     story.append(
                         Paragraph(
-                            f"<b>{tool_label}</b> (0 items)",
+                            f"<b>{user_text(tool_label)}</b> (0 items)",
                             styles["MemoBody"],
                         )
                     )
@@ -498,7 +498,7 @@ class AnomalySummaryGenerator:
                     story.append(
                         Paragraph(
                             f"\u2713 No anomalies identified. Population passed all configured "
-                            f"test thresholds.{ref_note}",
+                            f"test thresholds.{user_text(ref_note)}",
                             styles["MemoBody"],
                         )
                     )
@@ -542,7 +542,7 @@ class AnomalySummaryGenerator:
         total_anomalies = len(follow_up_items)
         story.append(
             Paragraph(
-                f"<b>Total Anomalies Requiring Response:</b> {total_anomalies}",
+                f"<b>Total Anomalies Requiring Response:</b> {user_text(total_anomalies)}",
                 styles["MemoBody"],
             )
         )
@@ -577,11 +577,13 @@ class AnomalySummaryGenerator:
 
                     # Response block header
                     tool_label = TOOL_LABELS.get(resolved_tn, tool_source) if resolved_tn else tool_source
-                    header = f"<b>Anomaly {anomaly_counter}</b> ({sev}) \u2014 {tool_label}"
+                    header = (
+                        f"<b>Anomaly {user_text(anomaly_counter)}</b> ({user_text(sev)}) \u2014 {user_text(tool_label)}"
+                    )
                     if cross_ref:
                         header += f" [{cross_ref}]"
                     story.append(Paragraph(header, styles["MemoBody"]))
-                    story.append(Paragraph(desc, styles["MemoBodySmall"]))
+                    story.append(Paragraph(user_text(desc), styles["MemoBodySmall"]))
                     story.append(Spacer(1, 4))
 
                     # Structured response fields
@@ -646,7 +648,7 @@ class AnomalySummaryGenerator:
         risk_box_data = [
             [
                 Paragraph(
-                    f"<b>ENGAGEMENT RISK INDICATOR: {risk_label}</b>",
+                    f"<b>ENGAGEMENT RISK INDICATOR: {user_text(risk_label)}</b>",
                     ParagraphStyle(
                         "_RiskLabel",
                         fontName="Times-Bold",
@@ -688,7 +690,7 @@ class AnomalySummaryGenerator:
             risk_details.append(f"{len(follow_up_items)} total anomalies across {len(items_by_tool)} tools")
 
         for detail in risk_details:
-            story.append(Paragraph(f"\u2022 {detail}", styles["MemoBody"]))
+            story.append(Paragraph(f"\u2022 {user_text(detail)}", styles["MemoBody"]))
 
         story.append(Spacer(1, 8))
 

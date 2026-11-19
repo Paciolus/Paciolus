@@ -40,7 +40,7 @@ from shared.memo_base import (
 )
 from shared.memo_template import _roman
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -579,7 +579,7 @@ def _generate_sampling_memo(
             "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
         )
         if period_tested:
-            scope_text += f"Period under examination: {period_tested}. "
+            scope_text += f"Period under examination: {user_text(period_tested)}. "
 
         # Determine method display name
         method = "N/A"
@@ -623,7 +623,7 @@ def _generate_sampling_memo(
             if pop_note:
                 story.append(
                     Paragraph(
-                        f"<i>{pop_note}</i>",
+                        f"<i>{user_text(pop_note)}</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -644,7 +644,7 @@ def _generate_sampling_memo(
                 story.append(
                     Paragraph(
                         f"<i>Confidence factor of {conf_factor:.4f} corresponds to the "
-                        f"{conf_note}. Per the Poisson distribution table used in MUS, "
+                        f"{user_text(conf_note)}. Per the Poisson distribution table used in MUS, "
                         f"the factor is derived as -ln(1 - confidence level).</i>",
                         styles["MemoBodySmall"],
                     )
@@ -705,7 +705,7 @@ def _generate_sampling_memo(
                         f"Actual sample size ({actual_size}) differs from calculated size "
                         f"({calc_size}) by {diff:+d} items due to interval rounding."
                     )
-                story.append(Paragraph(f"<i>{note_text}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(note_text)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 4))
 
             story.append(Spacer(1, 8))
@@ -804,7 +804,7 @@ def _generate_sampling_memo(
             section_num = (
                 "IV" if design_result and design_result.get("strata_summary") else ("III" if design_result else "II")
             )
-            story.append(Paragraph(f"{section_num}. Evaluation Results", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_num)}. Evaluation Results", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             # Sprint 825 (S6): when the understatement bound is present, label the
@@ -910,13 +910,13 @@ def _generate_sampling_memo(
                         error_data.append(
                             [
                                 str(i),
-                                Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(err.get("item_id", ""))), styles["MemoTableCell"]),
                                 f"${err.get('recorded_amount', 0):,.2f}",
                                 f"${err.get('audited_amount', 0):,.2f}",
                                 f"${err.get('misstatement', 0):,.2f}",
                                 f"{err.get('tainting', 0):.1%}",
-                                Paragraph(str(nature), styles["MemoTableCell"]),
-                                Paragraph(str(direction), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(nature)), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(direction)), styles["MemoTableCell"]),
                             ]
                         )
 
@@ -935,7 +935,7 @@ def _generate_sampling_memo(
                             f"${total_misstatement_sum:,.2f}",
                             "",
                             "",
-                            Paragraph(f"<b>{dir_summary}</b>", styles["MemoTableCell"]),
+                            Paragraph(f"<b>{user_text(dir_summary)}</b>", styles["MemoTableCell"]),
                         ]
                     )
 
@@ -985,7 +985,7 @@ def _generate_sampling_memo(
                         error_data.append(
                             [
                                 str(i),
-                                Paragraph(str(err.get("item_id", "")), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(err.get("item_id", ""))), styles["MemoTableCell"]),
                                 f"${err.get('recorded_amount', 0):,.2f}",
                                 f"${err.get('audited_amount', 0):,.2f}",
                                 f"${err.get('misstatement', 0):,.2f}",
@@ -1039,7 +1039,7 @@ def _generate_sampling_memo(
                 if len(errors) > 20:
                     story.append(
                         Paragraph(
-                            f"... and {len(errors) - 20} additional errors.",
+                            f"... and {user_text(len(errors) - 20)} additional errors.",
                             styles["MemoBodySmall"],
                         )
                     )
@@ -1053,7 +1053,7 @@ def _generate_sampling_memo(
 
         # ─── 5. Methodology ──────────────────────────────────────
         next_num = _next_section_number(design_result, evaluation_result)
-        story.append(Paragraph(f"{next_num}. Methodology", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(next_num)}. Methodology", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         build_methodology_statement(
@@ -1123,7 +1123,7 @@ def _generate_sampling_memo(
         # ─── 6. Conclusion / Status ───────────────────────────────
         if evaluation_result:
             next_num2 = _roman_after(next_num)
-            story.append(Paragraph(f"{next_num2}. Evaluation Result", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(next_num2)}. Evaluation Result", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             conclusion = evaluation_result.get("conclusion", "")
@@ -1154,11 +1154,11 @@ def _generate_sampling_memo(
 
             story.append(
                 Paragraph(
-                    f'<font color="{color.hexval()}">{conclusion_label}</font>',
+                    f'<font color="{user_text(color.hexval())}">{user_text(conclusion_label)}</font>',
                     styles["MemoSection"],
                 )
             )
-            story.append(Paragraph(detail, styles["MemoBody"]))
+            story.append(Paragraph(user_text(detail), styles["MemoBody"]))
             story.append(Spacer(1, 6))
 
             # ─── BUG-06: Conditional correction status ───────────────
@@ -1168,7 +1168,7 @@ def _generate_sampling_memo(
                 story.append(
                     Paragraph(
                         f"<i>Management has indicated the identified errors were corrected in "
-                        f"the subsequent period. {correction_note}"
+                        f"the subsequent period. {user_text(correction_note)}"
                         "Obtain written confirmation and the correcting journal entry reference "
                         "before relying on this assertion. Document in the engagement file "
                         "per ISA 450.</i>",
@@ -1188,11 +1188,11 @@ def _generate_sampling_memo(
             story.append(Spacer(1, 12))
         elif design_result:
             next_num2 = _roman_after(next_num)
-            story.append(Paragraph(f"{next_num2}. Status", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(next_num2)}. Status", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
             story.append(
                 Paragraph(
-                    f"Sample of {design_result.get('actual_sample_size', 0)} items has been selected. "
+                    f"Sample of {user_text(design_result.get('actual_sample_size', 0))} items has been selected. "
                     "Evaluation pending \u2014 auditor must complete testing of selected items and "
                     "upload results for evaluation.",
                     styles["MemoBody"],
@@ -1207,14 +1207,14 @@ def _generate_sampling_memo(
                 preview_num = _roman_after(next_num2)
 
                 actual_size = design_result.get("actual_sample_size", len(selected_items))
-                story.append(Paragraph(f"{preview_num}. Sample Selection Preview", styles["MemoSection"]))
+                story.append(Paragraph(f"{user_text(preview_num)}. Sample Selection Preview", styles["MemoSection"]))
                 story.append(LedgerRule(doc_width))
 
                 preview_count = min(len(selected_items), 10)
                 story.append(
                     Paragraph(
-                        f"The following table shows the first {preview_count} items selected for testing, "
-                        f"sorted by sampling order. The complete sample of {actual_size} items is available "
+                        f"The following table shows the first {user_text(preview_count)} items selected for testing, "
+                        f"sorted by sampling order. The complete sample of {user_text(actual_size)} items is available "
                         "as a CSV export from this report.",
                         styles["MemoBody"],
                     )
@@ -1229,7 +1229,7 @@ def _generate_sampling_memo(
                     preview_data.append(
                         [
                             str(i),
-                            Paragraph(str(item.get("item_id", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(item.get("item_id", ""))), styles["MemoTableCell"]),
                             Paragraph(desc, styles["MemoTableCell"]),
                             f"${item.get('recorded_amount', 0):,.2f}",
                             _format_stratum(item.get("stratum", "")),
@@ -1247,7 +1247,7 @@ def _generate_sampling_memo(
 
                 story.append(
                     Paragraph(
-                        f"<i>Full sample listing ({actual_size} items) should be exported and "
+                        f"<i>Full sample listing ({user_text(actual_size)} items) should be exported and "
                         "provided to the client as a document request. Items are listed in "
                         "systematic selection order \u2014 the random start was generated using a "
                         "cryptographically secure method (Python secrets module) to ensure "
@@ -1266,7 +1266,7 @@ def _generate_sampling_memo(
         else:
             next_steps_num = _roman_after(next_num)
 
-        story.append(Paragraph(f"{next_steps_num}. Next Steps", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(next_steps_num)}. Next Steps", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         # ─── BUG-02: Evaluation-phase next steps ─────────────────
@@ -1275,8 +1275,8 @@ def _generate_sampling_memo(
             story.append(Paragraph(intro_text, styles["MemoBody"]))
             story.append(Spacer(1, 6))
             for eval_step in eval_steps:
-                story.append(Paragraph(f"<b>{eval_step['title']}</b>", styles["MemoBody"]))
-                story.append(Paragraph(eval_step["body"], styles["MemoBody"]))
+                story.append(Paragraph(f"<b>{user_text(eval_step['title'])}</b>", styles["MemoBody"]))
+                story.append(Paragraph(user_text(eval_step["body"]), styles["MemoBody"]))
                 story.append(Spacer(1, 4))
         else:
             # Design-phase: population-type-specific steps
@@ -1294,16 +1294,16 @@ def _generate_sampling_memo(
             if pop_type and actual_size > 0:
                 story.append(
                     Paragraph(
-                        f"The following {actual_size} items have been selected for "
-                        f"{pop_type.upper()} balance testing using "
-                        f"{method}. To complete the sampling procedure:",
+                        f"The following {user_text(actual_size)} items have been selected for "
+                        f"{user_text(pop_type.upper())} balance testing using "
+                        f"{user_text(method)}. To complete the sampling procedure:",
                         styles["MemoBody"],
                     )
                 )
                 story.append(Spacer(1, 6))
 
             for design_step in steps:
-                story.append(Paragraph(f"<b>{design_step['title']}</b>", styles["MemoBody"]))
+                story.append(Paragraph(f"<b>{user_text(design_step['title'])}</b>", styles["MemoBody"]))
                 body = design_step["body"]
                 if tm_value > 0 and "Tolerable Misstatement" in body:
                     body = body.replace(
@@ -1396,8 +1396,8 @@ def _build_pass_fail_block(
         comparison = f"UEL ${uel:,.2f}  {_cmp(uel)}  TM ${tm:,.2f}"
     else:
         comparison = (
-            f"Overstatement UEL ${uel:,.2f}  {_cmp(uel)}  TM ${tm:,.2f}<br/>"
-            f"Understatement UEL ${under_uel:,.2f}  {_cmp(under_uel)}  TM ${tm:,.2f}"
+            f"Overstatement UEL ${uel:,.2f}  {user_text(_cmp(uel))}  TM ${tm:,.2f}<br/>"
+            f"Understatement UEL ${under_uel:,.2f}  {user_text(_cmp(under_uel))}  TM ${tm:,.2f}"
         )
 
     conclusion_line = f"EVALUATION RESULT:  {symbol} {label}"
@@ -1406,13 +1406,14 @@ def _build_pass_fail_block(
     block_data = [
         [
             Paragraph(
-                f'<font color="{text_color.hexval()}" size="12"><b>{conclusion_line}</b></font>', styles["MemoBody"]
+                f'<font color="{user_text(text_color.hexval())}" size="12"><b>{user_text(conclusion_line)}</b></font>',
+                styles["MemoBody"],
             )
         ],
-        [Paragraph(f'<font size="10">{comparison}</font>', styles["MemoBody"])],
+        [Paragraph(f'<font size="10">{user_text(comparison)}</font>', styles["MemoBody"])],
         [
             Paragraph(
-                f'<font size="9" color="{ClassicalColors.OBSIDIAN_500.hexval()}">{detail_line}</font>',
+                f'<font size="9" color="{user_text(ClassicalColors.OBSIDIAN_500.hexval())}">{user_text(detail_line)}</font>',
                 styles["MemoBody"],
             )
         ],
@@ -1612,7 +1613,7 @@ def _build_uel_derivation(
         conf_factor = design_result.get("confidence_factor", 3.0) or 3.0
 
     method_label = "Ratio Estimation" if is_random else "Stringer Bound Method"
-    story.append(Paragraph(f"<b>UEL Derivation ({method_label})</b>", styles["MemoBody"]))
+    story.append(Paragraph(f"<b>UEL Derivation ({user_text(method_label)})</b>", styles["MemoBody"]))
     story.append(Spacer(1, 4))
 
     # 1. Basic Precision — shared by both directions
@@ -1635,7 +1636,7 @@ def _build_uel_derivation(
         if population_value > 0 and n > 0 and abs(population_value * conf_factor / n - bp) < 0.01:
             story.append(
                 Paragraph(
-                    f"Computation: ${population_value:,.2f} × {conf_factor:.4f} ÷ {n} = ${bp:,.2f}",
+                    f"Computation: ${population_value:,.2f} × {conf_factor:.4f} ÷ {user_text(n)} = ${bp:,.2f}",
                     styles["MemoBody"],
                 )
             )
@@ -1722,7 +1723,9 @@ def _build_uel_derivation(
         suffix = f" — {label}" if label else ""
 
         # Projected Misstatement
-        story.append(Paragraph(f"<b>{step}. Projected Misstatement{suffix}</b>", styles["MemoBody"]))
+        story.append(
+            Paragraph(f"<b>{user_text(step)}. Projected Misstatement{user_text(suffix)}</b>", styles["MemoBody"])
+        )
         step += 1
         if is_random and side_errors:
             total = sum(abs(e.get("misstatement", 0) or 0) for e in side_errors)
@@ -1755,7 +1758,7 @@ def _build_uel_derivation(
                     proj_amount = abs(err.get("misstatement", 0) or 0)
                     story.append(
                         Paragraph(
-                            f"Error {i} ({item_id}, recorded amount at or above the interval, "
+                            f"Error {user_text(i)} ({user_text(item_id)}, recorded amount at or above the interval, "
                             f"examined rather than sampled): actual misstatement ${proj_amount:,.2f}",
                             styles["MemoBody"],
                         )
@@ -1764,7 +1767,7 @@ def _build_uel_derivation(
                     proj_amount = tainting * si
                     story.append(
                         Paragraph(
-                            f"Error {i} ({item_id}, tainting {tainting:.1%}): "
+                            f"Error {user_text(i)} ({user_text(item_id)}, tainting {tainting:.1%}): "
                             f"{tainting:.4f} × ${si:,.2f} = ${proj_amount:,.2f}",
                             styles["MemoBody"],
                         )
@@ -1772,7 +1775,7 @@ def _build_uel_derivation(
                 projected_sum += proj_amount
             story.append(
                 Paragraph(
-                    f"Total Projected Misstatement{suffix}: ${projected_sum:,.2f}",
+                    f"Total Projected Misstatement{user_text(suffix)}: ${projected_sum:,.2f}",
                     styles["MemoBody"],
                 )
             )
@@ -1782,7 +1785,9 @@ def _build_uel_derivation(
 
         # Incremental Allowance
         if incremental > 0:
-            story.append(Paragraph(f"<b>{step}. Incremental Allowance{suffix}</b>", styles["MemoBody"]))
+            story.append(
+                Paragraph(f"<b>{user_text(step)}. Incremental Allowance{user_text(suffix)}</b>", styles["MemoBody"])
+            )
             step += 1
             if is_random:
                 story.append(
@@ -1812,7 +1817,7 @@ def _build_uel_derivation(
                         f"{confidence_level:.0%} confidence, each successive error contributes a "
                         f"smaller incremental allowance, reflecting the diminishing marginal "
                         f"impact on the upper error limit. The factors are the first differences "
-                        f"of that series, per {_FIGURE_SOURCE}).</i>",
+                        f"of that series, per {user_text(_FIGURE_SOURCE)}).</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -1830,18 +1835,20 @@ def _build_uel_derivation(
                     inc_sum += inc_amount
                     story.append(
                         Paragraph(
-                            f"Error {i + 1} ({item_id}): factor {factor:.2f} − 1.0 = {factor - 1.0:.2f}; "
+                            f"Error {user_text(i + 1)} ({user_text(item_id)}): factor {factor:.2f} − 1.0 = {factor - 1.0:.2f}; "
                             f"{tainting:.4f} × ${si:,.2f} × {factor - 1.0:.2f} = ${inc_amount:,.2f}",
                             styles["MemoBody"],
                         )
                     )
-                story.append(Paragraph(f"Total Incremental Allowance{suffix}: ${inc_sum:,.2f}", styles["MemoBody"]))
+                story.append(
+                    Paragraph(f"Total Incremental Allowance{user_text(suffix)}: ${inc_sum:,.2f}", styles["MemoBody"])
+                )
             else:
                 story.append(Paragraph(f"Incremental Allowance = ${incremental:,.2f}", styles["MemoBody"]))
             story.append(Spacer(1, 6))
 
         # Upper Error Limit
-        story.append(Paragraph(f"<b>{step}. Upper Error Limit{suffix}</b>", styles["MemoBody"]))
+        story.append(Paragraph(f"<b>{user_text(step)}. Upper Error Limit{user_text(suffix)}</b>", styles["MemoBody"]))
         step += 1
         if incremental > 0:
             formula = "UEL = Basic Precision + Projected Misstatement + Incremental Allowance"
@@ -1861,7 +1868,7 @@ def _build_uel_derivation(
         operator = "≤" if within else "&gt;"
         story.append(
             Paragraph(
-                f'<font color="{color.hexval()}">UEL (${uel:,.2f}) {operator} TM (${tm:,.2f}) → {verdict}</font>',
+                f'<font color="{user_text(color.hexval())}">UEL (${uel:,.2f}) {user_text(operator)} TM (${tm:,.2f}) → {user_text(verdict)}</font>',
                 styles["MemoBody"],
             )
         )

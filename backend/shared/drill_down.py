@@ -12,7 +12,7 @@ from typing import Any, Optional
 from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 # Maximum rows to render per drill-down table
 MAX_DRILL_ROWS = 20
@@ -59,7 +59,7 @@ def build_drill_down_table(
         story.append(Spacer(1, 4))
         story.append(
             Paragraph(
-                f"<i>{_EMPTY_STATE_TEXT.format(title=title)}</i>",
+                f"<i>{user_text(_EMPTY_STATE_TEXT.format(title=title))}</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -88,7 +88,8 @@ def build_drill_down_table(
         wrapped_row = []
         for cell in row:
             if isinstance(cell, str):
-                wrapped_row.append(Paragraph(cell, styles["MemoTableCell"]))
+                # Cells are data from the upload (entry IDs, accounts, descriptions).
+                wrapped_row.append(Paragraph(user_text(cell), styles["MemoTableCell"]))
             else:
                 wrapped_row.append(cell)
         wrapped_rows.append(wrapped_row)
@@ -123,7 +124,7 @@ def build_drill_down_table(
     if actual_total > max_rows:
         story.append(
             Paragraph(
-                f"Showing {max_rows} of {actual_total} flagged entries. See CSV export for complete listing.",
+                f"Showing {user_text(max_rows)} of {user_text(actual_total)} flagged entries. See CSV export for complete listing.",
                 styles["MemoBodySmall"],
             )
         )

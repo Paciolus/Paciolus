@@ -3941,7 +3941,7 @@ def gen_flux_expectations() -> None:
                 "risk_level": "high",
                 "variance_indicators": ["material_change", "percentage_outlier"],
                 "footnote": (
-                    "Marketing &amp; Advertising may represent a sub-account within Other Operating "
+                    "Marketing & Advertising may represent a sub-account within Other Operating "
                     "Expenses ($795,000). Auditor should confirm account hierarchy and verify "
                     "the balance is not double-counted in the expense category analysis (see WP-ECA)."
                 ),

@@ -46,7 +46,7 @@ from shared.memo_base import (
     wrap_table_strings,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -137,8 +137,8 @@ def _build_methodology_table(
         desc = _TEST_DESCRIPTIONS.get(test_key, tr.get("description", ""))
         method_data.append(
             [
-                Paragraph(tr.get("test_name", ""), styles["MemoTableCell"]),
-                Paragraph(tr.get("test_tier", "structural").title(), styles["MemoTableCell"]),
+                Paragraph(user_text(tr.get("test_name", "")), styles["MemoTableCell"]),
+                Paragraph(user_text(tr.get("test_tier", "structural").title()), styles["MemoTableCell"]),
                 Paragraph(desc, styles["MemoTableCell"]),
             ]
         )
@@ -334,7 +334,7 @@ def _build_reconciliation_results(
             "Fraudulent transaction — unauthorized transaction cleared at bank",
         ]
         for exp in explanations:
-            story.append(Paragraph(f"&#x25A2;  {exp}", styles["MemoBody"]))
+            story.append(Paragraph(f"&#x25A2;  {user_text(exp)}", styles["MemoBody"]))
 
         # Cross-reference to AR difference (conditional)
         ar_cross_ref = rec_result.get("ar_cross_reference")
@@ -346,7 +346,7 @@ def _build_reconciliation_results(
                 Paragraph(
                     f"<i>Note: An unreconciled AR subledger difference of "
                     f"${ar_diff:,.2f} was identified in the AR Aging Analysis memo "
-                    f"(Ref: {ar_ref}). The bank and AR differences should be "
+                    f"(Ref: {user_text(ar_ref)}). The bank and AR differences should be "
                     f"investigated concurrently to determine whether they are related.</i>",
                     styles["MemoBodySmall"],
                 )
@@ -399,9 +399,9 @@ def _build_outstanding_aging_tables(
 
             dep_data.append(
                 [
-                    Paragraph(str(dep.get("date", "N/A")), cell_style),
+                    Paragraph(user_text(str(dep.get("date", "N/A"))), cell_style),
                     Paragraph(str(days) if days is not None else "N/A", cell_style),
-                    Paragraph(dep.get("description", "")[:40], cell_style),
+                    Paragraph(user_text(dep.get("description", "")[:40]), cell_style),
                     Paragraph(f"${abs(dep.get('amount', 0)):,.2f}", cell_style),
                     Paragraph(priority, cell_style),
                 ]
@@ -431,7 +431,7 @@ def _build_outstanding_aging_tables(
             story.append(Spacer(1, 2))
             story.append(
                 Paragraph(
-                    f"Showing {_MAX_AGING_ROWS} of {len(sorted_deposits)} items. "
+                    f"Showing {user_text(_MAX_AGING_ROWS)} of {len(sorted_deposits)} items. "
                     "Full listing available in source data export.",
                     styles["MemoBodySmall"],
                 )
@@ -471,9 +471,9 @@ def _build_outstanding_aging_tables(
 
             chk_data.append(
                 [
-                    Paragraph(str(chk.get("date", "N/A")), cell_style_chk),
+                    Paragraph(user_text(str(chk.get("date", "N/A"))), cell_style_chk),
                     Paragraph(str(days) if days is not None else "N/A", cell_style_chk),
-                    Paragraph(chk.get("description", "")[:40], cell_style_chk),
+                    Paragraph(user_text(chk.get("description", "")[:40]), cell_style_chk),
                     Paragraph(f"${abs(chk.get('amount', 0)):,.2f}", cell_style_chk),
                     Paragraph(priority, cell_style_chk),
                 ]
@@ -502,7 +502,7 @@ def _build_outstanding_aging_tables(
             story.append(Spacer(1, 2))
             story.append(
                 Paragraph(
-                    f"Showing {_MAX_AGING_ROWS} of {len(sorted_checks)} items. "
+                    f"Showing {user_text(_MAX_AGING_ROWS)} of {len(sorted_checks)} items. "
                     "Full listing available in source data export.",
                     styles["MemoBodySmall"],
                 )
@@ -587,7 +587,7 @@ def _build_key_findings(
         finding_num += 1
         story.append(
             Paragraph(
-                f"<b>{finding_num}. Reconciling Difference of ${abs(rec_diff):,.2f} (HIGH)</b>",
+                f"<b>{user_text(finding_num)}. Reconciling Difference of ${abs(rec_diff):,.2f} (HIGH)</b>",
                 styles["MemoBody"],
             )
         )
@@ -602,7 +602,7 @@ def _build_key_findings(
         )
         procedure = get_follow_up_procedure("reconciling_difference", rotation_index=finding_num)
         if procedure:
-            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
         # Cross-reference to AR difference
         ar_cross_ref = rec_result.get("ar_cross_reference")
@@ -612,7 +612,7 @@ def _build_key_findings(
             story.append(
                 Paragraph(
                     f"<i>Note: An unreconciled AR subledger difference of ${ar_diff:,.2f} "
-                    f"was identified in the AR Aging Analysis (Ref: {ar_ref}). "
+                    f"was identified in the AR Aging Analysis (Ref: {user_text(ar_ref)}). "
                     f"These two differences may be related — investigate concurrently.</i>",
                     styles["MemoBodySmall"],
                 )
@@ -625,22 +625,22 @@ def _build_key_findings(
         finding_num += 1
         story.append(
             Paragraph(
-                f"<b>{finding_num}. Outstanding Items Volume (MEDIUM)</b>",
+                f"<b>{user_text(finding_num)}. Outstanding Items Volume (MEDIUM)</b>",
                 styles["MemoBody"],
             )
         )
         story.append(
             Paragraph(
-                f"{total_outstanding} outstanding items remain unmatched "
-                f"({bank_only} deposits totaling ${abs(bank_only_amount):,.2f}; "
-                f"{ledger_only} checks totaling ${abs(ledger_only_amount):,.2f}). "
+                f"{user_text(total_outstanding)} outstanding items remain unmatched "
+                f"({user_text(bank_only)} deposits totaling ${abs(bank_only_amount):,.2f}; "
+                f"{user_text(ledger_only)} checks totaling ${abs(ledger_only_amount):,.2f}). "
                 f"Aging analysis in Section IV identifies items requiring priority investigation.",
                 styles["MemoBody"],
             )
         )
         procedure = get_follow_up_procedure("outstanding_volume", rotation_index=finding_num)
         if procedure:
-            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))
 
     # Dynamic findings from rec_tests
@@ -663,20 +663,20 @@ def _build_key_findings(
         severity = rt.get("severity", "medium").upper()
         story.append(
             Paragraph(
-                f"<b>{finding_num}. {test_name} ({severity})</b>",
+                f"<b>{user_text(finding_num)}. {user_text(test_name)} ({user_text(severity)})</b>",
                 styles["MemoBody"],
             )
         )
         story.append(
             Paragraph(
-                f"{flagged} item(s) flagged by the {test_name} test.",
+                f"{user_text(flagged)} item(s) flagged by the {user_text(test_name)} test.",
                 styles["MemoBody"],
             )
         )
         test_key = test_key_map.get(test_name, "")
         procedure = get_follow_up_procedure(test_key, rotation_index=finding_num)
         if procedure:
-            story.append(Paragraph(f"<i>Suggested follow-up: {procedure}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))
 
     if finding_num == 0:
@@ -894,9 +894,9 @@ def generate_bank_rec_memo(
                 for rt in rec_tests:
                     results_data.append(
                         [
-                            Paragraph(str(rt.get("test_name", "")), cell_style_rt),
-                            Paragraph(str(rt.get("flagged_count", 0)), cell_style_rt),
-                            Paragraph(rt.get("severity", "low").upper(), cell_style_rt),
+                            Paragraph(user_text(str(rt.get("test_name", ""))), cell_style_rt),
+                            Paragraph(user_text(str(rt.get("flagged_count", 0))), cell_style_rt),
+                            Paragraph(user_text(rt.get("severity", "low").upper()), cell_style_rt),
                         ]
                     )
 

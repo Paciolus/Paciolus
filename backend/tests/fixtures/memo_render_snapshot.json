@@ -2101,15 +2101,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nSource ... Fixed Asset Register — FY2025 Export (meridian_fixed_assets_fy2025.csv)\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTotal Fixed Assets Tested ......................... 250\nTests Applied ...................................... 10\nData Quality Score ................................ 94%\nFixed Asset Roll-Forward — FY2025\nGross Cost:\nBeginning Balance ....................... $3,000,000.00\nAdditions During Period ................. + $420,000.00\nEnding Balance (per Register) ........... $3,420,000.00\nPer Trial Balance (PP&E gross) ...... $3,420,000.00\nVariance ........................................ $0.00\nAccumulated Depreciation:\nBeginning Balance ......................... $895,000.00\nDepreciation Expense for Period ......... + $285,000.00\nEnding Balance (per Register) ........... $1,180,000.00\nPer Trial Balance (Accum. Depr.) ........ $1,180,000.00\nVariance ........................................ $0.00\nNet Book Value .......................... $2,240,000.00\n✓ Roll-forward reconciles to Trial Balance.\nDepreciation Rate Analysis\nGross PP&E .......................... $3,420,000.00\nDepreciation Expense (Period) ............. $285,000.00\nEffective Depreciation Rate ...................... 8.3%\nImplied Average Useful Life ................ 12.0 years\nAn effective depreciation rate of 8.3% implies an average asset life of approximately 12 years across the register. Assess whether this is\nconsistent with the entity’s asset mix and useful life policies.\nAsset Register Composition\nAsset Category\nCount\nGross Cost\nAccum. Depr.\nNet Book Value\nAvg. Age (yrs)\nBuilding Improvements\n28\n$1,240,000.00\n$412,000.00\n$828,000.00\n8.2\nEquipment\n95\n$980,000.00\n$385,000.00\n$595,000.00\n5.7\nIT Equipment\n72\n$540,000.00\n$298,000.00\n$242,000.00\n3.1\n",
+    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nSource ... Fixed Asset Register — FY2025 Export (meridian_fixed_assets_fy2025.csv)\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTotal Fixed Assets Tested ......................... 250\nTests Applied ...................................... 10\nData Quality Score ................................ 94%\nFixed Asset Roll-Forward — FY2025\nGross Cost:\nBeginning Balance ....................... $3,000,000.00\nAdditions During Period ................. + $420,000.00\nEnding Balance (per Register) ........... $3,420,000.00\nPer Trial Balance (PP&E gross) .......... $3,420,000.00\nVariance ........................................ $0.00\nAccumulated Depreciation:\nBeginning Balance ......................... $895,000.00\nDepreciation Expense for Period ......... + $285,000.00\nEnding Balance (per Register) ........... $1,180,000.00\nPer Trial Balance (Accum. Depr.) ........ $1,180,000.00\nVariance ........................................ $0.00\nNet Book Value .......................... $2,240,000.00\n✓ Roll-forward reconciles to Trial Balance.\nDepreciation Rate Analysis\nGross PP&E .............................. $3,420,000.00\nDepreciation Expense (Period) ............. $285,000.00\nEffective Depreciation Rate ...................... 8.3%\nImplied Average Useful Life ................ 12.0 years\nAn effective depreciation rate of 8.3% implies an average asset life of approximately 12 years across the register. Assess whether this is\nconsistent with the entity’s asset mix and useful life policies.\nAsset Register Composition\nAsset Category\nCount\nGross Cost\nAccum. Depr.\nNet Book Value\nAvg. Age (yrs)\nBuilding Improvements\n28\n$1,240,000.00\n$412,000.00\n$828,000.00\n8.2\nEquipment\n95\n$980,000.00\n$385,000.00\n$595,000.00\n5.7\nIT Equipment\n72\n$540,000.00\n$298,000.00\n$242,000.00\n3.1\n",
     "text_bbox": [
      60.0,
      12.0,
      482.37,
      766.8
     ],
-    "runs": "2ff897ed6fc2b6a8",
-    "content": "9712c9bfbb9cf452"
+    "runs": "d3ee8d1b464b1bce",
+    "content": "805d9af9ad13266d"
    },
    {
     "size": [
@@ -2208,15 +2208,15 @@
      612.0,
      792.0
     ],
-    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nSource ... Fixed Asset Register — FY2025 Export (meridian_fixed_assets_fy2025.csv)\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTotal Fixed Assets Tested ......................... 250\nTests Applied ...................................... 10\nData Quality Score ................................ 94%\nFixed Asset Roll-Forward — FY2025\nGross Cost:\nBeginning Balance ....................... $3,000,000.00\nAdditions During Period ................. + $420,000.00\nEnding Balance (per Register) ........... $3,420,000.00\nPer Trial Balance (PP&E gross) ...... $3,420,000.00\nVariance ........................................ $0.00\nAccumulated Depreciation:\nBeginning Balance ......................... $895,000.00\nDepreciation Expense for Period ......... + $285,000.00\nEnding Balance (per Register) ........... $1,180,000.00\nPer Trial Balance (Accum. Depr.) ........ $1,180,000.00\nVariance ........................................ $0.00\nNet Book Value .......................... $2,240,000.00\n✓ Roll-forward reconciles to Trial Balance.\nDepreciation Rate Analysis\nGross PP&E .......................... $3,420,000.00\nDepreciation Expense (Period) ............. $285,000.00\nEffective Depreciation Rate ...................... 8.3%\nImplied Average Useful Life ................ 12.0 years\nAn effective depreciation rate of 8.3% implies an average asset life of approximately 12 years across the register. Assess whether this is\nconsistent with the entity’s asset mix and useful life policies.\nAsset Register Composition\nAsset Category\nCount\nGross Cost\nAccum. Depr.\nNet Book Value\nAvg. Age (yrs)\nBuilding Improvements\n28\n$1,240,000.00\n$412,000.00\n$828,000.00\n8.2\nEquipment\n95\n$980,000.00\n$385,000.00\n$595,000.00\n5.7\nIT Equipment\n72\n$540,000.00\n$298,000.00\n$242,000.00\n3.1\n",
+    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nSource ... Fixed Asset Register — FY2025 Export (meridian_fixed_assets_fy2025.csv)\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTotal Fixed Assets Tested ......................... 250\nTests Applied ...................................... 10\nData Quality Score ................................ 94%\nFixed Asset Roll-Forward — FY2025\nGross Cost:\nBeginning Balance ....................... $3,000,000.00\nAdditions During Period ................. + $420,000.00\nEnding Balance (per Register) ........... $3,420,000.00\nPer Trial Balance (PP&E gross) .......... $3,420,000.00\nVariance ........................................ $0.00\nAccumulated Depreciation:\nBeginning Balance ......................... $895,000.00\nDepreciation Expense for Period ......... + $285,000.00\nEnding Balance (per Register) ........... $1,180,000.00\nPer Trial Balance (Accum. Depr.) ........ $1,180,000.00\nVariance ........................................ $0.00\nNet Book Value .......................... $2,240,000.00\n✓ Roll-forward reconciles to Trial Balance.\nDepreciation Rate Analysis\nGross PP&E .............................. $3,420,000.00\nDepreciation Expense (Period) ............. $285,000.00\nEffective Depreciation Rate ...................... 8.3%\nImplied Average Useful Life ................ 12.0 years\nAn effective depreciation rate of 8.3% implies an average asset life of approximately 12 years across the register. Assess whether this is\nconsistent with the entity’s asset mix and useful life policies.\nAsset Register Composition\nAsset Category\nCount\nGross Cost\nAccum. Depr.\nNet Book Value\nAvg. Age (yrs)\nBuilding Improvements\n28\n$1,240,000.00\n$412,000.00\n$828,000.00\n8.2\nEquipment\n95\n$980,000.00\n$385,000.00\n$595,000.00\n5.7\nIT Equipment\n72\n$540,000.00\n$298,000.00\n$242,000.00\n3.1\n",
     "text_bbox": [
      60.0,
      24.0,
      482.37,
      703.0
     ],
-    "runs": "429d292e75f998b2",
-    "content": "c31917da291d18f8"
+    "runs": "8b6d2a2657eef6e9",
+    "content": "0cd916e24b327f20"
    },
    {
     "size": [
@@ -4533,15 +4533,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 4 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) .............. 52\nItems Flagged\nAbove Materiality\nBelow Materiality\nInformational Notes\n8 3 5 0\nException Details\nItems Above Materiality (3)\n",
+    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 4 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nItems Flagged\nAbove Materiality\nBelow Materiality\nInformational Notes\n8 3 5 0\nException Details\nItems Above Materiality (3)\n",
     "text_bbox": [
      60.0,
      12.0,
      462.5,
      766.8
     ],
-    "runs": "c48d4c8c20db37cd",
-    "content": "feed42a1aa35448d"
+    "runs": "27f2b18faa6d0799",
+    "content": "94734b91bcf7010d"
    },
    {
     "size": [
@@ -4657,15 +4657,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\n— 4 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) .............. 52\nItems Flagged\nAbove Materiality\nBelow Materiality\nInformational Notes\n8 3 5 0\nException Details\nItems Above Materiality (3)\n",
+    "text": "Particularis de Computis\n— 4 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nItems Flagged\nAbove Materiality\nBelow Materiality\nInformational Notes\n8 3 5 0\nException Details\nItems Above Materiality (3)\n",
     "text_bbox": [
      60.0,
      24.0,
      462.5,
      704.0
     ],
-    "runs": "de5b648fa5c65686",
-    "content": "eeca8963620dbb97"
+    "runs": "9a716cec7ffbf1d6",
+    "content": "e422b2a9e3101c5f"
    },
    {
     "size": [

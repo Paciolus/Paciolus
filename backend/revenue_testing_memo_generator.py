@@ -28,7 +28,7 @@ from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.parsing_helpers import safe_decimal
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 REVENUE_TEST_DESCRIPTIONS = {
     "large_manual_entries": (
@@ -373,7 +373,7 @@ def _build_post_results_notes(
                     "conformity, providing analytical support for the completeness and "
                     "non-fabrication of revenue amounts in the population tested."
                 )
-            story.append(Paragraph(f"<i>{note}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>{user_text(note)}</i>", styles["MemoBodySmall"]))
             story.append(Spacer(1, 4))
 
         # IMPROVEMENT-02: SSP Allocation pass note
@@ -421,9 +421,9 @@ def _build_post_results_notes(
                     )
                 story.append(
                     Paragraph(
-                        f"<i>Contra-Revenue Ratio: {format_currency(contra_total)} / "
-                        f"{format_currency(gross_revenue)} gross revenue = {ratio:.1%}. "
-                        f"{interp}</i>",
+                        f"<i>Contra-Revenue Ratio: {user_text(format_currency(contra_total))} / "
+                        f"{user_text(format_currency(gross_revenue))} gross revenue = {ratio:.1%}. "
+                        f"{user_text(interp)}</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -476,11 +476,11 @@ def _build_cutoff_table(
         display_amount = abs(entry.get("amount", 0)) if isinstance(entry.get("amount"), (int, float)) else 0
         table_data.append(
             [
-                Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("account_name"), "")[:20], styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("reference"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("date"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("account_name"), "")[:20]), styles["MemoTableCell"]),
                 Paragraph(format_currency(display_amount), styles["MemoTableCell"]),
-                Paragraph(customer, styles["MemoTableCell"]),
+                Paragraph(user_text(customer), styles["MemoTableCell"]),
                 Paragraph(str(days_from) if days_from is not None else "\u2014", styles["MemoTableCell"]),
             ]
         )
@@ -500,7 +500,7 @@ def _build_cutoff_table(
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
         story.append(
             Paragraph(
-                f"<i>Showing {_MAX_DETAIL_ROWS} of {len(flagged_entries)} flagged entries.</i>",
+                f"<i>Showing {user_text(_MAX_DETAIL_ROWS)} of {len(flagged_entries)} flagged entries.</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -519,11 +519,11 @@ def _build_recognition_table(
         concern = fe.get("issue", "")
         table_data.append(
             [
-                Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("account_name"), "")[:20], styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("reference"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("date"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("account_name"), "")[:20]), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
-                Paragraph(concern[:60] if concern else "\u2014", styles["MemoTableCell"]),
+                Paragraph(user_text(concern[:60] if concern else "\u2014"), styles["MemoTableCell"]),
             ]
         )
 
@@ -539,7 +539,7 @@ def _build_recognition_table(
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
         story.append(
             Paragraph(
-                f"<i>Showing {_MAX_DETAIL_ROWS} of {len(flagged_entries)} flagged entries.</i>",
+                f"<i>Showing {user_text(_MAX_DETAIL_ROWS)} of {len(flagged_entries)} flagged entries.</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -557,12 +557,12 @@ def _build_sign_anomalies_table(
         entry = fe.get("entry", {})
         table_data.append(
             [
-                Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("account_name"), "")[:18], styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("reference"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("date"))), styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("account_name"), "")[:18]), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
                 Paragraph("Credit", styles["MemoTableCell"]),
-                Paragraph(safe_str_value(entry.get("description"), "")[:25], styles["MemoTableCell"]),
+                Paragraph(user_text(safe_str_value(entry.get("description"), "")[:25]), styles["MemoTableCell"]),
             ]
         )
 
@@ -600,10 +600,10 @@ def _build_concentration_table(
     for acct, info in list(seen_accounts.items())[:_MAX_DETAIL_ROWS]:
         table_data.append(
             [
-                Paragraph(acct, styles["MemoTableCell"]),
+                Paragraph(user_text(acct), styles["MemoTableCell"]),
                 Paragraph(format_currency(info["total"]), styles["MemoTableCell"]),
                 Paragraph(f"{info['pct']:.0%}" if info["pct"] else "\u2014", styles["MemoTableCell"]),
-                Paragraph(info["accounts"][:20] if info["accounts"] else "\u2014", styles["MemoTableCell"]),
+                Paragraph(user_text(info["accounts"][:20] if info["accounts"] else "\u2014"), styles["MemoTableCell"]),
             ]
         )
 
@@ -651,7 +651,7 @@ def _build_high_severity_detail(
 
     if high_tests:
         label = _roman(section_counter)
-        story.append(Paragraph(f"{label}. High Severity Entry Detail", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(label)}. High Severity Entry Detail", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
         has_detail = True
 
@@ -664,14 +664,14 @@ def _build_high_severity_detail(
                 test_key,
                 f"{tr.get('test_name', '')} \u2014 Entry Detail",
             )
-            story.append(Paragraph(f"<b>{title} ({count} items)</b>", styles["MemoBody"]))
+            story.append(Paragraph(f"<b>{user_text(title)} ({user_text(count)} items)</b>", styles["MemoBody"]))
             story.append(Spacer(1, 4))
 
             if not flagged:
                 # BUG-007: entries_flagged > 0 but flagged_entries not populated
                 story.append(
                     Paragraph(
-                        f"<i>No entry-level detail available for: {title}</i>",
+                        f"<i>No entry-level detail available for: {user_text(title)}</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -694,9 +694,9 @@ def _build_high_severity_detail(
                     entry = fe.get("entry", {})
                     gen_data.append(
                         [
-                            Paragraph(safe_str_value(entry.get("reference")), styles["MemoTableCell"]),
-                            Paragraph(safe_str_value(entry.get("date")), styles["MemoTableCell"]),
-                            Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(safe_str_value(entry.get("reference"))), styles["MemoTableCell"]),
+                            Paragraph(user_text(safe_str_value(entry.get("date"))), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(fe.get("issue", ""))), styles["MemoTableCell"]),
                             Paragraph(format_currency(entry.get("amount", 0)), styles["MemoTableCell"]),
                         ]
                     )
@@ -710,7 +710,7 @@ def _build_high_severity_detail(
 
             procedure = _DETAIL_PROCEDURES.get(test_key, "")
             if procedure:
-                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
             story.append(Spacer(1, 8))
 
@@ -730,13 +730,13 @@ def _build_high_severity_detail(
     if total_flagged_count > 0 and total_flagged_with_preparer / total_flagged_count >= 0.6:
         if not has_detail:
             label = _roman(section_counter)
-            story.append(Paragraph(f"{label}. High Severity Entry Detail", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(label)}. High Severity Entry Detail", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
             has_detail = True
 
         story.append(
             Paragraph(
-                f"{total_flagged_with_preparer} of {total_flagged_count} flagged entries "
+                f"{user_text(total_flagged_with_preparer)} of {user_text(total_flagged_count)} flagged entries "
                 f"({total_flagged_with_preparer / total_flagged_count:.0%}) include preparer identification:",
                 styles["MemoBody"],
             )

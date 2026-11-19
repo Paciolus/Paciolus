@@ -14,7 +14,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 from pdf.components import LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
 from ratio_engine import equity_basis_disclosure, unclosed_earnings_adjustment
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def render_ratios(story: list, styles: dict, statements: Any) -> bool:
@@ -171,7 +171,7 @@ def render_ratios(story: list, styles: dict, statements: Any) -> bool:
     _equity_note = equity_basis_disclosure(_unclosed)
     if _equity_note:
         story.append(Spacer(1, 4))
-        story.append(Paragraph(f"<i>{_equity_note}</i>", styles["DocumentRef"]))
+        story.append(Paragraph(f"<i>{user_text(_equity_note)}</i>", styles["DocumentRef"]))
 
     story.append(Spacer(1, 4))
     return True
@@ -234,7 +234,7 @@ def render_quality_of_earnings(story: list, styles: dict, statements: Any, has_r
         "a positive indicator of earnings quality. Ratios below 0.8x may indicate aggressive accrual "
         "accounting and warrant further analytical procedures."
     )
-    story.append(Paragraph(f"<i>{benchmark_text}</i>", styles["DocumentRef"]))
+    story.append(Paragraph(f"<i>{user_text(benchmark_text)}</i>", styles["DocumentRef"]))
 
     # Prior period Cash Conversion Ratio if available
     if statements.has_prior_period and statements.prior_net_income and statements.prior_net_income != 0:

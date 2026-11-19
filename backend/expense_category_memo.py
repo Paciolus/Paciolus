@@ -38,7 +38,7 @@ from shared.memo_base import (
     wrap_table_strings,
 )
 from shared.monetary import quantize_monetary
-from shared.safe_paragraph import Paragraph, escape_markup
+from shared.safe_paragraph import Paragraph, escape_markup, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -338,7 +338,7 @@ def generate_expense_category_memo(
             story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
         story.append(
             Paragraph(
-                f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
+                f"{user_text(format_classical_date())} &nbsp;&bull;&nbsp; {user_text(reference)}",
                 styles["MemoRef"],
             )
         )
@@ -605,7 +605,7 @@ def generate_expense_category_memo(
                     commentary = _generate_variance_commentary(label, pct_chg, dollar_change, pct_of_rev, total_revenue)
                     story.append(
                         Paragraph(
-                            f"<b>{label}:</b> {commentary}",
+                            f"<b>{user_text(label)}:</b> {user_text(commentary)}",
                             styles["MemoBody"],
                         )
                     )
@@ -627,7 +627,7 @@ def generate_expense_category_memo(
                 if pct_rev is not None and pct_rev > 10 and pct_chg is not None and pct_chg > 15:
                     story.append(
                         Paragraph(
-                            f"<b>Decomposition Flag — {label}:</b> "
+                            f"<b>Decomposition Flag — {user_text(label)}:</b> "
                             f"This category represents a high-growth, high-value catch-all at "
                             f"{pct_rev:.1f}% of revenue with {pct_chg:.1f}% year-over-year growth. "
                             f"Auditor should request a detailed sub-ledger breakdown to identify "
@@ -644,7 +644,7 @@ def generate_expense_category_memo(
         # ── IV. EXPENSE RATIO ANALYSIS ──
         if revenue_available:
             section_iv = "IV" if has_prior_data else "III"
-            story.append(Paragraph(f"{section_iv}. Expense Ratio Analysis", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_iv)}. Expense Ratio Analysis", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             story.append(
@@ -740,7 +740,7 @@ def generate_expense_category_memo(
         # ── V. FINDINGS ──
         if findings:
             section_v = "V" if has_prior_data else "IV"
-            story.append(Paragraph(f"{section_v}. Items Flagged", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_v)}. Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             story.append(
@@ -768,7 +768,7 @@ def generate_expense_category_memo(
                     [
                         str(i),
                         f.get("category", ""),
-                        Paragraph(f.get("finding", ""), styles["MemoTableCell"]),
+                        Paragraph(user_text(f.get("finding", "")), styles["MemoTableCell"]),
                         RISK_TIER_DISPLAY.get(risk_key, (risk_key.upper(),))[0],
                         RISK_TIER_DISPLAY.get(priority_key, (priority_key.upper(),))[0],
                     ]
@@ -783,7 +783,7 @@ def generate_expense_category_memo(
         procedures = _generate_procedures(findings if findings else [], categories)
         if procedures:
             section_vi = "VI" if has_prior_data else "V"
-            story.append(Paragraph(f"{section_vi}. Suggested Audit Procedures", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_vi)}. Suggested Audit Procedures", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             story.append(
@@ -806,7 +806,7 @@ def generate_expense_category_memo(
                     [
                         RISK_TIER_DISPLAY.get(prio_key, (prio_key.upper(),))[0],
                         p.get("area", ""),
-                        Paragraph(p.get("procedure", ""), styles["MemoTableCell"]),
+                        Paragraph(user_text(p.get("procedure", "")), styles["MemoTableCell"]),
                     ]
                 )
 

@@ -6,6 +6,7 @@ date formatting, reference number generation) that are shared across
 all report types.
 """
 
+import re
 from datetime import UTC, datetime
 from typing import Any, Optional
 
@@ -121,19 +122,33 @@ def generate_reference_number(prefix: str = "PAC") -> str:
     return f"{prefix}-{now.year}-{now.month:02d}{now.day:02d}-{seq:03d}"
 
 
-def create_leader_dots(label: str, value: str, total_chars: int = 55) -> str:
+def _shown_length(text: str) -> int:
+    """Characters a reader sees: tags dropped, entities counted as one character."""
+    return len(re.sub(r"&(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z]+);", "_", re.sub(r"<[^<>]*>", "", text)))
+
+
+def create_leader_dots(label: str, value: Any, total_chars: int = 55) -> str:
     """
     Create a leader-dot line for financial summaries.
 
     Example: "Total Debits .......................... $1,234,567.89"
+
+    ``label`` is template markup (``PP&amp;E``, ``<b>Total</b>``); a label that
+    is data — an account or statement line name — is passed as
+    ``user_text(name)``. ``value`` is data and is escaped here (Sprint 885,
+    OUT-24); pass ``template_markup(...)`` for a value that is template
+    markup. Dots are counted from the characters a reader sees. The line is
+    returned marked as escaped, so ``user_text(line)`` leaves it unchanged.
     """
-    # Calculate dots needed
-    label_len = len(label)
-    value_len = len(value)
+    from shared.safe_paragraph import EscapedText, user_text
+
+    shown_value = user_text(value)
+    label_len = _shown_length(label)
+    value_len = _shown_length(shown_value)
     dots_needed = total_chars - label_len - value_len - 2  # -2 for spaces
 
     if dots_needed < 3:
         dots_needed = 3
 
     dots = "." * dots_needed
-    return f"{label} {dots} {value}"
+    return EscapedText(f"{label} {dots} {shown_value}")

@@ -18,9 +18,11 @@ arriving inside user data is printed as text:
 - ``<font>`` with only ``size`` (6–72) and ``color`` (``#rrggbb`` or ReportLab's ``0xrrggbb``)
 - the named entities in ``_ALLOWED_ENTITIES`` and numeric entities
 
-Interpolated user data can still use those formatting tags. Where a value is
-known to be user-supplied, prefer ``escape_markup()`` (full escape) at the
-call site; ``wrap_table_strings`` and ``build_memo_header`` already do.
+Sprint 885 (review OUT-24): that filter alone let user data use those
+formatting tags. Every value from an upload or a user is now escaped with
+``user_text()`` before it is joined to template markup
+(``tests/test_sprint885_pdf_markup_escape.py`` renders every memo with
+markup in each free-text input); this filter stays as the second layer.
 
 If ReportLab still cannot parse the sanitized text (for example an
 unbalanced ``<b>`` arriving in user data), the paragraph falls back to the
@@ -58,6 +60,38 @@ _MAX_FONT_SIZE = 72.0
 def escape_markup(value: Any) -> str:
     """Escape ``value`` completely so ReportLab renders it as literal text."""
     return _xml_escape(str(value))
+
+
+class EscapedText(str):
+    """A value already escaped for ReportLab markup (see ``user_text``)."""
+
+    __slots__ = ()
+
+
+def user_text(value: Any) -> EscapedText:
+    """Escape a value from an upload or a user before it is joined to template markup.
+
+    Sprint 885 (review OUT-24): ``sanitize_markup`` keeps the template
+    vocabulary (``<b>``, ``<font color/size>`` …) — but it runs *after* user
+    values are joined into the template, so an uploaded account name could
+    still restyle the memo (white text, tiny text). Every value that comes
+    from an upload or a user goes through ``user_text`` first; its tags then
+    print literally while the template's own emphasis still renders.
+    Idempotent: escaping an ``EscapedText`` again returns it unchanged.
+    """
+    if isinstance(value, EscapedText):
+        return value
+    return EscapedText(_xml_escape(str(value)))
+
+
+def template_markup(markup: str) -> EscapedText:
+    """Mark text the *template* built — whose own values are already escaped — as safe to join.
+
+    For the few helpers that escape their arguments (``create_leader_dots``)
+    when the argument is deliberate template markup, e.g.
+    ``template_markup(f"<b>{user_text(score)}</b>")``.
+    """
+    return EscapedText(markup)
 
 
 def _font_tag_allowed(tag: str) -> bool:

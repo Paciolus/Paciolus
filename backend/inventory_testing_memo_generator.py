@@ -16,7 +16,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 from pdf import LedgerRule
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 INV_TEST_DESCRIPTIONS = {
     "missing_fields": "Flags inventory entries missing critical register fields (identifier, quantity, cost or value), a data completeness anomaly indicator per ISA 500.",
@@ -136,7 +136,11 @@ def _build_inventory_extra_sections(
         non_empty_buckets = {k: v for k, v in buckets.items() if v}
         if non_empty_buckets:
             section_label = _roman(section_counter)
-            story.append(Paragraph(f"{section_label}. Slow-Moving Inventory Duration Breakdown", styles["MemoSection"]))
+            story.append(
+                Paragraph(
+                    f"{user_text(section_label)}. Slow-Moving Inventory Duration Breakdown", styles["MemoSection"]
+                )
+            )
             story.append(LedgerRule(doc_width))
             story.append(
                 Paragraph(
@@ -167,7 +171,7 @@ def _build_inventory_extra_sections(
 
     # Inventory Turnover Note (always rendered)
     section_label = _roman(section_counter)
-    story.append(Paragraph(f"{section_label}. Inventory Turnover", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(section_label)}. Inventory Turnover", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
     story.append(
         Paragraph(

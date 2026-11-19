@@ -20,7 +20,7 @@ from shared.drill_down import format_currency
 from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 FA_TEST_DESCRIPTIONS = {
     "fully_depreciated": "Flags assets where accumulated depreciation equals or exceeds cost (NBV zero or negative), indicating potential ghost assets or items requiring disposal review.",
@@ -129,7 +129,7 @@ def _build_roll_forward(
 
     period = result.get("period_label", "FY2025")
 
-    story.append(Paragraph(f"Fixed Asset Roll-Forward \u2014 {period}", styles["MemoSection"]))
+    story.append(Paragraph(f"Fixed Asset Roll-Forward \u2014 {user_text(period)}", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     # Gross Cost section
@@ -149,14 +149,14 @@ def _build_roll_forward(
         )
         story.append(
             Paragraph(
-                create_leader_dots("Additions During Period", f"+ {format_currency(additions)}"),
+                create_leader_dots("Additions During Period", f"+ {user_text(format_currency(additions))}"),
                 styles["MemoLeader"],
             )
         )
         if disposals:
             story.append(
                 Paragraph(
-                    create_leader_dots("Disposals During Period", f"- {format_currency(disposals)}"),
+                    create_leader_dots("Disposals During Period", f"- {user_text(format_currency(disposals))}"),
                     styles["MemoLeader"],
                 )
             )
@@ -210,7 +210,7 @@ def _build_roll_forward(
         )
         story.append(
             Paragraph(
-                create_leader_dots("Depreciation Expense for Period", f"+ {format_currency(depr_expense)}"),
+                create_leader_dots("Depreciation Expense for Period", f"+ {user_text(format_currency(depr_expense))}"),
                 styles["MemoLeader"],
             )
         )
@@ -267,7 +267,7 @@ def _build_roll_forward(
                 parts.append(f"{format_currency(depr_var)} in accumulated depreciation")
             story.append(
                 Paragraph(
-                    f"\u26a0 Unreconciled difference of {' and '.join(parts)}. "
+                    f"\u26a0 Unreconciled difference of {user_text(' and '.join(parts))}. "
                     "Investigate before finalizing PP&amp;E balance.",
                     styles["MemoBody"],
                 )
@@ -403,8 +403,8 @@ def _build_category_summary(
         age_str = f"{avg_age:.1f}" if isinstance(avg_age, (int, float)) else str(avg_age)
         table_data.append(
             [
-                Paragraph(cat["category"], styles["MemoTableCell"]),
-                Paragraph(str(count), styles["MemoTableCell"]),
+                Paragraph(user_text(cat["category"]), styles["MemoTableCell"]),
+                Paragraph(user_text(str(count)), styles["MemoTableCell"]),
                 Paragraph(format_currency(cost), styles["MemoTableCell"]),
                 Paragraph(format_currency(depr), styles["MemoTableCell"]),
                 Paragraph(format_currency(nbv_cat), styles["MemoTableCell"]),
@@ -415,10 +415,10 @@ def _build_category_summary(
     table_data.append(
         [
             Paragraph("<b>Total</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{total_count}</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{format_currency(total_cost)}</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{format_currency(total_depr)}</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{format_currency(total_nbv)}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(total_count)}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(format_currency(total_cost))}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(format_currency(total_depr))}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(format_currency(total_nbv))}</b>", styles["MemoTableCell"]),
             Paragraph("", styles["MemoTableCell"]),
         ]
     )
@@ -492,9 +492,9 @@ def _build_over_depreciation_table(
         excess = details.get("excess", 0)
         table_data.append(
             [
-                Paragraph(entry.get("asset_id", "") or "", styles["MemoTableCell"]),
-                Paragraph(entry.get("description", "") or "", styles["MemoTableCell"]),
-                Paragraph(entry.get("category", "") or "", styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("description", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("category", "") or ""), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("acquisition_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("cost", 0)), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("accumulated_depreciation", 0)), styles["MemoTableCell"]),
@@ -540,12 +540,12 @@ def _build_duplicate_assets_table(
 
         table_data.append(
             [
-                Paragraph(a_entry.get("asset_id", "") or "", styles["MemoTableCell"]),
-                Paragraph(b_entry.get("asset_id", "") or "", styles["MemoTableCell"]),
-                Paragraph(a_entry.get("description", "") or "", styles["MemoTableCell"]),
+                Paragraph(user_text(a_entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(b_entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(a_entry.get("description", "") or ""), styles["MemoTableCell"]),
                 Paragraph(format_currency(cost), styles["MemoTableCell"]),
                 Paragraph(str(a_entry.get("acquisition_date", "") or ""), styles["MemoTableCell"]),
-                Paragraph(a_entry.get("category", "") or "", styles["MemoTableCell"]),
+                Paragraph(user_text(a_entry.get("category", "") or ""), styles["MemoTableCell"]),
             ]
         )
 
@@ -561,7 +561,7 @@ def _build_duplicate_assets_table(
     if total_dup_cost > 0:
         story.append(
             Paragraph(
-                f"Potential duplicate capitalization: {format_currency(total_dup_cost)} "
+                f"Potential duplicate capitalization: {user_text(format_currency(total_dup_cost))} "
                 "(if confirmed duplicate, one record requires reversal)",
                 styles["MemoBody"],
             )
@@ -580,9 +580,9 @@ def _build_negative_cost_table(
         entry = fe.get("entry", {})
         table_data.append(
             [
-                Paragraph(entry.get("asset_id", "") or "", styles["MemoTableCell"]),
-                Paragraph(entry.get("description", "") or "", styles["MemoTableCell"]),
-                Paragraph(entry.get("category", "") or "", styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("asset_id", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("description", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("category", "") or ""), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("cost", 0)), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("acquisition_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph("Data entry error", styles["MemoTableCell"]),
@@ -626,7 +626,7 @@ def _build_high_severity_detail(
         return section_counter
 
     label = _roman(section_counter)
-    story.append(Paragraph(f"{label}. High Severity Asset Detail", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(label)}. High Severity Asset Detail", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     for tr in high_tests:
@@ -638,14 +638,14 @@ def _build_high_severity_detail(
             test_key,
             f"{tr.get('test_name', '')} \u2014 Asset Detail",
         )
-        story.append(Paragraph(f"<b>{title} ({count} items)</b>", styles["MemoBody"]))
+        story.append(Paragraph(f"<b>{user_text(title)} ({user_text(count)} items)</b>", styles["MemoBody"]))
         story.append(Spacer(1, 4))
 
         if not flagged:
             # BUG-007: entries_flagged > 0 but flagged_entries not populated
             story.append(
                 Paragraph(
-                    f"<i>No entry-level detail available for: {title}</i>",
+                    f"<i>No entry-level detail available for: {user_text(title)}</i>",
                     styles["MemoBodySmall"],
                 )
             )
@@ -675,7 +675,7 @@ def _build_high_severity_detail(
                                 str(entry.get("description", "") or entry.get("category", "") or ""),
                                 styles["MemoTableCell"],
                             ),
-                            Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(fe.get("issue", ""))), styles["MemoTableCell"]),
                             Paragraph(amt_str, styles["MemoTableCell"]),
                         ]
                     )
@@ -689,7 +689,7 @@ def _build_high_severity_detail(
 
         procedure = _DETAIL_PROCEDURES.get(test_key, "")
         if procedure:
-            story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
         story.append(Spacer(1, 8))
 

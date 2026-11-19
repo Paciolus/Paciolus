@@ -37,7 +37,7 @@ from shared.memo_base import (
     wrap_table_strings,
 )
 from shared.monetary import quantize_monetary
-from shared.safe_paragraph import Paragraph, escape_markup
+from shared.safe_paragraph import Paragraph, escape_markup, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -92,7 +92,7 @@ def generate_accrual_completeness_memo(
             story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
         story.append(
             Paragraph(
-                f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
+                f"{user_text(format_classical_date())} &nbsp;&bull;&nbsp; {user_text(reference)}",
                 styles["MemoRef"],
             )
         )
@@ -189,10 +189,10 @@ def generate_accrual_completeness_memo(
                 if isinstance(a, dict):
                     acct_data.append(
                         [
-                            Paragraph(str(a.get("account_name", "")), cell_style),
-                            Paragraph(str(a.get("classification", "Accrued Liability")), cell_style),
+                            Paragraph(user_text(str(a.get("account_name", ""))), cell_style),
+                            Paragraph(user_text(str(a.get("classification", "Accrued Liability"))), cell_style),
                             Paragraph(_money(a.get("balance")), cell_style),
-                            Paragraph(str(a.get("matched_keyword", "")), cell_style),
+                            Paragraph(user_text(str(a.get("matched_keyword", ""))), cell_style),
                         ]
                     )
 
@@ -256,7 +256,7 @@ def generate_accrual_completeness_memo(
 
                         reason_data.append(
                             [
-                                Paragraph(str(r.get("account_name", "")), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(r.get("account_name", ""))), styles["MemoTableCell"]),
                                 annual,
                                 expected,
                                 recorded,
@@ -297,10 +297,10 @@ def generate_accrual_completeness_memo(
                     balance = item.get("balance")
                     checklist_data.append(
                         [
-                            Paragraph(str(item.get("expected_name", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(item.get("expected_name", ""))), styles["MemoTableCell"]),
                             "Yes" if detected else "No",
                             _money(balance) if balance is not None else "\u2014",
-                            Paragraph(str(item.get("risk_if_absent", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(item.get("risk_if_absent", ""))), styles["MemoTableCell"]),
                         ]
                     )
 
@@ -388,10 +388,10 @@ def generate_accrual_completeness_memo(
             for item in missing_items:
                 missing_data.append(
                     [
-                        Paragraph(str(item.get("expected_name", "")), styles["MemoTableCell"]),
-                        Paragraph(str(item.get("basis", "")), styles["MemoTableCell"]),
+                        Paragraph(user_text(str(item.get("expected_name", ""))), styles["MemoTableCell"]),
+                        Paragraph(user_text(str(item.get("basis", ""))), styles["MemoTableCell"]),
                         Paragraph("Not Found", styles["MemoTableCell"]),
-                        Paragraph(str(item.get("recommended_action", "")), styles["MemoTableCell"]),
+                        Paragraph(user_text(str(item.get("recommended_action", ""))), styles["MemoTableCell"]),
                     ]
                 )
 
@@ -468,7 +468,7 @@ def generate_accrual_completeness_memo(
         if narrative:
             story.append(Paragraph("Narrative", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
-            story.append(Paragraph(narrative, styles["MemoBody"]))
+            story.append(Paragraph(user_text(narrative), styles["MemoBody"]))
             story.append(Spacer(1, 8))
 
         # ── V. FINDINGS ──
@@ -504,10 +504,10 @@ def generate_accrual_completeness_memo(
                     finding_data.append(
                         [
                             str(i),
-                            Paragraph(f.get("area", ""), styles["MemoTableCell"]),
-                            Paragraph(f.get("finding", ""), styles["MemoTableCell"]),
+                            Paragraph(user_text(f.get("area", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(f.get("finding", "")), styles["MemoTableCell"]),
                             risk_display,
-                            Paragraph(f.get("action_required", ""), styles["MemoTableCell"]),
+                            Paragraph(user_text(f.get("action_required", "")), styles["MemoTableCell"]),
                         ]
                     )
 
@@ -542,7 +542,7 @@ def generate_accrual_completeness_memo(
                         [
                             prio_display,
                             p.get("area", ""),
-                            Paragraph(p.get("procedure", ""), styles["MemoTableCell"]),
+                            Paragraph(user_text(p.get("procedure", "")), styles["MemoTableCell"]),
                         ]
                     )
 

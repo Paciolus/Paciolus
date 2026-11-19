@@ -31,7 +31,7 @@ from shared.memo_base import (
 )
 from shared.memo_template import _roman
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -87,7 +87,7 @@ def generate_preflight_memo(
         section_counter = 1
 
         # ── I. SCOPE ──
-        story.append(Paragraph(f"{_roman(section_counter)}. Scope", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_counter))}. Scope", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         readiness = preflight_result.get("readiness_score", 0)
@@ -169,7 +169,9 @@ def generate_preflight_memo(
         # ── II. TB BALANCE CHECK (BUG-04) ──
         balance_check = preflight_result.get("balance_check")
         if balance_check is not None:
-            story.append(Paragraph(f"{_roman(section_counter)}. Trial Balance Integrity Check", styles["MemoSection"]))
+            story.append(
+                Paragraph(f"{user_text(_roman(section_counter))}. Trial Balance Integrity Check", styles["MemoSection"])
+            )
             story.append(LedgerRule(doc_width))
 
             total_debits = balance_check.get("total_debits", 0)
@@ -209,7 +211,7 @@ def generate_preflight_memo(
         # ── III. COLUMN DETECTION ──
         columns = preflight_result.get("columns", [])
         if columns:
-            story.append(Paragraph(f"{_roman(section_counter)}. Column Detection", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(_roman(section_counter))}. Column Detection", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             # Sprint 668 Issue 8: Downstream Use column added so the reader
@@ -248,9 +250,9 @@ def generate_preflight_memo(
                 conf = lc_col.get("confidence", 0)
                 story.append(
                     Paragraph(
-                        f"<i>{role} detection confidence ({conf:.0%}) is below the 80% threshold. "
-                        f"The '{detected}' column was matched to {role} with moderate confidence. "
-                        f"Confirm the column mapping is correct before running tests that filter by {role.lower()}. "
+                        f"<i>{user_text(role)} detection confidence ({conf:.0%}) is below the 80% threshold. "
+                        f"The '{user_text(detected)}' column was matched to {user_text(role)} with moderate confidence. "
+                        f"Confirm the column mapping is correct before running tests that filter by {user_text(role.lower())}. "
                         f"Use the column override feature to manually assign the correct column if needed.</i>",
                         styles["MemoBodySmall"],
                     )
@@ -261,7 +263,7 @@ def generate_preflight_memo(
 
         # ── IV. DATA QUALITY ISSUES ──
         issues = preflight_result.get("issues", [])
-        story.append(Paragraph(f"{_roman(section_counter)}. Data Quality Issues", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_counter))}. Data Quality Issues", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         if not issues:
@@ -281,12 +283,12 @@ def generate_preflight_memo(
                 issue_data.append(
                     [
                         Paragraph(issue.get("category", "").replace("_", " ").title(), styles["MemoTableCell"]),
-                        Paragraph(issue.get("severity", "").upper(), styles["MemoTableCell"]),
-                        Paragraph(issue.get("message", ""), styles["MemoTableCell"]),
+                        Paragraph(user_text(issue.get("severity", "").upper()), styles["MemoTableCell"]),
+                        Paragraph(user_text(issue.get("message", "")), styles["MemoTableCell"]),
                         str(issue.get("affected_count", 0)),
                         str(issue.get("tests_affected", 0)),
-                        Paragraph(issue.get("remediation", ""), styles["MemoTableCell"]),
-                        Paragraph(issue.get("downstream_impact", ""), styles["MemoTableCell"]),
+                        Paragraph(user_text(issue.get("remediation", "")), styles["MemoTableCell"]),
+                        Paragraph(user_text(issue.get("downstream_impact", "")), styles["MemoTableCell"]),
                     ]
                 )
 
@@ -329,7 +331,7 @@ def generate_preflight_memo(
                     items_str += f" ... and {total - 10} more"
                 story.append(
                     Paragraph(
-                        f"<i>{category} — Affected: {items_str}</i>",
+                        f"<i>{user_text(category)} — Affected: {user_text(items_str)}</i>",
                         styles["MemoBodySmall"],
                     )
                 )
@@ -360,7 +362,7 @@ def generate_preflight_memo(
         section_counter += 1
 
         # ── CONCLUSION (BUG-03) ──
-        story.append(Paragraph(f"{_roman(section_counter)}. Summary of Results", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(_roman(section_counter))}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         conclusion_text = _build_conclusion(preflight_result, filename)
@@ -432,7 +434,7 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
     if balance_check and not balance_check.get("balanced", True) and not balance_check.get("skipped", False):
         diff = abs(balance_check.get("difference", 0))
         return (
-            f"The trial balance file ({filename}) is out of balance by ${diff:,.2f}. "
+            f"The trial balance file ({user_text(filename)}) is out of balance by ${diff:,.2f}. "
             "This is a critical data integrity failure that prevents any downstream "
             "diagnostic testing from proceeding. Obtain a corrected trial balance "
             "where total debits equal total credits before running any analysis."
@@ -460,12 +462,12 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
             ),
         }
         suffix = suffix_map.get(category, "")
-        return f"({idx}) {message}." + (f" {suffix}" if suffix else "")
+        return f"({idx}) {user_text(message)}." + (f" {suffix}" if suffix else "")
 
     # ── No issues → Ready ─────────────────────────────────────────
     if not issues:
         return (
-            f"The trial balance file ({filename}) achieved a Readiness Score of "
+            f"The trial balance file ({user_text(filename)}) achieved a Readiness Score of "
             f"{readiness:.1f}/100 \u2014 assessed as Ready. The file contains "
             f"{row_count:,} accounts and is suitable for all downstream diagnostic "
             "testing with no caveats."
@@ -487,7 +489,7 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
         item_word = "issue" if len(ranked) == 1 else "issues"
         plural_invalidate = "invalidates" if len(high_issues) == 1 else "invalidate"
         return (
-            f"The trial balance file ({filename}) achieved a Readiness Score of "
+            f"The trial balance file ({user_text(filename)}) achieved a Readiness Score of "
             f"{readiness:.1f}/100 \u2014 assessed as Review Required. The file "
             f"contains {row_count:,} accounts and presents {len(ranked)} "
             f"{item_word} that must be resolved before downstream diagnostic "
@@ -502,7 +504,7 @@ def _build_conclusion(preflight_result: dict, filename: str) -> str:
     items_text = " ".join(_caveat(it, idx + 1) for idx, it in enumerate(ranked_medium))
     caveat_word = "caveat" if len(ranked_medium) == 1 else "caveats"
     return (
-        f"The trial balance file ({filename}) achieved a Readiness Score of "
+        f"The trial balance file ({user_text(filename)}) achieved a Readiness Score of "
         f"{readiness:.1f}/100 \u2014 assessed as Ready with caveats. The file "
         f"is suitable for downstream diagnostic testing subject to the "
         f"following {caveat_word}: {items_text} Remediate before final "

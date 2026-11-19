@@ -10,7 +10,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 _FOOTNOTE_STUBS = [
     (
@@ -81,9 +81,9 @@ def render_notes(story: list, styles: dict) -> None:
     story.append(Spacer(1, 12))
 
     for note_title, note_body in _FOOTNOTE_STUBS:
-        story.append(Paragraph(f"<b>{note_title}</b>", styles["DocumentRef"]))
+        story.append(Paragraph(f"<b>{user_text(note_title)}</b>", styles["DocumentRef"]))
         story.append(Spacer(1, 2))
         # Render placeholder text in italics
         for line in note_body.split("\n"):
-            story.append(Paragraph(f"<i>{line.strip()}</i>", styles["DocumentRef"]))
+            story.append(Paragraph(f"<i>{user_text(line.strip())}</i>", styles["DocumentRef"]))
         story.append(Spacer(1, 8))

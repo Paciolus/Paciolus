@@ -19,7 +19,7 @@ from shared.drill_down import (
 from shared.follow_up_procedures import get_follow_up_procedure
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.parsing_helpers import safe_decimal
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 AP_TEST_DESCRIPTIONS = {
     "exact_duplicate_payments": "Identifies payments with identical vendor, invoice number, amount, and payment date.",
@@ -119,7 +119,7 @@ def _build_ap_extra_sections(
 
     if detail_tests:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. High Severity Payment Detail", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_label)}. High Severity Payment Detail", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
         has_detail = True
 
@@ -268,7 +268,7 @@ def _build_ap_extra_sections(
             if procedure:
                 from reportlab.platypus import Spacer
 
-                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
 
     # DRILL-03: Vendor name variation pairs
@@ -315,7 +315,7 @@ def _build_ap_extra_sections(
         if display_rows:
             if not has_detail:
                 section_label = _roman(section_counter)
-                story.append(Paragraph(f"{section_label}. Payment Detail Analysis", styles["MemoSection"]))
+                story.append(Paragraph(f"{user_text(section_label)}. Payment Detail Analysis", styles["MemoSection"]))
                 story.append(LedgerRule(doc_width))
                 has_detail = True
 
@@ -335,7 +335,7 @@ def _build_ap_extra_sections(
             if procedure:
                 from reportlab.platypus import Spacer
 
-                story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+                story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
 
     if has_detail:
@@ -348,7 +348,9 @@ def _build_ap_extra_sections(
     )
     if has_any_dup_signal:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Duplicate Payment Recovery Summary", styles["MemoSection"]))
+        story.append(
+            Paragraph(f"{user_text(section_label)}. Duplicate Payment Recovery Summary", styles["MemoSection"])
+        )
         story.append(LedgerRule(doc_width))
 
         recovery = dup_summary.get("recovery_value_total", 0.0) or 0.0
@@ -375,7 +377,7 @@ def _build_ap_extra_sections(
             Paragraph(
                 create_leader_dots(
                     "Exact / Fuzzy Duplicate Rows Flagged",
-                    f"{exact_n} / {fuzzy_n}",
+                    f"{user_text(exact_n)} / {user_text(fuzzy_n)}",
                 ),
                 styles["MemoLeader"],
             )

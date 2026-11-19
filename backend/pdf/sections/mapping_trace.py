@@ -12,7 +12,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def render_mapping_trace(story: list, styles: dict, statements: Any) -> None:
@@ -46,7 +46,7 @@ def render_mapping_trace(story: list, styles: dict, statements: Any) -> None:
         line = create_leader_dots(
             f"      {entry.line_label} [{entry.lead_sheet_ref}]", f"${entry.statement_amount:,.2f}"
         )
-        story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+        story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
 
         # Account detail table
         if entry.account_count > 0 and entry.accounts:
@@ -89,7 +89,11 @@ def render_mapping_trace(story: list, styles: dict, statements: Any) -> None:
             tie_text = f"\u26a0 Difference: ${entry.tie_difference:,.2f}"
             tie_color = ClassicalColors.CLAY
 
-        story.append(Paragraph(f'<font color="{tie_color.hexval()}">{tie_text}</font>', styles["DocumentRef"]))
+        story.append(
+            Paragraph(
+                f'<font color="{user_text(tie_color.hexval())}">{user_text(tie_text)}</font>', styles["DocumentRef"]
+            )
+        )
         story.append(Spacer(1, 6))
 
     # Summary badge

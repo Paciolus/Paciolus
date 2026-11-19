@@ -23,7 +23,7 @@ from shared.memo_base import build_scope_section
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
 from shared.parsing_helpers import safe_decimal
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 PAYROLL_TEST_DESCRIPTIONS = {
     "PR-T1": "Identifies employee IDs associated with multiple different names, indicating possible data integrity issues.",
@@ -151,7 +151,7 @@ def _build_gl_reconciliation(
         else:
             story.append(
                 Paragraph(
-                    f"\u26a0 Unreconciled difference of {format_currency(abs(variance))} requires investigation. "
+                    f"\u26a0 Unreconciled difference of {user_text(format_currency(abs(variance)))} requires investigation. "
                     "Confirm whether the variance represents payroll accruals, timing differences, "
                     "or recording errors.",
                     styles["MemoBody"],
@@ -202,25 +202,29 @@ def _build_headcount_rollforward(
 
     story.append(
         Paragraph(
-            create_leader_dots(f"Employees Active \u2014 Beginning of Period ({ps})", str(hc["beginning_headcount"])),
+            create_leader_dots(
+                f"Employees Active \u2014 Beginning of Period ({user_text(ps)})", str(hc["beginning_headcount"])
+            ),
             styles["MemoLeader"],
         )
     )
     story.append(
         Paragraph(
-            create_leader_dots("New Hires During Period", f"+ {hc['new_hires']}"),
+            create_leader_dots("New Hires During Period", f"+ {user_text(hc['new_hires'])}"),
             styles["MemoLeader"],
         )
     )
     story.append(
         Paragraph(
-            create_leader_dots("Terminations During Period", f"- {hc['terminations']}"),
+            create_leader_dots("Terminations During Period", f"- {user_text(hc['terminations'])}"),
             styles["MemoLeader"],
         )
     )
     story.append(
         Paragraph(
-            create_leader_dots(f"Employees Active \u2014 End of Period ({pe})", f"= {hc['computed_ending']}"),
+            create_leader_dots(
+                f"Employees Active \u2014 End of Period ({user_text(pe)})", f"= {user_text(hc['computed_ending'])}"
+            ),
             styles["MemoLeader"],
         )
     )
@@ -281,8 +285,8 @@ def _build_department_summary(
             high_concentration = (dept["department"], pct)
         table_data.append(
             [
-                Paragraph(dept["department"], styles["MemoTableCell"]),
-                Paragraph(str(count), styles["MemoTableCell"]),
+                Paragraph(user_text(dept["department"]), styles["MemoTableCell"]),
+                Paragraph(user_text(str(count)), styles["MemoTableCell"]),
                 Paragraph(format_currency(pay), styles["MemoTableCell"]),
                 Paragraph(f"{pct:.1f}%", styles["MemoTableCell"]),
             ]
@@ -291,8 +295,8 @@ def _build_department_summary(
     table_data.append(
         [
             Paragraph("<b>Total</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{total_count}</b>", styles["MemoTableCell"]),
-            Paragraph(f"<b>{format_currency(total_pay)}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(total_count)}</b>", styles["MemoTableCell"]),
+            Paragraph(f"<b>{user_text(format_currency(total_pay))}</b>", styles["MemoTableCell"]),
             Paragraph("<b>100%</b>", styles["MemoTableCell"]),
         ]
     )
@@ -318,8 +322,8 @@ def _build_department_summary(
             direction = "exceeds" if diff > 0 else "is below"
             story.append(
                 Paragraph(
-                    f"<i>Note: Department distribution total ({total_count}) {direction} "
-                    f"roll-forward ending headcount ({ending_headcount}) by {abs(diff)} employee(s). "
+                    f"<i>Note: Department distribution total ({user_text(total_count)}) {user_text(direction)} "
+                    f"roll-forward ending headcount ({user_text(ending_headcount)}) by {abs(diff)} employee(s). "
                     "This variance may reflect terminated employees not yet removed from departmental "
                     "assignments, contractors included in department rosters, or data timing differences "
                     "between the payroll register and HR system.</i>",
@@ -331,7 +335,7 @@ def _build_department_summary(
         name, pct = high_concentration
         story.append(
             Paragraph(
-                f"<i>Single department ({name}) represents {pct:.1f}% of total payroll. "
+                f"<i>Single department ({user_text(name)}) represents {pct:.1f}% of total payroll. "
                 "Assess whether this concentration is consistent with the entity\u2019s "
                 "operating structure.</i>",
                 styles["MemoBodySmall"],
@@ -364,7 +368,7 @@ def _build_benford_note(
                 story.append(
                     Paragraph(
                         f"<i>Benford\u2019s Law analysis of gross pay amounts shows close conformity "
-                        f"(MAD = {mad}). This provides analytical support for the completeness and "
+                        f"(MAD = {user_text(mad)}). This provides analytical support for the completeness and "
                         "non-fabrication of gross pay amounts in the population. No further procedures "
                         "required for this test.</i>",
                         styles["MemoBodySmall"],
@@ -428,8 +432,8 @@ def _build_pay_after_term_table(
         entry = fe.get("entry", {})
         table_data.append(
             [
-                Paragraph(entry.get("employee_id", ""), styles["MemoTableCell"]),
-                Paragraph(entry.get("employee_name", ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("employee_id", "")), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("employee_name", "")), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("term_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("pay_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
@@ -449,7 +453,7 @@ def _build_pay_after_term_table(
     if total_overpayment > 0:
         story.append(
             Paragraph(
-                f"Total post-termination payments: {format_currency(total_overpayment)}",
+                f"Total post-termination payments: {user_text(format_currency(total_overpayment))}",
                 styles["MemoBody"],
             )
         )
@@ -457,7 +461,7 @@ def _build_pay_after_term_table(
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
         story.append(
             Paragraph(
-                f"<i>Showing {_MAX_DETAIL_ROWS} of {len(flagged_entries)} flagged entries.</i>",
+                f"<i>Showing {user_text(_MAX_DETAIL_ROWS)} of {len(flagged_entries)} flagged entries.</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -478,8 +482,8 @@ def _build_ghost_employee_table(
         ind_lower = " ".join(indicators).lower()
         table_data.append(
             [
-                Paragraph(entry.get("employee_id", ""), styles["MemoTableCell"]),
-                Paragraph(entry.get("employee_name", ""), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("employee_id", "")), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("employee_name", "")), styles["MemoTableCell"]),
                 Paragraph(str(entry.get("pay_date", "") or ""), styles["MemoTableCell"]),
                 Paragraph(format_currency(entry.get("gross_pay", 0)), styles["MemoTableCell"]),
                 Paragraph("\u2713" if "department" in ind_lower else "\u2014", styles["MemoTableCell"]),
@@ -506,7 +510,7 @@ def _build_ghost_employee_table(
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
         story.append(
             Paragraph(
-                f"<i>Showing {_MAX_DETAIL_ROWS} of {len(flagged_entries)} flagged entries.</i>",
+                f"<i>Showing {user_text(_MAX_DETAIL_ROWS)} of {len(flagged_entries)} flagged entries.</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -530,10 +534,10 @@ def _build_duplicate_bank_table(
             name = "[Employee name not available in payroll source data \u2014 obtain from HR master file]"
         table_data.append(
             [
-                Paragraph(entry.get("employee_id", ""), styles["MemoTableCell"]),
-                Paragraph(name, styles["MemoTableCell"]),
-                Paragraph(entry.get("department", "") or "", styles["MemoTableCell"]),
-                Paragraph(last4, styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("employee_id", "")), styles["MemoTableCell"]),
+                Paragraph(user_text(name), styles["MemoTableCell"]),
+                Paragraph(user_text(entry.get("department", "") or ""), styles["MemoTableCell"]),
+                Paragraph(user_text(last4), styles["MemoTableCell"]),
             ]
         )
 
@@ -548,7 +552,7 @@ def _build_duplicate_bank_table(
     if len(flagged_entries) > _MAX_DETAIL_ROWS:
         story.append(
             Paragraph(
-                f"<i>Showing {_MAX_DETAIL_ROWS} of {len(flagged_entries)} flagged entries.</i>",
+                f"<i>Showing {user_text(_MAX_DETAIL_ROWS)} of {len(flagged_entries)} flagged entries.</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -578,9 +582,9 @@ def _build_duplicate_id_table(
         names = info.get("names", [])
         table_data.append(
             [
-                Paragraph(eid, styles["MemoTableCell"]),
-                Paragraph(", ".join(str(n) for n in names), styles["MemoTableCell"]),
-                Paragraph(str(info.get("entry_count", 0)), styles["MemoTableCell"]),
+                Paragraph(user_text(eid), styles["MemoTableCell"]),
+                Paragraph(user_text(", ".join(str(n) for n in names)), styles["MemoTableCell"]),
+                Paragraph(user_text(str(info.get("entry_count", 0))), styles["MemoTableCell"]),
             ]
         )
 
@@ -622,7 +626,7 @@ def _build_high_severity_detail(
         return section_counter
 
     label = _roman(section_counter)
-    story.append(Paragraph(f"{label}. High Severity Employee Detail", styles["MemoSection"]))
+    story.append(Paragraph(f"{user_text(label)}. High Severity Employee Detail", styles["MemoSection"]))
     story.append(LedgerRule(doc_width))
 
     for tr in high_tests:
@@ -634,14 +638,14 @@ def _build_high_severity_detail(
             test_key,
             f"{tr.get('test_name', '')} \u2014 Employee Detail",
         )
-        story.append(Paragraph(f"<b>{title} ({count} items)</b>", styles["MemoBody"]))
+        story.append(Paragraph(f"<b>{user_text(title)} ({user_text(count)} items)</b>", styles["MemoBody"]))
         story.append(Spacer(1, 4))
 
         if not flagged:
             # BUG-007: entries_flagged > 0 but flagged_entries not populated
             story.append(
                 Paragraph(
-                    f"<i>No entry-level detail available for: {title}</i>",
+                    f"<i>No entry-level detail available for: {user_text(title)}</i>",
                     styles["MemoBodySmall"],
                 )
             )
@@ -667,7 +671,7 @@ def _build_high_severity_detail(
                         [
                             Paragraph(str(entry.get("employee_id", "") or ""), styles["MemoTableCell"]),
                             Paragraph(str(entry.get("employee_name", "") or ""), styles["MemoTableCell"]),
-                            Paragraph(str(fe.get("issue", "")), styles["MemoTableCell"]),
+                            Paragraph(user_text(str(fe.get("issue", ""))), styles["MemoTableCell"]),
                             Paragraph(amt_str, styles["MemoTableCell"]),
                         ]
                     )
@@ -681,7 +685,7 @@ def _build_high_severity_detail(
 
         procedure = _DETAIL_PROCEDURES.get(test_key, "")
         if procedure:
-            story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+            story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
         story.append(Spacer(1, 8))
 

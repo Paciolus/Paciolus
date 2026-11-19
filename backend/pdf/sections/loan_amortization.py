@@ -26,7 +26,7 @@ from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle
 from loan_amortization_engine import AmortizationResult
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors, create_classical_styles
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def _fmt_money(value: Decimal | str | None) -> str:
@@ -251,7 +251,9 @@ def build_amortization_pdf(result: AmortizationResult) -> bytes:
     story: list = []
 
     story.append(Paragraph("Loan Amortization Schedule", styles["SectionHeader"]))
-    story.append(Paragraph(f"Generated {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}", styles["BodyText"]))
+    story.append(
+        Paragraph(f"Generated {user_text(datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC'))}", styles["BodyText"])
+    )
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 10))
 

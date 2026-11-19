@@ -35,7 +35,7 @@ from shared.report_chrome import (
     build_cover_page,
     find_logo,
 )
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from uncorrected_misstatements_model import (
     MisstatementClassification,
     MisstatementDisposition,
@@ -226,7 +226,7 @@ class SumScheduleMemoGenerator:
         # --- Section I: Overview ---
         story.append(Paragraph("I. Engagement Overview", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
-        story.append(Paragraph(f"<b>Engagement Period:</b> {period_desc}", styles["MemoBody"]))
+        story.append(Paragraph(f"<b>Engagement Period:</b> {user_text(period_desc)}", styles["MemoBody"]))
         story.append(
             Paragraph(
                 f"<b>Total Misstatements Recorded:</b> {len(items)}",
@@ -238,16 +238,16 @@ class SumScheduleMemoGenerator:
             mat = schedule["materiality"]
             story.append(
                 Paragraph(
-                    f"<b>Overall Materiality:</b> {_format_money(mat['overall'])} &nbsp;&bull;&nbsp; "
-                    f"<b>Performance:</b> {_format_money(mat['performance'])} &nbsp;&bull;&nbsp; "
-                    f"<b>Trivial Threshold:</b> {_format_money(mat['trivial'])}",
+                    f"<b>Overall Materiality:</b> {user_text(_format_money(mat['overall']))} &nbsp;&bull;&nbsp; "
+                    f"<b>Performance:</b> {user_text(_format_money(mat['performance']))} &nbsp;&bull;&nbsp; "
+                    f"<b>Trivial Threshold:</b> {user_text(_format_money(mat['trivial']))}",
                     styles["MemoBody"],
                 )
             )
             unreviewed = schedule["unreviewed_count"]
             story.append(
                 Paragraph(
-                    f"<b>Unreviewed Items:</b> {unreviewed}",
+                    f"<b>Unreviewed Items:</b> {user_text(unreviewed)}",
                     styles["MemoBody"],
                 )
             )
@@ -276,7 +276,7 @@ class SumScheduleMemoGenerator:
                     continue
                 story.append(
                     Paragraph(
-                        f"<b>{_CLASSIFICATION_LABEL[cls]}</b> ({len(rows)})",
+                        f"<b>{user_text(_CLASSIFICATION_LABEL[cls])}</b> ({len(rows)})",
                         styles["MemoBody"],
                     )
                 )
@@ -293,10 +293,10 @@ class SumScheduleMemoGenerator:
                     table_data.append(
                         [
                             Paragraph(
-                                _SOURCE_LABEL.get(m.source_type, m.source_type.value),
+                                user_text(_SOURCE_LABEL.get(m.source_type, m.source_type.value)),
                                 styles["MemoTableCell"],
                             ),
-                            Paragraph(m.description[:240], styles["MemoTableCell"]),
+                            Paragraph(user_text(m.description[:240]), styles["MemoTableCell"]),
                             Paragraph(
                                 _format_signed_money(m.fs_impact_net_income),
                                 styles["MemoTableCell"],
@@ -306,7 +306,7 @@ class SumScheduleMemoGenerator:
                                 styles["MemoTableCell"],
                             ),
                             Paragraph(
-                                _DISPOSITION_LABEL.get(m.cpa_disposition, "—"),
+                                user_text(_DISPOSITION_LABEL.get(m.cpa_disposition, "—")),
                                 styles["MemoTableCell"],
                             ),
                         ]
@@ -343,11 +343,11 @@ class SumScheduleMemoGenerator:
                 # Per-row reference + auditor notes
                 for m in rows:
                     refnote = (
-                        f"<b>{_CLASSIFICATION_LABEL[cls]} — {_SOURCE_LABEL.get(m.source_type, m.source_type.value)}.</b> "
-                        f"<i>Reference:</i> {m.source_reference}"
+                        f"<b>{user_text(_CLASSIFICATION_LABEL[cls])} — {user_text(_SOURCE_LABEL.get(m.source_type, m.source_type.value))}.</b> "
+                        f"<i>Reference:</i> {user_text(m.source_reference)}"
                     )
                     if m.cpa_notes:
-                        refnote += f" <i>Auditor notes:</i> {m.cpa_notes}"
+                        refnote += f" <i>Auditor notes:</i> {user_text(m.cpa_notes)}"
                     story.append(Paragraph(refnote, styles["MemoBodySmall"]))
                     story.append(Spacer(1, 4))
 
@@ -398,11 +398,11 @@ class SumScheduleMemoGenerator:
                     [
                         Paragraph("<b>Aggregate</b>", styles["MemoTableCell"]),
                         Paragraph(
-                            f"<b>{_format_signed_money(agg['net_income'])}</b>",
+                            f"<b>{user_text(_format_signed_money(agg['net_income']))}</b>",
                             styles["MemoTableCell"],
                         ),
                         Paragraph(
-                            f"<b>{_format_signed_money(agg['net_assets'])}</b>",
+                            f"<b>{user_text(_format_signed_money(agg['net_assets']))}</b>",
                             styles["MemoTableCell"],
                         ),
                     ],
@@ -434,7 +434,7 @@ class SumScheduleMemoGenerator:
                 [
                     [
                         Paragraph(
-                            f"<b>MATERIALITY BUCKET: {bucket_label.upper()}</b>",
+                            f"<b>MATERIALITY BUCKET: {user_text(bucket_label.upper())}</b>",
                             ParagraphStyle(
                                 "_BucketLabel",
                                 fontName="Times-Bold",
@@ -516,7 +516,7 @@ class SumScheduleMemoGenerator:
         if unreviewed_count > 0:
             story.append(
                 Paragraph(
-                    f"<b>DRAFT — INCOMPLETE:</b> {unreviewed_count} item(s) remain "
+                    f"<b>DRAFT — INCOMPLETE:</b> {user_text(unreviewed_count)} item(s) remain "
                     f"unreviewed. ISA 450 requires the auditor to reach a documented "
                     f"disposition for each uncorrected misstatement before this "
                     f"workpaper is included in the engagement file.",

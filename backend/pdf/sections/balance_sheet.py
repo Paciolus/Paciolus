@@ -13,7 +13,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 # Cross-reference legend for balance-sheet lead-sheet refs
 _BS_LEGEND_MAP = {
@@ -116,23 +116,23 @@ def _render_leader_dot(story: list, styles: dict, statements: Any) -> None:
     for item in statements.balance_sheet:
         if item.is_total:
             story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
-            line = create_leader_dots(f"  {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+            line = create_leader_dots(f"  {user_text(item.label)}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
             story.append(
                 DoubleRule(
                     width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=12
                 )
             )
         elif item.is_subtotal:
-            line = create_leader_dots(f"    {item.label}", f"${item.amount:,.2f}")
-            story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+            line = create_leader_dots(f"    {user_text(item.label)}", f"${item.amount:,.2f}")
+            story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
             story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=4))
         elif item.indent_level == 0 and not item.lead_sheet_ref:
             story.append(Spacer(1, 6))
-            story.append(Paragraph(item.label, styles["SubsectionHeader"]))
+            story.append(Paragraph(user_text(item.label), styles["SubsectionHeader"]))
         else:
             ref = f" ({item.lead_sheet_ref})" if item.lead_sheet_ref else ""
-            line = create_leader_dots(f"      {item.label}{ref}", f"${item.amount:,.2f}")
+            line = create_leader_dots(f"      {user_text(item.label)}{ref}", f"${item.amount:,.2f}")
             story.append(Paragraph(line, styles["LeaderLine"]))
 
 

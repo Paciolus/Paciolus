@@ -405,7 +405,24 @@ Chinese/Japanese/Korean deferred (lowest priority, `## Deferred Items`).
       "plain-number strings stay numeric" asserted the old contract; rewritten. Tests: `test_sprint885_csv_text_by_column.py`
       (13; 5 failed first). **Note:** a CSV can only escape "+00123" with the visible `'` mark (same as every other
       escaped cell); "00123" goes out exactly, but whether a spreadsheet then drops its zeros is the spreadsheet's choice.
-- [ ] **10D / OUT-24 — uploaded text cannot restyle a PDF.**
+- [x] **10D / OUT-24 — uploaded text cannot restyle a PDF.** `shared/safe_paragraph.user_text()` escapes a value
+      completely before it is joined to template markup (idempotent: returns `EscapedText`, a str subclass);
+      `sanitize_markup` stays as the second layer; `template_markup()` marks the rare deliberate markup value.
+      Detector first (`test_sprint885_pdf_markup_escape.py`): every memo `generate_sample_reports.py` renders (21), plus
+      the analytical-expectations, SUM-schedule and engagement-dashboard memos, rendered with
+      `<font color="#ffffff">…</font>` appended to every free-text input; every marker must print with its tag.
+      Before: all 21 sample memos leaked (~950 values parsed as markup — cover metadata, scope lines, test tables,
+      drill-down rows, descriptions, names, currency codes, file names). Fixed by: three codemods (escape every
+      interpolated value in `Paragraph(f"…")`; escape `Paragraph(<subscript/attribute/.get()>)` data reads; escape the
+      values in any f-string whose literal text is markup) and hand fixes for values built in variables (cover
+      metadata, intelligence stamp, drill-down cells, memo test tables, FS line labels, TB/FS cover subtitles,
+      narratives, preflight messages, sampling conclusions, currency lists). `create_leader_dots` now escapes its value,
+      counts dots from the characters a reader sees (so "PP&amp;E" counts 4, not 8 — three memo lines gain dots and
+      now align with their neighbours; the only snapshot text change), and returns `EscapedText`. Template text
+      (titles, scope/methodology registry, constants) is left as markup. Sample data had pre-escaped "&amp;" in a
+      footnote to suit the old behaviour; now a plain "&". Tests: 31 (all 21 sample memos + 3 record-built memos
+      leaked first); `memo_render_snapshot.json` re-recorded (4 cases, dots only); Sprint 819 route snapshots
+      unchanged.
 - [x] **10E / OUT-28 — non-ASCII download names.** One builder, `shared/filenames.content_disposition`, used by
       `attachment_response` (every ordinary download) and the share download: a plain `[A-Za-z0-9._-]` name is sent
       exactly as before; any other gets an ASCII fallback (accents dropped, other characters `_`) plus

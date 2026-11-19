@@ -35,7 +35,7 @@ from shared.memo_base import (
     render_memo,
     source_line,
 )
-from shared.safe_paragraph import Paragraph, escape_markup
+from shared.safe_paragraph import Paragraph, escape_markup, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -57,7 +57,7 @@ def _risk_sort_key(item: dict) -> tuple:
 def _render_badge(text: str, styles: dict) -> Table:
     """Render a small amber badge with text."""
     badge = Table(
-        [[Paragraph(f"<font color='#B8860B'><b>{text}</b></font>", styles["MemoBody"])]],
+        [[Paragraph(f"<font color='#B8860B'><b>{user_text(text)}</b></font>", styles["MemoBody"])]],
         colWidths=[None],
     )
     badge.setStyle(
@@ -88,7 +88,7 @@ def _render_conclusion_block(styles: dict) -> list:
         "[ ] Inconclusive \u2014 awaiting management response",
     ]
     for opt in options:
-        elements.append(Paragraph(f"&nbsp;&nbsp;&nbsp;{opt}", styles["MemoBody"]))
+        elements.append(Paragraph(f"&nbsp;&nbsp;&nbsp;{user_text(opt)}", styles["MemoBody"]))
 
     elements.append(Spacer(1, 4))
     elements.append(
@@ -180,7 +180,7 @@ def generate_flux_expectations_memo(
             story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
         story.append(
             Paragraph(
-                f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
+                f"{user_text(format_classical_date())} &nbsp;&bull;&nbsp; {user_text(reference)}",
                 styles["MemoRef"],
             )
         )
@@ -319,10 +319,10 @@ def generate_flux_expectations_memo(
 
                 # Account header with optional note
                 story.append(Spacer(1, 6))
-                label = f"<b>{account}</b>"
+                label = f"<b>{user_text(account)}</b>"
                 if account_note:
-                    label += f" &nbsp;<i>{account_note}</i>"
-                label += f" &nbsp;({item.get('type', 'Unknown')})"
+                    label += f" &nbsp;<i>{user_text(account_note)}</i>"
+                label += f" &nbsp;({user_text(item.get('type', 'Unknown'))})"
                 story.append(Paragraph(label, styles["MemoBody"]))
 
                 # Status badge
@@ -390,7 +390,7 @@ def generate_flux_expectations_memo(
                 footnote = item.get("footnote", "")
                 if footnote:
                     story.append(Spacer(1, 4))
-                    story.append(Paragraph(f"<i>{footnote}</i>", styles["MemoBody"]))
+                    story.append(Paragraph(f"<i>{user_text(footnote)}</i>", styles["MemoBody"]))
 
                 story.append(LedgerRule(doc_width))
 

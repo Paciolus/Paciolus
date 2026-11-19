@@ -43,7 +43,7 @@ from shared.memo_base import (
     source_line,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -225,8 +225,8 @@ def _build_methodology_table(
         desc = _TEST_DESCRIPTIONS.get(test_key, tr.get("description", ""))
         method_data.append(
             [
-                Paragraph(tr.get("test_name", ""), styles["MemoTableCell"]),
-                Paragraph(tr.get("test_tier", "structural").title(), styles["MemoTableCell"]),
+                Paragraph(user_text(tr.get("test_name", "")), styles["MemoTableCell"]),
+                Paragraph(user_text(tr.get("test_tier", "structural").title()), styles["MemoTableCell"]),
                 Paragraph(desc, styles["MemoTableCell"]),
             ]
         )
@@ -462,7 +462,7 @@ def _build_material_variances(
 
         var_data.append(
             [
-                Paragraph(v.get("vendor", "\u2014"), styles["MemoTableCell"]),
+                Paragraph(user_text(v.get("vendor", "\u2014")), styles["MemoTableCell"]),
                 v.get("po_number", "\u2014"),
                 v.get("invoice_number", "\u2014"),
                 _VARIANCE_FIELD_LABELS.get(field, field.title()),
@@ -483,7 +483,7 @@ def _build_material_variances(
     if len(material_variances) > 15:
         story.append(
             Paragraph(
-                f"+ {len(material_variances) - 15} additional material variances (see CSV export for full list)",
+                f"+ {user_text(len(material_variances) - 15)} additional material variances (see CSV export for full list)",
                 styles["MemoBodySmall"],
             )
         )
@@ -538,7 +538,7 @@ def _build_key_findings(
     ]
 
     for i, finding in enumerate(top_findings[:5], 1):
-        story.append(Paragraph(f"{i}. {finding}", styles["MemoBody"]))
+        story.append(Paragraph(f"{user_text(i)}. {user_text(finding)}", styles["MemoBody"]))
 
         # Look up procedure by index mapping or keyword match
         proc_key = _FINDING_PROCEDURE_KEYS[i - 1] if i - 1 < len(_FINDING_PROCEDURE_KEYS) else ""
@@ -546,7 +546,7 @@ def _build_key_findings(
         if procedure:
             story.append(
                 Paragraph(
-                    f"<i>Suggested follow-up: {procedure}</i>",
+                    f"<i>Suggested follow-up: {user_text(procedure)}</i>",
                     styles["MemoBodySmall"],
                 )
             )
@@ -595,9 +595,9 @@ def _build_unmatched_documents(
             doc_dict = inv.get("document", inv)
             inv_data.append(
                 [
-                    Paragraph(str(doc_dict.get("invoice_number", "\u2014")), cell_style),
-                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style),
-                    Paragraph(str(doc_dict.get("invoice_date", "\u2014")), cell_style),
+                    Paragraph(user_text(str(doc_dict.get("invoice_number", "\u2014"))), cell_style),
+                    Paragraph(user_text(str(doc_dict.get("vendor", "\u2014"))), cell_style),
+                    Paragraph(user_text(str(doc_dict.get("invoice_date", "\u2014"))), cell_style),
                     Paragraph(
                         f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
                         if doc_dict.get("amount") or doc_dict.get("total_amount")
@@ -612,7 +612,7 @@ def _build_unmatched_documents(
         if len(unmatched_invoices) > _MAX_UNMATCHED_ROWS:
             story.append(
                 Paragraph(
-                    f"+ {len(unmatched_invoices) - _MAX_UNMATCHED_ROWS} additional unmatched invoices",
+                    f"+ {user_text(len(unmatched_invoices) - _MAX_UNMATCHED_ROWS)} additional unmatched invoices",
                     styles["MemoBodySmall"],
                 )
             )
@@ -638,9 +638,11 @@ def _build_unmatched_documents(
             doc_dict = po.get("document", po)
             po_data.append(
                 [
-                    Paragraph(str(doc_dict.get("po_number", "\u2014")), cell_style_po),
-                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style_po),
-                    Paragraph(str(doc_dict.get("po_date", doc_dict.get("order_date", "\u2014"))), cell_style_po),
+                    Paragraph(user_text(str(doc_dict.get("po_number", "\u2014"))), cell_style_po),
+                    Paragraph(user_text(str(doc_dict.get("vendor", "\u2014"))), cell_style_po),
+                    Paragraph(
+                        user_text(str(doc_dict.get("po_date", doc_dict.get("order_date", "\u2014")))), cell_style_po
+                    ),
                     Paragraph(
                         f"${doc_dict.get('po_amount', doc_dict.get('total_amount', 0)):,.2f}"
                         if doc_dict.get("po_amount") or doc_dict.get("total_amount")
@@ -655,7 +657,7 @@ def _build_unmatched_documents(
         if len(unmatched_pos) > _MAX_UNMATCHED_ROWS:
             story.append(
                 Paragraph(
-                    f"+ {len(unmatched_pos) - _MAX_UNMATCHED_ROWS} additional unmatched POs",
+                    f"+ {user_text(len(unmatched_pos) - _MAX_UNMATCHED_ROWS)} additional unmatched POs",
                     styles["MemoBodySmall"],
                 )
             )
@@ -682,10 +684,11 @@ def _build_unmatched_documents(
             rec_data.append(
                 [
                     Paragraph(
-                        str(doc_dict.get("receipt_number", doc_dict.get("grn_number", "\u2014"))), cell_style_rec
+                        user_text(str(doc_dict.get("receipt_number", doc_dict.get("grn_number", "\u2014")))),
+                        cell_style_rec,
                     ),
-                    Paragraph(str(doc_dict.get("vendor", "\u2014")), cell_style_rec),
-                    Paragraph(str(doc_dict.get("receipt_date", "\u2014")), cell_style_rec),
+                    Paragraph(user_text(str(doc_dict.get("vendor", "\u2014"))), cell_style_rec),
+                    Paragraph(user_text(str(doc_dict.get("receipt_date", "\u2014"))), cell_style_rec),
                     Paragraph(
                         f"${doc_dict.get('amount', doc_dict.get('total_amount', 0)):,.2f}"
                         if doc_dict.get("amount") or doc_dict.get("total_amount")
@@ -700,7 +703,7 @@ def _build_unmatched_documents(
         if len(unmatched_receipts) > _MAX_UNMATCHED_ROWS:
             story.append(
                 Paragraph(
-                    f"+ {len(unmatched_receipts) - _MAX_UNMATCHED_ROWS} additional unmatched receipts",
+                    f"+ {user_text(len(unmatched_receipts) - _MAX_UNMATCHED_ROWS)} additional unmatched receipts",
                     styles["MemoBodySmall"],
                 )
             )

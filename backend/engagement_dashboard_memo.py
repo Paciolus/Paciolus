@@ -35,7 +35,7 @@ from shared.memo_base import (
 )
 from shared.report_chrome import draw_page_footer
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def generate_engagement_dashboard_memo(
@@ -111,12 +111,12 @@ def generate_engagement_dashboard_memo(
                 t_label = f"{t_base} ({s.get('risk_score', 0):.0f})" if t_base != "—" else "—"
                 rpt_data.append(
                     [
-                        Paragraph(s.get("report_title", ""), cell_style),
+                        Paragraph(user_text(s.get("report_title", "")), cell_style),
                         Paragraph(f"{s.get('risk_score', 0):.1f}", cell_style),
                         Paragraph(t_label, cell_style),
-                        Paragraph(str(s.get("total_flagged", 0)), cell_style),
-                        Paragraph(str(s.get("high_severity_count", 0)), cell_style),
-                        Paragraph(str(s.get("tests_run", 0)), cell_style),
+                        Paragraph(user_text(str(s.get("total_flagged", 0))), cell_style),
+                        Paragraph(user_text(str(s.get("high_severity_count", 0))), cell_style),
+                        Paragraph(user_text(str(s.get("tests_run", 0))), cell_style),
                     ]
                 )
 
@@ -152,16 +152,16 @@ def generate_engagement_dashboard_memo(
             for i, thread in enumerate(threads, 1):
                 story.append(
                     Paragraph(
-                        f"<b>{i}. {thread.get('name', '')} ({thread.get('severity', 'medium').upper()})</b>",
+                        f"<b>{user_text(i)}. {user_text(thread.get('name', ''))} ({user_text(thread.get('severity', 'medium').upper())})</b>",
                         styles["MemoBody"],
                     )
                 )
-                story.append(Paragraph(thread.get("narrative", ""), styles["MemoBodySmall"]))
+                story.append(Paragraph(user_text(thread.get("narrative", "")), styles["MemoBodySmall"]))
                 indicators = thread.get("matched_conditions", [])
                 if indicators:
                     story.append(
                         Paragraph(
-                            f"Evidence: {', '.join(indicators)}",
+                            f"Evidence: {user_text(', '.join(indicators))}",
                             styles["MemoBodySmall"],
                         )
                     )
@@ -195,7 +195,7 @@ def generate_engagement_dashboard_memo(
             story.append(Spacer(1, 4))
 
             for i, action in enumerate(actions, 1):
-                story.append(Paragraph(f"{i}. {action}", styles["MemoBody"]))
+                story.append(Paragraph(f"{user_text(i)}. {user_text(action)}", styles["MemoBody"]))
             story.append(Spacer(1, 4))
 
             story.append(

@@ -13,7 +13,7 @@ from reportlab.platypus import Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def render_cash_flow(story: list, styles: dict, statements: Any) -> None:
@@ -35,20 +35,20 @@ def render_cash_flow(story: list, styles: dict, statements: Any) -> None:
     story.append(Spacer(1, 8))
 
     for section in [cf.operating, cf.investing, cf.financing]:
-        story.append(Paragraph(section.label, styles["SubsectionHeader"]))
+        story.append(Paragraph(user_text(section.label), styles["SubsectionHeader"]))
         story.append(Spacer(1, 4))
         for item in section.items:
-            line = create_leader_dots(f"      {item.label}", f"${item.amount:,.2f}")
+            line = create_leader_dots(f"      {user_text(item.label)}", f"${item.amount:,.2f}")
             story.append(Paragraph(line, styles["LeaderLine"]))
         # Subtotal
-        line = create_leader_dots(f"    Net {section.label}", f"${section.subtotal:,.2f}")
-        story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+        line = create_leader_dots(f"    Net {user_text(section.label)}", f"${section.subtotal:,.2f}")
+        story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
         story.append(LedgerRule(thickness=0.25, spaceBefore=2, spaceAfter=8))
 
     # Net Change in Cash
     story.append(LedgerRule(thickness=0.5, spaceBefore=4, spaceAfter=2))
     line = create_leader_dots("  NET CHANGE IN CASH", f"${cf.net_change:,.2f}")
-    story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+    story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
     story.append(
         DoubleRule(width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=8)
     )
@@ -61,7 +61,7 @@ def render_cash_flow(story: list, styles: dict, statements: Any) -> None:
     if cf.notes:
         story.append(Spacer(1, 8))
         for note in cf.notes:
-            story.append(Paragraph(f"<i>Note: {note}</i>", styles["DocumentRef"]))
+            story.append(Paragraph(f"<i>Note: {user_text(note)}</i>", styles["DocumentRef"]))
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +77,7 @@ def _render_reconciliation(story: list, styles: dict, cf: Any) -> None:
     story.append(Paragraph(line, styles["LeaderLine"]))
     story.append(LedgerRule(thickness=0.5, spaceBefore=2, spaceAfter=2))
     line = create_leader_dots("  ENDING CASH", f"${cf.ending_cash:,.2f}")
-    story.append(Paragraph(f"<b>{line}</b>", styles["LeaderLine"]))
+    story.append(Paragraph(f"<b>{user_text(line)}</b>", styles["LeaderLine"]))
     story.append(
         DoubleRule(width=6.5 * inch, color=ClassicalColors.OBSIDIAN_600, thick=1, thin=0.5, gap=1, spaceAfter=8)
     )

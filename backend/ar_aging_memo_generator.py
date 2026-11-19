@@ -19,7 +19,7 @@ from shared.drill_down import (
     safe_str_value,
 )
 from shared.memo_template import TestingMemoConfig, _roman, generate_testing_memo
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 AR_AGING_TEST_DESCRIPTIONS = {
     "ar_sign_anomalies": "Flags AR accounts with credit balances, indicating potential overpayments, misclassifications, or contra-AR entries.",
@@ -151,7 +151,7 @@ def _build_ar_extra_sections(
     aging_schedule = result.get("aging_schedule")
     if aging_schedule:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Aging Schedule", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_label)}. Aging Schedule", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         # Compute past-due percentage (everything beyond Current bucket)
@@ -200,7 +200,7 @@ def _build_ar_extra_sections(
 
     if total_ar_balance is not None and recorded_allowance is not None and total_ar_balance > 0:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Allowance Gap Analysis", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_label)}. Allowance Gap Analysis", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         allowance_3pct = total_ar_balance * 0.03
@@ -286,7 +286,7 @@ def _build_ar_extra_sections(
 
     if rows:
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Credit Limit Breach Detail", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_label)}. Credit Limit Breach Detail", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
         story.append(
             Paragraph(

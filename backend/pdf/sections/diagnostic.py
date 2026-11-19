@@ -14,7 +14,7 @@ from reportlab.platypus import KeepTogether, Spacer, Table, TableStyle
 
 from pdf.components import DoubleRule, LedgerRule, create_leader_dots
 from pdf.styles import ClassicalColors
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, template_markup, user_text
 
 # ---------------------------------------------------------------------------
 # Table of Contents
@@ -40,7 +40,7 @@ def render_table_of_contents(story: list, styles: dict) -> None:
     for i, entry in enumerate(toc_entries, 1):
         story.append(
             Paragraph(
-                f"{i}. &nbsp;&nbsp;{entry}",
+                f"{user_text(i)}. &nbsp;&nbsp;{user_text(entry)}",
                 styles["BodyText"],
             )
         )
@@ -83,16 +83,19 @@ def render_data_intake_summary(story: list, styles: dict, audit_result: dict, fi
 
     intake_data = [
         [Paragraph("Field", header_style), Paragraph("Value", header_style)],
-        [Paragraph("File Received", cell_style), Paragraph(filename or "\u2014", cell_style)],
+        [Paragraph("File Received", cell_style), Paragraph(user_text(filename or "\u2014"), cell_style)],
         [Paragraph("Rows Submitted", cell_style), Paragraph(f"{row_count + rows_rejected:,}", cell_style)],
         [Paragraph("Rows Accepted", cell_style), Paragraph(f"{rows_accepted:,}", cell_style)],
-        [Paragraph("Rows Rejected / Skipped", cell_style), Paragraph(str(rows_rejected), cell_style)],
-        [Paragraph("Null / Blank Account Codes", cell_style), Paragraph(str(null_accounts), cell_style)],
+        [Paragraph("Rows Rejected / Skipped", cell_style), Paragraph(user_text(str(rows_rejected)), cell_style)],
+        [Paragraph("Null / Blank Account Codes", cell_style), Paragraph(user_text(str(null_accounts)), cell_style)],
         [
             Paragraph("Duplicate Account Codes", cell_style),
             Paragraph("Yes" if duplicates_detected else "No", cell_style),
         ],
-        [Paragraph("Unrecognized Account Types", cell_style), Paragraph(str(unrecognized_types), cell_style)],
+        [
+            Paragraph("Unrecognized Account Types", cell_style),
+            Paragraph(user_text(str(unrecognized_types)), cell_style),
+        ],
         [Paragraph("Data Completeness", cell_style), Paragraph(f"{completeness:.0f}%", cell_style)],
     ]
 
@@ -163,7 +166,7 @@ def render_executive_summary(story: list, styles: dict, audit_result: dict) -> N
         status_style = "UnbalancedStatus"
 
     badge_data = [
-        [Paragraph(f"\u2713  {status_label}", styles[status_style])],
+        [Paragraph(f"\u2713  {user_text(status_label)}", styles[status_style])],
         [Paragraph(status_detail, styles["BodyText"])],
     ]
     badge_table = Table(badge_data, colWidths=[5 * inch])
@@ -319,7 +322,7 @@ def render_population_composition(story: list, styles: dict, audit_result: dict)
         total_count += count
         table_data.append(
             [
-                Paragraph(type_name, cell_style),
+                Paragraph(user_text(type_name), cell_style),
                 Paragraph(str(count) if count > 0 else "\u2014", cell_style),
                 Paragraph(f"${balance:,.2f}", cell_style),
                 Paragraph(f"{pct:.1f}%", cell_style),
@@ -367,7 +370,7 @@ def render_population_composition(story: list, styles: dict, audit_result: dict)
         "debit and credit balances without netting."
     )
     story.append(Spacer(1, 2))
-    story.append(Paragraph(f"<i>{gross_footnote}</i>", styles["BodyText"]))
+    story.append(Paragraph(f"<i>{user_text(gross_footnote)}</i>", styles["BodyText"]))
 
     col_detection = audit_result.get("column_detection") or {}
     if col_detection:
@@ -378,7 +381,7 @@ def render_population_composition(story: list, styles: dict, audit_result: dict)
                 f"Unclassified accounts are excluded from type-specific tests."
             )
             story.append(Spacer(1, 2))
-            story.append(Paragraph(f"<i>{footnote}</i>", styles["BodyText"]))
+            story.append(Paragraph(f"<i>{user_text(footnote)}</i>", styles["BodyText"]))
 
     story.append(Spacer(1, 6))
 
@@ -455,14 +458,16 @@ def render_risk_summary(story: list, styles: dict, audit_result: dict) -> None:
         for factor_name, contribution in risk_factors:
             story.append(
                 Paragraph(
-                    create_leader_dots(f"  {factor_name}", f"+{contribution}"),
+                    create_leader_dots(f"  {user_text(factor_name)}", f"+{user_text(contribution)}"),
                     styles["LeaderLine"],
                 )
             )
         story.append(LedgerRule(color=ClassicalColors.LEDGER_RULE, thickness=0.5))
         story.append(
             Paragraph(
-                create_leader_dots("  <b>Total (capped at 100)</b>", f"<b>{risk_score}</b>"),
+                create_leader_dots(
+                    "  <b>Total (capped at 100)</b>", template_markup(f"<b>{user_text(risk_score)}</b>")
+                ),
                 styles["LeaderLine"],
             )
         )
@@ -647,19 +652,19 @@ def _create_ledger_table(styles: dict, anomalies: list, is_material: bool) -> Ke
         acc_type = ab.get("type", "Unknown")
 
         issue_text = ab.get("issue", "")
-        issue_parts = [f"<b>{issue_text}</b>"]
-        issue_parts.append(f'<br/><font size="7" color="#616161"><i>{acc_type}</i></font>')
+        issue_parts = [f"<b>{user_text(issue_text)}</b>"]
+        issue_parts.append(f'<br/><font size="7" color="#616161"><i>{user_text(acc_type)}</i></font>')
 
         benchmark = get_concentration_benchmark(ab)
         if benchmark:
-            issue_parts.append(f'<br/><font size="7" color="#616161"><i>{benchmark}</i></font>')
+            issue_parts.append(f'<br/><font size="7" color="#616161"><i>{user_text(benchmark)}</i></font>')
 
         cross_ref = ab.get("cross_reference_note")
         if cross_ref:
-            issue_parts.append(f'<br/><font size="7" color="#4A7C59"><i>{cross_ref}</i></font>')
+            issue_parts.append(f'<br/><font size="7" color="#4A7C59"><i>{user_text(cross_ref)}</i></font>')
 
         procedure = get_tb_suggested_procedure(ab, is_material=is_material, rotation_index=idx)
-        issue_parts.append(f'<br/><font size="7"><i>Suggested Procedure: {procedure}</i></font>')
+        issue_parts.append(f'<br/><font size="7"><i>Suggested Procedure: {user_text(procedure)}</i></font>')
 
         issue_cell = Paragraph("".join(issue_parts), cell_style)
 
@@ -675,20 +680,20 @@ def _create_ledger_table(styles: dict, anomalies: list, is_material: bool) -> Ke
                 if per_txn is None and amount != 0:
                     per_txn = abs(amount) / txn_count
                 if per_txn is not None:
-                    amount_display += (
-                        f'<br/><font size="6"><i>({txn_count} transactions \u00d7 ${per_txn:,.2f})</i></font>'
-                    )
+                    amount_display += f'<br/><font size="6"><i>({user_text(txn_count)} transactions \u00d7 ${per_txn:,.2f})</i></font>'
                 else:
-                    amount_display += f'<br/><font size="6"><i>(sum of {txn_count} flagged transactions)</i></font>'
+                    amount_display += (
+                        f'<br/><font size="6"><i>(sum of {user_text(txn_count)} flagged transactions)</i></font>'
+                    )
                 has_pattern_based = True
 
         rank_label = f"P{idx}"
 
         data.append(
             [
-                Paragraph(f"<b>{rank_label}</b>", cell_style),
+                Paragraph(f"<b>{user_text(rank_label)}</b>", cell_style),
                 Paragraph(ref_num, cell_style),
-                Paragraph(account, cell_style),
+                Paragraph(user_text(account), cell_style),
                 issue_cell,
                 Paragraph(amount_display, cell_style),
             ]
@@ -773,14 +778,14 @@ def _create_informational_table(styles: dict, anomalies: list) -> KeepTogether:
         issue_text = ab.get("issue", "")
         acc_type = ab.get("type", "Unknown")
         issue_cell = Paragraph(
-            f'{issue_text}<br/><font size="7" color="#616161"><i>{acc_type}</i></font>',
+            f'{user_text(issue_text)}<br/><font size="7" color="#616161"><i>{user_text(acc_type)}</i></font>',
             cell_style,
         )
         amount = ab.get("amount", 0)
         data.append(
             [
                 Paragraph(ref_num, cell_style),
-                Paragraph(account, cell_style),
+                Paragraph(user_text(account), cell_style),
                 issue_cell,
                 Paragraph(f"${amount:,.2f}", cell_style),
             ]
@@ -872,15 +877,15 @@ def render_going_concern_indicators(story: list, styles: dict, audit_result: dic
                 value_text = f"{indicator_name}: {metric:,.2f}"
 
         # Compose bullet: name (bold), value, assessment
-        bullet_parts = [f"<b>{indicator_name}</b>"]
+        bullet_parts = [f"<b>{user_text(indicator_name)}</b>"]
         if value_text:
-            bullet_parts.append(f'<br/><font size="8">{value_text}</font>')
+            bullet_parts.append(f'<br/><font size="8">{user_text(value_text)}</font>')
         if description:
-            bullet_parts.append(f'<br/><font size="8" color="#616161"><i>{description}</i></font>')
+            bullet_parts.append(f'<br/><font size="8" color="#616161"><i>{user_text(description)}</i></font>')
 
         story.append(
             Paragraph(
-                f"\u2022 &nbsp;{''.join(bullet_parts)}",
+                f"\u2022 &nbsp;{user_text(''.join(bullet_parts))}",
                 styles["BodyText"],
             )
         )
@@ -890,7 +895,7 @@ def render_going_concern_indicators(story: list, styles: dict, audit_result: dic
     narrative = gc_data.get("narrative", "")
     if narrative:
         story.append(Spacer(1, 2))
-        story.append(Paragraph(f"<i>{narrative}</i>", styles["BodyText"]))
+        story.append(Paragraph(f"<i>{user_text(narrative)}</i>", styles["BodyText"]))
 
     # ── ISA 570 disclaimer ────────────────────────────────────────
     _render_gc_disclaimer(story, styles, gc_data)
@@ -913,7 +918,7 @@ def _render_gc_disclaimer(story: list, styles: dict, gc_data: dict) -> None:
     story.append(Spacer(1, 4))
     story.append(
         Paragraph(
-            f'<font size="7"><i>{disclaimer}</i></font>',
+            f'<font size="7"><i>{user_text(disclaimer)}</i></font>',
             styles["BodyText"],
         )
     )
@@ -954,7 +959,7 @@ def render_limitations(story: list, styles: dict) -> None:
     story.append(Spacer(1, 6))
 
     zero_storage = "Data handling: Your uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and anything you enter in an engagement. See paciolus.com/data-handling."
-    story.append(Paragraph(f"<i>{zero_storage}</i>", styles["BodyText"]))
+    story.append(Paragraph(f"<i>{user_text(zero_storage)}</i>", styles["BodyText"]))
     story.append(Spacer(1, 8))
 
 
@@ -975,7 +980,7 @@ def render_classical_footer(story: list, styles: dict) -> None:
     inner.append(Spacer(1, 8))
 
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
-    inner.append(Paragraph(f"Generated by Paciolus  \u00b7  {timestamp}", styles["Footer"]))
+    inner.append(Paragraph(f"Generated by Paciolus  \u00b7  {user_text(timestamp)}", styles["Footer"]))
 
     inner.append(
         Paragraph(

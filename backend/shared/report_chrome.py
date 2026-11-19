@@ -48,7 +48,7 @@ from shared.report_styles import (
     SPACE_COVER_AFTER_TITLE,
     SPACE_FOOTER_Y,
 )
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 
 def _safe_style(styles: dict, *names: str) -> Any:
@@ -444,7 +444,7 @@ def _append_metadata_table(
         table_data.append(
             [
                 Paragraph(f"<b>{label}</b>", label_style),
-                Paragraph(value, value_style),
+                Paragraph(user_text(value), value_style),
             ]
         )
 

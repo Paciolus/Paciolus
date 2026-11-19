@@ -35,7 +35,7 @@ from shared.memo_base import (
     build_workpaper_signoff,
     render_memo,
 )
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.saved_testing_config import engine_defaults_for_domain
 from shared.scope_methodology import (
     build_authoritative_reference_block,
@@ -262,7 +262,7 @@ def generate_testing_memo(
         fmt = format_finding or _default_format_finding
         if top_findings:
             section_label = _roman(section_counter)
-            story.append(Paragraph(f"{section_label}. Key Items Flagged", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_label)}. Key Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
             # BUG-001 fix: incorporate entity/filename into rotation seed so
@@ -270,7 +270,7 @@ def generate_testing_memo(
             rotation_seed = hash(client_name) if client_name else (hash(filename) if filename else 0)
 
             for i, finding in enumerate(top_findings[:5], 1):
-                story.append(Paragraph(f"{i}. {fmt(finding)}", styles["MemoBody"]))
+                story.append(Paragraph(f"{user_text(i)}. {user_text(fmt(finding))}", styles["MemoBody"]))
                 # Match finding to test_key for follow-up lookup (dict-based, not index-based)
                 test_key = _resolve_test_key(str(finding), test_results)
                 # Add benchmark context if available
@@ -278,7 +278,7 @@ def generate_testing_memo(
                 if benchmark:
                     story.append(
                         Paragraph(
-                            f"<i>{benchmark}</i>",
+                            f"<i>{user_text(benchmark)}</i>",
                             styles["MemoBodySmall"],
                         )
                     )
@@ -287,7 +287,7 @@ def generate_testing_memo(
                 if procedure:
                     story.append(
                         Paragraph(
-                            f"<i>Suggested follow-up: {procedure}</i>",
+                            f"<i>Suggested follow-up: {user_text(procedure)}</i>",
                             styles["MemoBodySmall"],
                         )
                     )
@@ -321,7 +321,7 @@ def generate_testing_memo(
 
         # 7. SUMMARY OF RESULTS (Sprint 843 — was "Conclusion"; a flag-density summary is not a conclusion)
         section_label = _roman(section_counter)
-        story.append(Paragraph(f"{section_label}. Summary of Results", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_label)}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         risk_tier = composite.get("risk_tier", "low")

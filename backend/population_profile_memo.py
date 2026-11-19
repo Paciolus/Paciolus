@@ -33,7 +33,7 @@ from shared.memo_base import (
     wrap_table_strings,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph, escape_markup
+from shared.safe_paragraph import Paragraph, escape_markup, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -82,7 +82,7 @@ def generate_population_profile_memo(
             story.append(Paragraph(escape_markup(client_name), styles["MemoSubtitle"]))
         story.append(
             Paragraph(
-                f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
+                f"{user_text(format_classical_date())} &nbsp;&bull;&nbsp; {user_text(reference)}",
                 styles["MemoRef"],
             )
         )
@@ -171,9 +171,9 @@ def generate_population_profile_memo(
 
         story.append(
             Paragraph(
-                f"The population exhibits a {skew_direction} distribution with a mean of "
+                f"The population exhibits a {user_text(skew_direction)} distribution with a mean of "
                 f"${mean_val:,.2f} versus a median of ${median_val:,.2f}. The coefficient of variation "
-                f"({cv:.0f}%) indicates {'high' if cv > 100 else 'moderate'} dispersion relative to the mean. "
+                f"({cv:.0f}%) indicates {user_text('high' if cv > 100 else 'moderate')} dispersion relative to the mean. "
                 f"The interquartile range (IQR) spans ${iqr:,.2f}, with the maximum account balance "
                 f"of ${max_val:,.2f} representing a significant outlier at "
                 f"{max_val / mean_val:.1f}x the mean.",
@@ -248,9 +248,9 @@ def generate_population_profile_memo(
 
             story.append(
                 Paragraph(
-                    f"Accounts with balances exceeding $100,000 ({large_count} accounts, "
+                    f"Accounts with balances exceeding $100,000 ({user_text(large_count)} accounts, "
                     f"{large_pct:.1f}% of total population value) warrant substantive audit "
-                    f"attention. Conversely, {small_count} account(s) fall below $1,000 — "
+                    f"attention. Conversely, {user_text(small_count)} account(s) fall below $1,000 — "
                     "these may represent immaterial balances that can be addressed through "
                     "analytical procedures rather than detailed testing.",
                     styles["MemoBody"],
@@ -266,7 +266,7 @@ def generate_population_profile_memo(
         # Gini callout
         story.append(
             Paragraph(
-                f"The Gini coefficient of <b>{gini:.4f}</b> indicates <b>{gini_interp}</b> concentration. "
+                f"The Gini coefficient of <b>{gini:.4f}</b> indicates <b>{user_text(gini_interp)}</b> concentration. "
                 "A Gini of 0 means all accounts have equal balances; 1.0 means one account holds all value. "
                 "Higher concentration warrants targeted substantive procedures on dominant accounts.",
                 styles["MemoBody"],
@@ -286,7 +286,7 @@ def generate_population_profile_memo(
                             [
                                 str(t.get("rank", "")),
                                 str(t.get("account_number", "")),
-                                Paragraph(str(t.get("account", "")), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(t.get("account", ""))), styles["MemoTableCell"]),
                                 t.get("category", "Unknown"),
                                 f"${t.get('net_balance', 0):,.2f}",
                                 f"{t.get('percent_of_total', 0):.1f}%",
@@ -304,7 +304,7 @@ def generate_population_profile_memo(
                         top_data.append(
                             [
                                 str(t.get("rank", "")),
-                                Paragraph(str(t.get("account", "")), styles["MemoTableCell"]),
+                                Paragraph(user_text(str(t.get("account", ""))), styles["MemoTableCell"]),
                                 t.get("category", "Unknown"),
                                 f"${t.get('net_balance', 0):,.2f}",
                                 f"{t.get('percent_of_total', 0):.1f}%",
@@ -336,7 +336,7 @@ def generate_population_profile_memo(
                 cum_pct = sum(t.get("percent_of_total", 0) for t in top_accounts[:5] if isinstance(t, dict))
                 story.append(
                     Paragraph(
-                        f"The top {min(len(top_accounts), 5)} accounts collectively represent "
+                        f"The top {user_text(min(len(top_accounts), 5))} accounts collectively represent "
                         f"{cum_pct:.1f}% of total population value. Per AU-C Section 520, this level "
                         "of concentration requires the auditor to evaluate whether analytical procedures "
                         "alone provide sufficient appropriate audit evidence or whether substantive "
@@ -380,7 +380,7 @@ def generate_population_profile_memo(
                 names = ", ".join(s.get("account_type", "") for s in disproportionate)
                 story.append(
                     Paragraph(
-                        f"<i>Note: {names} account(s) represent a disproportionate share "
+                        f"<i>Note: {user_text(names)} account(s) represent a disproportionate share "
                         f"(&gt; 40%) of total population value, warranting focused analytical procedures.</i>",
                         styles["MemoBody"],
                     )
@@ -450,7 +450,7 @@ def generate_population_profile_memo(
                     Paragraph(
                         f"Chi-square statistic: <b>{chi_sq:.3f}</b> &nbsp;|&nbsp; "
                         f"MAD: <b>{mad:.5f}</b> &nbsp;|&nbsp; "
-                        f"Conformance: <b>{conformity_display}</b>",
+                        f"Conformance: <b>{user_text(conformity_display)}</b>",
                         styles["MemoBody"],
                     )
                 )
@@ -478,7 +478,7 @@ def generate_population_profile_memo(
                     digits_str = ", ".join(str(d) for d in most_deviated)
                     story.append(
                         Paragraph(
-                            f"<i>Most deviated digits: {digits_str}. "
+                            f"<i>Most deviated digits: {user_text(digits_str)}. "
                             "Asterisk (*) denotes deviation exceeding ±5 percentage points.</i>",
                             styles["MemoBody"],
                         )
@@ -494,7 +494,7 @@ def generate_population_profile_memo(
                 precheck_msg = benford.get("precheck_message", "Prechecks not passed.")
                 story.append(
                     Paragraph(
-                        f"<i>Benford analysis not performed: {precheck_msg}</i>",
+                        f"<i>Benford analysis not performed: {user_text(precheck_msg)}</i>",
                         styles["MemoBody"],
                     )
                 )
@@ -514,9 +514,9 @@ def generate_population_profile_memo(
             total_flags = viol_count + zero_count + nz_count + dom_count
             story.append(
                 Paragraph(
-                    f"This section identifies {total_flags} exception(s) across three categories: "
-                    f"normal balance violations ({viol_count}), zero/near-zero balances "
-                    f"({zero_count + nz_count}), and dominant account risk flags ({dom_count}). "
+                    f"This section identifies {user_text(total_flags)} exception(s) across three categories: "
+                    f"normal balance violations ({user_text(viol_count)}), zero/near-zero balances "
+                    f"({user_text(zero_count + nz_count)}), and dominant account risk flags ({user_text(dom_count)}). "
                     "Each exception should be evaluated by the engagement team to determine "
                     "whether it represents a data quality issue, an intentional accounting "
                     "treatment (e.g., contra accounts), or a potential misstatement.",
@@ -547,7 +547,7 @@ def generate_population_profile_memo(
                         viol_data.append(
                             [
                                 v.get("account_number", ""),
-                                Paragraph(v.get("account", ""), styles["MemoTableCell"]),
+                                Paragraph(user_text(v.get("account", "")), styles["MemoTableCell"]),
                                 v.get("account_type", ""),
                                 v.get("expected", ""),
                                 v.get("actual", ""),
@@ -584,7 +584,7 @@ def generate_population_profile_memo(
                         zn_data.append(
                             [
                                 z.get("account_number", ""),
-                                Paragraph(z.get("account", ""), styles["MemoTableCell"]),
+                                Paragraph(user_text(z.get("account", "")), styles["MemoTableCell"]),
                                 z.get("account_type", ""),
                                 f"${z.get('balance', 0):,.2f}",
                                 "Zero",
@@ -595,7 +595,7 @@ def generate_population_profile_memo(
                         zn_data.append(
                             [
                                 z.get("account_number", ""),
-                                Paragraph(z.get("account", ""), styles["MemoTableCell"]),
+                                Paragraph(user_text(z.get("account", "")), styles["MemoTableCell"]),
                                 z.get("account_type", ""),
                                 f"${z.get('balance', 0):,.2f}",
                                 "Near-Zero",
@@ -628,10 +628,10 @@ def generate_population_profile_memo(
                     if isinstance(d, dict):
                         dom_data.append(
                             [
-                                Paragraph(d.get("account", ""), styles["MemoTableCell"]),
+                                Paragraph(user_text(d.get("account", "")), styles["MemoTableCell"]),
                                 f"${d.get('balance', 0):,.2f}",
                                 f"{d.get('pct_of_total', 0):.1f}%",
-                                Paragraph(d.get("risk_note", ""), styles["MemoTableCell"]),
+                                Paragraph(user_text(d.get("risk_note", "")), styles["MemoTableCell"]),
                             ]
                         )
 
@@ -673,7 +673,7 @@ def generate_population_profile_memo(
                         [
                             p.get("priority", ""),
                             p.get("area", ""),
-                            Paragraph(p.get("procedure", ""), styles["MemoTableCell"]),
+                            Paragraph(user_text(p.get("procedure", "")), styles["MemoTableCell"]),
                         ]
                     )
 

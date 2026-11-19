@@ -29,7 +29,7 @@ from pdf import (
     format_classical_date,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 # =============================================================================
 # Standard table style (Sprint 527 — consolidated from 3 diagnostic memos)
@@ -301,7 +301,7 @@ def build_memo_header(
         story.append(Paragraph(xml_escape(client_name), styles["MemoSubtitle"]))
     story.append(
         Paragraph(
-            f"{format_classical_date()} &nbsp;&bull;&nbsp; {reference}",
+            f"{user_text(format_classical_date())} &nbsp;&bull;&nbsp; {user_text(reference)}",
             styles["MemoRef"],
         )
     )
@@ -394,9 +394,9 @@ def build_methodology_section(
         desc = test_descriptions.get(tr["test_key"], tr.get("description", ""))
         method_data.append(
             [
-                Paragraph(tr["test_name"], styles["MemoTableCell"]),
-                Paragraph(tr["test_tier"].title(), styles["MemoTableCell"]),
-                Paragraph(desc, styles["MemoTableCell"]),
+                Paragraph(user_text(tr["test_name"]), styles["MemoTableCell"]),
+                Paragraph(user_text(tr["test_tier"].title()), styles["MemoTableCell"]),
+                Paragraph(user_text(desc), styles["MemoTableCell"]),
             ]
         )
 
@@ -506,13 +506,13 @@ def build_saved_settings_disclosure(
         if run_overrides
         else "Thresholds that differed from the Paciolus defaults"
     )
-    story.append(Paragraph(f"<b>{heading}</b>", styles["MemoBody"]))
+    story.append(Paragraph(f"<b>{user_text(heading)}</b>", styles["MemoBody"]))
     if run_overrides:
         count = len(run_overrides)
         noun = "threshold was" if count == 1 else "thresholds were"
         story.append(
             Paragraph(
-                f"{count} {noun} set by the preparer for this run only; these values replace any saved "
+                f"{user_text(count)} {user_text(noun)} set by the preparer for this run only; these values replace any saved "
                 "setting and the Paciolus default.",
                 styles["MemoBodySmall"],
             )
@@ -531,7 +531,7 @@ def build_saved_settings_disclosure(
         noun = "threshold" if count == 1 else "thresholds"
         story.append(
             Paragraph(
-                f"{count} {noun} differed from the Paciolus defaults on this run through the preparer's saved "
+                f"{user_text(count)} {user_text(noun)} differed from the Paciolus defaults on this run through the preparer's saved "
                 "settings. Results above and below reflect these values, not the defaults.",
                 styles["MemoBodySmall"],
             )
@@ -542,7 +542,7 @@ def build_saved_settings_disclosure(
         noun = "setting was" if count == 1 else "settings were"
         story.append(
             Paragraph(
-                f"{count} saved {noun} not applied:",
+                f"{user_text(count)} saved {user_text(noun)} not applied:",
                 styles["MemoBodySmall"],
             )
         )
@@ -641,10 +641,10 @@ def build_results_summary_section(
     for tr in sorted(test_results, key=lambda t: t.get("flag_rate", 0), reverse=True):
         results_data.append(
             [
-                Paragraph(tr["test_name"], cell_style),
-                Paragraph(str(tr["entries_flagged"]), cell_style),
+                Paragraph(user_text(tr["test_name"]), cell_style),
+                Paragraph(user_text(tr["entries_flagged"]), cell_style),
                 Paragraph(f"{tr['flag_rate']:.1%}", cell_style),
-                Paragraph(tr["severity"].upper(), cell_style),
+                Paragraph(user_text(tr["severity"].upper()), cell_style),
             ]
         )
 
@@ -783,9 +783,9 @@ def build_intelligence_stamp(
     timestamp = datetime.now(timezone.utc).strftime("%d %b %Y %H:%M UTC")
     parts.append(f"Generated {timestamp}")
     if client_name:
-        parts.append(client_name)
+        parts.append(user_text(client_name))
     if period_tested:
-        parts.append(f"Period: {period_tested}")
+        parts.append(f"Period: {user_text(period_tested)}")
 
     stamp_text = " &nbsp;&bull;&nbsp; ".join(parts)
     story.append(Spacer(1, 6))

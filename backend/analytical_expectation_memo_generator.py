@@ -42,7 +42,7 @@ from shared.report_chrome import (
     build_cover_page,
     find_logo,
 )
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 
 DISCLAIMER_TEXT = (
     "DATA ANALYTICS REPORT — NOT AN AUDIT COMMUNICATION. "
@@ -238,7 +238,7 @@ class AnalyticalExpectationMemoGenerator:
 
         story.append(
             Paragraph(
-                f"<b>Engagement Period:</b> {period_desc}",
+                f"<b>Engagement Period:</b> {user_text(period_desc)}",
                 styles["MemoBody"],
             )
         )
@@ -255,9 +255,9 @@ class AnalyticalExpectationMemoGenerator:
 
         story.append(
             Paragraph(
-                f"<b>Status:</b> Not Evaluated: {unevaluated_count} &nbsp;&bull;&nbsp; "
-                f"Within Threshold: {within_count} &nbsp;&bull;&nbsp; "
-                f"Exceeds Threshold: {exceeds_count}",
+                f"<b>Status:</b> Not Evaluated: {user_text(unevaluated_count)} &nbsp;&bull;&nbsp; "
+                f"Within Threshold: {user_text(within_count)} &nbsp;&bull;&nbsp; "
+                f"Exceeds Threshold: {user_text(exceeds_count)}",
                 styles["MemoBody"],
             )
         )
@@ -270,11 +270,11 @@ class AnalyticalExpectationMemoGenerator:
                 story.append(
                     Paragraph(
                         f"<b>Overall Materiality:</b> "
-                        f"{_format_money(materiality['overall_materiality'])} &nbsp;&bull;&nbsp; "
+                        f"{user_text(_format_money(materiality['overall_materiality']))} &nbsp;&bull;&nbsp; "
                         f"<b>Performance Materiality:</b> "
-                        f"{_format_money(materiality['performance_materiality'])} &nbsp;&bull;&nbsp; "
+                        f"{user_text(_format_money(materiality['performance_materiality']))} &nbsp;&bull;&nbsp; "
                         f"<b>Trivial Threshold:</b> "
-                        f"{_format_money(materiality['trivial_threshold'])}",
+                        f"{user_text(_format_money(materiality['trivial_threshold']))}",
                         styles["MemoBody"],
                     )
                 )
@@ -308,7 +308,7 @@ class AnalyticalExpectationMemoGenerator:
 
                 story.append(
                     Paragraph(
-                        f"<b>{_TARGET_TYPE_LABEL[target_type]}</b> ({len(items)})",
+                        f"<b>{user_text(_TARGET_TYPE_LABEL[target_type])}</b> ({len(items)})",
                         styles["MemoBody"],
                     )
                 )
@@ -327,14 +327,14 @@ class AnalyticalExpectationMemoGenerator:
                 for e in items:
                     table_data.append(
                         [
-                            Paragraph(e.procedure_target_label, styles["MemoTableCell"]),
+                            Paragraph(user_text(e.procedure_target_label), styles["MemoTableCell"]),
                             Paragraph(_format_expected(e), styles["MemoTableCell"]),
                             Paragraph(_format_threshold(e), styles["MemoTableCell"]),
                             Paragraph(_format_tags(e), styles["MemoTableCell"]),
                             Paragraph(_format_money(e.result_actual_value), styles["MemoTableCell"]),
                             Paragraph(_format_money(e.result_variance_amount), styles["MemoTableCell"]),
                             Paragraph(
-                                _STATUS_LABEL.get(e.result_status, "—"),
+                                user_text(_STATUS_LABEL.get(e.result_status, "—")),
                                 styles["MemoTableCell"],
                             ),
                         ]
@@ -373,11 +373,11 @@ class AnalyticalExpectationMemoGenerator:
                 # Per-row corroboration narrative + CPA notes block
                 for e in items:
                     narrative = (
-                        f"<b>{_TARGET_TYPE_LABEL[target_type]} — {e.procedure_target_label}.</b> "
-                        f"<i>Corroboration:</i> {e.corroboration_basis_text}"
+                        f"<b>{user_text(_TARGET_TYPE_LABEL[target_type])} — {user_text(e.procedure_target_label)}.</b> "
+                        f"<i>Corroboration:</i> {user_text(e.corroboration_basis_text)}"
                     )
                     if e.cpa_notes:
-                        narrative += f" <i>Auditor notes:</i> {e.cpa_notes}"
+                        narrative += f" <i>Auditor notes:</i> {user_text(e.cpa_notes)}"
                     story.append(Paragraph(narrative, styles["MemoBodySmall"]))
                     story.append(Spacer(1, 4))
 
@@ -423,7 +423,7 @@ class AnalyticalExpectationMemoGenerator:
         if unevaluated_count > 0:
             story.append(
                 Paragraph(
-                    f"<b>DRAFT — INCOMPLETE:</b> {unevaluated_count} expectation(s) "
+                    f"<b>DRAFT — INCOMPLETE:</b> {user_text(unevaluated_count)} expectation(s) "
                     f"remain unevaluated. ISA 520 requires the auditor to complete the "
                     f"analytical procedure (capture actual + assess variance) before this "
                     f"workpaper is included in the engagement file.",

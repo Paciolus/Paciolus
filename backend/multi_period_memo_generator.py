@@ -42,7 +42,7 @@ from shared.memo_base import (
     source_line,
 )
 from shared.report_styles import ledger_table_style
-from shared.safe_paragraph import Paragraph
+from shared.safe_paragraph import Paragraph, user_text
 from shared.scope_methodology import (
     build_authoritative_reference_block,
     build_methodology_statement,
@@ -175,7 +175,7 @@ def _build_significant_movements_table(
         pct = m.get("change_percent")
         pct_str = f"{pct:+.1f}%" if pct is not None else "N/A"
         movement = m.get("movement_type", "").replace("_", " ").title()
-        data.append([Paragraph(name, styles["MemoTableCell"]), prior, current, change, pct_str, movement])
+        data.append([Paragraph(user_text(name), styles["MemoTableCell"]), prior, current, change, pct_str, movement])
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
@@ -191,7 +191,7 @@ def _build_significant_movements_table(
     if total_sig > 25:
         story.append(
             Paragraph(
-                f"+ {total_sig - 25} additional significant movements (see CSV export for full list)",
+                f"+ {user_text(total_sig - 25)} additional significant movements (see CSV export for full list)",
                 styles["MemoBodySmall"],
             )
         )
@@ -303,7 +303,7 @@ def _build_suggested_procedures(
 
         story.append(
             Paragraph(
-                f"<b>{name}</b>{pct_str}: <i>{procedure_text}</i>",
+                f"<b>{user_text(name)}</b>{user_text(pct_str)}: <i>{user_text(procedure_text)}</i>",
                 styles["MemoBodySmall"],
             )
         )
@@ -627,7 +627,7 @@ def _build_sign_change_detail(
             nature = "Sign Reversal"
         data.append(
             [
-                Paragraph(name, styles["MemoTableCell"]),
+                Paragraph(user_text(name), styles["MemoTableCell"]),
                 _format_currency(prior),
                 _format_currency(current),
                 nature,
@@ -647,7 +647,7 @@ def _build_sign_change_detail(
     if len(sign_changes) > 20:
         story.append(
             Paragraph(
-                f"+ {len(sign_changes) - 20} additional sign changes (see CSV export for full list)",
+                f"+ {user_text(len(sign_changes) - 20)} additional sign changes (see CSV export for full list)",
                 styles["MemoBodySmall"],
             )
         )
@@ -656,7 +656,7 @@ def _build_sign_change_detail(
     procedure = get_follow_up_procedure("apc_sign_change", rotation_index=len(sign_changes))
     if procedure:
         story.append(Spacer(1, 4))
-        story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+        story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
     story.append(Spacer(1, 8))
 
@@ -694,7 +694,7 @@ def _build_dormant_accounts_detail(
             data.append(
                 [
                     str(idx),
-                    Paragraph(name, styles["MemoTableCell"]),
+                    Paragraph(user_text(name), styles["MemoTableCell"]),
                     _format_currency(prior_bal),
                     "$0.00",
                     "Confirm: closed?",
@@ -705,7 +705,7 @@ def _build_dormant_accounts_detail(
         col_widths = [0.5 * inch, 6.2 * inch]
         data = [headers]
         for idx, name in enumerate(dormant_accounts[:20], 1):
-            data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
+            data.append([str(idx), Paragraph(user_text(str(name)), styles["MemoTableCell"])])
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle(ledger_table_style(font_size=8, extra=[("ALIGN", (0, 0), (0, -1), "CENTER")])))
@@ -714,7 +714,7 @@ def _build_dormant_accounts_detail(
     if len(dormant_accounts) > 20:
         story.append(
             Paragraph(
-                f"+ {len(dormant_accounts) - 20} additional dormant accounts (see CSV export for full list)",
+                f"+ {user_text(len(dormant_accounts) - 20)} additional dormant accounts (see CSV export for full list)",
                 styles["MemoBodySmall"],
             )
         )
@@ -723,7 +723,7 @@ def _build_dormant_accounts_detail(
     procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=len(dormant_accounts))
     if procedure:
         story.append(Spacer(1, 4))
-        story.append(Paragraph(f"<i>{procedure}</i>", styles["MemoBodySmall"]))
+        story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
     story.append(Spacer(1, 8))
 
@@ -768,7 +768,7 @@ def _build_new_closed_account_detail(
                 acct_type = acct.get("account_type", "") if isinstance(acct, dict) else ""
                 data.append(
                     [
-                        Paragraph(name, styles["MemoTableCell"]),
+                        Paragraph(user_text(name), styles["MemoTableCell"]),
                         _format_currency(balance),
                         acct_type.replace("_", " ").title(),
                     ]
@@ -778,7 +778,7 @@ def _build_new_closed_account_detail(
             col_widths = [0.5 * inch, 6.2 * inch]
             data = [headers]
             for idx, name in enumerate(new_accounts[:20], 1):
-                data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
+                data.append([str(idx), Paragraph(user_text(str(name)), styles["MemoTableCell"])])
 
         table = Table(data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle(ledger_table_style(font_size=8)))
@@ -807,7 +807,7 @@ def _build_new_closed_account_detail(
                 acct_type = acct.get("account_type", "") if isinstance(acct, dict) else ""
                 data.append(
                     [
-                        Paragraph(name, styles["MemoTableCell"]),
+                        Paragraph(user_text(name), styles["MemoTableCell"]),
                         _format_currency(balance),
                         acct_type.replace("_", " ").title(),
                     ]
@@ -817,7 +817,7 @@ def _build_new_closed_account_detail(
             col_widths = [0.5 * inch, 6.2 * inch]
             data = [headers]
             for idx, name in enumerate(closed_accounts[:20], 1):
-                data.append([str(idx), Paragraph(str(name), styles["MemoTableCell"])])
+                data.append([str(idx), Paragraph(user_text(str(name)), styles["MemoTableCell"])])
 
         table = Table(data, colWidths=col_widths, repeatRows=1)
         table.setStyle(TableStyle(ledger_table_style(font_size=8)))
@@ -833,7 +833,7 @@ def _build_new_closed_account_detail(
     if closed_accounts and closed_procedure:
         combined.append(closed_procedure)
     if combined:
-        story.append(Paragraph(f"<i>{' '.join(combined)}</i>", styles["MemoBodySmall"]))
+        story.append(Paragraph(f"<i>{user_text(' '.join(combined))}</i>", styles["MemoBodySmall"]))
 
     story.append(Spacer(1, 8))
 
@@ -886,7 +886,7 @@ def _build_lead_sheet_table(
         data.append(
             [
                 code,
-                Paragraph(name, styles["MemoTableCell"]),
+                Paragraph(user_text(name), styles["MemoTableCell"]),
                 count,
                 _format_currency(prior_total),
                 _format_currency(current_total),
@@ -927,7 +927,7 @@ def _build_cash_context(
         direction = "increase" if pct > 0 else "decrease"
         story.append(
             Paragraph(
-                f"<i>Cash {direction} of {change} ({pct:+.1f}%). "
+                f"<i>Cash {user_text(direction)} of {user_text(change)} ({pct:+.1f}%). "
                 "Cross-reference to Cash Flow Statement to confirm source of cash "
                 "movement and assess whether operating, investing, or financing "
                 "activities explain the change.</i>",
@@ -1159,7 +1159,8 @@ def generate_multi_period_memo(
         story.append(
             Paragraph(
                 create_leader_dots(
-                    "New/Closed Accounts", f"{new_count + closed_count} ({new_count} new, {closed_count} closed)"
+                    "New/Closed Accounts",
+                    f"{user_text(new_count + closed_count)} ({user_text(new_count)} new, {user_text(closed_count)} closed)",
                 ),
                 styles["MemoLeader"],
             )
@@ -1211,7 +1212,7 @@ def generate_multi_period_memo(
                     }
                 )
 
-            story.append(Paragraph(f"{section_num}. Lead Sheet Summary", styles["MemoSection"]))
+            story.append(Paragraph(f"{user_text(section_num)}. Lead Sheet Summary", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
             _build_lead_sheet_table(story, styles, stripped_summaries)
             story.append(Spacer(1, 8))
@@ -1243,7 +1244,7 @@ def generate_multi_period_memo(
         # ================================================================
         # CONCLUSION
         # ================================================================
-        story.append(Paragraph(f"{section_num}. Summary of Results", styles["MemoSection"]))
+        story.append(Paragraph(f"{user_text(section_num)}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         assessment = _build_risk_conclusion(risk_tier, risk_score)
