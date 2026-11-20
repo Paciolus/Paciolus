@@ -305,6 +305,12 @@ class PopulationProfileReport:
     p75: float
     gini_coefficient: float
     gini_interpretation: str
+    # Sprint 887 (OUT-22): the statistics behind any skew or outlier statement.
+    # skewness: adjusted Fisher-Pearson G1 (None below 3 balances or with no dispersion);
+    # upper_fence: Tukey's P75 + 1.5 x IQR (None below 4 balances).
+    skewness: Optional[float] = None
+    upper_fence: Optional[float] = None
+    accounts_above_upper_fence: Optional[int] = None
     buckets: list[BucketBreakdown] = field(default_factory=list)
     top_accounts: list[TopAccount] = field(default_factory=list)
     section_density: list[SectionDensity] = field(default_factory=list)
@@ -329,6 +335,9 @@ class PopulationProfileReport:
             "p75": round(self.p75, 2),
             "gini_coefficient": round(self.gini_coefficient, 4),
             "gini_interpretation": self.gini_interpretation,
+            "skewness": round(self.skewness, 4) if self.skewness is not None else None,
+            "upper_fence": round(self.upper_fence, 2) if self.upper_fence is not None else None,
+            "accounts_above_upper_fence": self.accounts_above_upper_fence,
             "buckets": [b.to_dict() for b in self.buckets],
             "top_accounts": [t.to_dict() for t in self.top_accounts],
         }
@@ -352,6 +361,20 @@ class PopulationProfileReport:
 # ═══════════════════════════════════════════════════════════════
 # Helper: Gini coefficient
 # ═══════════════════════════════════════════════════════════════
+
+
+def _adjusted_skewness(values: list[float], mean: float, std_dev: float) -> Optional[float]:
+    """Adjusted Fisher-Pearson skewness G1 (Sprint 887 / OUT-22).
+
+    G1 = n / ((n - 1)(n - 2)) * sum(((x - mean) / s) ** 3), with s the sample standard
+    deviation. None below three balances or when every balance is equal (s = 0): there
+    is no shape to describe. Rounded to 4 places so a symmetric population reads 0.
+    """
+    n = len(values)
+    if n < 3 or std_dev <= 0:
+        return None
+    g1 = n / ((n - 1) * (n - 2)) * sum(((v - mean) / std_dev) ** 3 for v in values)
+    return round(g1, 4) + 0.0
 
 
 def _compute_gini(sorted_values: list[float]) -> float:
@@ -786,6 +809,14 @@ def compute_population_profile(
         p25 = abs_values[0] if n == 1 else 0.0
         p75 = abs_values[0] if n == 1 else 0.0
 
+    # Sprint 887 (OUT-22): explicit shape statistics.
+    skewness = _adjusted_skewness(abs_values, mean_abs, std_dev)
+    upper_fence: Optional[float] = None
+    above_fence: Optional[int] = None
+    if n >= 4:
+        upper_fence = p75 + 1.5 * (p75 - p25)
+        above_fence = sum(1 for v in abs_values if v > upper_fence)
+
     # Gini coefficient
     sorted_abs = sorted(abs_values)
     gini = _compute_gini(sorted_abs)
@@ -862,6 +893,9 @@ def compute_population_profile(
         p75=p75,
         gini_coefficient=gini,
         gini_interpretation=gini_interp,
+        skewness=skewness,
+        upper_fence=upper_fence,
+        accounts_above_upper_fence=above_fence,
         buckets=buckets,
         top_accounts=top_accounts,
         account_type_stratification=stratification,

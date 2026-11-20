@@ -452,6 +452,10 @@ class PopulationProfileResponse(BaseModel):
     p75: float
     gini_coefficient: float
     gini_interpretation: Literal["Low", "Moderate", "High"]
+    # Sprint 887 (OUT-22): adjusted Fisher-Pearson skewness and Tukey upper fence.
+    skewness: Optional[float] = None
+    upper_fence: Optional[float] = None
+    accounts_above_upper_fence: Optional[int] = None
     buckets: list[BucketBreakdownResponse]
     top_accounts: list[TopAccountResponse]
     section_density: Optional[list[SectionDensityResponse]] = None

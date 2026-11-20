@@ -44,6 +44,53 @@ from shared.scope_methodology import (
 _standard_table_style = standard_table_style
 
 
+def _describe_distribution(profile: dict) -> str:
+    """Neutral description of the population's spread, from the engine's statistics."""
+    n = int(profile.get("account_count") or 0)
+    mean_val = float(profile.get("mean_abs_balance") or 0)
+    median_val = float(profile.get("median_abs_balance") or 0)
+    std_val = float(profile.get("std_dev_abs_balance") or 0)
+    max_val = float(profile.get("max_abs_balance") or 0)
+    iqr = float(profile.get("p75") or 0) - float(profile.get("p25") or 0)
+    if n == 0:
+        return "No account balances were analyzed."
+    if max_val == 0:
+        return (
+            f"Every account balance in the population is $0.00 ({n:,} accounts); "
+            "dispersion and shape statistics do not apply."
+        )
+    if std_val == 0:
+        return f"All {n:,} account balances equal ${max_val:,.2f}; there is no dispersion."
+    parts = [
+        f"The mean absolute balance is ${mean_val:,.2f} and the median ${median_val:,.2f}.",
+        f"The standard deviation is ${std_val:,.2f} (coefficient of variation {std_val / mean_val * 100:.0f}%) "
+        f"and the interquartile range ${iqr:,.2f}.",
+    ]
+    skew = profile.get("skewness")
+    fence = profile.get("upper_fence")
+    above = profile.get("accounts_above_upper_fence")
+    if skew is None and fence is None:
+        parts.append("Skewness and outlier statistics: Not available.")
+        return " ".join(parts)
+    if skew is not None:
+        shown = f"{skew:+.2f}" if round(skew, 2) != 0 else "0.00"
+        if round(skew, 2) > 0:
+            meaning = "positive: the longer tail is toward larger balances"
+        elif round(skew, 2) < 0:
+            meaning = "negative: the longer tail is toward smaller balances"
+        else:
+            meaning = "no skew measured"
+        parts.append(f"Sample skewness (adjusted Fisher\u2013Pearson) is {shown} ({meaning}).")
+    if fence is not None and above is not None:
+        rule = f"the Tukey upper fence (P75 + 1.5 \u00d7 IQR = ${fence:,.2f})"
+        if above:
+            noun = "balance exceeds" if above == 1 else "balances exceed"
+            parts.append(f"{above:,} {noun} {rule}; the largest is ${max_val:,.2f}.")
+        else:
+            parts.append(f"No balance exceeds {rule}.")
+    return " ".join(parts)
+
+
 def generate_population_profile_memo(
     profile_result: dict,
     filename: str = "population_profile",
@@ -158,28 +205,10 @@ def generate_population_profile_memo(
         story.append(stats_table)
         story.append(Spacer(1, 8))
 
-        # Interpretive narrative for descriptive statistics
-        mean_val = profile_result.get("mean_abs_balance", 0)
-        median_val = profile_result.get("median_abs_balance", 0)
-        std_val = profile_result.get("std_dev_abs_balance", 0)
-        max_val = profile_result.get("max_abs_balance", 0)
-        p25_val = profile_result.get("p25", 0)
-        p75_val = profile_result.get("p75", 0)
-        skew_direction = "right-skewed (positively skewed)" if mean_val > median_val else "left-skewed"
-        cv = std_val / mean_val * 100 if mean_val > 0 else 0
-        iqr = p75_val - p25_val
-
-        story.append(
-            Paragraph(
-                f"The population exhibits a {user_text(skew_direction)} distribution with a mean of "
-                f"${mean_val:,.2f} versus a median of ${median_val:,.2f}. The coefficient of variation "
-                f"({cv:.0f}%) indicates {user_text('high' if cv > 100 else 'moderate')} dispersion relative to the mean. "
-                f"The interquartile range (IQR) spans ${iqr:,.2f}, with the maximum account balance "
-                f"of ${max_val:,.2f} representing a significant outlier at "
-                f"{max_val / mean_val:.1f}x the mean.",
-                styles["MemoBody"],
-            )
-        )
+        # Sprint 887 (OUT-22): skew and outliers only from an explicit statistic; plain facts
+        # for all-zero and uniform populations (the old text always called the maximum
+        # "a significant outlier", divided by a zero mean, and read mean = median as left skew).
+        story.append(Paragraph(user_text(_describe_distribution(profile_result)), styles["MemoBody"]))
         story.append(Spacer(1, 12))
 
         # ── Data Quality Score Breakdown ──

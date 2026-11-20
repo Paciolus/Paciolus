@@ -41,6 +41,10 @@ export interface PopulationProfile {
   p75: number
   gini_coefficient: number
   gini_interpretation: 'Low' | 'Moderate' | 'High' | 'Very High'
+  /** Sprint 887: adjusted Fisher–Pearson skewness and the Tukey upper fence (P75 + 1.5 × IQR). */
+  skewness?: number | null
+  upper_fence?: number | null
+  accounts_above_upper_fence?: number | null
   buckets: BucketBreakdown[]
   top_accounts: TopAccount[]
   section_density?: SectionDensity[]

@@ -708,7 +708,15 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       removed. Tests: `test_sprint887_follow_up_points.py` (12; collection failed first) — zero, coverage only, each
       edge, overrides gone, a large count, the memo text; old tier tests in `test_anomaly_summary.py` replaced. The
       sample anomaly summary now carries run status and flag counts (payroll zero, bank rec failed then rerun).
-- [ ] 12G / OUT-22 — population memo: outlier/skew only from an explicit statistic; zero/uniform/symmetric neutral
+- [x] **12G / OUT-22 — the population memo states skew and outliers only from a statistic.** The memo always called
+      the maximum "a significant outlier at {max/mean}x the mean", 500'd on an all-zero population (division by zero)
+      and called mean = median "left-skewed". The engine now reports `skewness` (adjusted Fisher–Pearson G1; None
+      below 3 balances or with no dispersion), `upper_fence` (Tukey P75 + 1.5 × IQR) and `accounts_above_upper_fence`;
+      the memo states them, "Every account balance … is $0.00" for all-zero, "All n balances equal $x; there is no
+      dispersion" for uniform, and "Skewness and outlier statistics: Not available." when an old payload lacks them;
+      the "high/moderate dispersion" judgment from CV > 100% is gone (the CV is stated). Tests:
+      `test_sprint887_population_statistics.py` (5, all failed first — real `/audit/population-profile` → memo:
+      all-zero, uniform, symmetric, skewed, old payload). Sample given consistent statistics; snapshot re-recorded.
 - [ ] 12H / OUT-29 — every signature block behind one off-by-default switch; no invented dates
 - [ ] 12I / OUT-30 — leftover vocabulary + a scanning test
 - [ ] 12J / OUT-31 — ASC 606-10-32 title

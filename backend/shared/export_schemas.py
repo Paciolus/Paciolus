@@ -576,6 +576,10 @@ class PopulationProfileMemoInput(WorkpaperMetadata):
     max_abs_balance: float = 0.0
     p25: float = 0.0
     p75: float = 0.0
+    # Sprint 887 (OUT-22): absent -> "Skewness and outlier statistics: Not available."
+    skewness: Optional[float] = None
+    upper_fence: Optional[float] = None
+    accounts_above_upper_fence: Optional[int] = None
     gini_coefficient: float = 0.0
     gini_interpretation: str = "Low"
     buckets: list = []

@@ -3329,6 +3329,10 @@ def gen_population_profile() -> None:
         "max_abs_balance": 4_250_000.00,
         "p25": 4_200.00,
         "p75": 67_500.00,
+        # Sprint 887 (OUT-22): the shape statistics the engine reports (P75 + 1.5 x IQR = 162,450).
+        "skewness": 14.82,
+        "upper_fence": 162_450.00,
+        "accounts_above_upper_fence": 19,
         "buckets": [
             {"label": "Zero (<$0.01)", "count": 4, "percent_count": 1.6, "sum_abs": 0.00},
             {"label": "<$1K", "count": 32, "percent_count": 13.0, "sum_abs": 17_750.00},

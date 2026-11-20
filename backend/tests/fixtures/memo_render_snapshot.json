@@ -3351,15 +3351,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\n TB Population Profile Report\n Meridian Capital Group, LLC\n 2nd March 2026  •  PPR-2026-0302-215\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nSource ... Trial Balance — FY2025 (meridian_tb_fy2025.csv)\nUnique Accounts ................................... 247\nTotal Population Value ................. $12,847,392.50\nGini Coefficient ........................ 0.7823 (High)\nData Quality Score .............................. 94.8%\nGini concentration thresholds: Low (< 0.40) · Moderate (0.40–0.65) · High (> 0.65)\nReporting Framework .................... FASB (US GAAP)\nThe automated population profile analysis procedures documented in this workpaper were performed on the trial balance\npopulation provided by management for the period under examination. These procedures are designed to identify potential\ndata anomalies that may warrant further investigation by the engagement team. The analysis was performed with reference\nto the FASB Accounting Standards Codification and applicable professional auditing standards.\nII. Descriptive Statistics\nStatistic\nValue\nMean (Absolute Balance)\n$52,012.52\nMedian (Absolute Balance)\n$18,450.00\nStandard Deviation\n$198,750.00\nMinimum\n$125.00\nMaximum\n$4,250,000.00\n25th Percentile (P25)\n$4,200.00\n75th Percentile (P75)\n$67,500.00\nThe population exhibits a right-skewed (positively skewed) distribution with a mean of $52,012.52 versus a median of\n$18,450.00. The coefficient of variation (382%) indicates high dispersion relative to the mean. The interquartile range\n(IQR) spans $63,300.00, with the maximum account balance of $4,250,000.00 representing a significant outlier at 81.7x\nthe mean.\nData Quality Score Breakdown\nComponent\nWeight\nScore\n",
+    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\n TB Population Profile Report\n Meridian Capital Group, LLC\n 2nd March 2026  •  PPR-2026-0302-215\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nSource ... Trial Balance — FY2025 (meridian_tb_fy2025.csv)\nUnique Accounts ................................... 247\nTotal Population Value ................. $12,847,392.50\nGini Coefficient ........................ 0.7823 (High)\nData Quality Score .............................. 94.8%\nGini concentration thresholds: Low (< 0.40) · Moderate (0.40–0.65) · High (> 0.65)\nReporting Framework .................... FASB (US GAAP)\nThe automated population profile analysis procedures documented in this workpaper were performed on the trial balance\npopulation provided by management for the period under examination. These procedures are designed to identify potential\ndata anomalies that may warrant further investigation by the engagement team. The analysis was performed with reference\nto the FASB Accounting Standards Codification and applicable professional auditing standards.\nII. Descriptive Statistics\nStatistic\nValue\nMean (Absolute Balance)\n$52,012.52\nMedian (Absolute Balance)\n$18,450.00\nStandard Deviation\n$198,750.00\nMinimum\n$125.00\nMaximum\n$4,250,000.00\n25th Percentile (P25)\n$4,200.00\n75th Percentile (P75)\n$67,500.00\nThe mean absolute balance is $52,012.52 and the median $18,450.00. The standard deviation is $198,750.00 (coefficient\nof variation 382%) and the interquartile range $63,300.00. Sample skewness (adjusted Fisher–Pearson) is +14.82 (positive:\nthe longer tail is toward larger balances). 19 balances exceed the Tukey upper fence (P75 + 1.5 × IQR = $162,450.00); the\nlargest is $4,250,000.00.\nData Quality Score Breakdown\nComponent\nWeight\nScore\n",
     "text_bbox": [
      60.0,
      12.0,
      512.51,
      766.8
     ],
-    "runs": "612f4e76c92b3c4e",
-    "content": "7618bcab5d39c0ed"
+    "runs": "bc215f18c51dd4ee",
+    "content": "e84dbf7ed2b74a8e"
    },
    {
     "size": [
@@ -3393,7 +3393,7 @@
      766.8
     ],
     "runs": "7b84fdbd0a213670",
-    "content": "d56f5b2afc00270a"
+    "content": "8f0c68da01cc3ba0"
    },
    {
     "size": [
@@ -3427,7 +3427,7 @@
      766.8
     ],
     "runs": "48585ef1db327a6c",
-    "content": "16a265a331f204ae"
+    "content": "3baebd026bb5924f"
    }
   ]
  },
@@ -3458,15 +3458,15 @@
      612.0,
      792.0
     ],
-    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\n TB Population Profile Report\n Meridian Capital Group, LLC\n 2nd March 2026  •  PPR-2026-0302-215\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nSource ... Trial Balance — FY2025 (meridian_tb_fy2025.csv)\nUnique Accounts ................................... 247\nTotal Population Value ................. $12,847,392.50\nGini Coefficient ........................ 0.7823 (High)\nData Quality Score .............................. 94.8%\nGini concentration thresholds: Low (< 0.40) · Moderate (0.40–0.65) · High (> 0.65)\nReporting Framework .................... FASB (US GAAP)\nThe automated population profile analysis procedures documented in this workpaper were performed on the trial balance\npopulation provided by management for the period under examination. These procedures are designed to identify potential\ndata anomalies that may warrant further investigation by the engagement team. The analysis was performed with reference\nto the FASB Accounting Standards Codification and applicable professional auditing standards.\nII. Descriptive Statistics\nStatistic\nValue\nMean (Absolute Balance)\n$52,012.52\nMedian (Absolute Balance)\n$18,450.00\nStandard Deviation\n$198,750.00\nMinimum\n$125.00\nMaximum\n$4,250,000.00\n25th Percentile (P25)\n$4,200.00\n75th Percentile (P75)\n$67,500.00\nThe population exhibits a right-skewed (positively skewed) distribution with a mean of $52,012.52 versus a median of\n$18,450.00. The coefficient of variation (382%) indicates high dispersion relative to the mean. The interquartile range\n(IQR) spans $63,300.00, with the maximum account balance of $4,250,000.00 representing a significant outlier at 81.7x\nthe mean.\nData Quality Score Breakdown\nComponent\nWeight\nScore\n",
+    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\n TB Population Profile Report\n Meridian Capital Group, LLC\n 2nd March 2026  •  PPR-2026-0302-215\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nSource ... Trial Balance — FY2025 (meridian_tb_fy2025.csv)\nUnique Accounts ................................... 247\nTotal Population Value ................. $12,847,392.50\nGini Coefficient ........................ 0.7823 (High)\nData Quality Score .............................. 94.8%\nGini concentration thresholds: Low (< 0.40) · Moderate (0.40–0.65) · High (> 0.65)\nReporting Framework .................... FASB (US GAAP)\nThe automated population profile analysis procedures documented in this workpaper were performed on the trial balance\npopulation provided by management for the period under examination. These procedures are designed to identify potential\ndata anomalies that may warrant further investigation by the engagement team. The analysis was performed with reference\nto the FASB Accounting Standards Codification and applicable professional auditing standards.\nII. Descriptive Statistics\nStatistic\nValue\nMean (Absolute Balance)\n$52,012.52\nMedian (Absolute Balance)\n$18,450.00\nStandard Deviation\n$198,750.00\nMinimum\n$125.00\nMaximum\n$4,250,000.00\n25th Percentile (P25)\n$4,200.00\n75th Percentile (P75)\n$67,500.00\nThe mean absolute balance is $52,012.52 and the median $18,450.00. The standard deviation is $198,750.00 (coefficient\nof variation 382%) and the interquartile range $63,300.00. Sample skewness (adjusted Fisher–Pearson) is +14.82 (positive:\nthe longer tail is toward larger balances). 19 balances exceed the Tukey upper fence (P75 + 1.5 × IQR = $162,450.00); the\nlargest is $4,250,000.00.\nData Quality Score Breakdown\nComponent\nWeight\nScore\n",
     "text_bbox": [
      60.0,
      24.0,
      512.51,
      708.0
     ],
-    "runs": "743a2d0ecf8a47bd",
-    "content": "e6350466a51692cc"
+    "runs": "cb10004da3129063",
+    "content": "35326fe117f3546d"
    },
    {
     "size": [
@@ -3500,7 +3500,7 @@
      689.0
     ],
     "runs": "72fee0d76c5ede17",
-    "content": "de73024e63834fb1"
+    "content": "1a8bcbed934fd415"
    },
    {
     "size": [
@@ -3534,7 +3534,7 @@
      720.0
     ],
     "runs": "1027c14ec8cd5c59",
-    "content": "7bba74b2bc3dd499"
+    "content": "1793b1edf25a2b15"
    }
   ]
  },

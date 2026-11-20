@@ -20735,6 +20735,17 @@
             "title": "Account Type Stratification",
             "type": "array"
           },
+          "accounts_above_upper_fence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts Above Upper Fence"
+          },
           "benford_analysis": {
             "anyOf": [
               {
@@ -20906,6 +20917,17 @@
             ],
             "title": "Reviewed By"
           },
+          "skewness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skewness"
+          },
           "source_context_note": {
             "anyOf": [
               {
@@ -20950,6 +20972,17 @@
             "title": "Total Abs Balance",
             "type": "number"
           },
+          "upper_fence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Fence"
+          },
           "workpaper_date": {
             "anyOf": [
               {
@@ -20986,6 +21019,17 @@
               }
             ],
             "title": "Account Type Stratification"
+          },
+          "accounts_above_upper_fence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts Above Upper Fence"
           },
           "benford_analysis": {
             "anyOf": [
@@ -21081,6 +21125,17 @@
             ],
             "title": "Section Density"
           },
+          "skewness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skewness"
+          },
           "std_dev_abs_balance": {
             "title": "Std Dev Abs Balance",
             "type": "number"
@@ -21110,6 +21165,17 @@
           "total_abs_balance": {
             "title": "Total Abs Balance",
             "type": "number"
+          },
+          "upper_fence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper Fence"
           }
         },
         "required": [
