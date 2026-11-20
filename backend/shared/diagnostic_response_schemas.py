@@ -483,6 +483,17 @@ class ExpenseCategoryItemResponse(BaseModel):
     dollar_change: Optional[float] = None
     exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
+    # Sprint 887: % change and its band (Change ≥ 20% and over materiality / ≥ 10% or over / below both).
+    pct_change: Optional[float] = None
+    change_band: Optional[Literal["both", "either", "neither"]] = None
+
+
+class ExpenseChangeThresholdsResponse(BaseModel):
+    """The thresholds behind change_band (Paciolus defaults + the run's materiality)."""
+
+    pct_both: float
+    pct_either: float
+    materiality: float
 
 
 class ExpenseCategoryReportResponse(BaseModel):
@@ -495,6 +506,7 @@ class ExpenseCategoryReportResponse(BaseModel):
     prior_available: bool
     materiality_threshold: float
     category_count: int
+    change_thresholds: Optional[ExpenseChangeThresholdsResponse] = None
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -18,6 +18,7 @@ from typing import Optional
 from reportlab.lib.units import inch
 from reportlab.platypus import Spacer, Table
 
+from expense_category_engine import CHANGE_BAND_LABELS
 from pdf import (
     ClassicalColors,
     DoubleRule,
@@ -27,7 +28,6 @@ from pdf import (
 )
 from shared.framework_resolution import ResolvedFramework
 from shared.memo_base import (
-    RISK_TIER_DISPLAY,
     MemoContext,
     build_disclaimer,
     build_intelligence_stamp,
@@ -92,27 +92,11 @@ def _pct_change(current: float, prior: float) -> Optional[float]:
 
 
 def _pct_change_str(pct: Optional[float]) -> str:
-    """Format percentage change with directional indicator."""
+    """Format the engine's percentage change, signed (Sprint 887: as the screen shows it)."""
     if pct is None:
         return "N/A"
-    arrow = "\u2191" if pct > 0 else ("\u2193" if pct < 0 else "\u2013")
-    return f"{abs(pct):.1f}% {arrow}"
-
-
-def _assign_risk(pct_change_val: Optional[float], exceeds_materiality: bool) -> str:
-    """Assign risk level based on percentage change and materiality.
-
-    Returns a key from RISK_TIER_DISPLAY ("high", "moderate", "low") so
-    that display labels and colors are derived from the shared mapping
-    rather than hardcoded strings (BUG-002).
-    """
-    if pct_change_val is None:
-        return "low"
-    if abs(pct_change_val) >= 20 and exceeds_materiality:
-        return "high"
-    if abs(pct_change_val) >= 10 or exceeds_materiality:
-        return "moderate"
-    return "low"
+    # Two decimals, as the engine and CSV carry it: 9.987% must not read "+10.0%" beside "< 10%".
+    return f"{pct:+.2f}%"
 
 
 def _benchmark_flag(ratio_name: str, value: float) -> str:
@@ -361,13 +345,14 @@ def generate_expense_category_memo(
         if category_rows:
             total_expenses = float(sum((quantize_monetary(c.get("amount")) for c in category_rows), Decimal("0")))
 
-        # Pre-compute % change for all categories
+        # Sprint 887: % change and change band are the engine's (screen and CSV show the same);
+        # the memo no longer computes its own.
         for c in categories:
-            if isinstance(c, dict) and c.get("prior_amount") is not None:
-                c["_pct_change"] = _pct_change(c.get("amount", 0), c["prior_amount"])
-            else:
-                if isinstance(c, dict):
-                    c["_pct_change"] = None
+            if isinstance(c, dict):
+                c["_pct_change"] = c.get("pct_change")
+        thresholds = report_result.get("change_thresholds") or {}
+        pct_either = float(thresholds.get("pct_either", 10))
+        pct_both = float(thresholds.get("pct_both", 20))
 
         # ── I. SCOPE ──
         story.append(Paragraph("I. Scope", styles["MemoSection"]))
@@ -447,12 +432,10 @@ def generate_expense_category_memo(
                         pct_chg = c.get("_pct_change")
                         pct_chg_str = _pct_change_str(pct_chg)
 
-                        # Add warning marker for large % changes
+                        # Sprint 887: no PDF-only marker (it flagged changes over 15%, a threshold
+                        # the screen and CSV never showed).
                         pct_chg_display = pct_chg_str
-                        if pct_chg is not None and abs(pct_chg) > 15:
-                            pct_chg_display = f"\u26a0 {pct_chg_str}"
-
-                        exceeds_display = "\u26a0 Yes" if exceeds else "No"
+                        exceeds_display = "Yes" if exceeds else "No"
 
                         cat_data.append(
                             [
@@ -517,10 +500,11 @@ def generate_expense_category_memo(
 
             story.append(
                 Paragraph(
-                    "The following analysis presents period-over-period variances for each expense "
-                    "category, with risk-level assessments based on the magnitude of change and "
-                    f"materiality threshold of ${materiality:,.2f}. Categories with moderate or high "
-                    "risk designations require management explanation.",
+                    "The following analysis presents period-over-period changes for each expense "
+                    f"category and the change band each falls in: a change of {pct_both:.0f}% or more and above "
+                    f"the materiality threshold of ${materiality:,.2f}; {pct_either:.0f}% or more, or above "
+                    f"materiality; or below both. The {pct_either:.0f}% and {pct_both:.0f}% thresholds are "
+                    "Paciolus defaults. The same bands are shown on screen and in the CSV export.",
                     styles["MemoBody"],
                 )
             )
@@ -530,8 +514,8 @@ def generate_expense_category_memo(
             story.append(Paragraph("III-A. Variance Summary", styles["MemoSection"]))
             story.append(Spacer(1, 4))
 
-            variance_headers = ["Category", "$ Change", "% Change", "Direction", "Risk Level", "Explanation Req."]
-            variance_widths = [1.8 * inch, 1.0 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch]
+            variance_headers = ["Category", "$ Change", "% Change", "Direction", "Change Band"]
+            variance_widths = [1.8 * inch, 1.0 * inch, 0.8 * inch, 0.8 * inch, 2.0 * inch]
             variance_data = [variance_headers]
 
             for c in categories:
@@ -546,9 +530,12 @@ def generate_expense_category_memo(
                     continue
 
                 direction = "Increase" if dollar_change > 0 else ("Decrease" if dollar_change < 0 else "No Change")
-                risk = _assign_risk(pct_chg, exceeds)
-                risk_display = RISK_TIER_DISPLAY.get(risk, (risk.upper(),))[0]
-                explanation_req = "Yes" if risk in ("high", "moderate") else "No"
+                band = c.get("change_band")
+                band_display = (
+                    CHANGE_BAND_LABELS.get(band, "% change not computable") if band else ("% change not computable")
+                )
+                # Internal ordering for Sections V-VI only; nothing here is printed as a risk.
+                risk = {"both": "high", "either": "moderate"}.get(band or "", "low")
 
                 variance_data.append(
                     [
@@ -556,13 +543,12 @@ def generate_expense_category_memo(
                         f"${dollar_change:,.2f}",
                         _pct_change_str(pct_chg),
                         direction,
-                        risk_display,
-                        explanation_req,
+                        band_display,
                     ]
                 )
 
-                # Collect findings for Section V
-                if risk in ("high", "moderate"):
+                # Collect items for Section V
+                if band in ("both", "either"):
                     finding_num += 1
                     finding_source = "III-A"
                     findings.append(
@@ -575,10 +561,12 @@ def generate_expense_category_memo(
                             ),
                             "risk": risk,
                             "priority": risk,
+                            "basis": band_display,
                             "source": finding_source,
                         }
                     )
 
+            variance_data = wrap_table_strings(variance_data, styles)
             var_table = Table(variance_data, colWidths=variance_widths, repeatRows=1)
             var_table.setStyle(_standard_table_style(courier_cols=[1]))
             story.append(var_table)
@@ -590,7 +578,7 @@ def generate_expense_category_memo(
                 for c in categories
                 if isinstance(c, dict)
                 and c.get("_pct_change") is not None
-                and _assign_risk(c["_pct_change"], c.get("exceeds_threshold", False)) in ("high", "moderate")
+                and c.get("change_band") in ("both", "either")
             ]
 
             if high_mod_cats:
@@ -628,12 +616,11 @@ def generate_expense_category_memo(
                     story.append(
                         Paragraph(
                             f"<b>Decomposition Flag — {user_text(label)}:</b> "
-                            f"This category represents a high-growth, high-value catch-all at "
-                            f"{pct_rev:.1f}% of revenue with {pct_chg:.1f}% year-over-year growth. "
-                            f"Auditor should request a detailed sub-ledger breakdown to identify "
-                            f"the drivers of the ${abs(dollar_change):,.0f} increase. Categories to "
-                            f"investigate may include: consulting fees, software/subscriptions, "
-                            f"travel, legal, or one-time charges.",
+                            f"This catch-all category is {pct_rev:.1f}% of revenue and grew {pct_chg:.1f}% "
+                            "year over year (flagged above 10% of revenue and 15% growth, Paciolus defaults). "
+                            "The auditor may consider requesting a sub-ledger breakdown of the "
+                            f"${abs(dollar_change):,.0f} increase, for example consulting fees, "
+                            "software/subscriptions, travel, legal or one-time charges.",
                             styles["MemoBody"],
                         )
                     )
@@ -717,6 +704,7 @@ def generate_expense_category_memo(
                             ),
                             "risk": "moderate",
                             "priority": "moderate",
+                            "basis": "Ratio above indicative range",
                             "source": section_iv,
                         }
                     )
@@ -745,9 +733,8 @@ def generate_expense_category_memo(
 
             story.append(
                 Paragraph(
-                    "The following items were flagged from the variance analysis and ratio "
-                    "benchmarking performed in the preceding sections. Each item requires "
-                    "evaluation by the engagement team.",
+                    "The following items were flagged by the change bands and ratio benchmarks "
+                    "in the preceding sections. The auditor evaluates these results.",
                     styles["MemoBody"],
                 )
             )
@@ -757,20 +744,17 @@ def generate_expense_category_memo(
             _tier_severity = {"high": 0, "elevated": 1, "moderate": 2, "low": 3}
             findings.sort(key=lambda f: _tier_severity.get(f.get("priority", "low"), 3))
 
-            finding_headers = ["#", "Category", "Item", "Risk", "Priority"]
-            finding_widths = [0.3 * inch, 1.4 * inch, 3.3 * inch, 0.7 * inch, 0.7 * inch]
+            finding_headers = ["#", "Category", "Item", "Basis"]
+            finding_widths = [0.3 * inch, 1.4 * inch, 3.0 * inch, 1.7 * inch]
             finding_data = [finding_headers]
 
             for i, f in enumerate(findings, 1):
-                risk_key = f.get("risk", "low")
-                priority_key = f.get("priority", "low")
                 finding_data.append(
                     [
                         str(i),
                         f.get("category", ""),
                         Paragraph(user_text(f.get("finding", "")), styles["MemoTableCell"]),
-                        RISK_TIER_DISPLAY.get(risk_key, (risk_key.upper(),))[0],
-                        RISK_TIER_DISPLAY.get(priority_key, (priority_key.upper(),))[0],
+                        Paragraph(user_text(f.get("basis", "")), styles["MemoTableCell"]),
                     ]
                 )
 
@@ -789,22 +773,20 @@ def generate_expense_category_memo(
             story.append(
                 Paragraph(
                     "The following procedures are suggested based on the items flagged in "
-                    "the preceding analysis. Procedures are prioritized by risk level and reference "
+                    "the preceding analysis, in the order of the items above, and reference "
                     "specific dollar amounts and percentages from the current period data.",
                     styles["MemoBody"],
                 )
             )
             story.append(Spacer(1, 6))
 
-            proc_headers = ["Priority", "Area", "Procedure"]
-            proc_widths = [0.7 * inch, 1.5 * inch, 4.3 * inch]
+            proc_headers = ["Area", "Procedure"]
+            proc_widths = [1.7 * inch, 4.8 * inch]
             proc_data = [proc_headers]
 
             for p in procedures:
-                prio_key = p.get("priority", "low")
                 proc_data.append(
                     [
-                        RISK_TIER_DISPLAY.get(prio_key, (prio_key.upper(),))[0],
                         p.get("area", ""),
                         Paragraph(user_text(p.get("procedure", "")), styles["MemoTableCell"]),
                     ]

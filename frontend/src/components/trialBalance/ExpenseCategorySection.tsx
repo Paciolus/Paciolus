@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { ExpenseCategoryReport } from '@/types/expenseCategoryAnalytics'
+import { changeBandLabel, type ExpenseCategoryReport } from '@/types/expenseCategoryAnalytics'
 
 interface ExpenseCategorySectionProps {
   data: ExpenseCategoryReport
@@ -122,7 +122,9 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
                       <>
                         <th className="text-right font-serif text-content-secondary py-1.5 pr-2">Prior Amount</th>
                         <th className="text-right font-serif text-content-secondary py-1.5 pr-2">$ Change</th>
-                        <th className="text-center font-serif text-content-secondary py-1.5">Exceeds Mat.</th>
+                        <th className="text-right font-serif text-content-secondary py-1.5 pr-2">% Change</th>
+                        <th className="text-center font-serif text-content-secondary py-1.5 pr-2">Exceeds Mat.</th>
+                        <th className="text-left font-serif text-content-secondary py-1.5">Change Band</th>
                       </>
                     )}
                   </tr>
@@ -141,8 +143,16 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
                           <td className="font-mono text-content-primary text-right py-1.5 pr-2">
                             {cat.dollar_change !== null ? formatCurrency(cat.dollar_change) : 'N/A'}
                           </td>
-                          <td className="font-sans text-content-secondary text-center py-1.5">
+                          <td className="font-mono text-content-secondary text-right py-1.5 pr-2">
+                            {cat.pct_change != null ? `${cat.pct_change >= 0 ? '+' : ''}${cat.pct_change.toFixed(2)}%` : 'N/A'}
+                          </td>
+                          <td className="font-sans text-content-secondary text-center py-1.5 pr-2">
                             {cat.dollar_change !== null ? (cat.exceeds_threshold ? 'Yes' : 'No') : 'N/A'}
+                          </td>
+                          <td className="font-sans text-content-secondary py-1.5">
+                            {cat.change_band && data.change_thresholds
+                              ? changeBandLabel(cat.change_band, data.change_thresholds)
+                              : 'N/A'}
                           </td>
                         </>
                       )}
@@ -161,6 +171,8 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
                       <>
                         <td className="py-1.5 pr-2"></td>
                         <td className="py-1.5 pr-2"></td>
+                        <td className="py-1.5 pr-2"></td>
+                        <td className="py-1.5 pr-2"></td>
                         <td className="py-1.5"></td>
                       </>
                     )}
@@ -168,6 +180,13 @@ export function ExpenseCategorySection({ data, onExportPDF, onExportCSV }: Expen
                 </tbody>
               </table>
             </div>
+            {hasPrior && data.change_thresholds && (
+              <p className="font-sans text-[11px] text-content-tertiary mt-2">
+                Change bands: {data.change_thresholds.pct_either}% and {data.change_thresholds.pct_both}% change
+                (Paciolus defaults) and the materiality threshold of{' '}
+                <span className="font-mono">{formatCurrency(data.change_thresholds.materiality)}</span>.
+              </p>
+            )}
           </div>
 
           {/* Export buttons */}

@@ -750,7 +750,18 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       Statement No. 16, "Superseded by Statement No. 101 — applies to fiscal years beginning on or before December 15,
       2023". The memo has no reliable fiscal-year start to pick one, so both print with their periods. Tests: 3 in
       `test_sprint887_citations.py` (2 failed first; one renders a GASB payroll memo).
-- [ ] 12L — expense category: one computation and the same thresholds on screen, CSV and PDF
+- [x] **12L — expense category: one computation, the same bands and thresholds on screen, CSV and PDF.** The PDF
+      computed its own % change, HIGH/MODERATE/LOW "Risk Level" and "Explanation Req." from 10%/20% thresholds
+      (`_assign_risk`, removed), plus a ⚠ marker over 15%, none shown elsewhere. The engine now emits `pct_change`,
+      `change_band` ("Change ≥ 20% and over materiality" / "Change ≥ 10% or over materiality" / "Change < 10% and
+      within materiality"; none when % change cannot be computed) and `change_thresholds`; the screen gains % Change
+      and Change Band columns and a thresholds line, the CSV gains both columns and a "Change Band Thresholds" row,
+      the PDF prints the bands and thresholds ("Paciolus defaults"), its Items Flagged table shows "Basis" instead
+      of Risk/Priority, its procedures drop the Priority column, and the decomposition flag states its own 10%/15%
+      thresholds and is a suggestion. % change shows two decimals everywhere (9.987% read "+10.0%" beside "< 10%").
+      Tests: `test_sprint887_expense_category_bands.py` (9, all failed first — real route → screen, CSV, PDF; band
+      cases); Jest `ExpenseCategoryChangeBand.test.tsx` (3; 2 failed first); old `_assign_risk` / arrow tests
+      rewritten. Sample bands derived with the engine's `change_band`; snapshot re-recorded.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

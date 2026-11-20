@@ -2,8 +2,8 @@
 Tests for Expense Category Analytical Procedures Memo Generator — Sprint 512
 """
 
+from expense_category_engine import change_band
 from expense_category_memo import (
-    _assign_risk,
     _benchmark_flag,
     _generate_procedures,
     _generate_variance_commentary,
@@ -105,51 +105,43 @@ class TestPctChange:
 
 
 class TestPctChangeStr:
+    """Sprint 887: the engine's % change, signed, as the screen shows it (no arrows)."""
+
     def test_positive(self):
-        result = _pct_change_str(20.4)
-        assert "20.4%" in result
-        assert "\u2191" in result  # up arrow
+        assert _pct_change_str(20.4) == "+20.40%"
 
     def test_negative(self):
-        result = _pct_change_str(-15.3)
-        assert "15.3%" in result
-        assert "\u2193" in result  # down arrow
+        assert _pct_change_str(-15.3) == "-15.30%"
 
     def test_zero(self):
-        result = _pct_change_str(0.0)
-        assert "0.0%" in result
-        assert "\u2013" in result  # en-dash
+        assert _pct_change_str(0.0) == "+0.00%"
 
     def test_none(self):
         assert _pct_change_str(None) == "N/A"
 
 
 # ═══════════════════════════════════════════════════════════════
-# Test _assign_risk
+# Test change_band (Sprint 887: was _assign_risk's HIGH / MODERATE / LOW, PDF only)
 # ═══════════════════════════════════════════════════════════════
 
 
-class TestAssignRisk:
-    def test_high_risk(self):
-        """>=20% and exceeds materiality → high (RISK_TIER_DISPLAY key)."""
-        assert _assign_risk(25.0, True) == "high"
-        assert _assign_risk(-20.0, True) == "high"
+class TestChangeBand:
+    def test_both(self):
+        assert change_band(25.0, True) == "both"
+        assert change_band(-20.0, True) == "both"
 
-    def test_moderate_pct_only(self):
-        """>=10% but not exceeds materiality → moderate."""
-        assert _assign_risk(15.0, False) == "moderate"
+    def test_either_pct_only(self):
+        assert change_band(15.0, False) == "either"
 
-    def test_moderate_materiality_only(self):
-        """<10% but exceeds materiality → moderate."""
-        assert _assign_risk(5.0, True) == "moderate"
+    def test_either_materiality_only(self):
+        assert change_band(5.0, True) == "either"
 
-    def test_low_risk(self):
-        """<10% and not exceeds materiality → low."""
-        assert _assign_risk(5.0, False) == "low"
+    def test_neither(self):
+        assert change_band(5.0, False) == "neither"
 
     def test_none_pct(self):
-        """None pct_change → low."""
-        assert _assign_risk(None, True) == "low"
+        """No % change (prior zero or absent): no band, never "low"."""
+        assert change_band(None, True) is None
 
 
 # ═══════════════════════════════════════════════════════════════

@@ -92,6 +92,28 @@ NEAR_ZERO = 1e-10
 # ═══════════════════════════════════════════════════════════════
 
 
+# Sprint 887 (review comparison table): one change classification for screen, CSV and
+# PDF. Paciolus defaults, printed with the results; they are not a professional standard.
+CHANGE_PCT_BOTH = 20.0
+CHANGE_PCT_EITHER = 10.0
+CHANGE_BAND_LABELS: dict[str, str] = {
+    "both": f"Change \u2265 {CHANGE_PCT_BOTH:.0f}% and over materiality",
+    "either": f"Change \u2265 {CHANGE_PCT_EITHER:.0f}% or over materiality",
+    "neither": f"Change < {CHANGE_PCT_EITHER:.0f}% and within materiality",
+}
+
+
+def change_band(pct_change: Optional[float], exceeds_materiality: bool) -> Optional[str]:
+    """Which change band a category falls in; None when the % change cannot be computed."""
+    if pct_change is None:
+        return None
+    if abs(pct_change) >= CHANGE_PCT_BOTH and exceeds_materiality:
+        return "both"
+    if abs(pct_change) >= CHANGE_PCT_EITHER or exceeds_materiality:
+        return "either"
+    return "neither"
+
+
 @dataclass
 class ExpenseCategory:
     """One row in the expense category breakdown."""
@@ -105,6 +127,9 @@ class ExpenseCategory:
     dollar_change: Optional[Decimal] = None
     exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
+    # Sprint 887: % change vs prior (None when prior is zero or absent) and its band.
+    pct_change: Optional[float] = None
+    change_band: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -119,6 +144,8 @@ class ExpenseCategory:
             "dollar_change": quantize_monetary(self.dollar_change) if self.dollar_change is not None else None,
             "exceeds_threshold": self.exceeds_threshold,
             "benchmark_pct": round(self.benchmark_pct, 4) if self.benchmark_pct is not None else None,
+            "pct_change": round(self.pct_change, 2) if self.pct_change is not None else None,
+            "change_band": self.change_band,
         }
 
 
@@ -143,6 +170,12 @@ class ExpenseCategoryReport:
             "prior_available": self.prior_available,
             "materiality_threshold": round(self.materiality_threshold, 2),
             "category_count": self.category_count,
+            # Sprint 887: the thresholds behind change_band, shown wherever the band is.
+            "change_thresholds": {
+                "pct_both": CHANGE_PCT_BOTH,
+                "pct_either": CHANGE_PCT_EITHER,
+                "materiality": round(self.materiality_threshold, 2),
+            },
         }
 
 
@@ -271,6 +304,9 @@ def compute_expense_categories(
                     cat.prior_pct_of_revenue = prior_amt / prior_revenue * 100
                 cat.dollar_change = amount - prior_dec
                 cat.exceeds_threshold = abs(amount - prior_dec) > materiality_threshold_dec
+                if abs(prior_dec) > safe_decimal(NEAR_ZERO):
+                    cat.pct_change = float((amount - prior_dec) / prior_dec * 100)
+                cat.change_band = change_band(cat.pct_change, cat.exceeds_threshold)
 
         categories.append(cat)
 

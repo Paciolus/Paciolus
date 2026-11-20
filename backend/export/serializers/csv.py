@@ -10,6 +10,7 @@ expense_category, and accrual_completeness — all the "diagnostic" CSV flavors.
 from collections import Counter
 from io import StringIO
 
+from expense_category_engine import CHANGE_BAND_LABELS
 from shared.export_schemas import (
     AccrualCompletenessCSVInput,
     ExpenseCategoryCSVInput,
@@ -283,6 +284,16 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
     writer.writerow(["Prior Period Data", "Yes" if ec_input.prior_available else "No"])
     writer.writerow(["Materiality Threshold", number_cell(ec_input.materiality_threshold, ".2f")])
     writer.writerow(["Active Categories", ec_input.category_count])
+    # Sprint 887: the thresholds behind the Change Band column, as on screen and in the memo.
+    thresholds = ec_input.change_thresholds or {}
+    if thresholds:
+        writer.writerow(
+            [
+                "Change Band Thresholds",
+                f"{thresholds.get('pct_either', 10):.0f}% and {thresholds.get('pct_both', 20):.0f}% change "
+                "(Paciolus defaults); materiality as above",
+            ]
+        )
     writer.writerow([])
 
     # Category breakdown
@@ -292,7 +303,18 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
 
     if has_prior:
         writer.writerow(["CATEGORY BREAKDOWN"])
-        writer.writerow(["Category", "Amount", "% of Revenue", "Prior Amount", "Dollar Change", "Exceeds Materiality"])
+        writer.writerow(
+            [
+                "Category",
+                "Amount",
+                "% of Revenue",
+                "Prior Amount",
+                "Dollar Change",
+                "% Change",
+                "Exceeds Materiality",
+                "Change Band",
+            ]
+        )
     else:
         writer.writerow(["CATEGORY BREAKDOWN"])
         writer.writerow(["Category", "Amount", "% of Revenue"])
@@ -307,6 +329,8 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
                 prior_amt = c.get("prior_amount")
                 dollar_change = c.get("dollar_change")
                 exceeds = c.get("exceeds_threshold", False)
+                pct_change = c.get("pct_change")
+                band = c.get("change_band")
                 writer.writerow(
                     [
                         sanitize_csv_value(c.get("label", "")),
@@ -314,7 +338,9 @@ def serialize_expense_category_csv(ec_input: ExpenseCategoryCSVInput) -> bytes:
                         pct_str,
                         number_cell(prior_amt, ".2f") if prior_amt is not None else "N/A",
                         number_cell(dollar_change, ".2f") if dollar_change is not None else "N/A",
+                        number_cell(pct_change, ".2f", "%") if pct_change is not None else "N/A",
                         "Yes" if exceeds else "No",
+                        CHANGE_BAND_LABELS.get(band, "N/A") if band else "N/A",
                     ]
                 )
             else:

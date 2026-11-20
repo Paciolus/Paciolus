@@ -12007,6 +12007,18 @@
             "title": "Category Count",
             "type": "integer"
           },
+          "change_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Thresholds"
+          },
           "filename": {
             "default": "expense_category",
             "title": "Filename",
@@ -12059,6 +12071,22 @@
             ],
             "title": "Benchmark Pct"
           },
+          "change_band": {
+            "anyOf": [
+              {
+                "enum": [
+                  "both",
+                  "either",
+                  "neither"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Band"
+          },
           "dollar_change": {
             "anyOf": [
               {
@@ -12082,6 +12110,17 @@
           "label": {
             "title": "Label",
             "type": "string"
+          },
+          "pct_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pct Change"
           },
           "pct_of_revenue": {
             "anyOf": [
@@ -12138,6 +12177,18 @@
             "default": 0,
             "title": "Category Count",
             "type": "integer"
+          },
+          "change_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Thresholds"
           },
           "client_id": {
             "anyOf": [
@@ -12304,6 +12355,16 @@
             "title": "Category Count",
             "type": "integer"
           },
+          "change_thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExpenseChangeThresholdsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "materiality_threshold": {
             "title": "Materiality Threshold",
             "type": "number"
@@ -12335,6 +12396,30 @@
           "category_count"
         ],
         "title": "ExpenseCategoryReportResponse",
+        "type": "object"
+      },
+      "ExpenseChangeThresholdsResponse": {
+        "description": "The thresholds behind change_band (Paciolus defaults + the run's materiality).",
+        "properties": {
+          "materiality": {
+            "title": "Materiality",
+            "type": "number"
+          },
+          "pct_both": {
+            "title": "Pct Both",
+            "type": "number"
+          },
+          "pct_either": {
+            "title": "Pct Either",
+            "type": "number"
+          }
+        },
+        "required": [
+          "pct_both",
+          "pct_either",
+          "materiality"
+        ],
+        "title": "ExpenseChangeThresholdsResponse",
         "type": "object"
       },
       "ExportShareCreateResponse": {

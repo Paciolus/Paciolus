@@ -624,6 +624,8 @@ class ExpenseCategoryMemoInput(WorkpaperMetadata):
     prior_available: bool = False
     materiality_threshold: float = 0.0
     category_count: int = 0
+    # Sprint 887: the thresholds behind each category's change_band (absent → not printed).
+    change_thresholds: Optional[dict] = None
     filename: str = "expense_category"
 
 
@@ -637,6 +639,8 @@ class ExpenseCategoryCSVInput(BaseModel):
     prior_available: bool = False
     materiality_threshold: float = 0.0
     category_count: int = 0
+    # Sprint 887: the thresholds behind each category's change_band (absent → not printed).
+    change_thresholds: Optional[dict] = None
     filename: str = "expense_category"
 
 
