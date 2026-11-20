@@ -75,32 +75,6 @@ _FA_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
     tool_domain="fixed_asset_testing",
-    risk_assessments={
-        "low": (
-            "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&amp;E data returned LOW flag density across the automated tests. "
-            "No fixed asset anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&amp;E data returned ELEVATED flag density across the automated tests. "
-            "Select flagged assets should be reviewed for proper capitalization treatment "
-            "and supporting documentation."
-        ),
-        "moderate": (
-            "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&amp;E data returned MODERATE flag density across the automated tests. "
-            "Flagged assets warrant focused review as PP&amp;E anomaly indicators, "
-            "particularly depreciation estimates and useful life assumptions."
-        ),
-        "high": (
-            "Based on the automated fixed asset register analysis procedures applied, "
-            "the PP&amp;E data returned HIGH flag density across the automated tests. "
-            "Significant fixed asset anomaly indicators were detected that require "
-            "detailed investigation. The engagement team should evaluate whether additional "
-            "PP&amp;E procedures are appropriate per ISA 540 and PCAOB AS 2501."
-        ),
-    },
 )
 
 _MAX_DETAIL_ROWS = 20

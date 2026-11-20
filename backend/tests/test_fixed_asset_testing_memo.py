@@ -429,33 +429,19 @@ class TestFATestDescriptions:
 class TestPPEAmpersandRendering:
     """Sprint 502 BUG-01: PP&E must render correctly in ReportLab."""
 
-    def test_risk_assessments_use_xml_escaped_ampersand(self):
-        """All risk_assessments must use &amp; not raw & for ReportLab XML."""
-        import inspect
+    def test_no_markup_escape_shows_in_the_memo(self):
+        """Sprint 887: the per-tier texts that carried "PP&amp;E" are gone (OUT-13); the
+        rendered memo must still never show an escape sequence as text."""
+        import io
 
-        source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
-        # Should have PP&amp;E (XML escaped)
-        assert "PP&amp;E" in source
-        # Should NOT have raw PP&E (un-escaped) — check risk_assessments only
-        # The test descriptions use normal Python strings not sent to Paragraph,
-        # but risk_assessments are. We check by looking at the _FA_CONFIG block.
-        lines = source.split("\n")
-        in_risk = False
-        for line in lines:
-            if "risk_assessments" in line:
-                in_risk = True
-            if in_risk and "PP&E" in line and "PP&amp;E" not in line:
-                pytest.fail(f"Raw PP&E found in risk_assessments: {line.strip()}")
-            if in_risk and line.strip() == "},":
-                in_risk = False
+        from pypdf import PdfReader
 
-    def test_all_four_risk_tiers_have_ppe(self):
-        """Each risk tier conclusion references PP&E."""
-        import inspect
-
-        source = inspect.getsource(inspect.getmodule(generate_fixed_asset_testing_memo))
-        for tier in ["low", "elevated", "moderate", "high"]:
-            assert f'"{tier}"' in source
+        pdf = generate_fixed_asset_testing_memo(
+            {"composite_score": {"score": 0.0, "risk_tier": "low"}, "test_results": [], "data_quality": {}},
+            filename="fa",
+        )
+        text = " ".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(pdf)).pages)
+        assert "&amp;" not in text
 
 
 # =============================================================================

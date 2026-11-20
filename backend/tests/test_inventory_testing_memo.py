@@ -295,12 +295,13 @@ class TestInventoryGuardrails:
             lower = desc.lower()
             assert "valuation testing" not in lower, f"GUARDRAIL VIOLATION: '{key}' uses 'valuation testing'"
 
-    def test_memo_generator_references_isa_501(self):
-        """Memo source code must pass ISA 501 reference to the PDF builder."""
+    def test_memo_no_longer_directs_a_count(self):
+        """Sprint 887 (OUT-13): ISA 501 was cited only in the High-tier text directing
+        "physical inventory counting"; the summary no longer directs procedures."""
         import inspect
 
         source = inspect.getsource(inspect.getmodule(generate_inventory_testing_memo))
-        assert "ISA 501" in source, "Memo must reference ISA 501"
+        assert "physical inventory counting" not in source
 
     def test_memo_generator_references_isa_500(self):
         """Memo source code must pass ISA 500 reference to the PDF builder."""

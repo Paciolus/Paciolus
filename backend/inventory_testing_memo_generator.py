@@ -51,33 +51,6 @@ _INV_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
     tool_domain="inventory_testing",
-    risk_assessments={
-        "low": (
-            "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data returned LOW flag density across the automated tests. "
-            "No inventory anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data returned ELEVATED flag density across the automated tests. "
-            "Select flagged items should be reviewed for proper valuation treatment "
-            "and supporting documentation."
-        ),
-        "moderate": (
-            "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data returned MODERATE flag density across the automated tests. "
-            "Flagged items warrant focused review as inventory anomaly indicators, "
-            "particularly slow-moving items and unit cost outliers."
-        ),
-        "high": (
-            "Based on the automated inventory register analysis procedures applied, "
-            "the inventory data returned HIGH flag density across the automated tests. "
-            "Significant inventory anomaly indicators were detected that require "
-            "detailed investigation. The engagement team should evaluate whether additional "
-            "inventory procedures are appropriate, such as attendance at physical inventory "
-            "counting (ISA 501) and testing of NRV estimates (PCAOB AS 2501)."
-        ),
-    },
 )
 
 

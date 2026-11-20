@@ -64,29 +64,6 @@ _JE_CONFIG = TestingMemoConfig(
         "(PCAOB AS 2401: Consideration of Fraud in a Financial Statement Audit, "
         "ISA 240: The Auditor's Responsibilities Relating to Fraud):"
     ),
-    risk_assessments={
-        "low": (
-            "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract returned LOW flag density across the automated tests. "
-            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract returned ELEVATED flag density across the automated tests. "
-            "Select flagged entries should be reviewed for proper authorization and documentation."
-        ),
-        "moderate": (
-            "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract returned MODERATE flag density across the automated tests. "
-            "Flagged entries warrant focused review, particularly high-severity items."
-        ),
-        "high": (
-            "Based on the automated journal entry testing procedures applied, "
-            "the General Ledger extract returned HIGH flag density across the automated tests. "
-            "Significant anomalies were detected that require detailed investigation. "
-            "The engagement team should evaluate whether additional procedures are appropriate."
-        ),
-    },
     isa_reference="PCAOB AS 2401 (Fraud) and ISA 240 (Fraud)",
     tool_domain="journal_entry_testing",
 )

@@ -130,32 +130,6 @@ _REVENUE_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 240 (presumed fraud risk in revenue recognition) and ISA 500",
     tool_domain="revenue_testing",
-    risk_assessments={
-        "low": (
-            "Based on the automated revenue testing procedures applied, "
-            "the revenue GL extract returned LOW flag density across the automated tests. "
-            "No revenue recognition anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated revenue testing procedures applied, "
-            "the revenue GL extract returned ELEVATED flag density across the automated tests. "
-            "Select flagged entries should be reviewed for proper revenue recognition treatment "
-            "and supporting documentation."
-        ),
-        "moderate": (
-            "Based on the automated revenue testing procedures applied, "
-            "the revenue GL extract returned MODERATE flag density across the automated tests. "
-            "Flagged entries warrant focused review as revenue recognition anomaly indicators, "
-            "particularly year-end concentration and cut-off items."
-        ),
-        "high": (
-            "Based on the automated revenue testing procedures applied, "
-            "the revenue GL extract returned HIGH flag density across the automated tests. "
-            "Significant revenue recognition anomaly indicators were detected that require "
-            "detailed investigation. The engagement team should evaluate whether additional "
-            "revenue procedures are appropriate per ISA 240 and PCAOB AS 2401."
-        ),
-    },
 )
 
 _MAX_DETAIL_ROWS = 20

@@ -57,29 +57,6 @@ _PAYROLL_CONFIG = TestingMemoConfig(
         "(ISA 240: Auditor's Responsibilities Relating to Fraud, "
         "ISA 500: Audit Evidence, PCAOB AS 2401: Consideration of Fraud):"
     ),
-    risk_assessments={
-        "low": (
-            "Based on the automated payroll testing procedures applied, "
-            "the payroll register returned LOW flag density across the automated tests. "
-            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated payroll testing procedures applied, "
-            "the payroll register returned ELEVATED flag density across the automated tests. "
-            "Select flagged entries should be reviewed for proper authorization and documentation."
-        ),
-        "moderate": (
-            "Based on the automated payroll testing procedures applied, "
-            "the payroll register returned MODERATE flag density across the automated tests. "
-            "Flagged entries warrant focused review, particularly ghost employee indicators."
-        ),
-        "high": (
-            "Based on the automated payroll testing procedures applied, "
-            "the payroll register returned HIGH flag density across the automated tests. "
-            "Significant anomalies were detected that require detailed investigation. "
-            "The engagement team should evaluate whether additional payroll procedures are appropriate."
-        ),
-    },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
     tool_domain="payroll_testing",
 )

@@ -62,7 +62,6 @@ class TestingMemoConfig:
     domain: str  # "AP payment testing" (disclaimer)
     test_descriptions: dict[str, str]  # test_key -> description
     methodology_intro: str  # intro paragraph for methodology section
-    risk_assessments: dict[str, str]  # {low, elevated, moderate, high} -> conclusion text
     isa_reference: str = "applicable professional standards"
     tool_domain: str = ""  # key into authoritative_language YAML (e.g., "journal_entry_testing")
     # Sprint 886: what one flagged row is ("payment"), for "Flags Raised (one per test per payment)".
@@ -128,6 +127,52 @@ def _resolve_test_key(finding_text: str, test_results: list[dict]) -> str:
             best_key = key
 
     return best_key if best_score > 0 else ""
+
+
+def _plural(unit: str) -> str:
+    return unit[:-1] + "ies" if unit.endswith("y") else unit + "s"
+
+
+def build_testing_results_summary(composite: dict[str, Any], test_results: list[dict], flag_unit: str) -> str:
+    """The Summary of Results text: score, tier and what the executed tests flagged (Sprint 887 / OUT-13).
+
+    "No exceptions flagged" is printed only when every executed test flagged
+    nothing and the composite carries no flagged item and no flag. Otherwise the
+    counts are given beside the tier, Low included. Nothing is said about whether
+    further procedures are needed: the auditor evaluates the results.
+    """
+    units = _plural(flag_unit)
+    parts: list[str] = []
+    tier = str(composite.get("risk_tier") or "").replace("_", " ").upper()
+    score = composite.get("score")
+    if tier and score is not None:
+        parts.append(
+            f"Composite diagnostic score: {float(score):.1f} of 100 ({tier} flag-density indicator; Section III)."
+        )
+    else:
+        parts.append("Composite diagnostic score: Not available.")
+
+    executed = [t for t in test_results if not t.get("skipped")]
+    skipped = len(test_results) - len(executed)
+    if not executed:
+        parts.append("Test results: Not available.")
+    else:
+        flagging = [t for t in executed if (t.get("entries_flagged") or 0) > 0]
+        sev = composite.get("flags_by_severity") or {}
+        flags = sum(int(v or 0) for v in sev.values())
+        distinct = int(composite.get("total_flagged") or 0)
+        if not flagging and distinct == 0 and flags == 0:
+            parts.append(f"No exceptions flagged: the {len(executed)} tests executed flagged no {units}.")
+        else:
+            parts.append(
+                f"{len(flagging)} of {len(executed)} tests executed flagged {distinct:,} distinct {units} "
+                f"({flags:,} flags: {int(sev.get('high') or 0):,} high, {int(sev.get('medium') or 0):,} medium, "
+                f"{int(sev.get('low') or 0):,} low severity)."
+            )
+        if skipped:
+            parts.append(f"{skipped} {'test was' if skipped == 1 else 'tests were'} not executed (Section II).")
+    parts.append("The auditor evaluates these results.")
+    return " ".join(parts)
 
 
 def generate_testing_memo(
@@ -331,18 +376,10 @@ def generate_testing_memo(
         story.append(Paragraph(f"{user_text(section_label)}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        risk_tier = composite.get("risk_tier", "low")
-        assessment = config.risk_assessments.get(risk_tier)
-        if assessment is None:
-            # Dynamic fallback: generate assessment from actual risk tier rather
-            # than silently falling back to "low" (BUG-002 fix).
-            tier_label = risk_tier.replace("_", " ").title()
-            assessment = (
-                f"The automated tests returned a {tier_label} flag-density indicator. "
-                f"This is not a risk assessment. The practitioner should apply professional "
-                f"judgment to determine whether additional procedures are warranted."
-            )
-
+        # Sprint 887 (OUT-13): one summary built from the results, for every tier. The
+        # per-tier texts chose "no anomalies were detected" for Low even when items were
+        # flagged, and told the auditor what to review or investigate for the others.
+        assessment = user_text(build_testing_results_summary(composite, test_results, config.flag_unit))
         story.append(Paragraph(assessment, styles["MemoBody"]))
         story.append(Spacer(1, 12))
 

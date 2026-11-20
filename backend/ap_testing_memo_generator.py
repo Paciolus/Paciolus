@@ -63,29 +63,6 @@ _AP_CONFIG = TestingMemoConfig(
         "The following automated tests were applied to the AP payment register "
         "with reference to professional auditing standards (ISA 240, ISA 500, PCAOB AS 2401):"
     ),
-    risk_assessments={
-        "low": (
-            "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register returned LOW flag density across the automated tests. "
-            "No anomalies exceeding the configured thresholds were detected by the automated tests applied."
-        ),
-        "elevated": (
-            "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register returned ELEVATED flag density across the automated tests. "
-            "Select flagged payments should be reviewed for proper authorization and documentation."
-        ),
-        "moderate": (
-            "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register returned MODERATE flag density across the automated tests. "
-            "Flagged payments warrant focused review, particularly high-severity items."
-        ),
-        "high": (
-            "Based on the automated AP payment testing procedures applied, "
-            "the AP payment register returned HIGH flag density across the automated tests. "
-            "Significant anomalies were detected that require detailed investigation. "
-            "The engagement team should evaluate whether additional procedures are appropriate."
-        ),
-    },
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
     tool_domain="ap_payment_testing",
 )

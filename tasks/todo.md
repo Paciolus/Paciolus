@@ -664,7 +664,16 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       ("Perform additional completeness procedures", "Inquire … regarding completeness") are suggestions under
       "Suggested Procedure". Tests: `test_sprint887_accrual_threshold_wording.py` (4, all failed first — real
       `/audit/accrual-completeness` above/below/entered/absent → memo).
-- [ ] 12C / OUT-13 — testing memo summaries: "no exceptions flagged" only when nothing was flagged; counts otherwise
+- [x] **12C / OUT-13 — testing memo summaries agree with what the tests flagged.** The seven memos chose a per-tier text
+      (`risk_assessments`); Low said "No anomalies exceeding the configured thresholds were detected" even with flags,
+      the others said what to review or investigate. All 28 texts removed; `build_testing_results_summary` (shared
+      template) prints the score and tier, "k of n tests executed flagged d distinct <units> (f flags: h high, m
+      medium, l low severity)" — or "No exceptions flagged: the n tests executed flagged no <units>." only when no
+      executed test flagged anything — skipped tests, then "The auditor evaluates these results." ISA 501 was cited
+      only inside the inventory High text ("physical inventory counting"): registry usage updated. Tests:
+      `test_sprint887_testing_memo_summary.py` (19, all failed first — 7 tools × Low with/without flags, other tiers,
+      results absent, a real AP run); three old tests that pinned the tier texts replaced. Memo snapshot and Sprint
+      819 `route_testing_exports` re-recorded (summary wording and page reflow only).
 - [ ] 12D / OUT-17 — explicit tool/test ids on flags; procedure library keyed by them; stable selection; PR-T12/T13
 - [ ] 12E / OUT-20 — anomaly summary: latest successful run, real flag counts, four states; worksheet blank by default
 - [ ] 12F / OUT-21 — Follow-Up Item Points: every band reachable, weights and edges printed

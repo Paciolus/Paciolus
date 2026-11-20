@@ -146,7 +146,8 @@ STANDARDS: Final[tuple[Standard, ...]] = (
         body="ISA",
         code="ISA 501",
         title="Audit Evidence — Specific Considerations for Selected Items",
-        usage=("inventory memo — attendance at counting named as an additional procedure", "sampling memo"),
+        # Sprint 887: the inventory memo cited it only inside a High-tier directive (removed, OUT-13).
+        usage=("sampling memo",),
     ),
     Standard(
         body="ISA",

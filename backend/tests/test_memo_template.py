@@ -43,12 +43,6 @@ def _make_config(**overrides: Any) -> TestingMemoConfig:
             "test_b": "Description B",
         },
         methodology_intro="Automated tests were applied per ISA 999:",
-        risk_assessments={
-            "low": "LOW risk assessment text.",
-            "elevated": "ELEVATED risk assessment text.",
-            "moderate": "MODERATE risk assessment text.",
-            "high": "HIGH risk assessment text.",
-        },
         isa_reference="ISA 999",
     )
     defaults.update(overrides)
@@ -139,13 +133,12 @@ class TestTestingMemoConfig:
             domain="d",
             test_descriptions={},
             methodology_intro="M",
-            risk_assessments={"low": "", "elevated": "", "moderate": "", "high": ""},
         )
         assert config.isa_reference == "applicable professional standards"
 
-    def test_config_risk_assessments_keys(self):
-        config = _make_config()
-        assert set(config.risk_assessments.keys()) == {"low", "elevated", "moderate", "high"}
+    def test_config_has_no_per_tier_summary_texts(self):
+        """Sprint 887 (OUT-13): the summary is built from the results, not chosen by tier."""
+        assert not hasattr(_make_config(), "risk_assessments")
 
 
 # =============================================================================
