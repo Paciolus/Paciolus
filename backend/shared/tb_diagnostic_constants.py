@@ -358,17 +358,9 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False, rota
         return primary
     alts = SUGGESTED_PROCEDURES_ALT.get(proc_key, [])
     if not alts:
-        # No explicit alternates — apply deterministic prefix variation so
-        # consecutive reports do not display identical text (BUG-001 fix).
-        if rotation_index == 0:
-            return primary
-        prefixes = [
-            "As a priority follow-up action, ",
-            "Building on the initial assessment, ",
-            "To further substantiate the finding, ",
-        ]
-        prefix = prefixes[(rotation_index - 1) % len(prefixes)]
-        return prefix + primary[0].lower() + primary[1:]
+        # Sprint 887 (OUT-30): no prefix variation ("To further substantiate the
+        # finding, ..."); a test without alternates always reads the same.
+        return primary
     all_procedures = [primary, *alts]
     return all_procedures[rotation_index % len(all_procedures)]
 
@@ -544,11 +536,11 @@ def compute_tb_diagnostic_score(
                     elif at == "intercompany_imbalance":
                         remainder_types.add("intercompany gaps")
                     else:
-                        remainder_types.add("minor findings")
-                type_desc = ", ".join(sorted(remainder_types)) if remainder_types else "additional findings"
-                factors.append((f"{len(remainder)} additional findings ({type_desc})", remainder_pts))
+                        remainder_types.add("minor items flagged")
+                type_desc = ", ".join(sorted(remainder_types)) if remainder_types else "additional items flagged"
+                factors.append((f"{len(remainder)} additional items flagged ({type_desc})", remainder_pts))
         else:
-            factors.append((f"Material exceptions ({material_count} findings)", material_pts))
+            factors.append((f"Material exceptions ({material_count} items flagged)", material_pts))
     score += material_pts
 
     # Minor observations: aggregate (each contributes 2 pts, below named threshold)
@@ -612,7 +604,7 @@ def compute_tb_diagnostic_score(
             elif running + pts > capped:
                 # Partially contributes
                 actual = capped - running
-                if "additional findings" in name:
+                if "additional items flagged" in name:
                     reconciled.append((f"{name} (to cap)", actual))
                 else:
                     reconciled.append((name, actual))

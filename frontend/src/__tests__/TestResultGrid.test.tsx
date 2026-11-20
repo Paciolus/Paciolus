@@ -80,7 +80,7 @@ describe('TestResultGrid', () => {
     expect(screen.getByText('12')).toBeInTheDocument()
   })
 
-  it('shows Clean for zero flagged entries', () => {
+  it('shows "No exceptions flagged" for zero flagged entries (Sprint 887)', () => {
     const results = [makeResult({ entries_flagged: 0, flag_rate: 0 })]
     render(
       <TestResultGrid
@@ -90,7 +90,7 @@ describe('TestResultGrid', () => {
         tierSections={tierSections}
       />
     )
-    expect(screen.getByText('Clean')).toBeInTheDocument()
+    expect(screen.getByText('No exceptions flagged')).toBeInTheDocument()
   })
 
   it('does not render empty tier sections', () => {

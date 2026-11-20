@@ -690,7 +690,7 @@ _DOWNSTREAM_USE_BY_ROLE: dict[str, str] = {
     "Department": "Not used in current analysis",
     "Cost Center": "Not used in current analysis",
     "Currency": "Not used in current analysis",
-    "Balance": "Net balance column — verified against debit/credit pair",
+    "Balance": "Net balance column — compared with the debit/credit pair",
     "Description": "Not used in current analysis",
     "Memo": "Not used in current analysis",
     "Reference": "Not used in current analysis",

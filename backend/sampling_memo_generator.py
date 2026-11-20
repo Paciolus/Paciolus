@@ -1588,7 +1588,7 @@ def _build_uel_derivation(
 
     Sprint 825: derives each direction's limit separately when the result
     carries the understatement bound (S6), and shows the random method's basic
-    precision formula, which is non-zero for a clean sample (S3).
+    precision formula, which is non-zero for a sample with no misstatement found (S3).
     """
     errors = evaluation_result.get("errors", [])
     # Sprint 805 (A-1): the engagement's own confidence level. This block used to
@@ -1645,8 +1645,8 @@ def _build_uel_derivation(
         story.append(
             Paragraph(
                 "<i>Sampling risk remains when no misstatement is found (ISA 530; PCAOB AS 2315), "
-                "so a clean sample still carries an upper error limit, and a smaller clean sample "
-                "carries a larger one. The AICPA Audit Sampling Guide's basic precision for a "
+                "so a sample with no misstatement found still carries an upper error limit, and a smaller "
+                "such sample carries a larger one. The AICPA Audit Sampling Guide's basic precision for a "
                 "monetary-unit sample is the zero-misstatement confidence factor multiplied by the "
                 "sampling interval; a simple random sample has no interval, so the average value "
                 "per sampled item stands in for it. That adaptation is a Paciolus convention, not "

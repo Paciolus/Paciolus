@@ -726,7 +726,20 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       block, the TB/financial-statement PDF section and both Excel sign-offs filled today's date when none was
       supplied, the reviewer's included — now the supplied date beside the preparer only, blank otherwise. Tests:
       `test_sprint887_signoff_off_by_default.py` (10; 9 failed first). Memo snapshot re-recorded (block removed).
-- [ ] 12I / OUT-30 — leftover vocabulary + a scanning test
+- [x] **12I / OUT-30 — leftover vocabulary, and a scan that keeps it out.** TestResultGrid "Clean" → "No exceptions
+      flagged"; BenfordChart "Pre-check not passed" → "Requirements for the analysis not met"; population memo
+      "Prechecks not passed." → "The requirements for the analysis were not met."; sampling memo "clean sample" → "a
+      sample with no misstatement found"; preflight "verified against debit/credit pair" → "compared with the
+      debit/credit pair"; TB diagnostic factors "additional/minor findings", "Material exceptions (n findings)" →
+      "items flagged"; all 163 procedure and benchmark texts in `follow_up_procedures.py` open "The auditor may
+      consider" with no Obtain/Verify/Investigate/must (163-row old/new table: `reports/sprint-887-wording.md`); the
+      TB diagnostic copy of the "To further substantiate the finding," prefix rotation removed. Tests:
+      `test_memo_banned_phrases.py` now also bans clean / (not) passed / verified / finding(s) and scans the procedure
+      library, TB diagnostic constants, preflight labels and the anomaly summary, plus a rule that every suggestion
+      opens "The auditor may consider" (failed first on 6 files + the rule; "Passed AJE", the audit term, allowed);
+      Jest `resultVocabulary.test.ts` scans 23 result-component folders (failed first on exactly the two strings).
+      **Not changed (outside the brief, follow-up):** the TB diagnostic and accrual/expense engines' own suggested
+      procedures are still imperative.
 - [ ] 12J / OUT-31 — ASC 606-10-32 title
 - [ ] 12K / OUT-32 — GASB 101 replaces GASB 16 by period
 - [ ] 12L — expense category: one computation and the same thresholds on screen, CSV and PDF

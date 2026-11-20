@@ -128,7 +128,7 @@ function TestResultCard<TFlagged extends FlaggedEntryBase>({
             ) : (
               <>
                 <span className="type-num text-sage-600">0</span>
-                <p className="text-sage-600 text-[10px] font-sans">Clean</p>
+                <p className="text-sage-600 text-[10px] font-sans">No exceptions flagged</p>
               </>
             )}
           </div>

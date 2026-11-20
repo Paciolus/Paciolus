@@ -520,7 +520,7 @@ def generate_population_profile_memo(
                         )
                     )
             else:
-                precheck_msg = benford.get("precheck_message", "Prechecks not passed.")
+                precheck_msg = benford.get("precheck_message", "The requirements for the analysis were not met.")
                 story.append(
                     Paragraph(
                         f"<i>Benford analysis not performed: {user_text(precheck_msg)}</i>",

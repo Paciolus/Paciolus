@@ -49,7 +49,7 @@ export function BenfordChart({ benford }: BenfordChartProps) {
             <span className="text-content-tertiary text-sm">i</span>
           </div>
           <div>
-            <p className="font-sans text-sm text-content-secondary">Pre-check not passed</p>
+            <p className="font-sans text-sm text-content-secondary">Requirements for the analysis not met</p>
             <p className="font-sans text-xs text-content-tertiary mt-0.5">
               {benford.precheck_message}
             </p>

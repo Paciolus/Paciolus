@@ -6,7 +6,8 @@ engagement ``ToolName`` value; the test is the ``test_key`` its engine emits
 (Sprint 887 / OUT-17: the library was keyed by names the engines did not emit,
 shared keys across tools, and the memo guessed the test from the flag's text).
 These are suggestions, not requirements; the auditor exercises professional
-judgment per ISA 330.
+judgment per ISA 330. Each opens "The auditor may consider" and gives no command
+(Sprint 887 / OUT-30).
 
 Selection is stable: a test with several suggestions gets the one chosen by a
 CRC-32 of (seed, tool, test) — the same in every process (``hash()`` was not)
@@ -18,336 +19,368 @@ ENHANCE-01: Suggested Follow-Up Procedures.
 import zlib
 
 # tool -> test_key -> suggestions (the first is the primary; the others are alternates)
+
 PROCEDURES: dict[str, dict[str, tuple[str, ...]]] = {
     "journal_entry_testing": {
         "unbalanced_entries": (
             (
-                "Obtain preparer explanation for each unbalanced entry. Confirm whether the difference represents a "
-                "rounding policy or requires a correcting journal entry. Document resolution in the engagement file."
+                "The auditor may consider obtaining the preparer's explanation for each unbalanced entry, "
+                "establishing whether the difference reflects a rounding policy or calls for a correcting journal"
+                " entry, and documenting the resolution in the engagement file."
             ),
             (
-                "Recalculate debit/credit totals from source documents for each unbalanced entry. If differences "
-                "persist, examine whether the entry was part of an automated posting split across periods or cost "
-                "centers. Document the recalculation and resolution."
+                "The auditor may consider recalculating debit/credit totals from source documents for each "
+                "unbalanced entry and, where differences persist, examining whether the entry was part of an "
+                "automated posting split across periods or cost centers, and documenting the recalculation and "
+                "resolution."
             ),
         ),
         "missing_fields": (
             (
-                "Request the complete GL extract with all required fields populated. Trace affected entries to source"
-                " documents to confirm the transactions are complete and properly recorded."
+                "The auditor may consider requesting the complete GL extract with all expected fields populated "
+                "and tracing affected entries to source documents to establish whether the transactions are "
+                "complete and properly recorded."
             ),
             (
-                "Evaluate the impact of missing field data on the completeness of audit evidence. If the GL extract "
-                "cannot be remediated, assess whether alternative procedures (e.g., vouching to source documents) can"
-                " compensate for the data gap."
+                "The auditor may consider evaluating the impact of missing field data on the completeness of "
+                "audit evidence. Where the GL extract cannot be remediated, it may also consider assessing "
+                "whether alternative procedures (e.g., vouching to source documents) can compensate for the data "
+                "gap."
             ),
         ),
         "duplicate_entries": (
             (
-                "Inspect each duplicate entry pair and confirm whether the duplication represents a legitimate "
-                "correction, a system posting error, or a potentially fraudulent duplicate transaction."
+                "The auditor may consider inspecting each duplicate entry pair and establishing whether the "
+                "duplication represents a legitimate correction, a system posting error, or a potentially "
+                "fraudulent duplicate transaction."
             ),
             (
-                "Trace each duplicate entry to the originating system or preparer. Compare timestamps, user IDs, and "
-                "posting channels to determine whether the duplication is systemic (e.g., interface re-run) or "
-                "manual. Quantify the net impact on affected accounts."
+                "The auditor may consider tracing each duplicate entry to the originating system or preparer, "
+                "comparing timestamps, user IDs, and posting channels to establish whether the duplication is "
+                "systemic (e.g., interface re-run) or manual, and quantifying the net impact on affected "
+                "accounts."
             ),
         ),
         "unusual_amounts": (
             (
-                "Obtain supporting documentation for statistically unusual amounts. Confirm that amounts reflect "
-                "actual invoiced or contracted values and were not manually estimated."
+                "The auditor may consider obtaining supporting documentation for statistically unusual amounts "
+                "and checking whether amounts reflect actual invoiced or contracted values and were not manually "
+                "estimated."
             ),
             (
-                "Perform a stratified analysis of flagged amounts by account and preparer. Identify whether unusual "
-                "amounts cluster around specific accounts or users, which may indicate a pattern of estimation or "
-                "override requiring management inquiry."
+                "The auditor may consider performing a stratified analysis of flagged amounts by account and "
+                "preparer and identifying whether unusual amounts cluster around specific accounts or users, "
+                "which may indicate a pattern of estimation or override that may call for management inquiry."
             ),
         ),
         "benford_law": (
             (
-                "Evaluate the most deviated digits for patterns of manual entry or estimation; consider targeted "
-                "sampling of entries starting with those digits."
+                "The auditor may consider evaluating the most deviated digits for patterns of manual entry or "
+                "estimation and targeted sampling of entries starting with those digits."
             ),
             (
-                "Select a judgmental sample of entries with the most deviated leading digits. Compare each sampled "
-                "entry to source documents and assess whether the deviation pattern suggests systematic rounding, "
-                "threshold-splitting, or estimation."
+                "The auditor may consider selecting a judgmental sample of entries with the most deviated leading"
+                " digits, comparing each sampled entry to source documents, and assessing whether the deviation "
+                "pattern suggests systematic rounding, threshold-splitting, or estimation."
             ),
         ),
         "weekend_postings": (
             (
-                "Verify weekend-posted entries were authorized and have valid business justification. Review system "
-                "access logs if available to confirm posting was performed by an authorized user."
+                "The auditor may consider checking whether weekend-posted entries were authorized and have valid "
+                "business justification, and reviewing system access logs if available to establish whether "
+                "posting was performed by an authorized user."
             ),
             (
-                "Review the entity's IT general controls for automated batch postings that may coincide with "
-                "weekends. Distinguish between automated system postings (lower risk) and manual weekend entries "
-                "(higher risk requiring individual authorization review)."
+                "The auditor may consider reviewing the entity's IT general controls for automated batch postings"
+                " that may coincide with weekends, distinguishing between automated system postings (lower risk) "
+                "and manual weekend entries (higher risk, for which an individual authorization review may be "
+                "appropriate)."
             ),
         ),
         "month_end_clustering": (
             (
-                "Evaluate whether month-end entries represent normal closing activity or potential earnings "
-                "management. Inquire of management regarding the business rationale for the concentration and perform"
-                " corroborating procedures on material month-end entries."
+                "The auditor may consider evaluating whether month-end entries represent normal closing activity "
+                "or potential earnings management, inquiring of management regarding the business rationale for "
+                "the concentration, and performing corroborating procedures on material month-end entries."
             ),
             (
-                "Compare month-end entry volume to prior-period closing patterns. If the current period shows a "
-                "statistically significant increase in month-end activity, perform targeted testing on the "
-                "incremental entries with particular focus on revenue recognition and expense accrual timing."
+                "The auditor may consider comparing month-end entry volume to prior-period closing patterns. "
+                "Where the current period shows a statistically significant increase in month-end activity, the "
+                "auditor may consider performing targeted testing on the incremental entries with particular "
+                "focus on revenue recognition and expense accrual timing."
             ),
         ),
         "holiday_postings": (
             (
-                "For each holiday posting, obtain documentation supporting business necessity and confirm the entry "
-                "received proper authorization and supervisory review per the client's journal entry policy (ISA 240 "
-                "journal entry fraud risk indicator)."
+                "The auditor may consider obtaining, for each holiday posting, documentation supporting business "
+                "necessity and checking whether the entry received proper authorization and supervisory review "
+                "per the client's journal entry policy (ISA 240 journal entry fraud risk indicator)."
             ),
             (
-                "Cross-reference holiday entries to system access logs and the entity's authorized user list. Assess "
-                "whether the posting time and user credentials are consistent with expected business operations. "
-                "Escalate entries without valid business justification."
+                "The auditor may consider cross-referencing holiday entries to system access logs and the "
+                "entity's authorized user list, assessing whether the posting time and user credentials are "
+                "consistent with expected business operations, and escalating entries without valid business "
+                "justification."
             ),
         ),
         "round_amounts": (
             (
-                "Verify round-dollar entries against supporting documentation (invoices, contracts) to confirm "
-                "amounts are not estimates or placeholders."
+                "The auditor may consider comparing round-dollar entries against supporting documentation "
+                "(invoices, contracts) to establish whether amounts are estimates or placeholders."
             ),
             (
-                "Compare round-dollar entries to the entity's accrual schedule and standard journal entry templates. "
-                "Determine whether round amounts correlate with recurring accruals or represent ad-hoc estimates "
-                "requiring further support."
+                "The auditor may consider comparing round-dollar entries to the entity's accrual schedule and "
+                "standard journal entry templates and establishing whether round amounts correlate with recurring"
+                " accruals or represent ad-hoc estimates that may call for further support."
             ),
         ),
     },
     "ap_testing": {
         "exact_duplicate_payments": (
             (
-                "Pull original invoices and payment documentation for both duplicate payments. Confirm whether the "
-                "duplicate was identified and recovered. If not recovered, request vendor credit or initiate recovery"
-                " process. Document resolution."
+                "The auditor may consider pulling original invoices and payment documentation for both duplicate "
+                "payments and establishing whether the duplicate was identified and recovered. If not recovered, "
+                "it may also consider requesting a vendor credit or initiating the recovery process, and "
+                "documenting the resolution."
             ),
             (
-                "Confirm whether the entity's AP system has duplicate payment detection controls. For confirmed "
-                "duplicates, verify the recovery process: credit memo issued, offset applied, or refund received. If "
-                "no controls exist, document as a control finding."
+                "The auditor may consider establishing whether the entity's AP system has duplicate payment "
+                "detection controls and, for confirmed duplicates, checking the recovery process: credit memo "
+                "issued, offset applied, or refund received. Where no controls exist, it may also consider "
+                "documenting this as a potential control matter."
             ),
         ),
         "fuzzy_duplicate_payments": (
             (
-                "Inspect each fuzzy duplicate pair for business justification. Confirm whether the same-vendor same-"
-                "amount payments on different dates represent recurring legitimate charges or potential duplicate "
-                "disbursements."
+                "The auditor may consider inspecting each fuzzy duplicate pair for business justification and "
+                "establishing whether the same-vendor same-amount payments on different dates represent recurring"
+                " legitimate charges or potential duplicate disbursements."
             ),
             (
-                "Compare fuzzy duplicate pairs to the vendor's standard pricing schedule. Confirm whether recurring "
-                "same-amount payments reflect contracted service fees or indicate potential duplicate processing "
-                "requiring recovery."
+                "The auditor may consider comparing fuzzy duplicate pairs to the vendor's standard pricing "
+                "schedule and establishing whether recurring same-amount payments reflect contracted service fees"
+                " or potential duplicate processing that may call for recovery."
             ),
         ),
         "payment_before_invoice": (
             (
-                "Obtain management explanation for each prepayment. Confirm whether a prepayment arrangement was "
-                "authorized per AP policy and supported by a contract or purchase order. The absence of authorization"
-                " documentation may indicate a control gap that the engagement team should consider as part of their "
-                "professional assessment of the AP control environment."
+                "The auditor may consider obtaining management's explanation for each prepayment and establishing"
+                " whether a prepayment arrangement was authorized per AP policy and supported by a contract or "
+                "purchase order. The absence of authorization documentation may indicate a control gap that the "
+                "engagement team may consider as part of its professional assessment of the AP control "
+                "environment."
             ),
             (
-                "Evaluate whether pre-payment patterns correlate with specific vendors, buyers, or contract types. A "
-                "concentration of pre-payments with a single vendor may indicate non-arms-length transactions "
-                "requiring expanded procedures."
+                "The auditor may consider evaluating whether pre-payment patterns correlate with specific "
+                "vendors, buyers, or contract types. A concentration of pre-payments with a single vendor may "
+                "indicate non-arms-length transactions, in which case it may also consider expanded procedures."
             ),
         ),
         "just_below_threshold": (
             (
-                "Obtain approval documentation for each payment. Compare the approval threshold in the current AP "
-                "policy to the threshold applied in the payment system. Determine whether the clustering of payments "
-                "just below threshold on the same dates represents intentional threshold avoidance."
+                "The auditor may consider obtaining approval documentation for each payment, comparing the "
+                "approval threshold in the current AP policy to the threshold applied in the payment system, and "
+                "establishing whether the clustering of payments just below threshold on the same dates "
+                "represents intentional threshold avoidance."
             ),
             (
-                "Request the entity's approval authority matrix and compare the AP system's configured threshold to "
-                "the documented policy threshold. Analyze the distribution of payment amounts near the threshold to "
-                "assess statistical likelihood of deliberate splitting."
+                "The auditor may consider requesting the entity's approval authority matrix, comparing the AP "
+                "system's configured threshold to the documented policy threshold, and analyzing the distribution"
+                " of payment amounts near the threshold to assess the statistical likelihood of deliberate "
+                "splitting."
             ),
         ),
         "invoice_number_reuse": (
             (
-                "Obtain both invoices sharing the reused number. Confirm whether the vendors are the same entity "
-                "operating under different names, or distinct entities. If distinct, investigate how the same invoice"
-                " number was accepted by the AP system for two different vendors."
+                "The auditor may consider obtaining both invoices sharing the reused number and establishing "
+                "whether the vendors are the same entity operating under different names, or distinct entities. "
+                "If distinct, it may also consider investigating how the same invoice number was accepted by the "
+                "AP system for two different vendors."
             ),
             (
-                "Examine the AP system's duplicate invoice detection controls. Determine whether the reused number "
-                "was accepted due to a control gap or represents a legitimate multi-line invoice split across "
-                "vendors."
+                "The auditor may consider examining the AP system's duplicate invoice detection controls and "
+                "establishing whether the reused number was accepted due to a control gap or represents a "
+                "legitimate multi-line invoice split across vendors."
             ),
         ),
         "vendor_name_variations": (
             (
-                "Obtain vendor master records for each flagged pair. Confirm whether similar vendor names represent "
-                "the same entity, a legitimate subsidiary, or a potential ghost vendor. Verify address, tax ID, and "
-                "bank account details for each."
+                "The auditor may consider obtaining vendor master records for each flagged pair, establishing "
+                "whether similar vendor names represent the same entity, a legitimate subsidiary, or a potential "
+                "ghost vendor, and checking address, tax ID, and bank account details for each."
             ),
             (
-                "Run the flagged vendor pairs against the entity's 1099 vendor master to identify shared tax IDs, "
-                "bank accounts, or addresses. Vendors sharing these attributes but listed under different names "
-                "represent a master data integrity risk."
+                "The auditor may consider running the flagged vendor pairs against the entity's 1099 vendor "
+                "master to identify shared tax IDs, bank accounts, or addresses. Vendors sharing these attributes"
+                " but listed under different names may represent a master data integrity risk."
             ),
         ),
         "missing_critical_fields": (
             (
-                "Request the complete AP register with all required fields populated for the affected payments. Trace"
-                " to source documents to confirm transactions are complete and properly recorded."
+                "The auditor may consider requesting the complete AP register with all expected fields populated "
+                "for the affected payments and tracing to source documents to establish whether transactions are "
+                "complete and properly recorded."
             ),
             (
-                "Evaluate whether the missing field data impacts the completeness of the AP population tested. If the"
-                " register extract cannot be remediated, assess whether alternative procedures (e.g., vouching a "
-                "sample to source invoices) can compensate for the data gap."
+                "The auditor may consider evaluating whether the missing field data affects the completeness of "
+                "the AP population tested. Where the register extract cannot be remediated, it may also consider "
+                "assessing whether alternative procedures (e.g., vouching a sample to source invoices) can "
+                "compensate for the data gap."
             ),
         ),
         "suspicious_descriptions": (
             (
-                "Inspect each payment flagged for suspicious description keywords. Obtain supporting documentation "
-                "and management explanation. Escalate any payments lacking adequate support per ISA 240 fraud risk "
-                "procedures."
+                "The auditor may consider inspecting each payment flagged for suspicious description keywords, "
+                "obtaining supporting documentation and management explanation, and escalating any payments "
+                "lacking adequate support per ISA 240 fraud risk procedures."
             ),
             (
-                "Stratify flagged payments by vendor and preparer. Determine whether suspicious descriptions cluster "
-                "around specific preparers or vendors, which may indicate a pattern warranting expanded fraud-risk "
-                "procedures per ISA 240."
+                "The auditor may consider stratifying flagged payments by vendor and preparer and establishing "
+                "whether suspicious descriptions cluster around specific preparers or vendors, which may indicate"
+                " a pattern for which expanded fraud-risk procedures per ISA 240 may be appropriate."
             ),
         ),
         "high_frequency_vendors": (
             (
-                "Obtain detail of all payments to the flagged vendor(s) on the high-frequency date. Confirm each "
-                "payment is supported by a distinct invoice and there is no duplication or splitting of a single "
-                "invoice across multiple payments."
+                "The auditor may consider obtaining detail of all payments to the flagged vendor(s) on the high-"
+                "frequency date and checking whether each payment is supported by a distinct invoice and whether "
+                "there is any duplication or splitting of a single invoice across multiple payments."
             ),
             (
-                "Obtain the entity's vendor payment terms and compare to the observed payment frequency. Determine "
-                "whether high-frequency payments represent legitimate recurring charges or potential payment "
-                "splitting to circumvent approval controls."
+                "The auditor may consider obtaining the entity's vendor payment terms, comparing them to the "
+                "observed payment frequency, and establishing whether high-frequency payments represent "
+                "legitimate recurring charges or potential payment splitting to circumvent approval controls."
             ),
         ),
         "check_number_gaps": (
             (
-                "Investigate gaps in check sequence. Obtain voided check documentation for missing numbers. Confirm "
-                "proper authorization and recording of any voided instruments."
+                "The auditor may consider investigating gaps in check sequence, obtaining voided check "
+                "documentation for missing numbers, and checking proper authorization and recording of any voided"
+                " instruments."
             ),
             (
-                "Request the void register for the period and reconcile to the identified gaps. For any unaccounted "
-                "gaps, expand the inquiry to include bank-cleared check images to confirm whether the instruments "
-                "were negotiated."
+                "The auditor may consider requesting the void register for the period and reconciling it to the "
+                "identified gaps. For any unaccounted gaps, it may also consider expanding the inquiry to include"
+                " bank-cleared check images to establish whether the instruments were negotiated."
             ),
         ),
         "unusual_payment_amounts": (
             (
-                "Obtain supporting documentation for statistically unusual payment amounts. Confirm amounts reflect "
-                "actual invoiced values and are supported by approved purchase orders or contracts."
+                "The auditor may consider obtaining supporting documentation for statistically unusual payment "
+                "amounts and checking whether amounts reflect actual invoiced values and are supported by "
+                "approved purchase orders or contracts."
             ),
             (
-                "Perform a stratified analysis of flagged payments by vendor category. Identify whether unusual "
-                "amounts cluster around specific vendors or periods, which may indicate estimation or pricing "
-                "anomalies requiring vendor confirmation."
+                "The auditor may consider performing a stratified analysis of flagged payments by vendor category"
+                " and identifying whether unusual amounts cluster around specific vendors or periods, which may "
+                "indicate estimation or pricing anomalies that may call for vendor confirmation."
             ),
         ),
         "weekend_payments": (
             (
-                "Verify weekend-processed payments were authorized and have valid business justification. Review "
-                "system access logs to confirm payments were processed by an authorized user outside normal business "
-                "hours."
+                "The auditor may consider checking whether weekend-processed payments were authorized and have "
+                "valid business justification, and reviewing system access logs to establish whether payments "
+                "were processed by an authorized user outside normal business hours."
             ),
             (
-                "Review the entity's IT general controls for automated payment processing that may coincide with "
-                "weekends. Distinguish between automated ACH runs (lower risk) and manual weekend disbursements "
-                "(higher risk requiring authorization review)."
+                "The auditor may consider reviewing the entity's IT general controls for automated payment "
+                "processing that may coincide with weekends, distinguishing between automated ACH runs (lower "
+                "risk) and manual weekend disbursements (higher risk, for which an authorization review may be "
+                "appropriate)."
             ),
         ),
         "round_dollar_amounts": (
             (
-                "Verify round-amount payments against supporting invoices to confirm they are not estimates or "
-                "placeholders."
+                "The auditor may consider comparing round-amount payments against supporting invoices to "
+                "establish whether they are estimates or placeholders."
             ),
             (
-                "Stratify round-dollar payments by account code and preparer. Determine whether round amounts "
-                "correlate with recurring accruals or represent ad-hoc estimates requiring supporting documentation."
+                "The auditor may consider stratifying round-dollar payments by account code and preparer and "
+                "establishing whether round amounts correlate with recurring accruals or represent ad-hoc "
+                "estimates that may call for supporting documentation."
             ),
         ),
     },
     "payroll_testing": {
         "PR-T1": (
             (
-                "Verify HR records against the payroll system for each employee ID associated with multiple names. "
-                "Investigate data entry errors or potential identity substitution."
+                "The auditor may consider comparing HR records against the payroll system for each employee ID "
+                "associated with multiple names and investigating data entry errors or potential identity "
+                "substitution."
             ),
         ),
         "PR-T2": (
             (
-                "Request the complete payroll register with all required fields populated. Trace affected entries to "
-                "HR authorization records to confirm completeness."
+                "The auditor may consider requesting the complete payroll register with all expected fields "
+                "populated and tracing affected entries to HR authorization records to establish completeness."
             ),
         ),
         "PR-T3": (
             (
-                "Obtain payroll authorization documentation for round-dollar pay amounts. Verify amounts reflect "
-                "approved compensation rather than estimates or placeholders."
+                "The auditor may consider obtaining payroll authorization documentation for round-dollar pay "
+                "amounts and checking whether amounts reflect approved compensation rather than estimates or "
+                "placeholders."
             ),
         ),
         "PR-T4": (
-            ("Verify post-termination payments for proper authorization; investigate for potential ghost employees."),
             (
-                "Cross-reference the termination date per HR records to the last paycheck date. For payments after "
-                "termination, obtain documentation of final pay obligations (accrued PTO, severance) that justify the"
-                " payment."
+                "The auditor may consider checking post-termination payments for proper authorization and "
+                "investigating them for potential ghost employees."
+            ),
+            (
+                "The auditor may consider cross-referencing the termination date per HR records to the last "
+                "paycheck date and, for payments after termination, obtaining documentation of final pay "
+                "obligations (accrued PTO, severance) that support the payment."
             ),
         ),
         "PR-T5": (
             (
-                "Obtain voided check documentation for missing sequence numbers. Confirm proper authorization and "
-                "recording of any voided instruments."
+                "The auditor may consider obtaining voided check documentation for missing sequence numbers and "
+                "checking proper authorization and recording of any voided instruments."
             ),
         ),
         "PR-T6": (
             (
-                "Obtain supporting authorization for statistically unusual pay amounts. Compare to approved salary "
-                "schedules and investigate department-level outliers."
+                "The auditor may consider obtaining supporting authorization for statistically unusual pay "
+                "amounts, comparing them to approved salary schedules, and investigating department-level "
+                "outliers."
             ),
         ),
         "PR-T7": (
             (
-                "Confirm pay cadence against employment contracts for employees with irregular pay spacing. "
-                "Investigate irregularities for potential ghost employee indicators."
+                "The auditor may consider comparing pay cadence against employment contracts for employees with "
+                "irregular pay spacing and investigating irregularities for potential ghost employee indicators."
             ),
         ),
         "PR-T8": (
             (
-                "Evaluate the most deviated digits in gross pay amounts for patterns of manual entry or estimation; "
-                "consider targeted sampling toward those digits."
+                "The auditor may consider evaluating the most deviated digits in gross pay amounts for patterns "
+                "of manual entry or estimation and targeted sampling toward those digits."
             ),
         ),
         "PR-T9": (
             (
-                "Investigate ghost employee indicators by tracing to HR records. Physical verification of employee "
-                "existence, if warranted, must be performed by the engagement team directly and not delegated to "
-                "management."
+                "The auditor may consider investigating ghost employee indicators by tracing to HR records. Where"
+                " physical verification of employee existence is performed, it is ordinarily performed by the "
+                "engagement team directly and not delegated to management."
             ),
             (
-                "Request a headcount reconciliation between HR and payroll systems. For any discrepancies, physically"
-                " verify employee existence through direct observation or independent third-party confirmation."
+                "The auditor may consider requesting a headcount reconciliation between HR and payroll systems "
+                "and, for any discrepancies, physically confirming employee existence through direct observation "
+                "or independent third-party confirmation."
             ),
         ),
         "PR-T10": (
             (
-                "Verify employees sharing bank accounts or addresses for proper documentation and business "
-                "justification."
+                "The auditor may consider checking employees sharing bank accounts or addresses for proper "
+                "documentation and business justification."
             ),
         ),
         "PR-T11": (
             (
-                "Investigate shared tax IDs for data entry errors or potential identity fraud. If confirmed, assess "
-                "implications for the entity's payroll tax reporting obligations."
+                "The auditor may consider investigating shared tax IDs for data entry errors or potential "
+                "identity fraud. Where identity fraud is confirmed, it may also consider assessing implications "
+                "for the entity's payroll tax reporting obligations."
             ),
         ),
         "PR-T12": (
@@ -368,609 +401,696 @@ PROCEDURES: dict[str, dict[str, tuple[str, ...]]] = {
     "revenue_testing": {
         "large_manual_entries": (
             (
-                "Obtain preparer identification and approval documentation for each large manual revenue entry. "
-                "Confirm entries were reviewed by a supervisor and supported by a contract or binding commitment per "
-                "ISA 240."
+                "The auditor may consider obtaining preparer identification and approval documentation for each "
+                "large manual revenue entry and checking whether entries were reviewed by a supervisor and "
+                "supported by a contract or binding commitment per ISA 240."
             ),
             (
-                "Compare flagged manual entries to the entity's standard revenue posting workflow. Identify whether "
-                "manual entries bypass automated controls (e.g., billing system interface) and assess the "
-                "compensating controls in place for manual overrides."
+                "The auditor may consider comparing flagged manual entries to the entity's standard revenue "
+                "posting workflow, identifying whether manual entries bypass automated controls (e.g., billing "
+                "system interface), and assessing the compensating controls in place for manual overrides."
             ),
         ),
         "year_end_concentration": (
             (
-                "Evaluate whether December revenue concentration reflects genuine business activity (e.g., seasonal "
-                "contracts, milestone completions) or potential period-end earnings management. Obtain delivery or "
-                "acceptance documentation for material December entries."
+                "The auditor may consider evaluating whether December revenue concentration reflects genuine "
+                "business activity (e.g., seasonal contracts, milestone completions) or potential period-end "
+                "earnings management, and obtaining delivery or acceptance documentation for material December "
+                "entries."
             ),
             (
-                "Perform a period-over-period comparison of December revenue as a percentage of annual revenue. If "
-                "the current-year percentage is significantly higher than the prior period, inquire of management and"
-                " corroborate with shipping or delivery records."
+                "The auditor may consider performing a period-over-period comparison of December revenue as a "
+                "percentage of annual revenue. Where the current-year percentage is significantly higher than the"
+                " prior period, it may also consider inquiring of management and corroborating with shipping or "
+                "delivery records."
             ),
         ),
         "cutoff_risk": (
             (
-                "For each flagged entry, inspect the underlying contract or delivery documentation. Confirm that the "
-                "performance obligation under ASC 606-10-25-23 was satisfied prior to the period end. Entries lacking"
-                " supporting evidence of satisfaction before period end should be assessed for potential deferral to "
-                "the subsequent period."
+                "The auditor may consider inspecting the underlying contract or delivery documentation for each "
+                "flagged entry and establishing whether the performance obligation under ASC 606-10-25-23 was "
+                "satisfied prior to the period end. Where an entry lacks supporting evidence of satisfaction "
+                "before period end, it may also consider assessing it for potential deferral to the subsequent "
+                "period."
             ),
             (
-                "Select entries within 5 business days of period end and trace to delivery/acceptance documentation. "
-                "For service revenue, confirm that the service period falls within the reporting period. Quantify any"
-                " entries where evidence of satisfaction is absent."
+                "The auditor may consider selecting entries within 5 business days of period end and tracing them"
+                " to delivery/acceptance documentation, checking for service revenue whether the service period "
+                "falls within the reporting period, and quantifying any entries where evidence of satisfaction is"
+                " absent."
             ),
         ),
         "concentration_risk": (
             (
-                "Assess single-customer concentration for both revenue recognition and credit risk implications. "
-                "Obtain the master contract with this customer. Evaluate whether concentration represents a going "
-                "concern or business continuity risk requiring disclosure under ASC 275-10."
+                "The auditor may consider assessing single-customer concentration for both revenue recognition "
+                "and credit risk implications, obtaining the master contract with this customer, and evaluating "
+                "whether the concentration represents a going concern or business continuity risk calling for "
+                "disclosure under ASC 275-10."
             ),
             (
-                "Perform a trend analysis of the top customer's revenue share over the past 3 periods. If "
-                "concentration is increasing, inquire of management about customer diversification strategy and "
-                "assess going-concern implications per ASC 205-40."
+                "The auditor may consider performing a trend analysis of the top customer's revenue share over "
+                "the past 3 periods. Where concentration is increasing, it may also consider inquiring of "
+                "management about customer diversification strategy and assessing going-concern implications per "
+                "ASC 205-40."
             ),
         ),
         "sign_anomalies": (
             (
-                "Investigate debit balances in revenue accounts. Confirm whether each debit represents a legitimate "
-                "return, allowance, or contra-revenue entry, or a misposting that warrants further review. Obtain "
-                "supporting documentation for each."
+                "The auditor may consider investigating debit balances in revenue accounts, establishing whether "
+                "each debit represents a legitimate return, allowance, or contra-revenue entry, or a misposting "
+                "that may call for further review, and obtaining supporting documentation for each."
             ),
             (
-                "Obtain a detailed listing of debit-balance revenue accounts. Stratify by customer and product line "
-                "to determine whether the pattern reflects a specific return/refund trend or a systematic misposting "
-                "requiring reclassification."
+                "The auditor may consider obtaining a detailed listing of debit-balance revenue accounts and "
+                "stratifying it by customer and product line to establish whether the pattern reflects a specific"
+                " return/refund trend or a systematic misposting that may call for reclassification."
             ),
         ),
         "trend_variance": (
             (
-                "Obtain management explanations for significant period-over-period revenue changes. Corroborate "
-                "explanations with supporting documentation and assess whether variances indicate revenue recognition"
-                " anomalies."
+                "The auditor may consider obtaining management's explanations for significant period-over-period "
+                "revenue changes, corroborating explanations with supporting documentation, and assessing whether"
+                " variances point to revenue recognition anomalies."
             ),
             (
-                "Compare revenue variances to changes in the entity's key business drivers (volume, pricing, customer"
-                " mix). Assess whether unexplained variances warrant expanded substantive testing of revenue "
-                "transactions near period end."
+                "The auditor may consider comparing revenue variances to changes in the entity's key business "
+                "drivers (volume, pricing, customer mix) and assessing whether unexplained variances call for "
+                "expanded substantive testing of revenue transactions near period end."
             ),
         ),
         "contra_revenue_anomalies": (
             (
-                "Calculate the contra-revenue ratio (returns and allowances / gross revenue). Compare to prior "
-                "period. Obtain detail of returns and allowances and assess whether elevated levels indicate channel "
-                "stuffing reversal or aggressive prior-period recognition."
+                "The auditor may consider calculating the contra-revenue ratio (returns and allowances / gross "
+                "revenue), comparing it to the prior period, obtaining detail of returns and allowances, and "
+                "assessing whether elevated levels point to channel stuffing reversal or aggressive prior-period "
+                "recognition."
             ),
             (
-                "Stratify returns and allowances by customer and product line. Determine whether elevated contra-"
-                "revenue is concentrated in specific channels that may indicate channel-stuffing reversal or "
-                "aggressive prior-period recognition."
+                "The auditor may consider stratifying returns and allowances by customer and product line and "
+                "establishing whether elevated contra-revenue is concentrated in specific channels that may "
+                "indicate channel-stuffing reversal or aggressive prior-period recognition."
             ),
         ),
         "recognition_before_satisfaction": (
             (
-                "Obtain contract documentation for each flagged entry. Identify the specific performance "
-                "obligation(s) associated with each entry and confirm the satisfaction date. Where the obligation was"
-                " satisfied after the recognition date, assess whether a correcting entry or disclosure is required "
-                "under ASC 606-10-25."
+                "The auditor may consider obtaining contract documentation for each flagged entry, identifying "
+                "the specific performance obligation(s) associated with each entry, and establishing the "
+                "satisfaction date. Where the obligation was satisfied after the recognition date, it may also "
+                "consider assessing whether a correcting entry or disclosure is called for under ASC 606-10-25."
             ),
         ),
         "missing_obligation_linkage": (
             (
-                "Obtain management explanation for revenue entries missing account classification or performance "
-                "obligation linkage. Confirm correct GL account assignment and reclassify if necessary before relying"
-                " on revenue totals for analytical procedures."
+                "The auditor may consider obtaining management's explanation for revenue entries missing account "
+                "classification or performance obligation linkage, checking the GL account assignment, and "
+                "reclassifying where appropriate before relying on revenue totals for analytical procedures."
             ),
         ),
         "modification_treatment_mismatch": (
             (
-                "Obtain contract modification documentation for each flagged contract. Confirm whether modifications "
-                "were properly accounted for as separate contracts or prospective/cumulative adjustments per ASC "
-                "606-10-25-13."
+                "The auditor may consider obtaining contract modification documentation for each flagged contract"
+                " and establishing whether modifications were properly accounted for as separate contracts or "
+                "prospective/cumulative adjustments per ASC 606-10-25-13."
             ),
         ),
         "allocation_inconsistency": (
             (
-                "Obtain standalone selling price documentation for each flagged contract. Confirm that allocation "
-                "bases are consistent across performance obligations and reflect observable prices per ASC "
-                "606-10-32-33."
+                "The auditor may consider obtaining standalone selling price documentation for each flagged "
+                "contract and checking whether allocation bases are consistent across performance obligations and"
+                " reflect observable prices per ASC 606-10-32-33."
             ),
         ),
-        "benford_law": ("Review most deviated digits in revenue amounts for manual estimation patterns.",),
-        "duplicate_entries": ("Inspect potential duplicate revenue entries for proper posting.",),
+        "benford_law": (
+            (
+                "The auditor may consider reviewing the most deviated digits in revenue amounts for manual "
+                "estimation patterns."
+            ),
+        ),
+        "duplicate_entries": (
+            "The auditor may consider inspecting potential duplicate revenue entries for proper posting.",
+        ),
     },
     "ar_aging": {
         "ar_sign_anomalies": (
-            "Investigate credit balances in AR for overpayments, misclassifications, or needed reclassification.",
+            (
+                "The auditor may consider investigating credit balances in AR for overpayments, "
+                "misclassifications, or items that may call for reclassification."
+            ),
         ),
         "missing_allowance": (
             (
-                "Determine how expected credit losses are measured and recognised under IFRS 9 / ASC 326, and where "
-                "they are recorded if no allowance account is present."
+                "The auditor may consider determining how expected credit losses are measured and recognized "
+                "under IFRS 9 / ASC 326, and where they are recorded if no allowance account is present."
             ),
         ),
         "past_due_concentration": (
-            "Review past-due accounts for collection activity and assess recoverability.",
             (
-                "Obtain the entity's collection activity log for past-due balances. Assess whether management's "
-                "collection efforts are commensurate with the risk, and evaluate the need to adjust the allowance for"
-                " doubtful accounts."
+                "The auditor may consider reviewing past-due accounts for collection activity and assessing "
+                "recoverability."
+            ),
+            (
+                "The auditor may consider obtaining the entity's collection activity log for past-due balances, "
+                "assessing whether management's collection efforts are commensurate with the risk, and evaluating"
+                " whether the allowance for doubtful accounts calls for adjustment."
             ),
         ),
         "customer_concentration": (
-            "Evaluate credit risk concentration; consider expanded confirmation procedures.",
+            ("The auditor may consider evaluating credit risk concentration and expanding confirmation procedures."),
             (
-                "Perform a trend analysis of the top customer's AR share over the past 3 periods. If concentration is"
-                " increasing, assess credit risk implications and evaluate whether expanded confirmation procedures "
-                "are warranted."
+                "The auditor may consider performing a trend analysis of the top customer's AR share over the "
+                "past 3 periods. Where concentration is increasing, it may also consider assessing credit risk "
+                "implications and evaluating whether expanded confirmation procedures are appropriate."
             ),
         ),
         "credit_limit_breaches": (
-            "Review customers exceeding credit limits for continued creditworthiness and collection outlook.",
             (
-                "Obtain management's credit review documentation for customers exceeding limits. Assess whether "
-                "continued shipments reflect approved credit limit increases or represent an override of the credit "
-                "control policy."
+                "The auditor may consider reviewing customers exceeding credit limits for continued "
+                "creditworthiness and collection outlook."
+            ),
+            (
+                "The auditor may consider obtaining management's credit review documentation for customers "
+                "exceeding limits and assessing whether continued shipments reflect approved credit limit "
+                "increases or represent an override of the credit control policy."
             ),
         ),
-        "dso_trend": ("Investigate DSO increases for changes in collection efficiency or customer payment behavior.",),
-        "allowance_adequacy": ("Perform independent estimate of allowance adequacy using historical loss rates.",),
+        "dso_trend": (
+            (
+                "The auditor may consider investigating DSO increases for changes in collection efficiency or "
+                "customer payment behavior."
+            ),
+        ),
+        "allowance_adequacy": (
+            (
+                "The auditor may consider performing an independent estimate of allowance adequacy using "
+                "historical loss rates."
+            ),
+        ),
     },
     "fixed_asset_testing": {
         "fully_depreciated": (
-            "Evaluate whether fully depreciated assets still in use require revised useful life estimates.",
             (
-                "Obtain a listing of fully depreciated assets still in productive use. Assess whether useful life "
-                "estimates require revision per ISA 540 and whether the carrying amount understates the entity's "
-                "asset base."
+                "The auditor may consider evaluating whether fully depreciated assets still in use call for "
+                "revised useful life estimates."
+            ),
+            (
+                "The auditor may consider obtaining a listing of fully depreciated assets still in productive use"
+                " and assessing whether useful life estimates call for revision per ISA 540 and whether the "
+                "carrying amount understates the entity's asset base."
             ),
         ),
-        "over_depreciation": ("Investigate over-depreciation for calculation errors or improper adjustments.",),
+        "over_depreciation": (
+            (
+                "The auditor may consider investigating over-depreciation for calculation errors or improper "
+                "adjustments."
+            ),
+        ),
         "useful_life_outliers": (
-            "Review unusual useful life estimates against industry norms and management justification.",
+            (
+                "The auditor may consider reviewing unusual useful life estimates against industry norms and "
+                "management justification."
+            ),
         ),
         "cost_zscore_outliers": (
             (
-                "Obtain supporting documentation for statistically unusual asset costs. Confirm amounts reflect "
-                "actual purchase prices and proper capitalization treatment."
+                "The auditor may consider obtaining supporting documentation for statistically unusual asset "
+                "costs and checking whether amounts reflect actual purchase prices and proper capitalization "
+                "treatment."
             ),
             (
-                "Compare flagged asset costs to market data or comparable acquisitions. Determine whether outlier "
-                "costs reflect legitimate premium purchases, capitalized installation costs, or potential data entry "
-                "errors."
+                "The auditor may consider comparing flagged asset costs to market data or comparable acquisitions"
+                " and establishing whether outlier costs reflect legitimate premium purchases, capitalized "
+                "installation costs, or potential data entry errors."
             ),
         ),
         "age_concentration": (
             (
-                "Evaluate the business rationale for bulk acquisitions concentrated in a single year. Verify "
-                "capitalization thresholds were consistently applied."
+                "The auditor may consider evaluating the business rationale for bulk acquisitions concentrated in"
+                " a single year and checking whether capitalization thresholds were consistently applied."
             ),
         ),
-        "duplicate_assets": ("Verify whether duplicate records represent distinct assets or data entry errors.",),
+        "duplicate_assets": (
+            (
+                "The auditor may consider checking whether duplicate records represent distinct assets or data "
+                "entry errors."
+            ),
+        ),
         "residual_value_anomalies": (
             (
-                "Review residual value estimates exceeding 30% of cost against management's disposal assumptions and "
-                "industry resale data. Assess reasonableness per ISA 540."
+                "The auditor may consider reviewing residual value estimates exceeding 30% of cost against "
+                "management's disposal assumptions and industry resale data and assessing reasonableness per ISA "
+                "540."
             ),
         ),
         "lease_indicators": (
             (
-                "Confirm whether flagged assets represent right-of-use assets under ASC 842. Verify lease "
-                "classification (finance vs. operating), amortization schedule, and that the asset is included in the"
-                " entity's lease schedule."
+                "The auditor may consider establishing whether flagged assets represent right-of-use assets under"
+                " ASC 842 and checking the lease classification (finance vs. operating), the amortization "
+                "schedule, and whether the asset is included in the entity's lease schedule."
             ),
         ),
         "missing_fields": (
             (
-                "Request the complete fixed asset register with all required fields populated. Trace affected entries"
-                " to source documents (purchase orders, invoices) to confirm completeness."
+                "The auditor may consider requesting the complete fixed asset register with all expected fields "
+                "populated and tracing affected entries to source documents (purchase orders, invoices) to "
+                "establish completeness."
             ),
             (
-                "Evaluate the impact of incomplete fixed asset records on the population tested. If the register "
-                "cannot be remediated, assess whether alternative procedures (e.g., physical inspection) can "
-                "compensate for the data gap."
+                "The auditor may consider evaluating the impact of incomplete fixed asset records on the "
+                "population tested. Where the register cannot be remediated, it may also consider assessing "
+                "whether alternative procedures (e.g., physical inspection) can compensate for the data gap."
             ),
         ),
         "negative_values": (
             (
-                "Investigate assets with negative cost or accumulated depreciation for data entry errors, improper "
-                "adjustments, or reversals requiring reclassification."
+                "The auditor may consider investigating assets with negative cost or accumulated depreciation for"
+                " data entry errors, improper adjustments, or reversals that may call for reclassification."
             ),
         ),
     },
     "inventory_testing": {
         "slow_moving": (
-            "Evaluate slow-moving items for obsolescence indicators and potential NRV write-down.",
             (
-                "Obtain management's obsolescence reserve methodology and compare to the identified slow-moving "
-                "items. Assess whether the current reserve adequately addresses the risk of NRV decline for these "
-                "items per ASC 330."
+                "The auditor may consider evaluating slow-moving items for obsolescence indicators and potential "
+                "NRV write-down."
+            ),
+            (
+                "The auditor may consider obtaining management's obsolescence reserve methodology, comparing it "
+                "to the identified slow-moving items, and assessing whether the current reserve adequately "
+                "addresses the risk of NRV decline for these items per ASC 330."
             ),
         ),
         "negative_values": (
-            "Investigate negative quantities/values for returns processing, data errors, or adjustments.",
+            (
+                "The auditor may consider investigating negative quantities/values for returns processing, data "
+                "errors, or adjustments."
+            ),
         ),
-        "value_mismatch": ("Recalculate extended values and investigate discrepancies with source pricing data.",),
+        "value_mismatch": (
+            (
+                "The auditor may consider recalculating extended values and investigating discrepancies with "
+                "source pricing data."
+            ),
+        ),
         "unit_cost_outliers": (
             (
-                "Obtain supporting documentation for statistically unusual unit costs. Verify pricing against "
-                "purchase orders, supplier contracts, or standard cost records."
+                "The auditor may consider obtaining supporting documentation for statistically unusual unit costs"
+                " and checking pricing against purchase orders, supplier contracts, or standard cost records."
             ),
             (
-                "Compare flagged unit costs to the most recent purchase orders and supplier contracts. Determine "
-                "whether cost increases reflect legitimate market changes or require adjustment to the standard cost "
-                "records."
+                "The auditor may consider comparing flagged unit costs to the most recent purchase orders and "
+                "supplier contracts and establishing whether cost increases reflect legitimate market changes or "
+                "call for adjustment to the standard cost records."
             ),
         ),
         "quantity_outliers": (
             (
-                "Investigate statistically unusual quantities for potential count errors, returns in transit, or "
-                "obsolete stock requiring NRV evaluation."
+                "The auditor may consider investigating statistically unusual quantities for potential count "
+                "errors, returns in transit, or obsolete stock that may call for NRV evaluation."
             ),
         ),
         "category_concentration": (
             (
-                "Evaluate whether disproportionate inventory value concentration in a single category reflects the "
-                "entity's business model or indicates potential valuation anomalies."
+                "The auditor may consider evaluating whether disproportionate inventory value concentration in a "
+                "single category reflects the entity's business model or potential valuation anomalies."
             ),
         ),
         "duplicate_items": (
             (
-                "Verify whether items with identical description and unit cost represent distinct inventory items or "
-                "data entry duplicates requiring correction."
+                "The auditor may consider checking whether items with identical description and unit cost "
+                "represent distinct inventory items or data entry duplicates that may call for correction."
             ),
         ),
-        "zero_value_items": ("Evaluate items with quantity but zero value for potential write-down or pricing gaps.",),
+        "zero_value_items": (
+            (
+                "The auditor may consider evaluating items with quantity but zero value for potential write-down "
+                "or pricing gaps."
+            ),
+        ),
         "missing_fields": (
             (
-                "Request the complete inventory register with all required fields populated. Trace affected items to "
-                "source documents to confirm data completeness."
+                "The auditor may consider requesting the complete inventory register with all expected fields "
+                "populated and tracing affected items to source documents to establish data completeness."
             ),
         ),
     },
     "bank_reconciliation": {
         "exact_match": (
             (
-                "Review matched transactions on a sample basis to confirm the automated matching algorithm correctly "
-                "paired bank and ledger items. Investigate any matched pairs where dates differ by more than 3 "
-                "business days."
+                "The auditor may consider reviewing matched transactions on a sample basis to check whether the "
+                "automated matching algorithm correctly paired bank and ledger items, and investigating any "
+                "matched pairs where dates differ by more than 3 business days."
             ),
         ),
         "bank_only_items": (
             (
-                "Obtain supporting documentation for all outstanding deposits older than 10 days. For outstanding "
-                "checks older than 90 days, assess escheatment obligations and confirm the disbursement was properly "
-                "authorized."
+                "The auditor may consider obtaining supporting documentation for all outstanding deposits older "
+                "than 10 days. For outstanding checks older than 90 days, it may also consider assessing "
+                "escheatment obligations and checking whether the disbursement was properly authorized."
             ),
         ),
         "ledger_only_items": (
             (
-                "Investigate ledger-only items for recording errors, timing differences, or transactions requiring "
-                "reclassification. Confirm that outstanding checks represent valid disbursements with proper "
-                "authorization."
+                "The auditor may consider investigating ledger-only items for recording errors, timing "
+                "differences, or transactions that may call for reclassification, and checking whether "
+                "outstanding checks represent valid disbursements with proper authorization."
             ),
         ),
         "stale_deposits": (
             (
-                "Obtain supporting documentation for all outstanding deposits older than 10 days. Deposits in transit"
-                " older than 10 days may indicate fictitious deposits recorded in the ledger but not yet cleared at "
-                "the bank. Verify deposit slips and bank confirmation of receipt."
+                "The auditor may consider obtaining supporting documentation for all outstanding deposits older "
+                "than 10 days. Deposits in transit older than 10 days may indicate fictitious deposits recorded "
+                "in the ledger but not yet cleared at the bank, and the auditor may also consider checking "
+                "deposit slips and bank confirmation of receipt."
             ),
         ),
         "stale_checks": (
             (
-                "Review checks outstanding more than 90 days for stale-dated items. Stale checks may require "
+                "The auditor may consider reviewing checks outstanding more than 90 days for stale-dated items "
+                "and obtaining void confirmations or reissue documentation. Stale checks may be subject to "
                 "escheatment review under applicable unclaimed property laws and may indicate fictitious "
-                "disbursements recorded in the ledger. Obtain void confirmations or reissue documentation."
+                "disbursements recorded in the ledger."
             ),
         ),
         "nsf_items": (
             (
-                "Trace NSF/returned items to subsequent collection or write-off. Assess whether returned items "
-                "indicate customer financial distress or payment fraud per ISA 240. Verify proper recording of the "
-                "reversal and any subsequent re-presentment."
+                "The auditor may consider tracing NSF/returned items to subsequent collection or write-off, "
+                "assessing whether returned items point to customer financial distress or payment fraud per ISA "
+                "240, and checking the recording of the reversal and any subsequent re-presentment."
             ),
         ),
         "interbank_transfers": (
             (
-                "Investigate same-day matching debit/credit pairs above $10,000 as potential check kiting indicators "
-                "(a fraud risk considered under ISA 240). Obtain management explanation and verify the business "
-                "purpose of each transfer. Confirm that both sides of the transfer are properly recorded in the "
-                "correct period."
+                "The auditor may consider investigating same-day matching debit/credit pairs above $10,000 as "
+                "potential check kiting indicators (a fraud risk considered under ISA 240), obtaining "
+                "management's explanation and checking the business purpose of each transfer, and checking "
+                "whether both sides of the transfer are properly recorded in the correct period."
             ),
         ),
         "high_value_transactions": (
             (
-                "Obtain supporting documentation for transactions exceeding performance materiality. High-value items"
-                " warrant individual verification per ISA 500 to confirm proper authorization and recording. Inspect "
-                "underlying contracts, approvals, and bank confirmations."
+                "The auditor may consider obtaining supporting documentation for transactions exceeding "
+                "performance materiality, examining high-value items individually per ISA 500 for proper "
+                "authorization and recording, and inspecting underlying contracts, approvals, and bank "
+                "confirmations."
             ),
         ),
         "reconciling_difference": (
             (
-                "Investigate the reconciling difference. Determine whether the variance represents a bank error, a GL"
-                " recording omission, a timing item not captured in the matching window, or a fraudulent transaction."
-                " Document the resolution with supporting evidence."
+                "The auditor may consider investigating the reconciling difference, establishing whether the "
+                "variance represents a bank error, a GL recording omission, a timing item not captured in the "
+                "matching window, or a fraudulent transaction, and documenting the resolution with supporting "
+                "evidence."
             ),
         ),
         "outstanding_volume": (
             (
-                "Evaluate the volume of outstanding items relative to total transactions. A high outstanding ratio "
-                "may indicate systemic recording delays, cut-off issues, or inadequate reconciliation procedures by "
-                "the entity."
+                "The auditor may consider evaluating the volume of outstanding items relative to total "
+                "transactions. A high outstanding ratio may indicate systemic recording delays, cut-off issues, "
+                "or inadequate reconciliation procedures by the entity."
             ),
         ),
     },
     "three_way_match": {
         "twm_amount_variance": (
             (
-                "Obtain supporting documentation for material variances between PO, invoice, and receiving amounts. "
-                "Determine whether variances reflect price adjustments, quantity discrepancies, or unauthorized "
-                "changes."
+                "The auditor may consider obtaining supporting documentation for material variances between PO, "
+                "invoice, and receiving amounts and establishing whether variances reflect price adjustments, "
+                "quantity discrepancies, or unauthorized changes."
             ),
         ),
         "twm_unmatched_po": (
             (
-                "Investigate unmatched purchase orders for goods/services not yet received, cancelled orders not "
-                "properly closed, or recording delays."
+                "The auditor may consider investigating unmatched purchase orders for goods/services not yet "
+                "received, cancelled orders not properly closed, or recording delays."
             ),
         ),
         "twm_unmatched_invoice": (
             (
-                "Investigate unmatched invoices for potential unauthorized purchases, duplicate invoices, or PO-"
-                "bypass transactions requiring management explanation."
+                "The auditor may consider investigating unmatched invoices for potential unauthorized purchases, "
+                "duplicate invoices, or PO-bypass transactions, and obtaining management's explanation for them."
             ),
         ),
         "twm_date_variance": (
             (
-                "Evaluate significant date gaps between PO, receipt, and invoice for cut-off implications and delayed"
-                " recording anomalies."
+                "The auditor may consider evaluating significant date gaps between PO, receipt, and invoice for "
+                "cut-off implications and delayed recording anomalies."
             ),
         ),
         "twm_full_match_rate": (
             (
-                "Investigate the root cause of the non-match rate. Assess whether the cause is process-related "
-                "(manual PO entry errors), system-related (ERP matching logic gaps), or control-related (inadequate "
-                "segregation of duties in procurement). Recommend remediation steps to management to bring the match "
-                "rate above 85%."
+                "The auditor may consider investigating the root cause of the non-match rate, assessing whether "
+                "the cause is process-related (manual PO entry errors), system-related (ERP matching logic gaps),"
+                " or control-related (inadequate segregation of duties in procurement), and recommending "
+                "remediation steps to management to bring the match rate above 85%."
             ),
         ),
         "twm_unmatched_receipt": (
             (
-                "Investigate unmatched receiving documents for goods received but not yet invoiced. Confirm whether "
-                "an accrual is required for goods received but not invoiced at period end. Verify that the receiving "
-                "log is complete and reconciles to warehouse records."
+                "The auditor may consider investigating unmatched receiving documents for goods received but not "
+                "yet invoiced, establishing whether an accrual is called for on goods received but not invoiced "
+                "at period end, and checking whether the receiving log is complete and reconciles to warehouse "
+                "records."
             ),
         ),
         "twm_date_gap": (
             (
-                "Obtain the original PO, invoice, and GRN for this transaction. Confirm actual delivery date and "
-                "whether the invoice represents goods received. Investigate whether the invoice date or PO date was "
-                "altered after original entry. Date gaps exceeding 60 days are a backdating indicator per ISA 240."
+                "The auditor may consider obtaining the original PO, invoice, and GRN for this transaction, "
+                "establishing the actual delivery date and whether the invoice represents goods received, and "
+                "investigating whether the invoice date or PO date was altered after original entry. Date gaps "
+                "exceeding 60 days are a backdating indicator per ISA 240."
             ),
         ),
         "twm_duplicate_invoice": (
             (
-                "Obtain both invoices sharing the same number. Confirm whether they represent the same transaction "
-                "posted twice or distinct transactions with reused numbers. If duplicate billing, initiate vendor "
-                "credit memo process."
+                "The auditor may consider obtaining both invoices sharing the same number and establishing "
+                "whether they represent the same transaction posted twice or distinct transactions with reused "
+                "numbers. In the case of duplicate billing, it may also consider initiating the vendor credit "
+                "memo process."
             ),
         ),
         "twm_quantity_variance": (
             (
-                "Obtain the GRN and invoice for each flagged item. Confirm whether the quantity discrepancy "
-                "represents a partial shipment, a receiving error, or billing for undelivered goods. Reconcile "
-                "quantities to physical count records where available."
+                "The auditor may consider obtaining the GRN and invoice for each flagged item, establishing "
+                "whether the quantity discrepancy represents a partial shipment, a receiving error, or billing "
+                "for undelivered goods, and reconciling quantities to physical count records where available."
             ),
         ),
         "twm_net_overbilling": (
             (
-                "Obtain PO amendment documentation for each HIGH severity variance. Confirm whether price increases "
-                "were authorized by an approved PO amendment prior to invoice submission. For variances lacking "
-                "authorization, contact the vendor to obtain a credit memo or corrected invoice."
+                "The auditor may consider obtaining PO amendment documentation for each HIGH severity variance "
+                "and establishing whether price increases were authorized by an approved PO amendment prior to "
+                "invoice submission. For variances lacking authorization, it may also consider contacting the "
+                "vendor to obtain a credit memo or corrected invoice."
             ),
         ),
     },
     "multi_period": {
         "significant_movement": (
             (
-                "Obtain management explanation for significant period-over-period balance changes. Corroborate "
-                "explanations with supporting documentation (contracts, invoices, board minutes)."
+                "The auditor may consider obtaining management's explanation for significant period-over-period "
+                "balance changes and corroborating explanations with supporting documentation (contracts, "
+                "invoices, board minutes)."
             ),
         ),
         "new_account": (
             (
-                "Investigate accounts appearing for the first time. Confirm proper chart-of-accounts authorization "
-                "and verify the underlying transactions are properly classified."
+                "The auditor may consider investigating accounts appearing for the first time, checking for "
+                "proper chart-of-accounts authorization, and checking whether the underlying transactions are "
+                "properly classified."
             ),
         ),
         "eliminated_account": (
             (
-                "Investigate accounts with prior-period balances that are now zero. Confirm whether the elimination "
-                "reflects legitimate business changes or potential reclassification errors."
+                "The auditor may consider investigating accounts with prior-period balances that are now zero and"
+                " establishing whether the elimination reflects legitimate business changes or potential "
+                "reclassification errors."
             ),
         ),
         "ratio_trend_change": (
             (
-                "Evaluate significant ratio trend changes for underlying drivers. Corroborate with management inquiry"
-                " and supporting documentation."
+                "The auditor may consider evaluating significant ratio trend changes for underlying drivers and "
+                "corroborating them with management inquiry and supporting documentation."
             ),
         ),
         "apc_revenue_increase": (
             (
-                "Obtain detail supporting the revenue increase. Assess whether growth reflects new contracts, price "
-                "increases, or volume changes. Cross-reference to revenue recognition testing results."
+                "The auditor may consider obtaining detail supporting the revenue increase, assessing whether "
+                "growth reflects new contracts, price increases, or volume changes, and cross-referencing to "
+                "revenue recognition testing results."
             ),
         ),
         "apc_revenue_decrease": (
             (
-                "Investigate the revenue decline. Determine whether the decrease reflects lost contracts, price "
-                "reductions, volume decreases, or changes in revenue recognition policy. Assess going-concern "
-                "implications if the decline is material."
+                "The auditor may consider investigating the revenue decline and establishing whether the decrease"
+                " reflects lost contracts, price reductions, volume decreases, or changes in revenue recognition "
+                "policy. Where the decline is material, it may also consider assessing going-concern "
+                "implications."
             ),
         ),
         "apc_cogs_increase": (
             (
-                "Assess whether COGS increase is proportional to revenue growth. COGS growth exceeding revenue growth"
-                " indicates margin compression — obtain management explanation and assess whether cost increases are "
+                "The auditor may consider assessing whether the COGS increase is proportional to revenue growth. "
+                "Where COGS growth exceeds revenue growth, which may point to margin compression, the auditor may"
+                " consider obtaining management's explanation and assessing whether the cost increases are "
                 "recurring or one-time."
             ),
         ),
         "apc_cogs_decrease": (
             (
-                "Assess whether the COGS decrease is consistent with revenue trends. A COGS decrease alongside stable"
-                " or increasing revenue may indicate improved efficiency, but could also indicate incomplete cost "
-                "recognition or period-end cutoff issues."
+                "The auditor may consider assessing whether the COGS decrease is consistent with revenue trends. "
+                "A COGS decrease alongside stable or increasing revenue may indicate improved efficiency, but "
+                "could also indicate incomplete cost recognition or period-end cutoff issues."
             ),
         ),
         "apc_asset_increase": (
             (
-                "Obtain supporting documentation for the asset increase. Confirm the asset is properly classified and"
-                " valued per applicable accounting standards."
+                "The auditor may consider obtaining supporting documentation for the asset increase and checking "
+                "whether the asset is properly classified and valued per applicable accounting standards."
             ),
         ),
         "apc_asset_decrease": (
             (
-                "Investigate the asset decrease. Determine whether the reduction reflects disposal, impairment, "
-                "depreciation/amortization, or collection of receivables. Obtain supporting documentation for any "
-                "disposals or write-downs."
+                "The auditor may consider investigating the asset decrease, establishing whether the reduction "
+                "reflects disposal, impairment, depreciation/amortization, or collection of receivables, and "
+                "obtaining supporting documentation for any disposals or write-downs."
             ),
         ),
         "apc_cash_increase": (
             (
-                "Cash increases above 50% warrant inquiry. Cross-reference to the cash flow statement to confirm the "
-                "source of funds. Assess whether the increase reflects operating performance, financing activity, or "
-                "asset disposals."
+                "The auditor may consider inquiring about cash increases above 50%, cross-referencing to the cash"
+                " flow statement to establish the source of funds, and assessing whether the increase reflects "
+                "operating performance, financing activity, or asset disposals."
             ),
         ),
         "apc_cash_decrease": (
             (
-                "Investigate the significant cash decrease. Cross-reference to the cash flow statement to identify "
-                "the use of funds. Assess whether the decrease reflects debt repayment, capital expenditures, "
-                "distributions, or operating losses."
+                "The auditor may consider investigating the significant cash decrease, cross-referencing to the "
+                "cash flow statement to identify the use of funds, and assessing whether the decrease reflects "
+                "debt repayment, capital expenditures, distributions, or operating losses."
             ),
         ),
         "apc_liability_increase": (
             (
-                "Investigate the liability increase. Determine whether the increase reflects new borrowings, "
-                "accruals, or deferred obligations. Obtain supporting documentation for new debt instruments or "
-                "material accrual changes."
+                "The auditor may consider investigating the liability increase, establishing whether the increase"
+                " reflects new borrowings, accruals, or deferred obligations, and obtaining supporting "
+                "documentation for new debt instruments or material accrual changes."
             ),
         ),
         "apc_liability_decrease": (
             (
-                "Confirm the liability reduction reflects actual payment or discharge. Obtain supporting "
-                "documentation (payoff letter, settlement agreement, or payment records)."
+                "The auditor may consider establishing whether the liability reduction reflects actual payment or"
+                " discharge and obtaining supporting documentation (payoff letter, settlement agreement, or "
+                "payment records)."
             ),
         ),
         "apc_expense_increase": (
             (
-                "Obtain management explanation for the expense increase. Assess whether the increase is consistent "
-                "with the entity's growth rate and strategic plan. Increases materially above the revenue growth rate"
-                " warrant additional inquiry."
+                "The auditor may consider obtaining management's explanation for the expense increase and "
+                "assessing whether the increase is consistent with the entity's growth rate and strategic plan. "
+                "Where increases are materially above the revenue growth rate, it may also consider additional "
+                "inquiry."
             ),
         ),
         "apc_expense_decrease": (
             (
-                "Investigate the expense decrease. Determine whether the reduction reflects cost-cutting measures, "
-                "reclassification, or incomplete accrual of period expenses. Assess whether the decrease is "
-                "sustainable or temporary."
+                "The auditor may consider investigating the expense decrease, establishing whether the reduction "
+                "reflects cost-cutting measures, reclassification, or incomplete accrual of period expenses, and "
+                "assessing whether the decrease is sustainable or temporary."
             ),
         ),
         "apc_sign_change": (
             (
-                "Investigate the sign change. Confirm whether the change represents a legitimate reclassification, a "
-                "correcting entry, or an error. A sign change in a balance sheet account may indicate that a debit "
-                "balance became a credit balance (e.g., an asset account became a liability through over-payment or "
-                "negative inventory)."
+                "The auditor may consider investigating the sign change and establishing whether the change "
+                "represents a legitimate reclassification, a correcting entry, or an error. A sign change in a "
+                "balance sheet account may indicate that a debit balance became a credit balance (e.g., an asset "
+                "account became a liability through over-payment or negative inventory)."
             ),
         ),
         "apc_dormant_account": (
             (
-                "For each dormant account, confirm whether the zero balance represents a legitimate closure (debt "
-                "paid off, asset disposed, account closed) or an account that was zeroed out improperly. Obtain "
-                "management confirmation that each dormant account has been properly resolved and closed in the chart"
-                " of accounts if no longer needed."
+                "The auditor may consider establishing, for each dormant account, whether the zero balance "
+                "represents a legitimate closure (debt paid off, asset disposed, account closed) or an account "
+                "that was zeroed out improperly, and obtaining management confirmation that each dormant account "
+                "has been properly resolved and closed in the chart of accounts if no longer in use."
             ),
         ),
         "apc_closed_account": (
             (
-                "For closed accounts, confirm the balance was properly disposed of, transferred, or written off prior"
-                " to closure. Obtain documentation supporting the account closure."
+                "The auditor may consider establishing, for closed accounts, whether the balance was properly "
+                "disposed of, transferred, or written off prior to closure, and obtaining documentation "
+                "supporting the account closure."
             ),
         ),
     },
     "statistical_sampling": {
         "sampling_exception": (
             (
-                "For each exception identified in the sample, obtain the source document and management explanation. "
-                "Evaluate whether the exception represents an isolated error or a systematic control deviation."
+                "The auditor may consider obtaining, for each exception identified in the sample, the source "
+                "document and management explanation, and evaluating whether the exception represents an isolated"
+                " error or a systematic control deviation."
             ),
         ),
         "projected_misstatement": (
             (
-                "Evaluate the projected misstatement against tolerable misstatement. If projected misstatement "
-                "approaches or exceeds tolerable misstatement, consider expanding the sample or performing "
-                "alternative procedures."
+                "The auditor may consider evaluating the projected misstatement against tolerable misstatement. "
+                "Where projected misstatement approaches or exceeds tolerable misstatement, it may also consider "
+                "expanding the sample or performing alternative procedures."
             ),
         ),
     },
     "currency_conversion": {
         "rate_deviation": (
             (
-                "Investigate exchange rate deviations exceeding 1% from published rates. Confirm rate source and date"
-                " alignment per ASC 830 / IAS 21."
+                "The auditor may consider investigating exchange rate deviations exceeding 1% from published "
+                "rates and checking rate source and date alignment per ASC 830 / IAS 21."
             ),
         ),
         "unrealized_gain_loss": (
             (
-                "Evaluate significant unrealized foreign currency gains/losses for proper classification and "
-                "disclosure. Confirm remeasurement methodology."
+                "The auditor may consider evaluating significant unrealized foreign currency gains/losses for "
+                "proper classification and disclosure and checking the remeasurement methodology."
             ),
         ),
     },
     "preflight": {
         "data_completeness": (
             (
-                "Request a complete data file addressing identified gaps. Verify that missing columns or incomplete "
-                "records are resolved before proceeding."
+                "The auditor may consider requesting a complete data file addressing identified gaps and checking"
+                " that missing columns or incomplete records are resolved before proceeding."
             ),
         ),
         "balance_integrity": (
             (
-                "Investigate balance integrity failures (debits not equal to credits) for extraction errors, partial "
-                "data, or posting anomalies."
+                "The auditor may consider investigating balance integrity failures (debits not equal to credits) "
+                "for extraction errors, partial data, or posting anomalies."
             ),
         ),
     },
     "trial_balance": {
         "rounding_anomaly": (
             (
-                "Evaluate round-dollar balances for estimates, accruals, or manual entries that may indicate "
-                "placeholder amounts rather than actual transactions."
+                "The auditor may consider evaluating round-dollar balances for estimates, accruals, or manual "
+                "entries that may indicate placeholder amounts rather than actual transactions."
             ),
         ),
         "natural_balance_violation": (
             (
-                "Obtain management explanation for accounts with abnormal balance directions. Confirm whether the "
-                "balance represents a reclassification, offset, or posting error."
+                "The auditor may consider obtaining management's explanation for accounts with abnormal balance "
+                "directions and establishing whether the balance represents a reclassification, offset, or "
+                "posting error."
             ),
         ),
         "suspense_account": (
             (
-                "Obtain the transaction detail supporting outstanding suspense balances. Confirm whether items "
-                "represent unresolved reconciling differences or reclassifications in progress. Assess age of "
-                "outstanding items."
+                "The auditor may consider obtaining the transaction detail supporting outstanding suspense "
+                "balances, establishing whether items represent unresolved reconciling differences or "
+                "reclassifications in progress, and assessing the age of outstanding items."
             ),
         ),
         "concentration_risk_tb": (
             (
-                "Evaluate whether disproportionate balance concentration in a single account reflects the entity's "
-                "business model or indicates potential classification anomalies."
+                "The auditor may consider evaluating whether disproportionate balance concentration in a single "
+                "account reflects the entity's business model or potential classification anomalies."
             ),
         ),
     },
@@ -980,8 +1100,9 @@ PROCEDURES: dict[str, dict[str, tuple[str, ...]]] = {
 BENCHMARKS: dict[str, dict[str, str]] = {
     "journal_entry_testing": {
         "month_end_clustering": (
-            "A clustering rate above 8% in the final 3 business days of the month warrants inquiry into whether "
-            "entries represent legitimate closing activity or potential period-end earnings management (ISA 240)."
+            "A clustering rate above 8% in the final 3 business days of the month is a common point at which "
+            "auditors inquire whether entries represent legitimate closing activity or potential period-end "
+            "earnings management (ISA 240)."
         ),
     },
 }

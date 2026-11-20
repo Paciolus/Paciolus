@@ -55,7 +55,12 @@ BANNED: list[tuple[str, str]] = [
     (r"no client financial data is retained", "retired claim: see content/storage-statement.ts"),
     (r"diagnostic intelligence", "generic-AI wording (reports/website-review-2026-11-14.md G-10)"),
     (r"\btests clear\b", "a 'clean' verdict; say 'no exceptions flagged'"),
-    (r"\bfindings\b", "results are flags for review, not findings"),
+    (r"\bfindings?\b", "results are flags for review, not findings"),
+    # Sprint 887 (OUT-30): result words the product does not use. A test with nothing
+    # flagged is "no exceptions flagged" — never clean, passed or verified.
+    (r"\bclean\b", "a verdict; say 'no exceptions flagged'"),
+    (r"\b(?:not )?passed\b", "a verdict; say what was or was not met"),
+    (r"\bverified\b", "a verdict; say what was compared"),
     ("®", "the registered-trademark sign asserts a registration we have not confirmed"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]
@@ -67,7 +72,14 @@ _CONCLUSION_HEADING = re.compile(r"^\s*conclusions?\s*:?\s*$", re.IGNORECASE | r
 CONCLUSION_FIELD_ALLOWED = {"flux_expectations"}
 
 
+# Audit terms that contain a banned word but are not result words: a "passed"
+# adjusting entry is one the auditor proposed and management did not record.
+ALLOWED_TERMS = ("Passed AJE",)
+
+
 def _hits(text: str) -> list[str]:
+    for term in ALLOWED_TERMS:
+        text = text.replace(term, "")
     found = []
     for rx, pattern, why in _BANNED_RE:
         for m in rx.finditer(text):
@@ -124,6 +136,13 @@ def test_rendered_memo_has_no_conclusion_heading(key, text):
 def _memo_modules() -> list[Path]:
     modules = sorted(p for p in BACKEND.glob("*memo*.py"))
     modules += [BACKEND / "shared" / "memo_base.py", BACKEND / "shared" / "memo_template.py"]
+    # Sprint 887 (OUT-30): label mappings and generated prefixes that reach documents.
+    modules += [
+        BACKEND / "shared" / "follow_up_procedures.py",
+        BACKEND / "shared" / "tb_diagnostic_constants.py",
+        BACKEND / "preflight_engine.py",
+        BACKEND / "anomaly_summary_generator.py",
+    ]
     return modules
 
 
@@ -162,6 +181,25 @@ def test_memo_source_has_no_banned_phrase(path):
     assert not found, "Banned memo wording in source:\n" + "\n".join(found)
 
 
+_COMMANDS = re.compile(
+    r"(?:^|[.;] )(?:Obtain|Verify|Investigate|Request|Confirm|Inspect|Review|Evaluate|Determine|Document)\b"
+)
+
+
+def test_suggested_procedures_are_suggestions():
+    """Sprint 887 (OUT-30): every suggestion opens "The auditor may consider" and gives no command."""
+    from shared.follow_up_procedures import PROCEDURES
+
+    bad = []
+    for tool, tests in PROCEDURES.items():
+        for key, variants in tests.items():
+            for text in variants:
+                opens = text.startswith("The auditor may consider ")
+                if not opens or re.search(r"\bmust\b", text) or _COMMANDS.search(text):
+                    bad.append(f"{tool}/{key}: {text[:90]}")
+    assert not bad, "\n".join(bad)
+
+
 def test_banned_list_catches_known_bad_wording():
     """The patterns must actually fire, or the gate passes vacuously."""
     for bad in [
@@ -171,6 +209,11 @@ def test_banned_list_catches_known_bad_wording():
         "The accounts are fairly stated.",
         "Evaluation: FAIL",
         "The conclusion is a fail if either limit exceeds TM.",
+        "Clean",
+        "Pre-check not passed",
+        "Net balance column \u2014 verified against debit/credit pair",
+        "Material exceptions (3 findings)",
+        "To further substantiate the finding, ",
     ]:
         assert _hits(bad), bad
     for fine in ["LLC pass-through status", "UEL > TM", "Summary of Results", "no misstatement is found"]:
