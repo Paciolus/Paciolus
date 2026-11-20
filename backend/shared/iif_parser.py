@@ -341,16 +341,14 @@ def parse_iif(file_bytes: bytes, filename: str) -> pd.DataFrame:
         encoding=encoding,
     )
 
-    # Log metadata
+    # Log metadata. Sprint 888: no date range — it comes from the file, and logs
+    # carry nothing from the upload.
     logger.info(
-        "IIF parsed: sections=%s, blocks=%d, rows=%d, accounts=%d, "
-        "date_range=%s..%s, duplicates=%d, malformed=%d, encoding=%s",
+        "IIF parsed: sections=%s, blocks=%d, rows=%d, accounts=%d, duplicates=%d, malformed=%d, encoding=%s",
         metadata.section_types_found,
         metadata.transaction_block_count,
         metadata.transaction_row_count,
         metadata.account_list_count,
-        metadata.date_range_start,
-        metadata.date_range_end,
         len(metadata.duplicate_references),
         metadata.malformed_row_count,
         metadata.encoding,

@@ -442,16 +442,13 @@ def parse_ofx(file_bytes: bytes, filename: str) -> pd.DataFrame:
     # Extract metadata (non-blocking)
     metadata = _extract_metadata(root, dialect, transactions)
 
-    # Log metadata for observability
+    # Log metadata for observability. Sprint 888: counts and the dialect only —
+    # currency, account number, account type and dates come from the file, and
+    # logs carry nothing from the upload.
     logger.info(
-        "OFX parsed: dialect=%s, currency=%s, account=%s, type=%s, txns=%d, date_range=%s..%s, duplicates=%d",
+        "OFX parsed: dialect=%s, txns=%d, duplicates=%d",
         metadata.dialect,
-        metadata.currency,
-        metadata.account_id,
-        metadata.account_type,
         metadata.transaction_count,
-        metadata.date_start,
-        metadata.date_end,
         len(metadata.duplicate_fitids),
     )
 

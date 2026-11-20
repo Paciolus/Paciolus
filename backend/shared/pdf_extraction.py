@@ -152,10 +152,11 @@ def _extract_tables_from_pages(
             # the whole parse rather than quietly dropping the page.
             if _is_memory_error(e):
                 raise MemoryError from e
+            # Sprint 888: no filename — logs carry nothing from the upload.
             logger.warning(
-                "PDF page %d of '%s' extraction failed, skipping",
+                "PDF page %d extraction failed (%s), skipping",
                 page.page_number,
-                filename,
+                type(e).__name__,
             )
             dropped_pages += 1
             continue
