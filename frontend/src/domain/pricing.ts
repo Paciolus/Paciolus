@@ -328,7 +328,7 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'What counts as an "upload"?',
-    answer: 'Each file submitted to any tool counts as one upload. Re-uploading a corrected version of the same file counts as a separate upload. A multi-sheet Excel workbook counts as one upload. Uploading a trial balance to TB Diagnostics and then journal entries to JE Testing counts as two uploads (one per tool submission).',
+    answer: 'Each successful analysis run counts as one upload, whatever the number of files it takes: a run that compares two files (for example AR aging with its sub-ledger, or a current and prior period) counts once, and a multi-sheet Excel workbook counts once. A run that fails does not count. Running a corrected version of a file again counts as a new upload, and a trial balance in TB Diagnostics followed by journal entries in JE Testing counts as two.',
   },
   {
     question: 'What promotions are available?',
@@ -352,11 +352,11 @@ export const faqItems: FaqItem[] = [
   },
   {
     question: 'Do uploads roll over between months?',
-    answer: 'No. Upload limits reset at the start of each billing period. Unused uploads do not carry forward. Enterprise plans have unlimited uploads so rollover does not apply.',
+    answer: 'No. Upload limits reset every month, including on annual plans. Unused uploads do not carry forward. Enterprise plans have unlimited uploads so rollover does not apply.',
   },
   {
     question: 'Are there file size or row limits?',
-    answer: 'Files can be up to 100 MB and 500,000 rows. The platform supports 10 file formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF (tabular), and ODS.',
+    answer: 'Files can be up to 100 MB and 500,000 rows. The platform reads these file types: CSV, TSV, TXT, Excel (.xlsx, .xls), Word (.docx, tables), QBO, OFX, IIF and PDF (tables). The Free plan accepts CSV, TSV, TXT and Excel.',
   },
   {
     question: 'Can I downgrade my plan?',

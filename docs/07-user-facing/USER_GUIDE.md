@@ -16,7 +16,7 @@ Paciolus is a diagnostic intelligence platform for financial professionals. Eigh
 - **Uploads not kept:** Uploaded files are processed in memory and not kept after analysis. Paciolus saves your account, client list, analysis summaries and anything you enter in an engagement — Section 22 lists exactly what.
 - **18 Audit Tools:** Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, 1099 Vendor Threshold Review, Book-to-Tax Reconciliation, and the Cash Flow Projector. Multi-Currency Conversion runs alongside them as a validation layer rather than a tool of its own.
   - Sections 3–20 below walk through all eighteen in detail, one chapter each.
-- **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
+- **10 File Formats:** CSV, Excel (.xlsx/.xls), TSV, TXT, Word (.docx tables), OFX, QBO, IIF and PDF
 - **Reports for your review:** PDF memos (with optional sign-off lines you complete), Excel workpapers and CSV exports
 
 **Need help?** Email help@paciolus.com or visit our [Help Center](#)
@@ -118,7 +118,7 @@ Paciolus accepts the following file formats for upload. Format availability depe
 | OFX | `.ofx` | Open Financial Exchange (SGML v1 / XML v2) | Solo and above |
 | IIF | `.iif` | QuickBooks Interchange Format | Solo and above |
 | PDF | `.pdf` | Table extraction from PDF documents | Solo and above |
-| ODS | `.ods` | OpenDocument Spreadsheet (LibreOffice/Calc) | Solo and above |
+| Word | `.docx` | Tables extracted from Word documents | Solo and above |
 
 ### 2.2 File Requirements
 
@@ -1126,7 +1126,7 @@ Your uploaded files are processed in memory and not kept after analysis. Paciolu
 - **Line-level data from your uploads is not saved.** Trial balance rows, journal entries, invoices, payments and payroll records are not written to disk or to the database
 - **Aggregate results are retained.** Category totals, financial ratios, row counts, total debits and credits, and the names of accounts a tool flagged (without amounts) are stored for your activity history and workspace continuity
 - **What you type into an engagement is retained.** Materiality, follow-up notes, intercompany account mappings, analytical expectations (expected and actual values) and uncorrected misstatements (account, debit or credit, amount) are workpaper content you enter, and they are stored so the engagement persists
-- **Shared report links are temporary.** When you share a report by link, the generated file is held encrypted for up to 48 hours and then deleted
+- **Shared report links are temporary.** When you share a report by link, the generated file is held encrypted and the link stops working after 24 hours on Professional or 48 hours on Enterprise, or as soon as you revoke it. The file is then deleted by an hourly cleanup; if the storage service does not confirm the deletion, it is retried on the next pass
 
 ### 22.2 What Is Stored vs. What Is Not
 
@@ -1137,7 +1137,7 @@ Your uploaded files are processed in memory and not kept after analysis. Paciolu
 | Aggregate results (ratio values, category totals, row counts) | Ledger entries or journal lines from uploads |
 | Names of accounts a tool flagged (no amounts) | Bank statement line items |
 | Engagement content you enter: materiality, follow-up notes, analytical expectations, uncorrected misstatements | Invoice, payment and payroll records from uploads |
-| Shared report files, for up to 48 hours | Flagged-entry details from uploads |
+| Shared report files, until the link expires (24 hours on Professional, 48 on Enterprise) or is revoked, then deleted by an hourly cleanup | Flagged-entry details from uploads |
 | Billing and subscription records | |
 | Activity log (filename prefix, timestamp) | |
 
@@ -1329,7 +1329,7 @@ Maximum file size is 100 MB (500,000 rows). Remove unnecessary columns or split 
 
 ### "Unsupported Format"
 
-Verify your file extension matches one of the 10 supported formats. Some formats (QBO, OFX, IIF, PDF, ODS) require a Solo plan or higher.
+Verify your file extension matches one of the 10 supported formats. Some formats (QBO, OFX, IIF, PDF, Word) require a Solo plan or higher.
 
 ### "Verify Your Email"
 
@@ -1378,7 +1378,7 @@ A: "Ephemeral" refers specifically to your uploaded financial data. Workspace me
 A: Paciolus is a diagnostic intelligence tool, not an audit. It provides data-driven analysis to support your professional judgment. Use it for review engagements, compilations, internal diagnostics, and audit planning. See our [Terms of Service](https://paciolus.com/terms).
 
 **Q: What file formats are supported?**
-A: Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS. Some formats require a Solo plan or higher. See Section 2 for details.
+A: Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, Word (.docx tables), OFX, QBO, IIF and PDF. Some formats require a Solo plan or higher. See Section 2 for details.
 
 **Q: What is the maximum file size?**
 A: 100 MB and 500,000 rows per upload, across all formats.

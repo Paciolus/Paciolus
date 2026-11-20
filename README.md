@@ -11,7 +11,7 @@ Paciolus is an 18-tool AI-powered audit intelligence suite for financial profess
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches
 - **Ratio Intelligence** — 17 core ratios + 8 industry ratios with DuPont decomposition and trend analysis
-- **10 File Formats** — CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, and ODS
+- **10 File Formats** — CSV, Excel (.xlsx/.xls), TSV, TXT, Word (.docx tables), OFX, QBO, IIF and PDF (ODS is off by default; see `FORMAT_ODS_ENABLED`)
 - **Professional Exports** — PDF diagnostic memos, Excel workpapers, and CSV exports with Oat & Obsidian branding
 
 ## Quick Start
