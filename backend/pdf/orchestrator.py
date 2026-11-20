@@ -131,7 +131,7 @@ def generate_audit_report(
         styles,
         prepared_by,
         reviewed_by,
-        workpaper_date=workpaper_date or datetime.now().strftime("%Y-%m-%d"),
+        workpaper_date=workpaper_date,  # Sprint 887 (OUT-29): never today's date by default
         include_signoff=include_signoff,
     )
 

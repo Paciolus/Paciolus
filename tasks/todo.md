@@ -717,7 +717,15 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       the "high/moderate dispersion" judgment from CV > 100% is gone (the CV is stated). Tests:
       `test_sprint887_population_statistics.py` (5, all failed first — real `/audit/population-profile` → memo:
       all-zero, uniform, symmetric, skewed, old payload). Sample given consistent statistics; snapshot re-recorded.
-- [ ] 12H / OUT-29 — every signature block behind one off-by-default switch; no invented dates
+- [x] **12H / OUT-29 — every signature block is off by default; no invented dates.** One switch,
+      `include_signoff` (default False): the flux expectations memo printed its sign-off table (with a Partner row)
+      regardless — now only when enabled, with only the supplied names; the analytical-expectations and SUM-schedule
+      workpapers always printed "Auditor: ____ Date: ____" — now behind the same switch (`SignoffRequest`; the two
+      engagement routes take `include_signoff`, `prepared_by`, `reviewed_by`, `workpaper_date` query parameters).
+      Their "Sign-Off" headings are "Completion Status" (the DRAFT/completion note stays). Dates: the shared memo
+      block, the TB/financial-statement PDF section and both Excel sign-offs filled today's date when none was
+      supplied, the reviewer's included — now the supplied date beside the preparer only, blank otherwise. Tests:
+      `test_sprint887_signoff_off_by_default.py` (10; 9 failed first). Memo snapshot re-recorded (block removed).
 - [ ] 12I / OUT-30 — leftover vocabulary + a scanning test
 - [ ] 12J / OUT-31 — ASC 606-10-32 title
 - [ ] 12K / OUT-32 — GASB 101 replaces GASB 16 by period

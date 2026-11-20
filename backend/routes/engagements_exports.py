@@ -5,6 +5,7 @@ Split from engagements.py (Sprint 539).
 """
 
 import io
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
@@ -144,6 +145,10 @@ def export_convergence_csv(
 def export_analytical_expectations(
     request: Request,
     engagement_id: int,
+    include_signoff: bool = Query(False, description="Add a sign-off block (off by default)."),
+    prepared_by: Optional[str] = Query(None, max_length=200),
+    reviewed_by: Optional[str] = Query(None, max_length=200),
+    workpaper_date: Optional[str] = Query(None, max_length=40),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -158,7 +163,14 @@ def export_analytical_expectations(
     branding = load_pdf_branding_context(current_user, db)
     try:
         with apply_pdf_branding(branding):
-            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+            pdf_bytes = generator.generate_pdf(
+                current_user.id,
+                engagement_id,
+                include_signoff=include_signoff,
+                prepared_by=prepared_by,
+                reviewed_by=reviewed_by,
+                workpaper_date=workpaper_date,
+            )
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 
@@ -173,6 +185,10 @@ def export_analytical_expectations(
 def export_sum_schedule(
     request: Request,
     engagement_id: int,
+    include_signoff: bool = Query(False, description="Add a sign-off block (off by default)."),
+    prepared_by: Optional[str] = Query(None, max_length=200),
+    reviewed_by: Optional[str] = Query(None, max_length=200),
+    workpaper_date: Optional[str] = Query(None, max_length=40),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> Response:
@@ -187,7 +203,14 @@ def export_sum_schedule(
     branding = load_pdf_branding_context(current_user, db)
     try:
         with apply_pdf_branding(branding):
-            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+            pdf_bytes = generator.generate_pdf(
+                current_user.id,
+                engagement_id,
+                include_signoff=include_signoff,
+                prepared_by=prepared_by,
+                reviewed_by=reviewed_by,
+                workpaper_date=workpaper_date,
+            )
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 

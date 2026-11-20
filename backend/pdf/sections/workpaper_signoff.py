@@ -6,7 +6,6 @@ Renders a table with Prepared By / Reviewed By fields when the signoff
 gate is enabled and practitioner information is provided.
 """
 
-from datetime import datetime
 from typing import Optional
 
 from reportlab.lib.units import inch
@@ -15,6 +14,22 @@ from reportlab.platypus import Spacer, Table, TableStyle
 from pdf.components import LedgerRule
 from pdf.styles import ClassicalColors
 from shared.safe_paragraph import Paragraph
+
+
+def build_workpaper_signoff_rows(
+    prepared_by: Optional[str], reviewed_by: Optional[str], workpaper_date: Optional[str]
+) -> list[list[str]]:
+    """Rows for the names the firm supplied (Sprint 887 / OUT-29).
+
+    The supplied date goes beside the preparer; the reviewer's date is left blank.
+    No date is invented: today's date was printed for both when none was supplied.
+    """
+    rows: list[list[str]] = []
+    if prepared_by:
+        rows.append(["Prepared By:", prepared_by, workpaper_date or ""])
+    if reviewed_by:
+        rows.append(["Reviewed By:", reviewed_by, ""])
+    return rows
 
 
 def render_workpaper_signoff(
@@ -50,12 +65,7 @@ def render_workpaper_signoff(
     story.append(LedgerRule(color=ClassicalColors.OBSIDIAN_DEEP, thickness=1))
     story.append(Spacer(1, 8))
 
-    wp_date = workpaper_date or datetime.now().strftime("%Y-%m-%d")
-    signoff_data = [["Field", "Name", "Date"]]
-    if prepared_by:
-        signoff_data.append(["Prepared By:", prepared_by, wp_date])
-    if reviewed_by:
-        signoff_data.append(["Reviewed By:", reviewed_by, wp_date])
+    signoff_data = [["Field", "Name", "Date"], *build_workpaper_signoff_rows(prepared_by, reviewed_by, workpaper_date)]
 
     col_widths = [1.5 * inch, 3.5 * inch, 1.5 * inch]
     table = Table(signoff_data, colWidths=col_widths)

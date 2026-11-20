@@ -36150,6 +36150,69 @@
               "title": "Engagement Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "Add a sign-off block (off by default).",
+            "in": "query",
+            "name": "include_signoff",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Add a sign-off block (off by default).",
+              "title": "Include Signoff",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prepared_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prepared By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reviewed_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reviewed By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workpaper_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workpaper Date"
+            }
           }
         ],
         "responses": {
@@ -36349,6 +36412,69 @@
             "schema": {
               "title": "Engagement Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Add a sign-off block (off by default).",
+            "in": "query",
+            "name": "include_signoff",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Add a sign-off block (off by default).",
+              "title": "Include Signoff",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prepared_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prepared By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reviewed_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reviewed By"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workpaper_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workpaper Date"
             }
           }
         ],

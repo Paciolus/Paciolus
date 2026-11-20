@@ -668,6 +668,27 @@ def build_results_summary_section(
     story.append(Spacer(1, 8))
 
 
+@dataclass(frozen=True)
+class SignoffRequest:
+    """The one off-by-default sign-off switch, with what the firm supplied (Sprint 887 / OUT-29)."""
+
+    include: bool = False
+    prepared_by: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    workpaper_date: Optional[str] = None
+
+    def lines(self) -> list[str]:
+        """Only the names, and the date, the firm supplied."""
+        out: list[str] = []
+        if self.prepared_by:
+            out.append(
+                f"Prepared by: {self.prepared_by}" + (f" \u2014 {self.workpaper_date}" if self.workpaper_date else "")
+            )
+        if self.reviewed_by:
+            out.append(f"Reviewed by: {self.reviewed_by}")
+        return out
+
+
 def build_workpaper_signoff(
     story: list,
     styles: dict,
@@ -692,7 +713,8 @@ def build_workpaper_signoff(
 
     story.append(LedgerRule(doc_width))
     signoff_data = [["", "Name", "Date"]]
-    wp_date = workpaper_date or format_classical_date()
+    # Sprint 887 (OUT-29): a date is printed only when the firm supplied one; the reviewer's is left blank.
+    wp_date = workpaper_date or ""
     if prepared_by:
         signoff_data.append(["Prepared By:", prepared_by, wp_date])
     if reviewed_by:

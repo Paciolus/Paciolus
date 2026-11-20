@@ -36,7 +36,7 @@ from engagement_model import Engagement
 from models import Client
 from pdf import ClassicalColors, LedgerRule, generate_reference_number
 from shared.framework_resolution import ResolvedFramework
-from shared.memo_base import MemoContext, render_memo
+from shared.memo_base import MemoContext, SignoffRequest, render_memo
 from shared.report_chrome import (
     ReportMetadata,
     build_cover_page,
@@ -145,6 +145,10 @@ class AnalyticalExpectationMemoGenerator:
         user_id: int,
         engagement_id: int,
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
+        include_signoff: bool = False,
+        prepared_by: Optional[str] = None,
+        reviewed_by: Optional[str] = None,
+        workpaper_date: Optional[str] = None,
     ) -> bytes:
         """Render the workpaper. Returns raw PDF bytes."""
         from shared.pdf_branding import current_pdf_branding
@@ -184,6 +188,7 @@ class AnalyticalExpectationMemoGenerator:
                     resolved_framework=resolved_framework,
                     custom_logo_bytes=memo.branding.effective_logo_bytes(),
                     reference=memo.reference,
+                    signoff=SignoffRequest(include_signoff, prepared_by, reviewed_by, workpaper_date),
                 )
             )
 
@@ -199,6 +204,7 @@ class AnalyticalExpectationMemoGenerator:
         resolved_framework: ResolvedFramework = ResolvedFramework.FASB,
         custom_logo_bytes: Optional[bytes] = None,
         reference: Optional[str] = None,
+        signoff: Optional[SignoffRequest] = None,
     ) -> list:
         story: list = []
 
@@ -426,7 +432,7 @@ class AnalyticalExpectationMemoGenerator:
         story.append(Spacer(1, 12))
 
         # --- Sign-off ---
-        story.append(Paragraph("Sign-Off", styles["MemoSection"]))
+        story.append(Paragraph("Completion Status", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         if unevaluated_count > 0:
@@ -448,17 +454,16 @@ class AnalyticalExpectationMemoGenerator:
         else:
             story.append(
                 Paragraph(
-                    "<i>All expectations evaluated. Auditor sign-off below.</i>",
+                    "<i>All expectations evaluated. </i>",
                     styles["MemoBody"],
                 )
             )
 
-        story.append(Spacer(1, 12))
-        story.append(
-            Paragraph(
-                "Auditor: ____________________________ &nbsp; Date: __________",
-                styles["MemoBody"],
-            )
-        )
+        # Sprint 887 (OUT-29): a signature line only when the firm asks for one, with the
+        # name and date it supplied (it printed "Auditor: ____ Date: ____" on every export).
+        if signoff is not None and signoff.include and signoff.lines():
+            story.append(Spacer(1, 12))
+            for line in signoff.lines():
+                story.append(Paragraph(user_text(line), styles["MemoBody"]))
 
         return story

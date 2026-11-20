@@ -240,15 +240,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nSign-Off\n",
+    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nCompletion Status\n",
     "text_bbox": [
      60.0,
      12.0,
      493.44,
      766.8
     ],
-    "runs": "475aae834a20850d",
-    "content": "c16510ee3689f33f"
+    "runs": "cfe77874c18185af",
+    "content": "c536f77e6d40257c"
    },
    {
     "size": [
@@ -257,15 +257,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDRAFT — INCOMPLETE: 1 expectation(s) remain unevaluated. ISA 520 requires the auditor to complete the analytical\nprocedure (capture actual + assess variance) before this workpaper is included in the engagement file.\nAuditor: ____________________________   Date: __________\n",
+    "text": "ACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDRAFT — INCOMPLETE: 1 expectation(s) remain unevaluated. ISA 520 requires the auditor to complete the analytical\nprocedure (capture actual + assess variance) before this workpaper is included in the engagement file.\n",
     "text_bbox": [
      60.0,
      12.0,
      292.5,
      766.8
     ],
-    "runs": "2799e4162629df02",
-    "content": "78d9f21e35ff0d0d"
+    "runs": "bb6b2817e8ac7b40",
+    "content": "8ce623e6d1c71baf"
    }
   ]
  },
@@ -296,15 +296,15 @@
      612.0,
      792.0
     ],
-    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nSign-Off\n",
+    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Engagement Overview\nEngagement Period: Jan 01, 2025 – Dec 31, 2025\nTotal Expectations Documented: 3\nStatus: Not Evaluated: 1  •  Within Threshold: 1  •  Exceeds Threshold: 1\nOverall Materiality: $100,000.00  •  Performance Materiality: $75,000.00  •  Trivial Threshold: $5,000.00\nII. Analytical Expectations\nAccount (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nRevenue\n$1,000.00\n$50.00\nPrior Period\n—\n—\nNot Evaluated\nAccount — Revenue. Corroboration: Prior-period growth\nBalance (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCash and equivalents\n$100,000.00 –\n$125,000.00\n$5,000.00\nBudget\n$140,000.00\n$15,000.00\nExceeds\nThreshold\nBalance — Cash and equivalents. Corroboration: Budget review Auditor notes: Spike attributable to year-end customer pre-payment.\nRatio (1)\nTarget\nExpected\nThreshold\nBasis Tags\nActual\nVariance\nStatus\nCurrent ratio\n$2.00\n10.00%\nIndustry Data, Prior\nPeriod\n$2.05\n$0.05\nWithin\nThreshold\nRatio — Current ratio. Corroboration: Industry median\nIII. Authoritative References\nBody\nReference\nTopic\nAICPA\nAU-C § 520\nAnalytical Procedures\nIAASB\nISA 520\nAnalytical Procedures\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nCompletion Status\n",
     "text_bbox": [
      60.0,
      24.0,
      493.44,
      721.0
     ],
-    "runs": "4d881fb9e568ef21",
-    "content": "ce0c5f7025693b3c"
+    "runs": "9731dfe8f505fd1e",
+    "content": "3df7fa2f2ebe49b2"
    },
    {
     "size": [
@@ -313,15 +313,15 @@
      612.0,
      792.0
     ],
-    "text": "— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDRAFT — INCOMPLETE: 1 expectation(s) remain unevaluated. ISA 520 requires the auditor to complete the analytical\nprocedure (capture actual + assess variance) before this workpaper is included in the engagement file.\nAuditor: ____________________________   Date: __________\n",
+    "text": "— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDRAFT — INCOMPLETE: 1 expectation(s) remain unevaluated. ISA 520 requires the auditor to complete the analytical\nprocedure (capture actual + assess variance) before this workpaper is included in the engagement file.\n",
     "text_bbox": [
      60.0,
      24.0,
      292.5,
      723.0
     ],
-    "runs": "f07ffe56907e0914",
-    "content": "567f6c63c4f77a01"
+    "runs": "2ac72858b60f86db",
+    "content": "53489e9ec8f7eadd"
    }
   ]
  },
@@ -2383,15 +2383,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 8 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nflagged item in the context of the overall engagement risk assessment and perform corroborating procedures as deemed\nnecessary under applicable professional standards.\nAuthoritative References\nBody\nReference\nTopic\nStatus\nAICPA\nAU-C § 520\nAnalytical Procedures\nCurrent\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nCurrent\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nCurrent\nIII. Formal Sign-Off\nDRAFT — INCOMPLETE WORKPAPER\nThis workpaper cannot be finalized until all expectation and conclusion fields are completed.\nRole\nName\nSignature\nDate\nPrepared by\nSarah M. Chen, CPA\n____/____/________\nReviewed by\nJames R. Whitfield, CPA, CIA\n____/____/________\nPartner\n_______________\n____/____/________\n Paciolus Intelligence  •  Generated 02 Mar 2026 09:30 UTC  •  Meridian Capital Group, LLC  •  Period: FY 2024 vs. FY 2025\nIV. Disclaimer\nThis memo reports automated Flux & Variance Intelligence testing analytics with reference to ISA 520 (Analytical Procedures) and ISA 330 (Auditor's Responses to Assessed\n Risks). It is not audit evidence, a risk assessment, or a conclusion on internal control, fraud or misstatement. The auditor must evaluate each flagged item in the context of the\nengagement and perform additional procedures as necessary per professional standards. Standards are cited for reference. Paciolus is not affiliated with any standard-setter, and\n thresholds that no standard sets are Paciolus conventions (see paciolus.com/sources). Generated by Paciolus.\n",
+    "text": "ACME Audit Partners LLP\n— 8 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nflagged item in the context of the overall engagement risk assessment and perform corroborating procedures as deemed\nnecessary under applicable professional standards.\nAuthoritative References\nBody\nReference\nTopic\nStatus\nAICPA\nAU-C § 520\nAnalytical Procedures\nCurrent\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nCurrent\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nCurrent\nIII. Completion Status\nDRAFT — INCOMPLETE WORKPAPER\nThis workpaper cannot be finalized until all expectation and conclusion fields are completed.\n Paciolus Intelligence  •  Generated 02 Mar 2026 09:30 UTC  •  Meridian Capital Group, LLC  •  Period: FY 2024 vs. FY 2025\nIV. Disclaimer\nThis memo reports automated Flux & Variance Intelligence testing analytics with reference to ISA 520 (Analytical Procedures) and ISA 330 (Auditor's Responses to Assessed\n Risks). It is not audit evidence, a risk assessment, or a conclusion on internal control, fraud or misstatement. The auditor must evaluate each flagged item in the context of the\nengagement and perform additional procedures as necessary per professional standards. Standards are cited for reference. Paciolus is not affiliated with any standard-setter, and\n thresholds that no standard sets are Paciolus conventions (see paciolus.com/sources). Generated by Paciolus.\n",
     "text_bbox": [
      60.0,
      12.0,
      492.0,
      766.8
     ],
-    "runs": "99c9dadefe97a3ed",
-    "content": "388be915c4a9c98c"
+    "runs": "2b9905a648fee12f",
+    "content": "442e62462e72ba6a"
    }
   ]
  },
@@ -2524,15 +2524,15 @@
      612.0,
      792.0
     ],
-    "text": "— 8 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nflagged item in the context of the overall engagement risk assessment and perform corroborating procedures as deemed\nnecessary under applicable professional standards.\nAuthoritative References\nBody\nReference\nTopic\nStatus\nAICPA\nAU-C § 520\nAnalytical Procedures\nCurrent\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nCurrent\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nCurrent\nIII. Formal Sign-Off\nDRAFT — INCOMPLETE WORKPAPER\nThis workpaper cannot be finalized until all expectation and conclusion fields are completed.\nRole\nName\nSignature\nDate\nPrepared by\nSarah M. Chen, CPA\n____/____/________\nReviewed by\nJames R. Whitfield, CPA, CIA\n____/____/________\nPartner\n_______________\n____/____/________\n Paciolus Intelligence  •  Generated 02 Mar 2026 09:30 UTC  •  Meridian Capital Group, LLC  •  Period: FY 2024 vs. FY 2025\nIV. Disclaimer\nThis memo reports automated Flux & Variance Intelligence testing analytics with reference to ISA 520 (Analytical Procedures) and ISA 330 (Auditor's Responses to Assessed\n Risks). It is not audit evidence, a risk assessment, or a conclusion on internal control, fraud or misstatement. The auditor must evaluate each flagged item in the context of the\nengagement and perform additional procedures as necessary per professional standards. Standards are cited for reference. Paciolus is not affiliated with any standard-setter, and\n thresholds that no standard sets are Paciolus conventions (see paciolus.com/sources). Generated by Paciolus.\n",
+    "text": "— 8 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nflagged item in the context of the overall engagement risk assessment and perform corroborating procedures as deemed\nnecessary under applicable professional standards.\nAuthoritative References\nBody\nReference\nTopic\nStatus\nAICPA\nAU-C § 520\nAnalytical Procedures\nCurrent\nAICPA\nAU-C § 330\nPerforming Audit Procedures in Response to Assessed Risks\nCurrent\nPCAOB\nAS 2305\nSubstantive Analytical Procedures\nCurrent\nIII. Completion Status\nDRAFT — INCOMPLETE WORKPAPER\nThis workpaper cannot be finalized until all expectation and conclusion fields are completed.\n Paciolus Intelligence  •  Generated 02 Mar 2026 09:30 UTC  •  Meridian Capital Group, LLC  •  Period: FY 2024 vs. FY 2025\nIV. Disclaimer\nThis memo reports automated Flux & Variance Intelligence testing analytics with reference to ISA 520 (Analytical Procedures) and ISA 330 (Auditor's Responses to Assessed\n Risks). It is not audit evidence, a risk assessment, or a conclusion on internal control, fraud or misstatement. The auditor must evaluate each flagged item in the context of the\nengagement and perform additional procedures as necessary per professional standards. Standards are cited for reference. Paciolus is not affiliated with any standard-setter, and\n thresholds that no standard sets are Paciolus conventions (see paciolus.com/sources). Generated by Paciolus.\n",
     "text_bbox": [
      60.0,
      24.0,
      492.0,
      722.0
     ],
-    "runs": "d4edcd1d47435a03",
-    "content": "c89bc2ca7db30bbd"
+    "runs": "574baead6647d31f",
+    "content": "5b13426123b558fe"
    }
   ]
  },
@@ -4370,15 +4370,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nBody\nReference\nTopic\nAICPA\nAU-C § 450\nEvaluation of Misstatements Identified During the Audit\nIAASB\nISA 450\nEvaluation of Misstatements Identified During the Audit\nAICPA\nAU-C § 320\nMateriality in Planning and Performing an Audit\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nPCAOB\nAS 2810\nEvaluating Audit Results\nSign-Off\nDRAFT — INCOMPLETE: 3 item(s) remain unreviewed. ISA 450 requires the auditor to reach a documented disposition for\neach uncorrected misstatement before this workpaper is included in the engagement file.\nAuditor: ____________________________   Date: __________\n",
+    "text": "ACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nBody\nReference\nTopic\nAICPA\nAU-C § 450\nEvaluation of Misstatements Identified During the Audit\nIAASB\nISA 450\nEvaluation of Misstatements Identified During the Audit\nAICPA\nAU-C § 320\nMateriality in Planning and Performing an Audit\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nPCAOB\nAS 2810\nEvaluating Audit Results\nCompletion Status\nDRAFT — INCOMPLETE: 3 item(s) remain unreviewed. ISA 450 requires the auditor to reach a documented disposition for\neach uncorrected misstatement before this workpaper is included in the engagement file.\n",
     "text_bbox": [
      60.0,
      12.0,
      292.5,
      766.8
     ],
-    "runs": "0bc809aee0929b2e",
-    "content": "19627ba61663a782"
+    "runs": "bd3504d7b379185e",
+    "content": "b8583786898f8b45"
    }
   ]
  },
@@ -4426,15 +4426,15 @@
      612.0,
      792.0
     ],
-    "text": "— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nBody\nReference\nTopic\nAICPA\nAU-C § 450\nEvaluation of Misstatements Identified During the Audit\nIAASB\nISA 450\nEvaluation of Misstatements Identified During the Audit\nAICPA\nAU-C § 320\nMateriality in Planning and Performing an Audit\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nPCAOB\nAS 2810\nEvaluating Audit Results\nSign-Off\nDRAFT — INCOMPLETE: 3 item(s) remain unreviewed. ISA 450 requires the auditor to reach a documented disposition for\neach uncorrected misstatement before this workpaper is included in the engagement file.\nAuditor: ____________________________   Date: __________\n",
+    "text": "— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nBody\nReference\nTopic\nAICPA\nAU-C § 450\nEvaluation of Misstatements Identified During the Audit\nIAASB\nISA 450\nEvaluation of Misstatements Identified During the Audit\nAICPA\nAU-C § 320\nMateriality in Planning and Performing an Audit\nIAASB\nISA 320\nMateriality in Planning and Performing an Audit\nPCAOB\nAS 2810\nEvaluating Audit Results\nCompletion Status\nDRAFT — INCOMPLETE: 3 item(s) remain unreviewed. ISA 450 requires the auditor to reach a documented disposition for\neach uncorrected misstatement before this workpaper is included in the engagement file.\n",
     "text_bbox": [
      60.0,
      24.0,
      292.5,
      703.5
     ],
-    "runs": "886e2184d922fe63",
-    "content": "2f0fae234001471d"
+    "runs": "3cbe767ab70844a0",
+    "content": "f8fc2a592069325f"
    }
   ]
  },

@@ -149,7 +149,8 @@ class PaciolusWorkpaperGenerator:
         self.prepared_by = prepared_by
         self.reviewed_by = reviewed_by
         # Sprint 885 (OUT-02): a real date (written as a date cell), never free text.
-        self.workpaper_date = as_date(workpaper_date) or datetime.now().date()
+        # Sprint 887 (OUT-29): None (a blank cell) unless the firm supplied a date.
+        self.workpaper_date = as_date(workpaper_date)
         self.include_signoff = include_signoff
 
         # Remove default sheet (will create named sheets)
@@ -277,7 +278,6 @@ class PaciolusWorkpaperGenerator:
                 put_ref(ws, f"A{row}", "Reviewed By:")
                 ws[f"A{row}"].font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
                 put_ref(ws, f"B{row}", self.reviewed_by)
-                put_ref(ws, f"C{row}", self.workpaper_date)
                 row += 1
 
             disclaimer_start = row + 2
@@ -805,7 +805,7 @@ def generate_financial_statements_excel(
     # Workpaper signoff (deprecated Sprint 7 — gated by include_signoff)
     if include_signoff and (prepared_by or reviewed_by):
         end_row += 2
-        wp_date = as_date(workpaper_date) or datetime.now().date()
+        wp_date = as_date(workpaper_date)  # Sprint 887 (OUT-29): blank unless supplied
         put(bs_ws, end_row, 1, "Workpaper Sign-Off")
         bs_ws.cell(row=end_row, column=1).style = "title_style"
         end_row += 1
@@ -819,7 +819,6 @@ def generate_financial_statements_excel(
             put(bs_ws, end_row, 1, "Reviewed By:")
             bs_ws.cell(row=end_row, column=1).font = Font(color=ExcelColors.OBSIDIAN_600, size=10)
             put(bs_ws, end_row, 2, reviewed_by)
-            put(bs_ws, end_row, 3, wp_date)
 
     bs_ws.column_dimensions["A"].width = 40
     bs_ws.column_dimensions["B"].width = 18

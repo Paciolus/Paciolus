@@ -417,7 +417,7 @@ def generate_flux_expectations_memo(
         )
 
         # ── III. FORMAL SIGN-OFF ──
-        story.append(Paragraph("III. Formal Sign-Off", styles["MemoSection"]))
+        story.append(Paragraph("III. Completion Status", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
         # Completion gating: DRAFT watermark when items pending
@@ -436,33 +436,35 @@ def generate_flux_expectations_memo(
             )
             story.append(Spacer(1, 6))
 
-        signoff_data = [
-            ["Role", "Name", "Signature", "Date"],
-            ["Prepared by", prepared_by or "_______________", "", "____/____/________"],
-            ["Reviewed by", reviewed_by or "_______________", "", "____/____/________"],
-            ["Partner", "_______________", "", "____/____/________"],
-        ]
-        signoff_table = Table(
-            signoff_data,
-            colWidths=[1.2 * inch, 2.0 * inch, 2.0 * inch, 1.5 * inch],
-        )
-        signoff_table.setStyle(
-            TableStyle(
-                [
-                    ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
-                    ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 9),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
-                    ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("TOPPADDING", (0, 0), (-1, -1), 6),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                    ("LEFTPADDING", (0, 0), (0, -1), 0),
-                ]
+        # Sprint 887 (OUT-29): the signature table only when the firm asks for it, with only the
+        # names (and the date) it supplied. It printed always, with a Partner row and blank dates.
+        if include_signoff and (prepared_by or reviewed_by):
+            signoff_data = [["Role", "Name", "Signature", "Date"]]
+            if prepared_by:
+                signoff_data.append(["Prepared by", prepared_by, "", workpaper_date or ""])
+            if reviewed_by:
+                signoff_data.append(["Reviewed by", reviewed_by, "", ""])
+            signoff_table = Table(
+                signoff_data,
+                colWidths=[1.2 * inch, 2.0 * inch, 2.0 * inch, 1.5 * inch],
             )
-        )
-        story.append(signoff_table)
+            signoff_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
+                        ("FONTNAME", (0, 1), (-1, -1), "Times-Roman"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, ClassicalColors.OBSIDIAN_DEEP),
+                        ("LINEBELOW", (0, 1), (-1, -1), 0.25, ClassicalColors.LEDGER_RULE),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("TOPPADDING", (0, 0), (-1, -1), 6),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                        ("LEFTPADDING", (0, 0), (0, -1), 0),
+                    ]
+                )
+            )
+            story.append(signoff_table)
         story.append(Spacer(1, 12))
 
         # ── Intelligence Stamp ──
