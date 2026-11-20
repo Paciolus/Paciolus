@@ -1,5 +1,23 @@
 # Pricing V2 Rollback Runbook
 
+> **SUPERSEDED (Sprint 888, 2026-11-20) — do not follow the steps below.** `PRICING_V2_ENABLED` was retired in Phase
+> LXIX (`config.py` hard-codes it to `True`; setting the variable does nothing), and "soft" enforcement would stop enforcing
+> every plan limit (production only warns about it). A pricing rollback today is a code revert of `price_config.py` / `entitlements.py` plus the
+> matching Stripe price change. Kept for history only.
+
+Current facts live in the code, not here:
+
+- **Tiers and prices:** Free, Solo ($100 / $1,000), Professional ($500 / $5,000), Enterprise ($1,000 / $10,000) —
+  `PRICE_TABLE` in `backend/billing/price_config.py`.
+- **Limits:** `backend/shared/entitlements.py` (Free 10 uploads a month and 3 clients; Solo 100; Professional 500;
+  Enterprise unlimited). Enforcement defaults to hard; `config.py` logs a warning if production runs with
+  `ENTITLEMENT_ENFORCEMENT=soft` or `SEAT_ENFORCEMENT_MODE=soft`. Soft mode is not a rollback tool.
+- **Stripe environment names:** `STRIPE_PRICE_{SOLO,PROFESSIONAL,ENTERPRISE}_{MONTHLY,ANNUAL}`,
+  `STRIPE_SEAT_PRICE_{PRO,ENT}_{MONTHLY,ANNUAL}`, `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`.
+- **Live cutover:** Sprint 447 in `tasks/todo.md` and `tasks/ceo-actions.md`.
+
+---
+
 **Phase LIX Sprint F** — Hybrid Pricing Model rollout control.
 
 ## Overview

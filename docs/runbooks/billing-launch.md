@@ -1,5 +1,22 @@
 # Billing Launch Runbook
 
+> **SUPERSEDED (Sprint 888, 2026-11-20) — do not follow the steps below.** This runbook describes Pricing v2:
+> Solo at $50 / $500, a Team plan, $80 and $70 seat rates, a Free allowance of 5 and `STRIPE_PRICE_TEAM_*`. None of
+> that is current. It is kept for history only.
+
+Current facts live in the code, not here:
+
+- **Tiers and prices:** Free, Solo ($100 / $1,000), Professional ($500 / $5,000), Enterprise ($1,000 / $10,000) —
+  `PRICE_TABLE` in `backend/billing/price_config.py`.
+- **Limits:** `backend/shared/entitlements.py` (Free 10 uploads a month and 3 clients; Solo 100; Professional 500;
+  Enterprise unlimited). Enforcement defaults to hard; `config.py` logs a warning if production runs with
+  `ENTITLEMENT_ENFORCEMENT=soft` or `SEAT_ENFORCEMENT_MODE=soft`. Soft mode is not a rollback tool.
+- **Stripe environment names:** `STRIPE_PRICE_{SOLO,PROFESSIONAL,ENTERPRISE}_{MONTHLY,ANNUAL}`,
+  `STRIPE_SEAT_PRICE_{PRO,ENT}_{MONTHLY,ANNUAL}`, `STRIPE_COUPON_MONTHLY_20`, `STRIPE_COUPON_ANNUAL_10`.
+- **Live cutover:** Sprint 447 in `tasks/todo.md` and `tasks/ceo-actions.md`.
+
+---
+
 **Sprint:** Billing Launch Configuration
 **Prerequisite:** Phase L (billing infrastructure) + Phase LIX (hybrid pricing) code-complete.
 

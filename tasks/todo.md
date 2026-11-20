@@ -813,7 +813,8 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       returns on payment, records stay readable. Webhook-driven entitlement test + FAQ/email timing copy check.
 - [ ] 13B: FAQ upload unit (one analysis run), monthly reset, enabled formats (README, FAQ, USER_GUIDE), shared-link
       24 h / 48 h, bulk upload (endpoint + todo feature), runbooks superseded, retired tier aliases.
-      Done: bulk upload 501 + build plan; FAQ/README/guide facts (`test_sprint_888_plan_facts.py`).
+      Done: bulk upload 501 + build plan; FAQ/README/guide facts (`test_sprint_888_plan_facts.py`); both pricing
+      runbooks marked superseded; rate-limit aliases starter/team/organization and "Team" plan comments removed.
 - [ ] 13C: 10-minute cache claim, Data Handling contradictions, retired wording + old sample PDFs, log content claim,
       closure/cancellation report, "what we keep" drafts, subprocessor list.
 - [x] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
