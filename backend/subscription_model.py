@@ -235,7 +235,7 @@ class BillingEvent(Base):
     )
 
     # Context at time of event
-    tier: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # solo, team
+    tier: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # solo, professional, enterprise
     interval: Mapped[str | None] = mapped_column(String(10), nullable=True)  # monthly, annual
     seat_count: Mapped[int | None] = mapped_column(Integer, nullable=True)  # total seats at event time
 

@@ -4,7 +4,7 @@
  * PlanCard
  *
  * Displays current subscription plan details with status badge.
- * Uses display names (Solo/Team/Organization) and trial-aware messaging.
+ * Uses plan display names (Solo/Professional/Enterprise) and trial-aware messaging.
  */
 
 interface PlanCardProps {

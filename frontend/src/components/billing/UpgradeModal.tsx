@@ -4,7 +4,7 @@
  * UpgradeModal
  *
  * Tier selection modal with monthly/annual toggle.
- * Includes seat selector for Team tier.
+ * Includes a seat selector for the team plans (Professional, Enterprise).
  */
 
 import { useState } from 'react'

@@ -7,7 +7,7 @@ Provides:
     1. trial_starts (count)
     2. trial_to_paid_rate (trial_converted / trial_started)
     3. paid_by_plan (subscriptions grouped by tier)
-    4. avg_seats_by_tier (average seat count for Team)
+    4. avg_seats_by_tier (average seat count per tier)
     5. cancellations_by_reason (grouped by metadata.reason)
 - Weekly review summary aggregation
 

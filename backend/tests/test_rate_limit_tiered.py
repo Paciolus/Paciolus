@@ -596,12 +596,22 @@ class TestTierPolicies:
             "anonymous",
             "free",
             "solo",
-            "starter",
-            "team",
-            "organization",
             "professional",
             "enterprise",
         }
+
+    @pytest.mark.parametrize("retired", ["starter", "team", "organization"])
+    def test_retired_tier_names_get_anonymous_limits(self, retired):
+        """Sprint 888: the pre-v3 aliases are gone; no token can carry them (UserTier has
+        only free/solo/professional/enterprise), and an unknown name gets the anonymous limits."""
+        assert retired not in get_tier_policies()
+        ctx = copy_context()
+
+        def _run():
+            _current_tier.set(retired)
+            return RATE_LIMIT_AUDIT()
+
+        assert ctx.run(_run) == get_tier_policies()["anonymous"]["audit"]
 
     def test_all_categories_present(self):
         policies = get_tier_policies()

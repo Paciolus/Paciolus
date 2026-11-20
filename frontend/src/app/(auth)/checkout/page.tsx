@@ -2,7 +2,7 @@
 
 /**
  * Checkout page — Self-Serve Checkout.
- * Supports Solo/Team pricing with seat_count + promo_code passthrough.
+ * Supports Solo/Professional/Enterprise pricing with seat_count + promo_code passthrough.
  * Includes seat stepper, promo code input, and price breakdown.
  *
  * Shows plan summary with interactive seat/promo controls and redirects to Stripe Checkout.

@@ -9,7 +9,7 @@ Sprint 306: User-aware rate limiting with tiered policies.
 - Anonymous requests keyed by client IP (existing behavior preserved)
 - TieredLimit str subclass: backward-compatible with existing == / .split()
   comparisons while also being callable for slowapi dynamic resolution
-- Tier policies: anonymous/free/solo/professional/team/organization x 5 categories
+- Tier policies: anonymous/free/solo/professional/enterprise x 5 categories (an unknown tier gets anonymous)
 
 Maintenance Status (Sprint 444, revised Sprint 786b):
     slowapi (0.1.10) is maintained at low frequency, not unmaintained. The
@@ -106,15 +106,6 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "write": "60/minute",
         "default": "120/minute",
     },
-    # Backward-compat alias: existing JWTs may carry "starter" during the
-    # 30-min access token window after migration.
-    "starter": {
-        "auth": "8/minute",
-        "audit": "20/minute",
-        "export": "45/minute",
-        "write": "60/minute",
-        "default": "120/minute",
-    },
     "professional": {
         "auth": "10/minute",
         "audit": "30/minute",
@@ -123,24 +114,6 @@ _DEFAULT_POLICIES: dict[str, dict[str, str]] = {
         "default": "180/minute",
     },
     "enterprise": {
-        "auth": "20/minute",
-        "audit": "60/minute",
-        "export": "120/minute",
-        "write": "180/minute",
-        "default": "300/minute",
-    },
-    # LEGACY ALIAS: "team" maps to Professional tier. Requires DB migration before rename.
-    # Tracked in docs/archive/COHESION_REMEDIATION.md — do not rename without migration.
-    "team": {
-        "auth": "20/minute",
-        "audit": "60/minute",
-        "export": "120/minute",
-        "write": "180/minute",
-        "default": "300/minute",
-    },
-    # LEGACY ALIAS: "organization" maps to Enterprise tier. Requires DB migration before rename.
-    # Tracked in docs/archive/COHESION_REMEDIATION.md — do not rename without migration.
-    "organization": {
         "auth": "20/minute",
         "audit": "60/minute",
         "export": "120/minute",
