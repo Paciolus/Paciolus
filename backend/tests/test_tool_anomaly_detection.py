@@ -352,22 +352,140 @@ from multi_period_comparison import compare_trial_balances
 from tests.anomaly_framework.fixtures.base_multi_period import BaseMultiPeriodFactory
 from tests.anomaly_framework.generators.multi_period_generators import MULTI_PERIOD_REGISTRY
 
+# Sprint 889 (CEO brief 14B, review TQ-06): each case names the account and the result.
+# Values are worked from the base fixture by hand:
+#   new_account     6700: prior 0, current 18,395.50, classed new
+#   closed_account  1300: prior 41,350.00, current 0, classed closed
+#   sign_change     1100: prior 78,412.00 debit -> 15,234.00 credit; change -93,646.00
+#   large_increase  6100: prior 34,150.00 x 1.75 = 59,762.50; change 25,612.50, +75%
+#   large_decrease  4100: prior 98,175.00 credit x 0.40 = 39,270.00; revenue down 60%
+#   budget_variance 6000: actual 95,497.50 vs budget 70,000.00 -> adverse 25,497.50, 36.425%
+_MP_EXPECTED = {
+    "new_account": ("6700", "new_account", 0.0, 18395.50, 18395.50, None),
+    "closed_account": ("1300", "closed_account", 41350.00, 0.0, -41350.00, None),
+    "sign_change": ("1100", "sign_change", 78412.00, -15234.00, -93646.00, None),
+    "large_increase": ("6100", "increase", 34150.00, 59762.50, 25612.50, 75.0),
+    # movement_type None: see test_revenue_that_falls_is_labelled_a_decrease (CEO finding)
+    # Raw debit-positive basis: 58,905 / 98,175 = +60%. The fixture names the account "4100", which the
+    # classifier cannot place as revenue, so no credit-normal display flip happens here.
+    "large_decrease": ("4100", None, -98175.00, -39270.00, 58905.00, 60.0),
+}
+
+
+def _movement(result_dict: dict, account: str) -> dict:
+    matches = [m for m in result_dict["all_movements"] if m["account_name"] == account]
+    assert len(matches) == 1, (account, [m["account_name"] for m in result_dict["all_movements"]])
+    return matches[0]
+
+
+def _budget_accounts(current: list[dict]) -> list[dict]:
+    """The generator writes the budget beside each current account; put it on the account's normal side."""
+    out = []
+    for acct in current:
+        if "budget" not in acct:
+            continue
+        debit_normal = (acct["debit"] - acct["credit"]) >= 0
+        out.append(
+            {
+                "account": acct["account"],
+                "type": acct["type"],
+                "debit": acct["budget"] if debit_normal else 0.0,
+                "credit": 0.0 if debit_normal else acct["budget"],
+            }
+        )
+    return out
+
 
 @pytest.mark.parametrize("generator", MULTI_PERIOD_REGISTRY, ids=lambda g: g.name)
 def test_multi_period_anomaly_detected(generator):
-    """Verify Multi-Period movement is detected."""
+    """Verify the injected movement is found on the right account with the right amounts."""
+    from multi_period_comparison import compare_three_periods
+
     prior = BaseMultiPeriodFactory.as_prior_period()
     current = BaseMultiPeriodFactory.as_current_period()
 
     mutated_prior, mutated_current, records = generator.inject(prior, current, seed=42)
-    result = compare_trial_balances(mutated_prior, mutated_current)
+    assert records, generator.name
 
-    result_dict = result.to_dict() if hasattr(result, "to_dict") else result
+    if generator.name == "budget_variance":
+        budget = _budget_accounts(mutated_current)
+        assert budget, "the budget generator wrote no budget"
+        result_dict = compare_three_periods(mutated_prior, mutated_current, budget).to_dict()
+        variance = _movement(result_dict, "6000")["budget_variance"]
+        assert variance is not None
+        assert variance["budget_balance"] == 70000.00
+        assert variance["variance_amount"] == 25497.50
+        assert variance["variance_percent"] == pytest.approx(36.425, abs=0.001)
+        # Direction is not asserted here: the base fixture names accounts by number ("6000"), which
+        # the classifier cannot place, so it reads "neutral". The named case below asserts it.
+        return
 
+    result_dict = compare_trial_balances(mutated_prior, mutated_current).to_dict()
     _assert_counts_are_rows(generator.name, result_dict)
-    for record in records:
-        # Multi-period results have movement_summary or account_movements
-        assert result_dict is not None, f"[{generator.name}] No result returned"
+    account, movement_type, prior_bal, current_bal, change, pct = _MP_EXPECTED[generator.name]
+    m = _movement(result_dict, account)
+    if movement_type is not None:
+        assert m["movement_type"] == movement_type
+    assert m["prior_balance"] == prior_bal
+    assert m["current_balance"] == current_bal
+    assert m["change_amount"] == change
+    if pct is not None:
+        assert m["change_percent"] == pytest.approx(pct, abs=0.001)
+    if generator.name == "new_account":
+        assert "6700" in result_dict["new_accounts"]
+    if generator.name == "closed_account":
+        assert "1300" in result_dict["closed_accounts"]
+
+
+class TestMultiPeriodHandWorkedCases:
+    """Small inputs whose answers are worked by hand (brief 14B)."""
+
+    def test_new_increase_and_sign_change(self):
+        prior = [
+            {"account": "Rent Expense", "type": "Expense", "debit": 100, "credit": 0},
+            {"account": "Prepaid Asset", "type": "Asset", "debit": 100, "credit": 0},
+        ]
+        current = [
+            {"account": "Rent Expense", "type": "Expense", "debit": 175, "credit": 0},
+            {"account": "Prepaid Asset", "type": "Asset", "debit": 0, "credit": 20},
+            {"account": "6700", "type": "Expense", "debit": 18395.50, "credit": 0},
+        ]
+        r = compare_trial_balances(prior, current).to_dict()
+        rent = _movement(r, "Rent Expense")
+        assert (rent["movement_type"], rent["change_amount"], rent["change_percent"]) == ("increase", 75.0, 75.0)
+        asset = _movement(r, "Prepaid Asset")
+        assert (asset["movement_type"], asset["current_balance"], asset["change_amount"]) == (
+            "sign_change",
+            -20.0,
+            -120.0,
+        )
+        new = _movement(r, "6700")
+        assert (new["movement_type"], new["prior_balance"], new["current_balance"]) == ("new_account", 0.0, 18395.50)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "Sprint 889 finding for the CEO: movement_type is classed on the debit-positive net, so revenue "
+            "that falls from 100 to 40 is labelled 'increase' (badge and 'Increases' count) beside a "
+            "display change of -60%."
+        ),
+    )
+    def test_revenue_that_falls_is_labelled_a_decrease(self):
+        prior = [{"account": "Consulting Revenue", "type": "Revenue", "debit": 0, "credit": 100}]
+        current = [{"account": "Consulting Revenue", "type": "Revenue", "debit": 0, "credit": 40}]
+        m = _movement(compare_trial_balances(prior, current).to_dict(), "Consulting Revenue")
+        assert m["display_change_percent"] == pytest.approx(-60.0)
+        assert m["movement_type"] == "decrease"
+
+    def test_budget_variance_uses_the_budget(self):
+        from multi_period_comparison import compare_three_periods
+
+        prior = [{"account": "Rent Expense", "type": "Expense", "debit": 100, "credit": 0}]
+        current = [{"account": "Rent Expense", "type": "Expense", "debit": 175, "credit": 0}]
+        budget = [{"account": "Rent Expense", "type": "Expense", "debit": 100, "credit": 0}]
+        r = compare_three_periods(prior, current, budget).to_dict()
+        v = _movement(r, "Rent Expense")["budget_variance"]
+        assert (v["variance_amount"], v["variance_percent"], v["variance_direction"]) == (75.0, 75.0, "unfavorable")
 
 
 # =============================================================================
@@ -379,30 +497,68 @@ from tests.anomaly_framework.fixtures.base_sampling_population import BaseSampli
 from tests.anomaly_framework.generators.sampling_generators import SAMPLING_REGISTRY
 
 
-@pytest.mark.parametrize("generator", SAMPLING_REGISTRY, ids=lambda g: g.name)
-def test_sampling_anomaly_detected(generator):
-    """Verify Sampling population anomaly is handled."""
-    rows = BaseSamplingPopulationFactory.as_rows()
-    mutated_rows, records = generator.inject(rows, seed=42)
-
-    # Convert to CSV bytes for the sampling engine
+def _design(rows: list[dict]):
     import io
 
     import pandas as pd
 
-    df = pd.DataFrame(mutated_rows)
     buf = io.BytesIO()
-    df.to_csv(buf, index=False)
-    csv_bytes = buf.getvalue()
+    pd.DataFrame(rows).to_csv(buf, index=False)
+    config = SamplingConfig(confidence_level=0.95, tolerable_misstatement=50000.0, expected_misstatement=0.0)
+    return design_sample(buf.getvalue(), "test_population.csv", config)
 
-    config = SamplingConfig(
-        confidence_level=0.95,
-        tolerable_misstatement=50000.0,
-        expected_misstatement=0.0,
-    )
-    result = design_sample(csv_bytes, "test_population.csv", config)
-    # Sampling engine should process without crashing
-    assert result is not None, f"[{generator.name}] No result returned"
+
+def _selected(result) -> dict[str, list[float]]:
+    out: dict[str, list[float]] = {}
+    for s in result.selected_items:
+        out.setdefault(s.item.item_id, []).append(s.item.recorded_amount)
+    return out
+
+
+@pytest.mark.parametrize("generator", SAMPLING_REGISTRY, ids=lambda g: g.name)
+def test_sampling_anomaly_detected(generator):
+    """Sprint 889 (14B): each injected item is selected, or left out, for a stated reason.
+
+    MUS selects any item larger than the interval with certainty and can never select an item
+    with no dollars (a zero) or a negative one.
+    """
+    rows = BaseSamplingPopulationFactory.as_rows()
+    mutated_rows, records = generator.inject(rows, seed=42)
+    result = _design(mutated_rows)
+    selected = _selected(result)
+    item_id = records[0].metadata["item_id"]
+    interval = result.sampling_interval
+    assert interval and interval > 0
+
+    if generator.name in ("high_value_item", "extreme_outlier"):
+        amount = records[0].metadata["amount"]
+        assert amount > interval
+        assert selected.get(item_id) == [amount], f"{item_id} must be selected at its recorded amount"
+    elif generator.name in ("zero_amount_item", "negative_amount_item"):
+        assert item_id not in selected
+    elif generator.name == "duplicate_item_id":
+        assert result.population_size == len(BaseSamplingPopulationFactory.as_rows()) + 1
+    else:  # a new generator must state its expectation here
+        raise AssertionError(f"no expectation for {generator.name}")
+
+
+def test_mus_selects_big_at_its_amount_and_never_zero():
+    """Hand-worked (brief 14B): BIG 275,000 + ten 100s + ten 200s + ZERO.
+
+    Population value 278,000; interval = 50,000 / 3.0 (95%, no expected error) = 16,666.67.
+    BIG spans many intervals and is selected once at 275,000; ZERO has no dollars to hit.
+    """
+    rows = [{"Item ID": "BIG", "Description": "big", "Recorded Amount": 275000.0}]
+    rows += [
+        {"Item ID": f"ORD-{i}", "Description": "o", "Recorded Amount": 100.0 if i % 2 else 200.0} for i in range(20)
+    ]
+    rows += [{"Item ID": "ZERO", "Description": "z", "Recorded Amount": 0.0}]
+    result = _design(rows)
+    assert result.population_value == 278000.0
+    assert result.sampling_interval == pytest.approx(16666.67, abs=0.01)
+    selected = _selected(result)
+    assert selected["BIG"] == [275000.0]
+    assert "ZERO" not in selected
 
 
 # =============================================================================

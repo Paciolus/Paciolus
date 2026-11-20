@@ -862,7 +862,11 @@ test is shown to fail under a temporary mutation, then the mutation is reverted.
 allowance is computed and never presents the provision as complete. (Closes Sprint 826 B1.)
 
 - [x] 14A heatmap fixed expectations (engine, API, CSV) — 3.000 / 4.000 / materiality 90 / count 2.
-- [ ] 14B multi-period + sampling cases assert the account and result; generators derive change from prior.
+- [x] 14B multi-period + sampling cases assert the account and result; generators derive change from prior.
+      **Found (CEO):** `movement_type` is classed on the debit-positive net, so revenue that falls 60% shows the
+      "Increase" badge and counts under "Increases" beside a -60% display change (strict xfail
+      `test_revenue_that_falls_is_labelled_a_decrease`). Also: the sign-change generator recorded the current AR
+      (83,900.84) as its prior (78,412.00) — corrected.
 - [ ] 14C if-guarded assertions become assertions.
 - [ ] 14D frontend activity mapper + JE success case from real response shapes.
 - [ ] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.

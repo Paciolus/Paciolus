@@ -158,7 +158,7 @@ class SignChangeGenerator(MultiPeriodGeneratorBase):
             metadata={
                 "account": "1100",
                 "account_name": "Accounts Receivable",
-                "prior_balance": 83900.84,
+                "prior_balance": 78412.00,  # Sprint 889: was the current-period 83,900.84
                 "current_balance": -15234.00,
             },
         )
@@ -179,11 +179,14 @@ class LargeIncreaseGenerator(MultiPeriodGeneratorBase):
         prior_period = deepcopy(prior_period)
         current_period = deepcopy(current_period)
 
-        # Increase Rent Expense by 75%: 36179 -> 59813.25
+        # Increase Rent Expense 75% over the PRIOR period: 34,150 x 1.75 = 59,762.50.
+        # Sprint 889 (14B): it used to scale the current 36,179 (-> 63,313.25), an
+        # 85.4% rise over prior, while recording 75%.
+        prior_amount = next(a["debit"] for a in prior_period if a["account"] == "6100")  # 34150.00
         for acct in current_period:
             if acct["account"] == "6100":
                 old_amount = acct["debit"]  # 36179.00
-                new_amount = round(old_amount * 1.75, 2)  # 63313.25
+                new_amount = round(prior_amount * 1.75, 2)  # 59762.50
                 increase = new_amount - old_amount
                 acct["debit"] = new_amount
                 break
@@ -197,14 +200,14 @@ class LargeIncreaseGenerator(MultiPeriodGeneratorBase):
         record = AnomalyRecord(
             anomaly_type="large_increase",
             report_targets=["MPTB-04"],
-            injected_at="Account 6100 Rent Expense increased 75% ($36,179 -> $63,313)",
+            injected_at="Account 6100 Rent Expense increased 75% over prior ($34,150 -> $59,762.50)",
             expected_field="significant_increases",
             expected_condition="items_count > 0",
             metadata={
                 "account": "6100",
                 "account_name": "Rent Expense",
                 "prior_balance": 34150.00,
-                "current_balance": 63313.25,
+                "current_balance": 59762.50,
                 "percent_change": 75.0,
             },
         )
@@ -225,11 +228,14 @@ class LargeDecreaseGenerator(MultiPeriodGeneratorBase):
         prior_period = deepcopy(prior_period)
         current_period = deepcopy(current_period)
 
-        # Decrease Consulting Revenue by 60%: 106029 -> 42411.60
+        # Decrease Consulting Revenue 60% below the PRIOR period: 98,175 x 0.40 = 39,270.00.
+        # Sprint 889 (14B): it used to scale the current 106,029 (-> 42,411.60), a 56.8%
+        # fall from prior, while recording 60%.
+        prior_credit = next(a["credit"] for a in prior_period if a["account"] == "4100")  # 98175.00
         for acct in current_period:
             if acct["account"] == "4100":
                 old_credit = acct["credit"]  # 106029.00
-                new_credit = round(old_credit * 0.40, 2)  # 42411.60
+                new_credit = round(prior_credit * 0.40, 2)  # 39270.00
                 decrease = old_credit - new_credit
                 acct["credit"] = new_credit
                 break
@@ -243,14 +249,14 @@ class LargeDecreaseGenerator(MultiPeriodGeneratorBase):
         record = AnomalyRecord(
             anomaly_type="large_decrease",
             report_targets=["MPTB-05"],
-            injected_at="Account 4100 Consulting Revenue decreased 60% ($106,029 -> $42,412)",
+            injected_at="Account 4100 Consulting Revenue decreased 60% from prior ($98,175 -> $39,270)",
             expected_field="significant_decreases",
             expected_condition="items_count > 0",
             metadata={
                 "account": "4100",
                 "account_name": "Consulting Revenue",
                 "prior_balance": 98175.00,
-                "current_balance": 42411.60,
+                "current_balance": 39270.00,
                 "percent_change": -60.0,
             },
         )
