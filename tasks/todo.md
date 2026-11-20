@@ -689,8 +689,25 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       tests still passing `risk_assessments` (12C), the aggregator mocks without `test_key`, and the 12A thresholds
       dict (now with `materiality_threshold`) — all updated here. Engine and route snapshots re-recorded: additions
       of `top_flags` / ids only (checked by stripping them), memo text = suggestion choice only.
-- [ ] 12E / OUT-20 — anomaly summary: latest successful run, real flag counts, four states; worksheet blank by default
-- [ ] 12F / OUT-21 — Follow-Up Item Points: every band reachable, weights and edges printed
+- [x] **12E / OUT-20 — the anomaly summary reports each tool's real state.** New nullable `tool_runs.flag_count`
+      (migration `c3e7a1f9d524`), written by the testing tools, AR (`total_flagged`), TB (`anomaly_count`), multi-period
+      (material + significant) and bank rec; other tools record none. One "Tool Results" table per catalog tool, from
+      its latest successful run: Failed / Not evaluated / Results unavailable / No exceptions flagged / n items flagged,
+      each with its "captured follow-up items". Removed: "Tools with Clean Results", "No anomalies identified.
+      Population passed all configured test thresholds.", "Total Anomalies", "Assessments Completed: 0", the
+      "Unexecuted tools may represent coverage gaps requiring alternative procedures" note, the narrative telling the
+      auditor to prioritize High items, and the DRAFT note. Section III is "Practitioner Worksheet — for the firm to
+      complete", blank by default; `POST …/export/anomaly-summary?fill_from_saved=true` fills disposition and notes from
+      Paciolus with the date each was last recorded. **No page offers this report today** (API only). Tests:
+      `test_sprint887_anomaly_summary_states.py` (4, all failed first: only-failed runs, flagged run with no items, a
+      rerun, a true zero, an unrecorded count, worksheet default/filled).
+- [x] **12F / OUT-21 — Follow-Up Item Points.** Replaces "Engagement Risk Indicator: TIER (n/100)": points = 3/2/1 per
+      high/medium/low captured follow-up item + 1.5 per catalog tool not run (rounded down); bands by points alone
+      ("Under 8 points" / "8–14 points" / "15 points or more"; the 1-high and 3-high overrides removed, so every
+      band is reachable); weights, band edges and the per-line breakdown printed. `RISK_TIER_BASIS_NOTE_ENGAGEMENT`
+      removed. Tests: `test_sprint887_follow_up_points.py` (12; collection failed first) — zero, coverage only, each
+      edge, overrides gone, a large count, the memo text; old tier tests in `test_anomaly_summary.py` replaced. The
+      sample anomaly summary now carries run status and flag counts (payroll zero, bank rec failed then rerun).
 - [ ] 12G / OUT-22 — population memo: outlier/skew only from an explicit statistic; zero/uniform/symmetric neutral
 - [ ] 12H / OUT-29 — every signature block behind one off-by-default switch; no invented dates
 - [ ] 12I / OUT-30 — leftover vocabulary + a scanning test

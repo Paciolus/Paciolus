@@ -420,6 +420,7 @@ class EngagementManager:
         composite_score: Optional[float] = None,
         flagged_accounts: Optional[list[str]] = None,
         _max_retries: int = 3,
+        flag_count: Optional[int] = None,
     ) -> ToolRun:
         """Record a tool run, auto-incrementing run_number per (engagement, tool).
 
@@ -447,6 +448,7 @@ class EngagementManager:
                 status=status,
                 composite_score=composite_score,
                 flagged_accounts=json.dumps(flagged_accounts) if flagged_accounts else None,
+                flag_count=flag_count,
             )
 
             try:

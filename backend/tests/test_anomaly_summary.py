@@ -35,13 +35,12 @@ from anomaly_summary_generator import (
     DISCLAIMER_TEXT,
     TOOL_CROSS_REFERENCES,
     AnomalySummaryGenerator,
-    _compute_engagement_risk,
+    _compute_follow_up_points,
     _generate_reference,
 )
 from engagement_export import PLATFORM_VERSION, EngagementExporter
 from engagement_model import ToolName
 from follow_up_items_model import FollowUpSeverity
-from shared.memo_base import RISK_TIER_DISPLAY, validate_risk_tier_coverage
 
 
 class TestAnomalySummaryReport:
@@ -271,124 +270,25 @@ class TestPractitionerAssessment:
         assert pdf[:5] == b"%PDF-"
 
 
-class TestEngagementRiskAssessment:
-    """Tests for Section IV engagement risk scoring."""
+class TestFollowUpItemPoints:
+    """Section IV: Follow-Up Item Points (Sprint 887 / OUT-21 replaced the risk tiers).
 
-    def test_elevated_risk(self):
-        """High severity count >= 3 triggers elevated tier."""
-        label, score = _compute_engagement_risk(3, 2, 1, 0)
-        assert label == "elevated"
+    Band edges, the coverage term and a large count are covered in
+    ``test_sprint887_follow_up_points.py``.
+    """
 
-    def test_elevated_risk_by_score(self):
-        """Total score >= 15 triggers elevated tier."""
-        label, score = _compute_engagement_risk(2, 3, 2, 2)
-        assert label == "elevated"
-        assert score >= 15
+    def test_weights(self):
+        assert _compute_follow_up_points(3, 2, 1, 0)[0] == 3 * 3 + 2 * 2 + 1
 
-    def test_moderate_risk(self):
-        """1 high severity with low total triggers moderate tier."""
-        label, score = _compute_engagement_risk(1, 0, 0, 0)
-        assert label == "moderate"
+    def test_coverage_term_adds_points(self):
+        assert _compute_follow_up_points(0, 0, 0, 10)[0] > _compute_follow_up_points(0, 0, 0, 0)[0]
 
-    def test_low_risk(self):
-        """Zero high severity and low total triggers low tier."""
-        label, score = _compute_engagement_risk(0, 1, 1, 0)
-        assert label == "low"
-
-    def test_coverage_penalty(self):
-        """Unexecuted tools add coverage penalty."""
-        label1, score1 = _compute_engagement_risk(0, 0, 0, 0)
-        label2, score2 = _compute_engagement_risk(0, 0, 0, 10)
-        assert score2 > score1
-
-    def test_risk_indicator_in_pdf(self, db_session, make_engagement, make_follow_up_item):
-        """PDF generates with risk indicator section."""
+    def test_points_in_pdf(self, db_session, make_engagement, make_follow_up_item):
         eng = make_engagement()
         make_follow_up_item(engagement=eng, severity=FollowUpSeverity.HIGH, tool_source="ap_testing")
         gen = AnomalySummaryGenerator(db_session)
         pdf = gen.generate_pdf(eng.created_by, eng.id)
         assert pdf[:5] == b"%PDF-"
-
-
-class TestRiskTierBoundaryValidation:
-    """FIX-4 FIX 1: Boundary validation ensuring scoring logic and RISK_TIER_DISPLAY stay in sync."""
-
-    # All tier keys that _compute_engagement_risk can return
-    _KNOWN_TIERS = {"low", "moderate", "elevated"}
-
-    def test_risk_tier_display_covers_all_scoring_tiers(self):
-        """RISK_TIER_DISPLAY must contain a label for every tier _compute_engagement_risk can return."""
-        missing = validate_risk_tier_coverage(self._KNOWN_TIERS)
-        assert missing == [], f"RISK_TIER_DISPLAY is missing labels for: {missing}"
-
-    def test_boundary_score_7_is_low(self):
-        """Score = 7 (just below moderate threshold 8) → low."""
-        # 7 = 0*3 + 2*2 + 3*1 = 7
-        label, score = _compute_engagement_risk(0, 2, 3, 0)
-        assert score == 7
-        assert label == "low"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_boundary_score_8_is_moderate(self):
-        """Score = 8 (exact moderate threshold) → moderate."""
-        # 8 = 0*3 + 4*2 + 0*1 = 8
-        label, score = _compute_engagement_risk(0, 4, 0, 0)
-        assert score == 8
-        assert label == "moderate"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_boundary_score_14_is_moderate(self):
-        """Score = 14 (just below elevated threshold 15) → moderate."""
-        # 14 = 0*3 + 7*2 + 0*1 = 14
-        label, score = _compute_engagement_risk(0, 7, 0, 0)
-        assert score == 14
-        assert label == "moderate"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_boundary_score_15_is_elevated(self):
-        """Score = 15 (exact elevated threshold) → elevated."""
-        # 15 = 1*3 + 6*2 + 0*1 = 15
-        label, score = _compute_engagement_risk(1, 6, 0, 0)
-        assert score == 15
-        assert label == "elevated"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_boundary_high_count_1_triggers_moderate(self):
-        """high_count=1 triggers moderate regardless of total score."""
-        label, score = _compute_engagement_risk(1, 0, 0, 0)
-        assert score == 3
-        assert label == "moderate"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_boundary_high_count_3_triggers_elevated(self):
-        """high_count=3 triggers elevated regardless of total score."""
-        label, score = _compute_engagement_risk(3, 0, 0, 0)
-        assert score == 9
-        assert label == "elevated"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_zero_inputs_is_low(self):
-        """All zeros → low."""
-        label, score = _compute_engagement_risk(0, 0, 0, 0)
-        assert score == 0
-        assert label == "low"
-        assert label in RISK_TIER_DISPLAY
-
-    def test_label_changes_at_boundary_transitions(self):
-        """Labels must change at exact boundary values and not before."""
-        # Below moderate boundary
-        label_7, _ = _compute_engagement_risk(0, 2, 3, 0)  # score=7
-        label_8, _ = _compute_engagement_risk(0, 4, 0, 0)  # score=8
-        assert label_7 == "low"
-        assert label_8 == "moderate"
-        assert label_7 != label_8
-
-        # Below elevated boundary
-        label_14, _ = _compute_engagement_risk(0, 7, 0, 0)  # score=14
-        label_15, _ = _compute_engagement_risk(1, 6, 0, 0)  # score=15
-        assert label_14 == "moderate"
-        assert label_15 == "elevated"
-        assert label_14 != label_15
 
 
 class TestSignOffBlock:

@@ -53,6 +53,7 @@ def maybe_record_tool_run(
     summary: Optional[dict] = None,
     *,
     consumes_upload: bool = False,
+    flag_count: Optional[int] = None,
 ) -> None:
     """Write a ToolActivity row, and (if engagement_id resolves) a ToolRun row.
 
@@ -119,6 +120,8 @@ def maybe_record_tool_run(
         status=ToolRunStatus.COMPLETED if success else ToolRunStatus.FAILED,
         composite_score=composite_score if success else None,
         flagged_accounts=flagged_accounts if success else None,
+        # Sprint 887 (OUT-20): items the run flagged (None = this tool reports no count).
+        flag_count=flag_count if success else None,
     )
 
 

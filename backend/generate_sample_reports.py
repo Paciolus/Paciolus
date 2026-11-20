@@ -4212,7 +4212,7 @@ def gen_anomaly_summary() -> None:
     from types import SimpleNamespace
 
     from anomaly_summary_generator import render_anomaly_summary_pdf
-    from engagement_model import ToolName
+    from engagement_model import ToolName, ToolRunStatus
     from follow_up_items_model import FollowUpSeverity
 
     engagement = SimpleNamespace(period_start=date(2025, 1, 1), period_end=date(2025, 12, 31))
@@ -4227,10 +4227,33 @@ def gen_anomaly_summary() -> None:
         (ToolName.FIXED_ASSET_TESTING, ["2026-02-12 16:20", "2026-02-13 09:40", "2026-02-13 14:05"]),
         (ToolName.BANK_RECONCILIATION, ["2026-02-13 16:55", "2026-02-14 09:00"]),
     ]
-    tool_runs = [
-        SimpleNamespace(id=n, tool_name=tool, run_at=datetime.strptime(stamp, "%Y-%m-%d %H:%M"))
-        for n, (tool, stamp) in enumerate(((t, ts) for t, stamps in run_log for ts in stamps), 1)
-    ]
+    # Sprint 887 (OUT-20): each run's status and flag count, as the recorder stores them.
+    # Payroll flagged nothing; the first bank rec run failed and the rerun flagged 2 items
+    # that were not captured as follow-up items.
+    flag_counts = {
+        ToolName.TRIAL_BALANCE: 18,
+        ToolName.JOURNAL_ENTRY_TESTING: 163,
+        ToolName.AP_TESTING: 10,
+        ToolName.PAYROLL_TESTING: 0,
+        ToolName.REVENUE_TESTING: 8,
+        ToolName.AR_AGING: 5,
+        ToolName.FIXED_ASSET_TESTING: 14,
+        ToolName.BANK_RECONCILIATION: 2,
+    }
+    tool_runs: list[SimpleNamespace] = []
+    for n, (tool, stamps) in enumerate(run_log, 1):
+        for run_number, stamp in enumerate(stamps, 1):
+            failed = tool == ToolName.BANK_RECONCILIATION and run_number == 1
+            tool_runs.append(
+                SimpleNamespace(
+                    id=len(tool_runs) + 1,
+                    tool_name=tool,
+                    run_number=run_number,
+                    run_at=datetime.strptime(stamp, "%Y-%m-%d %H:%M"),
+                    status=ToolRunStatus.FAILED if failed else ToolRunStatus.COMPLETED,
+                    flag_count=None if failed else flag_counts[tool],
+                )
+            )
 
     high, medium, low = FollowUpSeverity.HIGH, FollowUpSeverity.MEDIUM, FollowUpSeverity.LOW
     anomalies = [

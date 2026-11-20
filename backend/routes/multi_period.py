@@ -165,7 +165,18 @@ def compare_period_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
+    # Sprint 887 (OUT-20): material + significant movements are the run's flagged items.
+    by_sig = result_dict.get("movements_by_significance") or {}
+    maybe_record_tool_run(
+        db,
+        payload.engagement_id,
+        current_user.id,
+        "multi_period",
+        True,
+        None,
+        flagged,
+        flag_count=int(by_sig.get("material", 0)) + int(by_sig.get("significant", 0)),
+    )
 
     # Sprint 728c: evaluate ISA 520 expectations targeting these movements.
     if payload.engagement_id is not None:
@@ -210,7 +221,18 @@ def compare_three_way_trial_balances(
 
     result_dict = result.to_dict()
     flagged = extract_multi_period_accounts(result_dict)
-    maybe_record_tool_run(db, payload.engagement_id, current_user.id, "multi_period", True, None, flagged)
+    # Sprint 887 (OUT-20): material + significant movements are the run's flagged items.
+    by_sig = result_dict.get("movements_by_significance") or {}
+    maybe_record_tool_run(
+        db,
+        payload.engagement_id,
+        current_user.id,
+        "multi_period",
+        True,
+        None,
+        flagged,
+        flag_count=int(by_sig.get("material", 0)) + int(by_sig.get("significant", 0)),
+    )
 
     # Sprint 728c: ISA 520 evaluation against current-period balances
     if payload.engagement_id is not None:

@@ -132,7 +132,17 @@ async def audit_bank_reconciliation(
                     "performance_materiality": "caller" if performance_materiality is not None else "default",
                 }
 
-            maybe_record_tool_run(db, engagement_id, current_user.id, "bank_reconciliation", True, consumes_upload=True)
+            # Sprint 887 (OUT-20): the run's flagged-item count, for the anomaly summary.
+            bank_flags = (result.composite_score or {}).get("total_flagged")
+            maybe_record_tool_run(
+                db,
+                engagement_id,
+                current_user.id,
+                "bank_reconciliation",
+                True,
+                consumes_upload=True,
+                flag_count=bank_flags if isinstance(bank_flags, int) else None,
+            )
 
             return result.to_dict()  # type: ignore[no-any-return]
 

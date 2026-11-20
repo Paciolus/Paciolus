@@ -425,6 +425,7 @@ def make_tool_run(db_session: Session, make_engagement: Any) -> Callable[..., To
         run_number: int = 1,
         status: ToolRunStatus = ToolRunStatus.COMPLETED,
         composite_score: float | None = None,
+        flag_count: int | None = None,
     ) -> ToolRun:
         if engagement is None:
             engagement = make_engagement()
@@ -434,6 +435,7 @@ def make_tool_run(db_session: Session, make_engagement: Any) -> Callable[..., To
             run_number=run_number,
             status=status,
             composite_score=composite_score,
+            flag_count=flag_count,
         )
         db_session.add(tool_run)
         db_session.flush()

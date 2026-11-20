@@ -202,6 +202,8 @@ async def run_single_file_testing(
                 filename,
                 result_dict.get("record_count"),
                 consumes_upload=True,
+                # Sprint 887 (OUT-20): distinct items the run flagged.
+                flag_count=(result_dict.get("composite_score") or {}).get("total_flagged"),
             )
 
             response = dict(result_dict)

@@ -256,6 +256,10 @@ class ToolRun(SoftDeleteMixin, Base):
     flagged_accounts: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # JSON-encoded list of account name strings
+    # Sprint 887 (OUT-20): items the run flagged. None = not recorded (runs before
+    # this column, tools without a count) — the anomaly summary says "results
+    # unavailable", never "no exceptions flagged".
+    flag_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Timestamp
     run_at: Mapped[datetime] = mapped_column(

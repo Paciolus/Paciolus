@@ -132,7 +132,16 @@ async def audit_ar_aging(
             )
             flagged = extract_ar_aging_accounts(result_dict)
             maybe_record_tool_run(
-                db, engagement_id, current_user.id, "ar_aging", True, score, flagged, consumes_upload=True
+                db,
+                engagement_id,
+                current_user.id,
+                "ar_aging",
+                True,
+                score,
+                flagged,
+                consumes_upload=True,
+                # Sprint 887 (OUT-20): distinct items the run flagged.
+                flag_count=(result_dict.get("composite_score") or {}).get("total_flagged"),
             )
 
             return result_dict  # type: ignore[no-any-return]

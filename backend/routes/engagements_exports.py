@@ -6,7 +6,7 @@ Split from engagements.py (Sprint 539).
 
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -35,10 +35,17 @@ router = APIRouter(tags=["engagements"])
 def export_anomaly_summary(
     request: Request,
     engagement_id: int,
+    fill_from_saved: bool = Query(
+        False,
+        description=(
+            "Fill the Section III worksheet from the dispositions and notes saved in Paciolus, "
+            "each with the date it was recorded. Default: a blank worksheet for the firm to complete."
+        ),
+    ),
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Generate anomaly summary PDF for an engagement."""
+    """Generate anomaly summary PDF for an engagement (Sprint 887: optional saved dispositions)."""
     log_secure_operation(
         "anomaly_summary_export",
         f"User {current_user.id} exporting anomaly summary for engagement {engagement_id}",
@@ -51,7 +58,7 @@ def export_anomaly_summary(
     branding = load_pdf_branding_context(current_user, db)
     try:
         with apply_pdf_branding(branding):
-            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id)
+            pdf_bytes = generator.generate_pdf(current_user.id, engagement_id, fill_from_saved=fill_from_saved)
     except ValueError:
         raise HTTPException(status_code=404, detail="Engagement not found")
 

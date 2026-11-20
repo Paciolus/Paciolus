@@ -241,6 +241,8 @@ async def audit_trial_balance(
                 tb_record_count,
                 tb_summary,
                 consumes_upload=True,
+                # Sprint 887 (OUT-20): the analysis's flagged-account count.
+                flag_count=analysis_result.get("anomaly_count"),
             )
 
             return analysis_result  # type: ignore[return-value]

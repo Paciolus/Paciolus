@@ -36120,7 +36120,7 @@
     },
     "/engagements/{engagement_id}/export/anomaly-summary": {
       "post": {
-        "description": "Generate anomaly summary PDF for an engagement.",
+        "description": "Generate anomaly summary PDF for an engagement (Sprint 887: optional saved dispositions).",
         "operationId": "export_anomaly_summary_engagements__engagement_id__export_anomaly_summary_post",
         "parameters": [
           {
@@ -36130,6 +36130,18 @@
             "schema": {
               "title": "Engagement Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Fill the Section III worksheet from the dispositions and notes saved in Paciolus, each with the date it was recorded. Default: a blank worksheet for the firm to complete.",
+            "in": "query",
+            "name": "fill_from_saved",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Fill the Section III worksheet from the dispositions and notes saved in Paciolus, each with the date it was recorded. Default: a blank worksheet for the firm to complete.",
+              "title": "Fill From Saved",
+              "type": "boolean"
             }
           }
         ],
