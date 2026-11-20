@@ -113,7 +113,7 @@ def calculate_lease(
     """Run ASC 842 lessee workflow: classification + initial measurement +
     amortization + disclosures.
 
-    Zero-storage: nothing persisted. Single-lease only — multi-lease bundling
+    Nothing from this request is saved. Single-lease only — multi-lease bundling
     is a future-sprint enhancement.
     """
     try:

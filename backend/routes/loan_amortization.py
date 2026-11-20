@@ -118,7 +118,7 @@ def calculate_schedule(
 ) -> AmortizationScheduleResponse:
     """Calculate a loan amortization schedule from form inputs.
 
-    Zero-storage: nothing is persisted; the response is computed on demand.
+    Nothing from this request is saved; the response is computed on demand.
     """
     try:
         config = _build_config(payload)

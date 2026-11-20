@@ -113,7 +113,7 @@ def calculate_depreciation(
 ) -> DepreciationResponse:
     """Calculate book + MACRS depreciation schedules from form inputs.
 
-    Zero-storage: nothing persisted. Salvage value is honored under book methods
+    Nothing from this request is saved. Salvage value is honored under book methods
     and ignored under MACRS (per IRC §168).
     """
     try:

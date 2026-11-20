@@ -2,12 +2,12 @@
 
 **18-Tool AI-Powered Audit Intelligence Suite for Financial Professionals**
 
-Paciolus is an 18-tool AI-powered audit intelligence suite for financial professionals, built on a Zero-Storage architecture. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review — your uploaded financial data is never stored.
+Paciolus is an 18-tool AI-powered audit intelligence suite for financial professionals. Upload a trial balance, general ledger, payment register, or bank statement. Get structured, standards-referenced diagnostics and report-ready exports that hold up under professional review. Your uploaded files are processed in memory and not kept after analysis.
 
 ## Key Features
 
 - **18 Audit Tools** — Trial Balance Diagnostics, Multi-Period Comparison, Bank Reconciliation, Three-Way Match, Journal Entry Testing, AP Payment Testing, Revenue Testing, AR Aging, Payroll Testing, Fixed Assets, Inventory Testing, Statistical Sampling, Segregation of Duties, Intercompany Elimination, W-2 / W-3 Reconciliation, 1099 Vendor Threshold Review, Book-to-Tax Reconciliation and Cash Flow Projector. Canonical list: [`backend/tools_registry.py`](./backend/tools_registry.py)
-- **Zero-Storage Architecture** — Your uploaded financial data is never stored. Only aggregate, non-attributable usage metadata is retained
+- **Uploads not kept** — Your uploaded files are processed in memory and not kept after analysis. We save your account, client list, analysis summaries and anything you enter in an engagement. Details: [`docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md`](./docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md)
 - **Intelligent Classification** — 80+ keyword rules automatically categorize accounts (Assets, Liabilities, Equity, Revenue, Expenses)
 - **Anomaly Detection** — Identifies sign errors, unusual balances, and classification mismatches
 - **Ratio Intelligence** — 17 core ratios + 8 industry ratios with DuPont decomposition and trend analysis

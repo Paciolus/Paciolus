@@ -31650,7 +31650,7 @@
     },
     "/audit/depreciation": {
       "post": {
-        "description": "Calculate book + MACRS depreciation schedules from form inputs.\n\nZero-storage: nothing persisted. Salvage value is honored under book methods\nand ignored under MACRS (per IRC §168).",
+        "description": "Calculate book + MACRS depreciation schedules from form inputs.\n\nNothing from this request is saved. Salvage value is honored under book methods\nand ignored under MACRS (per IRC §168).",
         "operationId": "calculate_depreciation_audit_depreciation_post",
         "requestBody": {
           "content": {
@@ -32330,7 +32330,7 @@
     },
     "/audit/lease-accounting": {
       "post": {
-        "description": "Run ASC 842 lessee workflow: classification + initial measurement +\namortization + disclosures.\n\nZero-storage: nothing persisted. Single-lease only — multi-lease bundling\nis a future-sprint enhancement.",
+        "description": "Run ASC 842 lessee workflow: classification + initial measurement +\namortization + disclosures.\n\nNothing from this request is saved. Single-lease only — multi-lease bundling\nis a future-sprint enhancement.",
         "operationId": "calculate_lease_audit_lease_accounting_post",
         "requestBody": {
           "content": {
@@ -32422,7 +32422,7 @@
     },
     "/audit/loan-amortization": {
       "post": {
-        "description": "Calculate a loan amortization schedule from form inputs.\n\nZero-storage: nothing is persisted; the response is computed on demand.",
+        "description": "Calculate a loan amortization schedule from form inputs.\n\nNothing from this request is saved; the response is computed on demand.",
         "operationId": "calculate_schedule_audit_loan_amortization_post",
         "requestBody": {
           "content": {

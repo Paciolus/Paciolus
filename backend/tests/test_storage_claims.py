@@ -26,6 +26,7 @@ SCANNED_PREFIXES = (
     "backend/templates/",
     "docs/04-compliance/",
     "docs/07-user-facing/",
+    "README.md",  # Sprint 888: the repository's front page is public
 )
 # Dated, superseded versions kept for the record; each is labelled as such.
 EXCLUDED_PREFIXES = ("docs/04-compliance/archive/",)
@@ -54,6 +55,11 @@ RETIRED_PHRASES = (
     "immediately destroyed",
     "nothing was persisted",
     "no data is stored",
+    # Sprint 888 (CEO brief 13C, approved data statement): also retired.
+    "nothing retained",
+    "nothing is retained",
+    "don't store client data",
+    "do not store client data",
 )
 _PATTERN = re.compile("|".join(re.escape(p) for p in RETIRED_PHRASES), re.IGNORECASE)
 
@@ -107,6 +113,7 @@ _TERM_PREFIXES = (
     "frontend/src/domain/",
     "backend/templates/",
     "docs/07-user-facing/",
+    "README.md",
 )
 _COMMENT = re.compile(r"^\s*(//|\*|/\*|\{/\*)")
 
@@ -120,3 +127,10 @@ def test_zero_storage_is_not_used_as_a_customer_facing_claim():
             if _TERM.search(line) and not _COMMENT.match(line):
                 hits.append(f"{rel}:{lineno}")
     assert not hits, "'Zero-Storage' used as a claim:\n  " + "\n  ".join(hits)
+
+
+def test_public_api_descriptions_do_not_claim_zero_storage():
+    """Sprint 888: route docstrings become the published OpenAPI descriptions."""
+    snapshot = (REPO / "scripts" / "openapi-snapshot.json").read_text(encoding="utf-8")
+    assert not _TERM.search(snapshot), "'Zero-Storage' in an OpenAPI description (scripts/openapi-snapshot.json)"
+    assert not _PATTERN.search(snapshot), _PATTERN.search(snapshot).group(0)

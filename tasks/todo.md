@@ -821,6 +821,8 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       (`test_sprint_888_logs_carry_no_upload_content.py`).
       Data Handling v3.2 (flagged names, adjusting entries, rate rows, Key Value) and Subprocessor List v2.2 (S3 logos,
       Key Value security counters, SendGrid contact form) corrected.
+      README and three OpenAPI descriptions use the approved statement; guard extended to README, the API
+      snapshot and the brief's retired phrases. The 22 sample PDFs carry no retired wording (checked).
 - [x] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
       Professional 499 allowed / 500 refused.
 - [ ] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
