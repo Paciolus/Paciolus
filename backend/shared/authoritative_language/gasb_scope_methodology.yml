@@ -57,10 +57,16 @@ tools:
   payroll_testing:
     data_description: "payroll and employee compensation detail"
     references:
+      # Sprint 887 (OUT-32): Statement 101 replaced Statement 16 for fiscal years
+      # beginning after December 15, 2023; each is cited for the periods it governs.
+      - statement: "Statement No. 101"
+        topic: "Compensated Absences"
+        paragraph: "Various"
+        status: "Current — fiscal years beginning after December 15, 2023"
       - statement: "Statement No. 16"
         topic: "Accounting for Compensated Absences"
         paragraph: "Various"
-        status: "Current"
+        status: "Superseded by Statement No. 101 — applies to fiscal years beginning on or before December 15, 2023"
       - statement: "Statement No. 73"
         topic: "Accounting and Financial Reporting for Pensions and Related Assets That Are Not within the Scope of GASB Statement 68"
         paragraph: "Various"

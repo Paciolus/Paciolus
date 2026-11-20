@@ -745,7 +745,11 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       were outside the listed "25-1 through 25-5" — now listed; 32-33 sits in the allocation paragraphs, now listed as
       "32-28 through 32-41". Tests: `test_sprint887_citations.py` (2, both failed first — the title, and every cited
       606-10 paragraph appears in the YAML). Memo snapshot and `route_testing_exports` re-recorded (title only).
-- [ ] 12K / OUT-32 — GASB 101 replaces GASB 16 by period
+- [x] **12K / OUT-32 — compensated absences cite GASB 101 and 16 by period.** Statement 16 was listed as "Current".
+      Now: Statement No. 101 "Compensated Absences", "Current — fiscal years beginning after December 15, 2023";
+      Statement No. 16, "Superseded by Statement No. 101 — applies to fiscal years beginning on or before December 15,
+      2023". The memo has no reliable fiscal-year start to pick one, so both print with their periods. Tests: 3 in
+      `test_sprint887_citations.py` (2 failed first; one renders a GASB payroll memo).
 - [ ] 12L — expense category: one computation and the same thresholds on screen, CSV and PDF
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent

@@ -54,3 +54,38 @@ class TestRevenueReferences:
         }
         missing = sorted(f"606-10-{s}-{p}" for s, p in cited if p not in listed.get(s, set()))
         assert not missing, missing
+
+
+class TestCompensatedAbsences:
+    """12K: GASB Statement 101 replaced Statement 16 for fiscal years beginning after December 15, 2023."""
+
+    def _payroll(self) -> dict[str, dict]:
+        return {r["statement"]: r for r in _refs("gasb_scope_methodology.yml", "payroll_testing")}
+
+    def test_statement_101_cited_for_the_periods_it_applies_to(self):
+        ref = self._payroll()["Statement No. 101"]
+        assert ref["topic"] == "Compensated Absences"
+        assert "fiscal years beginning after December 15, 2023" in ref["status"]
+
+    def test_statement_16_cited_only_for_earlier_periods(self):
+        ref = self._payroll()["Statement No. 16"]
+        assert ref["status"] != "Current"
+        assert "Superseded by Statement No. 101" in ref["status"]
+        assert "on or before December 15, 2023" in ref["status"]
+
+    def test_gasb_payroll_memo_prints_both_with_their_periods(self):
+        import io
+
+        from pypdf import PdfReader
+
+        from payroll_testing_memo_generator import generate_payroll_testing_memo
+        from shared.framework_resolution import ResolvedFramework
+
+        pdf = generate_payroll_testing_memo(
+            {"composite_score": {"score": 0.0, "risk_tier": "low"}, "test_results": [], "data_quality": {}},
+            filename="p",
+            resolved_framework=ResolvedFramework.GASB,
+        )
+        text = " ".join(" ".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(pdf)).pages).split())
+        assert "Statement No. 101" in text and "Statement No. 16" in text
+        assert "Superseded by Statement No. 101" in text
