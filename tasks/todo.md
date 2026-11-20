@@ -96,6 +96,10 @@
 >       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
 > - [ ] **Sprint 887** (in review) — generated wording: no audit conclusions, no contradiction of the results, correct
 >       citations (review OUT-07/08/13/17/20/21/22/29/30/31/32 + expense-category table). Local branch, stacked on 886.
+> - [ ] **Sprints 888–892** (CEO briefs 13–17, 2026-11-20) — one local branch each, stacked on Sprint 887 in this
+>       order: 888 published claims match the code · 889 tests that can fail · 890 frontend/API/background edges ·
+>       891 one catalog, one plan file, docs, dead code · 892 behaviour-neutral refactors. The CEO's briefs supersede
+>       the freeze for this work. Merge after 883–887.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -795,6 +799,31 @@ clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/
       imperative — reword to "The auditor may consider…" and extend the `test_memo_banned_phrases.py` procedure rule.
 - [ ] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
       reword to "No exceptions flagged" form.
+
+### Sprint 888: What we publish about plans, billing and data handling matches the code
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-888-published-claims`, stacked on Sprint 887.
+**Priority:** P0 (launch copy). **Source:** CEO brief 13 (review AZ-12, TQ-08 + plan and data-handling tables, at
+`ef5e567`). **Agents:** executor, guardian (copy vs code), critic (no new promises).
+**Decisions (CEO):** paid features pause at the first failed payment (copy changes, not behaviour); bulk upload will
+be built — until it analyses files, Terms does not list it and the endpoint says it is not available; approved data
+statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one legal-copy commit on top of
+`counsel-redline-863`, not on this branch.
+
+- [x] 13A: FAQ + every dunning email say paid features pause at the first failed payment, cancellation later, access
+      returns on payment, records stay readable. Webhook-driven entitlement test + FAQ/email timing copy check.
+- [ ] 13B: FAQ upload unit (one analysis run), monthly reset, enabled formats (README, FAQ, USER_GUIDE), shared-link
+      24 h / 48 h, bulk upload (endpoint + todo feature), runbooks superseded, retired tier aliases.
+- [ ] 13C: 10-minute cache claim, Data Handling contradictions, retired wording + old sample PDFs, log content claim,
+      closure/cancellation report, "what we keep" drafts, subprocessor list.
+- [ ] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
+      Professional 499 allowed / 500 refused.
+- [ ] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
+
+**Found (13A), for the CEO — not fixed:** `invoice.paid` sets the subscription ACTIVE but leaves `user.tier` on Free,
+and its write moves `updated_at`, so Stripe's `customer.subscription.updated` for the same recovery (same second or
+earlier) is skipped as stale. A subscriber who pays after a failure can stay on Free. Pinned by a strict xfail in
+`tests/test_sprint_888_payment_failure.py`. Proposed fix: `invoice.paid` restores `user.tier` from `sub.tier` (and org
+members) when it moves PAST_DUE → ACTIVE.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

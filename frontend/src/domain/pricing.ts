@@ -320,7 +320,11 @@ export const faqItems: FaqItem[] = [
       }]),
   {
     question: 'What happens when my trial expires?',
-    answer: 'When the trial ends, your subscription continues on the plan you chose and the card on file is charged. If that charge fails, we email you and the card is retried over the following days; if it still has not gone through after a 7-day grace period, the subscription is canceled and your account moves to the Free plan. Your client list, analysis summaries and engagement entries are kept.',
+    answer: 'When the trial ends, your subscription continues on the plan you chose and the card on file is charged. If that charge fails, the rules for a failed payment below apply.',
+  },
+  {
+    question: 'What happens if a payment fails?',
+    answer: 'Paid features pause at the first failed payment: until a payment goes through, your account works as a Free account. We email you, and the card is retried over the following days. If the payment still has not gone through, the subscription is canceled 7 days after the third failed attempt. When a payment succeeds, paid features return. Your client list, analysis summaries and engagement entries remain readable throughout.',
   },
   {
     question: 'What counts as an "upload"?',

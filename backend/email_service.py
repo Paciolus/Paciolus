@@ -581,10 +581,22 @@ Paciolus — trial balance and ledger testing for audit teams
 </body></html>"""
 
 
+_P = '<p style="color:#212121;font-size:15px;line-height:1.6">'
+_RECORDS_READABLE = "Your client list, analysis summaries and engagement entries remain readable."
+
+
 def send_dunning_first_failure(to_email: str, amount: str, plan_name: str, portal_url: str) -> EmailResult:
-    """First payment failure — friendly, informational."""
-    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">Your payment of <strong>{amount}</strong> for <strong>{plan_name}</strong> didn\'t go through. This can happen — we\'ll try again in a few days.</p><p style="color:#212121;font-size:15px;line-height:1.6">If you\'d like to update your payment method now, click below:</p>'
-    plain = f"Your payment of {amount} for {plan_name} didn't go through. We'll try again in a few days. Update your payment method: {portal_url}"
+    """First payment failure. Paid features are already paused (Sprint 888: the copy states it)."""
+    body = (
+        f"{_P}Your payment of <strong>{amount}</strong> for <strong>{plan_name}</strong> didn't go through, "
+        f"so paid features are paused until a payment succeeds. {_RECORDS_READABLE}</p>"
+        f"{_P}We'll try the card again in a few days. To update your payment method now, click below:</p>"
+    )
+    plain = (
+        f"Your payment of {amount} for {plan_name} didn't go through, so paid features are paused until a "
+        f"payment succeeds. {_RECORDS_READABLE} We'll try the card again in a few days. "
+        f"Update your payment method: {portal_url}"
+    )
     return _send_dunning_email(
         to_email,
         "We couldn't process your Paciolus payment",
@@ -594,9 +606,16 @@ def send_dunning_first_failure(to_email: str, amount: str, plan_name: str, porta
 
 
 def send_dunning_second_failure(to_email: str, amount: str, portal_url: str) -> EmailResult:
-    """Second failure — urgent."""
-    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">We\'ve tried twice to process your <strong>{amount}</strong> payment. To avoid service interruption, please update your payment method.</p>'
-    plain = f"We've tried twice to process your {amount} payment. Update your payment method to avoid interruption: {portal_url}"
+    """Second failure. Paid features stay paused."""
+    body = (
+        f"{_P}We've tried twice to process your <strong>{amount}</strong> payment. Paid features are paused "
+        f"until a payment succeeds. {_RECORDS_READABLE}</p>"
+        f"{_P}Update your payment method to restore paid features:</p>"
+    )
+    plain = (
+        f"We've tried twice to process your {amount} payment. Paid features are paused until a payment "
+        f"succeeds. {_RECORDS_READABLE} Update your payment method: {portal_url}"
+    )
     return _send_dunning_email(
         to_email,
         "Action needed: Update your Paciolus payment method",
@@ -606,33 +625,53 @@ def send_dunning_second_failure(to_email: str, amount: str, portal_url: str) -> 
 
 
 def send_dunning_final_notice(to_email: str, suspension_date: str, portal_url: str) -> EmailResult:
-    """Final notice — last chance before suspension."""
-    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">We haven\'t been able to collect your payment after multiple attempts.</p><p style="color:#BC4749;font-size:15px;line-height:1.6;font-weight:600">Your account will be suspended on {suspension_date} unless payment is received.</p>'
-    plain = f"Your Paciolus account will be suspended on {suspension_date} unless payment is received. Update your payment method: {portal_url}"
+    """Third failure. Cancellation follows 7 days later (``process_grace_period_expirations``)."""
+    body = (
+        f"{_P}We haven't been able to collect your payment after three attempts. Paid features are paused. "
+        f"{_RECORDS_READABLE}</p>"
+        '<p style="color:#BC4749;font-size:15px;line-height:1.6;font-weight:600">'
+        f"Your subscription will be canceled on {suspension_date} unless payment is received.</p>"
+    )
+    plain = (
+        f"We haven't been able to collect your Paciolus payment after three attempts. Paid features are "
+        f"paused. {_RECORDS_READABLE} Your subscription will be canceled on {suspension_date} unless payment "
+        f"is received. Update your payment method: {portal_url}"
+    )
     return _send_dunning_email(
         to_email,
-        "Final notice: Your Paciolus account will be suspended in 7 days",
+        "Final notice: your Paciolus subscription will be canceled in 7 days",
         _dunning_html("Final Payment Notice", body, portal_url, "Update Payment Method"),
         plain,
     )
 
 
 def send_dunning_suspended(to_email: str, reactivation_url: str) -> EmailResult:
-    """Account suspended due to non-payment."""
-    body = '<p style="color:#212121;font-size:15px;line-height:1.6">Your subscription has been canceled due to non-payment. Your data will be retained for 30 days.</p><p style="color:#212121;font-size:15px;line-height:1.6">To reactivate your account, click below:</p>'
-    plain = f"Your Paciolus subscription has been canceled due to non-payment. Data retained for 30 days. Reactivate: {reactivation_url}"
+    """Subscription canceled for non-payment. The account continues on Free; nothing is deleted."""
+    body = (
+        f"{_P}Your subscription has been canceled because the payment could not be collected. "
+        f"Your account continues on the Free plan. {_RECORDS_READABLE}</p>"
+        f"{_P}To subscribe again, click below:</p>"
+    )
+    plain = (
+        "Your Paciolus subscription has been canceled because the payment could not be collected. "
+        f"Your account continues on the Free plan. {_RECORDS_READABLE} Subscribe again: {reactivation_url}"
+    )
     return _send_dunning_email(
         to_email,
-        "Your Paciolus account has been suspended",
-        _dunning_html("Account Suspended", body, reactivation_url, "Reactivate Account"),
+        "Your Paciolus subscription has been canceled",
+        _dunning_html("Subscription Canceled", body, reactivation_url, "Choose a Plan"),
         plain,
     )
 
 
 def send_dunning_recovered(to_email: str, amount: str) -> EmailResult:
-    """Payment recovered — all clear."""
-    body = f'<p style="color:#212121;font-size:15px;line-height:1.6">Great news — your payment of <strong>{amount}</strong> has been processed successfully. Your Paciolus account is fully active.</p><p style="color:#4A7C59;font-size:15px;line-height:1.6;font-weight:600">No action needed.</p>'
-    plain = f"Your payment of {amount} has been processed. Your Paciolus account is fully active. No action needed."
+    """Payment recovered."""
+    body = (
+        f"{_P}Your payment of <strong>{amount}</strong> has been processed successfully. "
+        "Paid features are available again.</p>"
+        '<p style="color:#4A7C59;font-size:15px;line-height:1.6;font-weight:600">No action needed.</p>'
+    )
+    plain = f"Your payment of {amount} has been processed. Paid features are available again. No action needed."
     return _send_dunning_email(
         to_email,
         "Payment received — you're all set!",
