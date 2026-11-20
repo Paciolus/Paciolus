@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+
 from account_risk_heatmap_engine import (
     SOURCE_AUDIT_ANOMALY,
     SOURCE_CLASSIFICATION,
@@ -243,3 +245,104 @@ class TestCsvExport:
         assert "Priority" in lines[0]
         # First data row is the highest-score account (Cash)
         assert "Cash" in lines[1]
+
+
+# =============================================================================
+# Sprint 889 (CEO brief 14A, review TQ-04): fixed expectations
+# =============================================================================
+# Worked by hand, not taken from the engine:
+#   high, materiality 90, confidence 0.5  -> 3 x log10(90 + 10) x 0.5 = 3 x 2 x 0.5 = 3.000
+#   low,  materiality 0,  confidence 1.0  -> 1 x log10(0 + 10)  x 1.0 = 1 x 1 x 1.0 = 1.000
+#   same account                           -> aggregate 4.000, materiality 90, 2 signals
+
+_HIGH = {
+    "account_number": "4000",
+    "account_name": "Revenue",
+    "source": "audit_anomaly",
+    "severity": "high",
+    "issue": "Unusual balance",
+    "materiality": "90",
+    "confidence": 0.5,
+}
+_LOW = {
+    "account_number": "4000",
+    "account_name": "Revenue",
+    "source": "cutoff_risk",
+    "severity": "low",
+    "issue": "Late posting",
+    "materiality": "0",
+}
+
+
+def _signal(d: dict) -> RiskSignal:
+    return RiskSignal(
+        account_number=d["account_number"],
+        account_name=d["account_name"],
+        source=d["source"],
+        severity=d["severity"],
+        issue=d["issue"],
+        materiality=Decimal(d["materiality"]),
+        confidence=d.get("confidence", 1.0),
+    )
+
+
+class TestFixedScores:
+    def test_single_high_signal_scores_three(self):
+        assert round(_signal(_HIGH).weighted_score(), 3) == 3.000
+
+    def test_low_signal_with_zero_materiality_scores_one(self):
+        assert round(_signal(_LOW).weighted_score(), 3) == 1.000
+
+    def test_two_signals_on_one_account_aggregate(self):
+        result = compute_account_heatmap([_signal(_HIGH), _signal(_LOW)])
+        assert result.total_accounts_with_signals == 1
+        assert result.total_signals == 2
+        (row,) = result.rows
+        assert row.to_dict()["weighted_score"] == 4.000
+        assert row.total_materiality == Decimal("90")
+        assert row.signal_count == 2
+        assert row.severities == {"high": 1, "low": 1}
+
+    def test_csv_carries_the_same_values(self):
+        import csv
+        import io
+
+        result = compute_account_heatmap([_signal(_HIGH), _signal(_LOW)])
+        rows = list(csv.reader(io.StringIO(heatmap_to_csv(result))))
+        header, (data,) = rows[0], rows[1:]
+        record = dict(zip(header, data))
+        assert record["Weighted Score"] == "4.000"
+        assert record["Signal Count"] == "2"
+        assert record["High"] == "1" and record["Low"] == "1"
+        assert Decimal(record["Total Materiality"]) == Decimal("90")
+
+
+class TestFixedScoresThroughTheApi:
+    @staticmethod
+    async def _post(path: str, override_auth_verified):
+        import httpx
+
+        from main import app
+
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            return await client.post(path, json={"signals": [_HIGH, _LOW]})
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_json_response(self, override_auth_verified):
+        response = await self._post("/audit/account-risk-heatmap", override_auth_verified)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["total_signals"] == 2
+        (row,) = body["rows"]
+        assert row["weighted_score"] == 4.0
+        assert row["total_materiality"] == "90"
+        assert row["signal_count"] == 2
+
+    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("bypass_csrf")
+    async def test_csv_response(self, override_auth_verified):
+        response = await self._post("/audit/account-risk-heatmap/export.csv", override_auth_verified)
+        assert response.status_code == 200, response.text
+        lines = response.text.lstrip("\ufeff").splitlines()
+        assert "4.000" in lines[1].split(",")

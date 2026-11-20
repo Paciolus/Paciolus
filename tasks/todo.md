@@ -853,6 +853,23 @@ Verification: backend `-m "not slow"` 11,335 passed, 1 xfailed (the recovery def
       delete or regenerate.
 - [ ] Until `counsel-redline-863` merges, Privacy/Terms on this branch still say "up to 48 hours" and list bulk upload.
 
+### Sprint 889: Tests that fail when a number or a rule is wrong
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-889-tests-that-fail`, stacked on Sprint 888.
+**Priority:** P1. **Source:** CEO brief 14 (review TQ-04/06/07/09/10/14/15/16 at `ef5e567`). **Agents:** critic
+(could this test pass with the bug?), executor, guardian (14G schema). Expected values are worked out by hand; each new
+test is shown to fail under a temporary mutation, then the mutation is reverted.
+**Decision (CEO):** NOL recognition is out of scope; a loss year states that no NOL deferred tax asset or valuation
+allowance is computed and never presents the provision as complete. (Closes Sprint 826 B1.)
+
+- [x] 14A heatmap fixed expectations (engine, API, CSV) — 3.000 / 4.000 / materiality 90 / count 2.
+- [ ] 14B multi-period + sampling cases assert the account and result; generators derive change from prior.
+- [ ] 14C if-guarded assertions become assertions.
+- [ ] 14D frontend activity mapper + JE success case from real response shapes.
+- [ ] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
+- [ ] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.
+- [ ] 14G PostgreSQL job runs `alembic upgrade head`; enum round-trip; schema parity; upgrade from existing rows.
+- [ ] 14H mapping E2E in PR CI; financial-correctness slow tests before merge; workflow check.
+
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
 page does not list it and `POST /upload/bulk` answers 501 "Bulk upload is not available yet." (Sprint 888).
