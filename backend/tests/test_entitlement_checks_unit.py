@@ -65,13 +65,52 @@ def _make_activity_log(user_id, db_session, timestamp=None):
 
 
 class TestCheckDiagnosticLimit:
-    def test_professional_tier_unlimited_always_passes(self, make_user, db_session):
-        """PROFESSIONAL tier has diagnostics_per_month=0 (unlimited)."""
+    def test_professional_tier_with_no_usage_passes(self, make_user, db_session):
+        """PROFESSIONAL allows 500 uploads a month (not unlimited); no usage passes."""
         from shared.entitlement_checks import check_diagnostic_limit
 
         user = make_user(tier=UserTier.PROFESSIONAL, email="professional_diag@example.com")
         result = check_diagnostic_limit(user=user, db=db_session)
         assert result is user
+
+    @staticmethod
+    def _professional_subscriber(make_user, db_session, used: int, email: str):
+        from shared.entitlement_checks import upload_window_start
+        from subscription_model import BillingInterval, Subscription, SubscriptionStatus
+
+        user = make_user(tier=UserTier.PROFESSIONAL, email=email)
+        sub = Subscription(
+            user_id=user.id,
+            tier="professional",
+            status=SubscriptionStatus.ACTIVE,
+            billing_interval=BillingInterval.MONTHLY,
+            seat_count=7,
+            additional_seats=0,
+            uploads_used_current_period=used,
+        )
+        db_session.add(sub)
+        db_session.flush()
+        sub.uploads_window_start = upload_window_start(sub)
+        db_session.flush()
+        return user
+
+    def test_professional_499_used_is_allowed(self, make_user, db_session):
+        """Sprint 888 (13D): Professional's limit is 500; the 500th upload is still allowed."""
+        from shared.entitlement_checks import check_diagnostic_limit
+
+        user = self._professional_subscriber(make_user, db_session, 499, "pro_499@example.com")
+        assert check_diagnostic_limit(user=user, db=db_session) is user
+
+    def test_professional_500_used_is_refused_with_403(self, make_user, db_session):
+        """Sprint 888 (13D): at 500 used, Professional is refused."""
+        from shared.entitlement_checks import check_diagnostic_limit
+
+        user = self._professional_subscriber(make_user, db_session, 500, "pro_500@example.com")
+        with pytest.raises(HTTPException) as exc_info:
+            check_diagnostic_limit(user=user, db=db_session)
+        assert exc_info.value.status_code == 403
+        assert exc_info.value.detail["resource"] == "uploads"
+        assert "500/500" in exc_info.value.detail["message"]
 
     def test_free_tier_zero_logs_passes(self, make_user, db_session):
         """FREE tier with no usage passes."""
@@ -139,10 +178,10 @@ class TestCheckDiagnosticLimit:
         """Logs from a previous month should not count toward the limit."""
         from shared.entitlement_checks import check_diagnostic_limit
 
-        user = make_user(tier=UserTier.SOLO, email="solo_diag_month@example.com")
-        # SOLO limit=20; add 20 logs from January 2024 (in the past)
+        user = make_user(tier=UserTier.FREE, email="free_diag_month@example.com")
+        # FREE limit=10; add 10 logs from January 2024 — would hit the limit if counted
         old_ts = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
-        for _ in range(20):
+        for _ in range(10):
             _make_activity_log(user.id, db_session, timestamp=old_ts)
 
         # Should pass because all logs are from a different month

@@ -96,20 +96,28 @@ describe('PricingLaunchBillingHook', () => {
   // ── fetchUsage ────────────────────────────────────────────
 
   it('fetchUsage returns usage data on success', async () => {
-    const usageData = {
-      diagnostics_used: 5, diagnostics_limit: 20,
-      clients_used: 2, clients_limit: 10, tier: 'solo',
-    }
-    mockApiGet.mockResolvedValueOnce({ data: usageData, ok: true, status: 200 })
-
-    const { result } = renderHook(() => useBilling())
-    let data: unknown
-    await act(async () => {
-      data = await result.current.fetchUsage()
+    // Sprint 888 (13D): the body UsageResponse sends for a Solo subscriber
+    // (backend/schemas/billing_schemas.py; limits from shared/entitlements.py).
+    mockApiGet.mockResolvedValueOnce({
+      data: {
+        uploads_used: 5, uploads_limit: 100,
+        diagnostics_used: 5, diagnostics_limit: 100,
+        clients_used: 2, clients_limit: 0, tier: 'solo',
+      },
+      ok: true,
+      status: 200,
     })
 
-    expect(data).toEqual(usageData)
+    const { result } = renderHook(() => useBilling())
+    await act(async () => {
+      await result.current.fetchUsage()
+    })
+
     expect(mockApiGet).toHaveBeenCalledWith('/billing/usage', mockToken)
+    expect(result.current.usage?.diagnostics_used).toBe(5)
+    expect(result.current.usage?.diagnostics_limit).toBe(100)
+    expect(result.current.usage?.clients_limit).toBe(0)
+    expect(result.current.usage?.tier).toBe('solo')
   })
 
   it('fetchUsage handles error', async () => {

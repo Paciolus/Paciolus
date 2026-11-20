@@ -52,14 +52,30 @@ jest.mock('@/components/billing/PlanCard', () => ({
 jest.mock('@/components/billing/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }))
-jest.mock('@/components/shared/UsageMeter', () => ({
-  UsageMeter: ({ label }: { label: string }) => <div data-testid="usage-meter">{label}</div>,
-}))
 jest.mock('@/components/ui/Reveal', () => ({
   Reveal: ({ children, ...rest }: any) => <div {...rest}>{children}</div>,
 }))
 
 const mockUseAuthSession = useAuthSession as jest.Mock
+
+/**
+ * Sprint 888 (13D): a `/billing/usage` body exactly as `UsageResponse`
+ * (backend/schemas/billing_schemas.py) sends it. Limits are the ones in
+ * backend/shared/entitlements.py: Free 10 uploads / 3 clients, Solo 100 /
+ * unlimited (0), Professional 500 / unlimited.
+ */
+function usageResponse(tier: 'free' | 'solo' | 'professional', uploadsUsed: number, clientsUsed: number) {
+  const limits = { free: [10, 3], solo: [100, 0], professional: [500, 0] }[tier]
+  return {
+    uploads_used: uploadsUsed,
+    uploads_limit: limits[0],
+    diagnostics_used: uploadsUsed,
+    diagnostics_limit: limits[0],
+    clients_used: clientsUsed,
+    clients_limit: limits[1],
+    tier,
+  }
+}
 const mockUseBilling = useBilling as jest.Mock
 
 describe('BillingSettingsPage', () => {
@@ -72,7 +88,7 @@ describe('BillingSettingsPage', () => {
     })
     mockUseBilling.mockReturnValue({
       subscription: { tier: 'solo', status: 'active', billing_interval: 'monthly', cancel_at_period_end: false, total_seats: 1, seat_count: 1, additional_seats: 0 },
-      usage: { diagnostics_used: 5, diagnostics_limit: 50, clients_used: 2, clients_limit: 10 },
+      usage: usageResponse('solo', 5, 2),
       isLoading: false,
       error: null,
       fetchSubscription: mockFetchSubscription,
@@ -100,7 +116,7 @@ describe('BillingSettingsPage', () => {
     })
     mockUseBilling.mockReturnValue({
       subscription: null,
-      usage: { diagnostics_used: 0, diagnostics_limit: 3, clients_used: 0, clients_limit: 1 },
+      usage: usageResponse('free', 4, 1),
       isLoading: false,
       error: null,
       fetchSubscription: mockFetchSubscription,
@@ -113,6 +129,9 @@ describe('BillingSettingsPage', () => {
     })
     render(<BillingSettingsPage />)
     expect(screen.getByText('Start Free Trial')).toBeInTheDocument()
+    // The real UsageMeter shows the Free allowance from the response.
+    expect(screen.getByText('4 / 10')).toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
 
   it('a Professional subscription gets Contact us, not Add Seat, while team tiers are sales-only (Sprint 858)', () => {
@@ -141,10 +160,23 @@ describe('BillingSettingsPage', () => {
     expect(screen.getByText('Remove Seat')).toBeInTheDocument()
   })
 
-  it('renders usage meters when usage data is available', () => {
+  it('renders the Solo allowance from a real /billing/usage response', () => {
     render(<BillingSettingsPage />)
-    const meters = screen.getAllByTestId('usage-meter')
-    expect(meters.length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Diagnostics this month')).toBeInTheDocument()
+    expect(screen.getByText('5 / 100')).toBeInTheDocument()
+    // Solo clients are unlimited (clients_limit 0).
+    expect(screen.getByText('Clients')).toBeInTheDocument()
+    expect(screen.getByText('Unlimited')).toBeInTheDocument()
+  })
+
+  it('shows a Professional subscriber at the 500 limit as at limit', () => {
+    mockUseBilling.mockReturnValue({
+      ...mockUseBilling(),
+      subscription: { tier: 'professional', status: 'active', billing_interval: 'monthly', cancel_at_period_end: false, total_seats: 7, seat_count: 7, additional_seats: 0 },
+      usage: usageResponse('professional', 500, 12),
+    })
+    render(<BillingSettingsPage />)
+    expect(screen.getByText('500 / 500')).toHaveClass('text-clay-600')
   })
 
   it('renders error banner when billing fetch fails', () => {

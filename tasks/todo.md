@@ -815,7 +815,7 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       24 h / 48 h, bulk upload (endpoint + todo feature), runbooks superseded, retired tier aliases.
 - [ ] 13C: 10-minute cache claim, Data Handling contradictions, retired wording + old sample PDFs, log content claim,
       closure/cancellation report, "what we keep" drafts, subprocessor list.
-- [ ] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
+- [x] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
       Professional 499 allowed / 500 refused.
 - [ ] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
 
