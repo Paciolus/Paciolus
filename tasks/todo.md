@@ -825,6 +825,17 @@ earlier) is skipped as stale. A subscriber who pays after a failure can stay on 
 `tests/test_sprint_888_payment_failure.py`. Proposed fix: `invoice.paid` restores `user.tier` from `sub.tier` (and org
 members) when it moves PAST_DUE → ACTIVE.
 
+### Feature to build: Bulk upload (Enterprise)
+**Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
+page does not list it and `POST /upload/bulk` answers 501 "Bulk upload is not available yet." (Sprint 888).
+- [ ] Run each file through the tool it belongs to (engine, not a name-and-size record), with per-file results.
+- [ ] Meter it like every other gated route (one successful run per file, or a CEO-chosen unit) — the Sprint 790
+      guard (`test_sprint_790_upload_metering.py`) will require it once the route checks the quota again.
+- [ ] Job state: no full filenames in Redis unless the "what we keep" page says so; job TTL stated.
+- [ ] Mount and test the batch frontend (`BatchUploadContext`, `BatchUploadPanel`), one limit (backend 5 files;
+      `types/batch.ts` says 10).
+- [ ] Then: Terms and pricing list it again; remove the 501.
+
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
 Seen 2026-11-15: in a browser that does not send the `paciolus-api.onrender.com` refresh cookie from

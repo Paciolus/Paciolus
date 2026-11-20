@@ -7400,23 +7400,6 @@
         "title": "Body_sampling_evaluate_audit_sampling_evaluate_post",
         "type": "object"
       },
-      "Body_start_bulk_upload_upload_bulk_post": {
-        "properties": {
-          "files": {
-            "items": {
-              "contentMediaType": "application/octet-stream",
-              "type": "string"
-            },
-            "title": "Files",
-            "type": "array"
-          }
-        },
-        "required": [
-          "files"
-        ],
-        "title": "Body_start_bulk_upload_upload_bulk_post",
-        "type": "object"
-      },
       "Body_upload_logo_branding_logo_post": {
         "properties": {
           "file": {
@@ -7684,30 +7667,6 @@
           "status"
         ],
         "title": "BulkFileStatusEntry",
-        "type": "object"
-      },
-      "BulkUploadStartResponse": {
-        "description": "POST /upload/bulk — initiation response.",
-        "properties": {
-          "job_id": {
-            "title": "Job Id",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "total_files": {
-            "title": "Total Files",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "job_id",
-          "total_files",
-          "status"
-        ],
-        "title": "BulkUploadStartResponse",
         "type": "object"
       },
       "BulkUploadStatusResponse": {
@@ -41698,38 +41657,16 @@
     },
     "/upload/bulk": {
       "post": {
-        "description": "Accept up to 5 files for bulk processing. Enterprise only.",
+        "description": "Not available yet: bulk upload runs no analysis, so it accepts no files.",
         "operationId": "start_bulk_upload_upload_bulk_post",
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_start_bulk_upload_upload_bulk_post"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
-          "200": {
+          "501": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BulkUploadStartResponse"
-                }
+                "schema": {}
               }
             },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
+            "description": "Bulk upload is not available yet."
           }
         },
         "security": [

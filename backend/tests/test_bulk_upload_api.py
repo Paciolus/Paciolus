@@ -123,33 +123,19 @@ class TestBulkUpload:
             assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_bulk_upload_forbidden_for_solo(self, override_solo):
-        """Solo user gets 403 (Enterprise only)."""
-        from fastapi import HTTPException
+    async def test_bulk_upload_is_not_available_even_for_enterprise(self, override_enterprise):
+        """Sprint 888: bulk upload runs no analysis yet, so it refuses with 501 and stores no job."""
+        from shared import bulk_job_store
 
-        def _raise_403(*args, **kwargs):
-            raise HTTPException(status_code=403, detail="Bulk upload not available.")
-
-        with patch("routes.bulk_upload.check_bulk_upload_access", side_effect=_raise_403):
+        with patch.object(bulk_job_store, "put") as put:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
                 response = await client.post(
                     "/upload/bulk",
                     files=[("files", ("test.csv", b"header\ndata", "text/csv"))],
                 )
-                assert response.status_code == 403
-
-    @pytest.mark.asyncio
-    async def test_bulk_upload_too_many_files(self, override_enterprise):
-        """More than 5 files returns 400."""
-        with (
-            patch("routes.bulk_upload.check_bulk_upload_access"),
-            patch("routes.bulk_upload.check_upload_limit"),
-            patch("routes.bulk_upload.validate_file_size", return_value=b"content"),
-        ):
-            files = [("files", (f"test{i}.csv", b"header\ndata", "text/csv")) for i in range(6)]
-            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.post("/upload/bulk", files=files)
-                assert response.status_code == 400
+        assert response.status_code == 501
+        assert response.json()["detail"] == "Bulk upload is not available yet."
+        put.assert_not_called()
 
 
 # =============================================================================

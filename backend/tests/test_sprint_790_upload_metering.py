@@ -750,12 +750,10 @@ _GATES = {"check_upload_limit", "check_diagnostic_limit"}
 # Gated functions deliberately allowed to meter nothing. Each entry must say why,
 # and test_exemptions_are_still_true fails the moment the reason stops holding.
 #
-# bulk upload: _process_bulk_files runs no engine — it marks each file
-# "complete" with only its name and size. There is no analysis run to charge
-# for, so it consumes nothing (lead/CEO decision, Sprint 790). Its quota check
-# is kept: harmless (Enterprise is unlimited) and it refuses a capped user
-# before work starts once real analysis is wired in.
-_EXEMPT = {"routes/bulk_upload.py::start_bulk_upload"}
+# Sprint 888: bulk upload was the only exemption (it ran no engine). It now
+# answers 501 without a quota check, so it is not gated and needs no exemption.
+# When it is built it must meter like every other gated route.
+_EXEMPT: set[str] = set()
 _SCAN_DIRS = ("routes", "shared", "services")
 
 
@@ -847,8 +845,9 @@ class TestCheckAndIncrementAreSymmetric:
         # The scan must actually be finding the gate, or this test proves nothing.
         # Sprint 819 item 6: the six promoted JSON tools gate through one shared
         # helper, so they count once (as run_json_tool) — was 14 when each route
-        # called check_upload_limit itself.
-        assert len(gated) >= 9, gated
+        # called check_upload_limit itself. Sprint 888: 8, because bulk upload no
+        # longer checks the quota (it answers 501 and runs nothing).
+        assert len(gated) >= 8, gated
         assert "routes/audit_pipeline.py::audit_trial_balance" in gated  # the Depends() form
         assert "shared/testing_route.py::run_single_file_testing" in gated  # the six testing tools
         assert "shared/testing_route.py::run_json_tool" in gated  # the six promoted JSON tools
