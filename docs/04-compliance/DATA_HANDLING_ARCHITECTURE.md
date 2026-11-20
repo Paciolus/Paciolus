@@ -1,8 +1,10 @@
 # Data Handling Architecture
 
-**Version:** 3.1 · **Effective:** 2026-11-14 · **Owner:** security@paciolus.com · **Classification:** Public
+**Version:** 3.2 · **Effective:** 2026-11-20 · **Owner:** security@paciolus.com · **Classification:** Public
 
-*(v3.1, 2026-11-14: renamed from its earlier filename, database backups added, and the deletion section
+*(v3.2, 2026-11-20: checked against the code — flagged account names are saved with engagement tool runs,
+not every summary; adjusting entries are saved without their accounts and amounts; the currency tool's
+rate rows named as the one upload kept; Render Key Value's security counters listed. v3.1, 2026-11-14: renamed from its earlier filename, database backups added, and the deletion section
 corrected for them. Earlier versions are in [`archive/`](archive/).)*
 
 ## In one sentence
@@ -20,11 +22,14 @@ list, analysis summaries and anything you enter in an engagement.
 4. **Respond** with the results.
 5. **Release.** The file and its rows leave memory. A **summary** is saved to your history: category
    totals, ratios, row counts, total debits and credits, materiality, anomaly counts, the first
-   characters of the filename and its hash — and, when a tool flags accounts, their **names** (no amounts).
+   characters of the filename and its hash. When the run is recorded in an engagement and the tool
+   flags accounts, their **names** (no amounts) are saved with that engagement's tool run.
 
-Nothing from the upload is saved to the database or to file storage, and nothing from it reaches the logs or Sentry: application
-logs carry exception type names only, and Sentry events have request bodies, local variables, exception
-messages and breadcrumbs removed before they are sent.
+The file itself and its line-level rows are not saved to the database or to file storage, except the
+exchange-rate rows of a rate table you load into the currency tool (§2.2, Tool Sessions). Nothing from
+the upload reaches the logs or Sentry: application logs carry counts and exception type names, not values
+from the file, and Sentry events have request bodies, local variables, exception messages and breadcrumbs
+removed before they are sent.
 
 ## 2. What is stored, and where
 
@@ -39,7 +44,7 @@ messages and breadcrumbs removed before they are sent.
 | **Engagement entries** (materiality, follow-ups, intercompany mappings, analytical expectations, uncorrected misstatements) | Neon | Until you delete them or the account |
 | **Sessions and security events** | Neon | Session tokens hashed, until expiry; security events (hashed IP) 365 days |
 | **Shared report files** | Cloudflare R2 `paciolus-exports`, keyed by a hash of the share token | 24 h (Professional) / 48 h (Enterprise); the DB row is removed only after R2 confirms deletion |
-| **Rate-limit counters** | Render Key Value | Short-lived |
+| **Rate-limit and security counters** — request counts by user or IP address, failed sign-ins by IP address, revoked admin-impersonation tokens | Render Key Value | Short-lived |
 | **Database backups** — a daily copy of everything in Neon above | Cloudflare R2 `paciolus-backups` (a separate provider), written by a GitHub Actions job using a read-only database role | 30 daily and 12 monthly copies. A deleted account stays in older backups until they age out |
 
 Exported PDFs, Excel and CSV files are generated on request and sent to the browser without being
@@ -69,7 +74,9 @@ Per analysis: category totals (assets, liabilities, revenue, expenses …), rati
 
 #### Tool Sessions Table
 
-Saved adjusting entries (accounts and amounts) and currency rate tables, for 1–2 hours.
+Adjusting entries you save: reference, description, type, status, notes, preparer, reviewer and approver names and
+the number of accounts — the account and amount on each line are removed before saving. Currency rate
+tables you load: each rate (date, currencies, rate). For 1–2 hours.
 
 #### Engagements Table
 

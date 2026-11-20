@@ -819,6 +819,8 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       closure/cancellation report, "what we keep" drafts, subprocessor list.
       Done: three parser log lines no longer carry the filename, OFX currency/account/type/dates or IIF dates
       (`test_sprint_888_logs_carry_no_upload_content.py`).
+      Data Handling v3.2 (flagged names, adjusting entries, rate rows, Key Value) and Subprocessor List v2.2 (S3 logos,
+      Key Value security counters, SendGrid contact form) corrected.
 - [x] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
       Professional 499 allowed / 500 refused.
 - [ ] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
