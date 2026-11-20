@@ -158,6 +158,8 @@ export interface BankRecActiveThresholds {
 /** Sprint 886 (OUT-10): one reconciliation test of the run. */
 export interface BankRecTest {
   test_name: string
+  /** Sprint 887: the identifier the memo's procedure library is keyed by. */
+  test_key?: string
   flagged_count: number
   severity: string
   flagged_items?: Array<Record<string, unknown>>

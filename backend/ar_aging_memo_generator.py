@@ -63,6 +63,7 @@ _AR_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
     tool_domain="ar_aging_testing",
+    tool="ar_aging",  # Sprint 887 (OUT-17): procedure library key
 )
 
 

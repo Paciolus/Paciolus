@@ -49,6 +49,8 @@ export interface BaseCompositeScore<TFinding = string> {
   total_flagged: number
   flags_by_severity: { high: number; medium: number; low: number }
   top_findings: TFinding[]
+  /** Sprint 887: the listed flags with explicit tool and test identifiers (the memo's procedure keys). */
+  top_flags?: { tool: string; test_key: string; text: string }[]
   /** Sprint 831: reasons a severity floor raised the score (empty when none applied). */
   score_basis?: string[]
 }

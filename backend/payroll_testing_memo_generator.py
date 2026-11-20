@@ -59,6 +59,7 @@ _PAYROLL_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
     tool_domain="payroll_testing",
+    tool="payroll_testing",  # Sprint 887 (OUT-17): procedure library key
 )
 
 _MAX_DETAIL_ROWS = 20

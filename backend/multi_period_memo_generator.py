@@ -297,9 +297,9 @@ def _build_suggested_procedures(
             continue
         seen_procedures.add(procedure_key)
 
-        procedure_text = get_follow_up_procedure(procedure_key, rotation_index=len(seen_procedures))
+        procedure_text = get_follow_up_procedure("multi_period", procedure_key)
         if not procedure_text:
-            procedure_text = get_follow_up_procedure("significant_movement")
+            procedure_text = get_follow_up_procedure("multi_period", "significant_movement")
         pct = m.get("change_percent")
         pct_str = f" ({pct:+.1f}%)" if pct is not None else ""
 
@@ -655,7 +655,7 @@ def _build_sign_change_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_sign_change", rotation_index=len(sign_changes))
+    procedure = get_follow_up_procedure("multi_period", "apc_sign_change")
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
@@ -722,7 +722,7 @@ def _build_dormant_accounts_detail(
         )
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("apc_dormant_account", rotation_index=len(dormant_accounts))
+    procedure = get_follow_up_procedure("multi_period", "apc_dormant_account")
     if procedure:
         story.append(Spacer(1, 4))
         story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
@@ -827,8 +827,8 @@ def _build_new_closed_account_detail(
         story.append(Spacer(1, 4))
 
     # Suggested procedure
-    procedure = get_follow_up_procedure("new_account", rotation_index=len(new_accounts))
-    closed_procedure = get_follow_up_procedure("apc_closed_account", rotation_index=len(closed_accounts))
+    procedure = get_follow_up_procedure("multi_period", "new_account")
+    closed_procedure = get_follow_up_procedure("multi_period", "apc_closed_account")
     combined = []
     if new_accounts and procedure:
         combined.append(procedure)

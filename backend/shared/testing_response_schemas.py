@@ -27,6 +27,14 @@ from shared.exact_json import ExactMoney
 # ═══════════════════════════════════════════════════════════════
 
 
+class TopFlagResponse(BaseModel):
+    """Sprint 887 (OUT-17): one listed flag with explicit tool and test identifiers."""
+
+    tool: str
+    test_key: str
+    text: str
+
+
 class CompositeScoreResponse(BaseModel):
     """Testing composite score — shared by JE and AP."""
 
@@ -38,6 +46,7 @@ class CompositeScoreResponse(BaseModel):
     flag_rate: float
     flags_by_severity: dict[str, int]
     top_findings: list[str]
+    top_flags: list[TopFlagResponse] = []
     # Sprint 831: reasons a severity floor raised the score (Paciolus convention).
     score_basis: list[str] = []
 
@@ -710,6 +719,7 @@ class ARCompositeScoreResponse(BaseModel):
     total_flagged: int
     flags_by_severity: dict[str, int]
     top_findings: list[str]
+    top_flags: list[TopFlagResponse] = []
     has_subledger: bool
     # Sprint 831: reasons a severity floor raised the score (Paciolus convention).
     score_basis: list[str] = []

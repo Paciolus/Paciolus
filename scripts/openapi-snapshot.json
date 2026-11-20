@@ -1101,6 +1101,14 @@
             "title": "Top Findings",
             "type": "array"
           },
+          "top_flags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TopFlagResponse"
+            },
+            "title": "Top Flags",
+            "type": "array"
+          },
           "total_flagged": {
             "title": "Total Flagged",
             "type": "integer"
@@ -9339,6 +9347,14 @@
               "type": "string"
             },
             "title": "Top Findings",
+            "type": "array"
+          },
+          "top_flags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TopFlagResponse"
+            },
+            "title": "Top Flags",
             "type": "array"
           },
           "total_entries": {
@@ -22352,6 +22368,17 @@
             "title": "Severity",
             "type": "string"
           },
+          "test_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Test Key"
+          },
           "test_name": {
             "title": "Test Name",
             "type": "string"
@@ -27709,6 +27736,30 @@
           "percent_of_total"
         ],
         "title": "TopAccountResponse",
+        "type": "object"
+      },
+      "TopFlagResponse": {
+        "description": "Sprint 887 (OUT-17): one listed flag with explicit tool and test identifiers.",
+        "properties": {
+          "test_key": {
+            "title": "Test Key",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "test_key",
+          "text"
+        ],
+        "title": "TopFlagResponse",
         "type": "object"
       },
       "TransactionResponse": {

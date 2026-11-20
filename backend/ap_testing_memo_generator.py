@@ -65,6 +65,7 @@ _AP_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 240 (Fraud), ISA 500 (Audit Evidence), and PCAOB AS 2401",
     tool_domain="ap_payment_testing",
+    tool="ap_testing",  # Sprint 887 (OUT-17): procedure library key
 )
 
 
@@ -242,8 +243,8 @@ def _build_ap_extra_sections(
                     right_align_cols=[4],
                 )
 
-            # Add suggested procedure below each table (rotate across detail tests)
-            procedure = get_follow_up_procedure(test_key, rotation_index=detail_idx)
+            # Suggested procedure below each table (Sprint 887: by tool and test, not position)
+            procedure = get_follow_up_procedure("ap_testing", test_key)
             if procedure:
                 from reportlab.platypus import Spacer
 
@@ -310,7 +311,7 @@ def _build_ap_extra_sections(
                 col_widths=[1.6 * inch, 1.6 * inch, 0.8 * inch, 1.3 * inch, 1.3 * inch],
                 right_align_cols=[2, 3, 4],
             )
-            procedure = get_follow_up_procedure("vendor_name_variations", rotation_index=total_pairs)
+            procedure = get_follow_up_procedure("ap_testing", "vendor_name_variations")
             if procedure:
                 from reportlab.platypus import Spacer
 

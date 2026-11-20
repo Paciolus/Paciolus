@@ -674,7 +674,21 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       `test_sprint887_testing_memo_summary.py` (19, all failed first — 7 tools × Low with/without flags, other tiers,
       results absent, a real AP run); three old tests that pinned the tier texts replaced. Memo snapshot and Sprint
       819 `route_testing_exports` re-recorded (summary wording and page reflow only).
-- [ ] 12D / OUT-17 — explicit tool/test ids on flags; procedure library keyed by them; stable selection; PR-T12/T13
+- [x] **12D / OUT-17 — each flag keeps its test and its suggested procedure.** The memo guessed a flag's test from
+      its words (`_resolve_test_key`, removed). `follow_up_procedures.PROCEDURES` is keyed by (ToolName value, the
+      `test_key` the engine emits): JE `round_amounts` now finds its text (the library had `round_dollar_amounts`); AP
+      round-dollar, revenue Benford/duplicates, fixed-asset and inventory missing-fields/negative-values get their own
+      texts, not JE's. Selection: CRC-32 of (client, tool, test) — not `hash()`, not the flag's position; the "As a
+      priority follow-up action," prefixes are gone. Engines emit `composite_score.top_flags` [{tool, test_key, text}]
+      (declared on the response models so the page forwards them); payroll flags carry `tool`, `test_key`,
+      `employee_id`; bank-rec tests carry `test_key` (the memo's name→key map is gone). A text-only flag is listed with
+      no suggestion. **Drafted for the CEO:** PR-T12 and PR-T13 entries (see the summary). Samples carry explicit ids
+      (inventory's sample memo went from 0 to 4 suggestions, AR 2→3). Tests: `test_sprint887_procedure_identifiers.py`
+      (13; collection failed first on the new API) — library keys vs engine keys, a "Benford Law Gross Pay" employee,
+      reorder + rename, three processes with different `PYTHONHASHSEED`, a real AP run. The full suite also found three
+      tests still passing `risk_assessments` (12C), the aggregator mocks without `test_key`, and the 12A thresholds
+      dict (now with `materiality_threshold`) — all updated here. Engine and route snapshots re-recorded: additions
+      of `top_flags` / ids only (checked by stripping them), memo text = suggestion choice only.
 - [ ] 12E / OUT-20 — anomaly summary: latest successful run, real flag counts, four states; worksheet blank by default
 - [ ] 12F / OUT-21 — Follow-Up Item Points: every band reachable, weights and edges printed
 - [ ] 12G / OUT-22 — population memo: outlier/skew only from an explicit statistic; zero/uniform/symmetric neutral

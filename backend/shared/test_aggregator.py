@@ -56,6 +56,8 @@ class CompositeScoreResult:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    # Sprint 887 (OUT-17): the same flags with their test identifier, in the same order.
+    top_flags: list[dict] = field(default_factory=list)
     # Sprint 831: plain-language reasons a floor raised the score (empty when
     # the base score stood on its own).
     score_basis: list[str] = field(default_factory=list)
@@ -70,6 +72,7 @@ class CompositeScoreResult:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "top_flags": self.top_flags,
             "score_basis": self.score_basis,
         }
 
@@ -223,9 +226,12 @@ def calculate_composite_score(
 
     # Top findings (sorted by flag_rate, descending)
     top_findings: list[str] = []
+    top_flags: list[dict] = []
     for tr in sorted(test_results, key=lambda t: t.flag_rate, reverse=True):
         if tr.entries_flagged > 0:
-            top_findings.append(f"{tr.test_name}: {tr.entries_flagged} {entity_label} flagged ({tr.flag_rate:.1%})")
+            text = f"{tr.test_name}: {tr.entries_flagged} {entity_label} flagged ({tr.flag_rate:.1%})"
+            top_findings.append(text)
+            top_flags.append({"test_key": tr.test_key, "text": text})
 
     total_flagged = len(all_flagged_rows)
     flag_rate = total_flagged / max(total_entries, 1)
@@ -239,5 +245,6 @@ def calculate_composite_score(
         flag_rate=flag_rate,
         flags_by_severity=flags_by_severity,
         top_findings=top_findings[:top_n],
+        top_flags=top_flags[:top_n],
         score_basis=score_basis,
     )

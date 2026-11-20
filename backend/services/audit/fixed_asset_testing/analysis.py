@@ -484,6 +484,8 @@ class FACompositeScore:
     flag_rate: float
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    # Sprint 887 (OUT-17): each flag with its tool and test identifiers.
+    top_flags: list[dict] = field(default_factory=list)
     score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
 
     def to_dict(self) -> dict:
@@ -496,6 +498,7 @@ class FACompositeScore:
             "flag_rate": round(self.flag_rate, 4),
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "top_flags": self.top_flags,
             "score_basis": self.score_basis,
         }
 
@@ -1646,6 +1649,7 @@ def calculate_fa_composite_score(
         flag_rate=result.flag_rate,
         flags_by_severity=result.flags_by_severity,
         top_findings=result.top_findings,
+        top_flags=[{**f, "tool": "fixed_asset_testing"} for f in result.top_flags],
         score_basis=result.score_basis,
     )
 

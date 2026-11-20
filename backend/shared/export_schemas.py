@@ -346,6 +346,8 @@ class RecTestInput(_ExportItem):
     """One reconciliation test of the bank rec run (``BankRecResult.rec_tests``)."""
 
     test_name: str
+    # Sprint 887 (OUT-17): absent → the memo lists the test with no suggested procedure.
+    test_key: Optional[str] = None
     flagged_count: int = Field(ge=0)
     severity: str = "low"
     flagged_items: list[RecFlaggedItemInput] = []

@@ -292,6 +292,8 @@ class TestRPT02ConfigurableThresholds:
         assert at == {
             "significant_variance_percent": 2.0,
             "significant_variance_amount": 500.0,
+            # Sprint 887 (OUT-07): the materiality threshold applied is disclosed too.
+            "materiality_threshold": 0.0,
         }
         d = result.to_dict()
         assert d["active_thresholds"]["significant_variance_percent"] == 2.0

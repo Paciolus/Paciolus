@@ -1352,11 +1352,14 @@ class RecTestResult:
     test_name: str
     flagged_count: int = 0
     severity: str = "low"  # "low", "medium", "high"
+    # Sprint 887 (OUT-17): the identifier the procedure library is keyed by.
+    test_key: str = ""
     flagged_items: list[RecFlaggedItem] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
             "test_name": self.test_name,
+            "test_key": self.test_key,
             "flagged_count": self.flagged_count,
             "severity": self.severity,
             "flagged_items": [item.to_dict() for item in self.flagged_items],
@@ -1439,6 +1442,7 @@ def _test_stale_deposits(
     severity = "high" if has_high else ("medium" if len(flagged) > 0 else "low")
     return RecTestResult(
         test_name="Stale Deposits (>10 days)",
+        test_key="stale_deposits",
         flagged_count=len(flagged),
         severity=severity,
         flagged_items=flagged,
@@ -1475,6 +1479,7 @@ def _test_stale_checks(
     severity = "medium" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="Stale Checks (>90 days)",
+        test_key="stale_checks",
         flagged_count=len(flagged),
         severity=severity,
         flagged_items=flagged,
@@ -1512,6 +1517,7 @@ def _test_nsf_items(
     severity = "high" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="NSF / Returned Items",
+        test_key="nsf_items",
         flagged_count=len(flagged),
         severity=severity,
         flagged_items=flagged,
@@ -1566,6 +1572,7 @@ def _test_interbank_transfers(
     severity = "high" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="Interbank Transfers",
+        test_key="interbank_transfers",
         flagged_count=len(flagged),
         severity=severity,
         flagged_items=flagged,
@@ -1599,6 +1606,7 @@ def _test_high_value_transactions(
     severity = "medium" if len(flagged) > 0 else "low"
     return RecTestResult(
         test_name="High Value (>Materiality)",
+        test_key="high_value_transactions",
         flagged_count=len(flagged),
         severity=severity,
         flagged_items=flagged,

@@ -36,6 +36,8 @@ class MockFlaggedEntry:
 @dataclass
 class MockTestResult:
     test_name: str = "Test"
+    # Sprint 887 (OUT-17): every engine result carries its identifier; top_flags read it.
+    test_key: str = "test"
     flag_rate: float = 0.0
     entries_flagged: int = 0
     total_entries: int = 100
@@ -251,6 +253,7 @@ class TestCalculateCompositeScore:
         @dataclass
         class PayrollTestResult:
             test_name: str = "Test"
+            test_key: str = "PR-T1"
             flag_rate: float = 0.0
             entries_flagged: int = 0
             total_entries: int = 10

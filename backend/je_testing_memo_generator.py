@@ -66,6 +66,7 @@ _JE_CONFIG = TestingMemoConfig(
     ),
     isa_reference="PCAOB AS 2401 (Fraud) and ISA 240 (Fraud)",
     tool_domain="journal_entry_testing",
+    tool="journal_entry_testing",  # Sprint 887 (OUT-17): procedure library key
 )
 
 
@@ -223,7 +224,7 @@ def _build_high_severity_detail(
                 col_widths=[0.7 * inch, 0.7 * inch, 1.2 * inch, 0.8 * inch, 0.8 * inch, 0.8 * inch, 1.6 * inch],
                 right_align_cols=[3, 4, 5],
             )
-            procedure = get_follow_up_procedure("unbalanced_entries", rotation_index=finding_idx)
+            procedure = get_follow_up_procedure("journal_entry_testing", "unbalanced_entries")
             if procedure:
                 story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))
@@ -255,7 +256,7 @@ def _build_high_severity_detail(
                 col_widths=[0.6 * inch, 0.7 * inch, 1.0 * inch, 0.8 * inch, 1.0 * inch, 1.2 * inch, 1.3 * inch],
                 right_align_cols=[3],
             )
-            procedure = get_follow_up_procedure("holiday_postings", rotation_index=finding_idx)
+            procedure = get_follow_up_procedure("journal_entry_testing", "holiday_postings")
             if procedure:
                 story.append(Paragraph(f"<i>{user_text(procedure)}</i>", styles["MemoBodySmall"]))
                 story.append(Spacer(1, 6))

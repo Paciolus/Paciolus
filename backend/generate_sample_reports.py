@@ -582,11 +582,27 @@ def gen_je_testing() -> None:
         tests=tests,
         score=18.4,
         risk_tier="moderate",
-        top_findings=[
-            "3 unbalanced journal entries detected — debits do not equal credits",
-            "4 journal entries posted on US federal holidays (Thanksgiving, Christmas)",
-            "156 entries clustered in last 3 days of month (10.4% flag rate)",
-            "12 entries with missing critical fields (account or date)",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "journal_entry_testing",
+                "test_key": "unbalanced_entries",
+                "text": ("3 unbalanced journal entries detected — debits do not equal credits"),
+            },
+            {
+                "tool": "journal_entry_testing",
+                "test_key": "holiday_postings",
+                "text": ("4 journal entries posted on US federal holidays (Thanksgiving, Christmas)"),
+            },
+            {
+                "tool": "journal_entry_testing",
+                "test_key": "month_end_clustering",
+                "text": ("156 entries clustered in last 3 days of month (10.4% flag rate)"),
+            },
+            {
+                "tool": "journal_entry_testing",
+                "test_key": "missing_fields",
+                "text": ("12 entries with missing critical fields (account or date)"),
+            },
         ],
         benford_result=benford,
         completeness_score=96.8,
@@ -843,11 +859,27 @@ def gen_ap_testing() -> None:
         tests=tests,
         score=24.7,
         risk_tier="moderate",
-        top_findings=[
-            "2 exact duplicate payments totaling $14,200 to vendor 'Apex Office Solutions'",
-            "3 payments processed before invoice date — potential prepayment fraud",
-            "1 invoice number reused across vendors 'Metro Supplies' and 'Metro Supply Co.'",
-            "5 payments just below $10,000 approval threshold on same dates",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "ap_testing",
+                "test_key": "exact_duplicate_payments",
+                "text": ("2 exact duplicate payments totaling $14,200 to vendor 'Apex Office Solutions'"),
+            },
+            {
+                "tool": "ap_testing",
+                "test_key": "payment_before_invoice",
+                "text": ("3 payments processed before invoice date — potential prepayment fraud"),
+            },
+            {
+                "tool": "ap_testing",
+                "test_key": "invoice_number_reuse",
+                "text": ("1 invoice number reused across vendors 'Metro Supplies' and 'Metro Supply Co.'"),
+            },
+            {
+                "tool": "ap_testing",
+                "test_key": "just_below_threshold",
+                "text": ("5 payments just below $10,000 approval threshold on same dates"),
+            },
         ],
         completeness_score=91.5,
         column_detection={"overall_confidence": 0.88},
@@ -1017,15 +1049,26 @@ def gen_payroll_testing() -> None:
         risk_tier="elevated",
         top_findings=[
             {
+                "tool": "payroll_testing",
+                "test_key": "PR-T4",
                 "employee": "EMP-4421 (Robert Nguyen)",
                 "issue": "2 payments totaling $8,400.00 after termination date (2025-11-22)",
             },
             {
+                "tool": "payroll_testing",
+                "test_key": "PR-T9",
                 "employee": "EMP-3187 (Vacant \u2014 No Department)",
                 "issue": "Ghost employee indicators: no department, single entry, boundary month",
             },
-            {"employee": "EMP-2901 / EMP-5512", "issue": "Shared bank account ending in 7743"},
             {
+                "tool": "payroll_testing",
+                "test_key": "PR-T10",
+                "employee": "EMP-2901 / EMP-5512",
+                "issue": "Shared bank account ending in 7743",
+            },
+            {
+                "tool": "payroll_testing",
+                "test_key": "PR-T1",
                 "employee": "EMP-1102 (Sarah Blake)",
                 "issue": "Duplicate employee ID mapped to different name in Q3 vs Q4",
             },
@@ -1454,11 +1497,35 @@ def gen_revenue_testing() -> None:
         tests=tests,
         score=22.1,
         risk_tier="moderate",
-        top_findings=[
-            "Cut-Off Risk: 7 entries flagged (0.9%) \u2014 revenue recorded within 3 days of period end (aggregate value: $647,500)",
-            "Recognition Before Satisfaction: 4 entries flagged (0.5%) \u2014 ASC 606 performance obligation not satisfied (aggregate value: $567,000)",
-            "Year-End Concentration: 18 entries flagged (2.2%) \u2014 December revenue clustering (aggregate value: $2,192,000)",
-            "Concentration Risk: 1 entry flagged (0.1%) \u2014 single customer represents 38% of total revenue (estimated revenue: $2,603,000 based on $6,850,000 total)",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "revenue_testing",
+                "test_key": "cutoff_risk",
+                "text": (
+                    "Cut-Off Risk: 7 entries flagged (0.9%) \u2014 revenue recorded within 3 days of period end (aggregate value: $647,500)"
+                ),
+            },
+            {
+                "tool": "revenue_testing",
+                "test_key": "recognition_before_satisfaction",
+                "text": (
+                    "Recognition Before Satisfaction: 4 entries flagged (0.5%) \u2014 ASC 606 performance obligation not satisfied (aggregate value: $567,000)"
+                ),
+            },
+            {
+                "tool": "revenue_testing",
+                "test_key": "year_end_concentration",
+                "text": (
+                    "Year-End Concentration: 18 entries flagged (2.2%) \u2014 December revenue clustering (aggregate value: $2,192,000)"
+                ),
+            },
+            {
+                "tool": "revenue_testing",
+                "test_key": "concentration_risk",
+                "text": (
+                    "Concentration Risk: 1 entry flagged (0.1%) \u2014 single customer represents 38% of total revenue (estimated revenue: $2,603,000 based on $6,850,000 total)"
+                ),
+            },
         ],
         completeness_score=97.1,
         column_detection={"overall_confidence": 0.94},
@@ -1513,11 +1580,27 @@ def gen_ar_aging() -> None:
         tests=tests,
         score=19.8,
         risk_tier="moderate",
-        top_findings=[
-            "Allowance-to-receivable ratio of 2.1% — below industry benchmark of 3-5%",
-            "3 customers exceeding credit limits (totaling $142,000 over-limit)",
-            "TB-to-sub-ledger reconciling difference of $8,450",
-            "4 past-due accounts representing 28% of receivables balance",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "ar_aging",
+                "test_key": "allowance_adequacy",
+                "text": ("Allowance-to-receivable ratio of 2.1% — below industry benchmark of 3-5%"),
+            },
+            {
+                "tool": "ar_aging",
+                "test_key": "credit_limit_breaches",
+                "text": ("3 customers exceeding credit limits (totaling $142,000 over-limit)"),
+            },
+            {
+                "tool": "ar_aging",
+                "test_key": "unreconciled_detail",
+                "text": ("TB-to-sub-ledger reconciling difference of $8,450"),
+            },
+            {
+                "tool": "ar_aging",
+                "test_key": "past_due_concentration",
+                "text": ("4 past-due accounts representing 28% of receivables balance"),
+            },
         ],
         completeness_score=92.7,
         column_detection={"overall_confidence": 0.90},
@@ -1711,12 +1794,30 @@ def gen_fixed_asset_testing() -> None:
         tests=tests,
         score=21.5,
         risk_tier="moderate",
-        top_findings=[
-            "2 assets with accumulated depreciation exceeding original cost",
-            f"12 fully depreciated assets still in use — aggregate original cost ${fully_depr_aggregate_cost:,.2f} "
-            "(net book value: $0) — potential impairment indicator",
-            "2 potential duplicate assets ('Dell Latitude 5540' — same cost, same date)",
-            "1 asset with negative cost value (data entry error suspected)",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "fixed_asset_testing",
+                "test_key": "over_depreciation",
+                "text": ("2 assets with accumulated depreciation exceeding original cost"),
+            },
+            {
+                "tool": "fixed_asset_testing",
+                "test_key": "fully_depreciated",
+                "text": (
+                    f"12 fully depreciated assets still in use — aggregate original cost ${fully_depr_aggregate_cost:,.2f} "
+                    "(net book value: $0) — potential impairment indicator"
+                ),
+            },
+            {
+                "tool": "fixed_asset_testing",
+                "test_key": "duplicate_assets",
+                "text": ("2 potential duplicate assets ('Dell Latitude 5540' — same cost, same date)"),
+            },
+            {
+                "tool": "fixed_asset_testing",
+                "test_key": "negative_values",
+                "text": ("1 asset with negative cost value (data entry error suspected)"),
+            },
         ],
         completeness_score=93.6,
         column_detection={"overall_confidence": 0.91},
@@ -1773,11 +1874,27 @@ def gen_inventory_testing() -> None:
         tests=tests,
         score=15.2,
         risk_tier="moderate",
-        top_findings=[
-            "89 items with no movement in 180+ days — potential obsolescence ($234,500 value)",
-            "5 potential duplicate items (identical description + unit cost)",
-            "4 items where extended value ≠ quantity × unit cost",
-            "14 items with zero recorded value but positive quantity on hand",
+        top_findings=[  # Sprint 887: explicit tool/test identifiers (OUT-17)
+            {
+                "tool": "inventory_testing",
+                "test_key": "slow_moving",
+                "text": ("89 items with no movement in 180+ days — potential obsolescence ($234,500 value)"),
+            },
+            {
+                "tool": "inventory_testing",
+                "test_key": "duplicate_items",
+                "text": ("5 potential duplicate items (identical description + unit cost)"),
+            },
+            {
+                "tool": "inventory_testing",
+                "test_key": "value_mismatch",
+                "text": ("4 items where extended value ≠ quantity × unit cost"),
+            },
+            {
+                "tool": "inventory_testing",
+                "test_key": "zero_value_items",
+                "text": ("14 items with zero recorded value but positive quantity on hand"),
+            },
         ],
         completeness_score=88.4,
         column_detection={"overall_confidence": 0.85},
@@ -1945,6 +2062,7 @@ def gen_bank_rec() -> None:
     rec_tests = [
         {
             "test_name": "Stale Deposits (>10 days)",
+            "test_key": "stale_deposits",
             "flagged_count": 11,
             "severity": "high",
             "flagged_items": [
@@ -1968,6 +2086,7 @@ def gen_bank_rec() -> None:
         },
         {
             "test_name": "Stale Checks (>90 days)",
+            "test_key": "stale_checks",
             "flagged_count": 3,
             "severity": "medium",
             "flagged_items": [

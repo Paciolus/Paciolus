@@ -66,6 +66,8 @@ class TestingMemoConfig:
     tool_domain: str = ""  # key into authoritative_language YAML (e.g., "journal_entry_testing")
     # Sprint 886: what one flagged row is ("payment"), for "Flags Raised (one per test per payment)".
     flag_unit: str = "entry"
+    # Sprint 887 (OUT-17): the engagement ToolName value — the procedure library's first key.
+    tool: str = ""
 
 
 # Type alias for optional callback hooks
@@ -81,52 +83,18 @@ def _default_format_finding(finding: Any) -> str:
     return str(finding)
 
 
-def _resolve_test_key(finding_text: str, test_results: list[dict]) -> str:
-    """Match a finding to its test_key using test name/keyword overlap.
+def _flag_identity(item: Any, fmt: FindingFormatter, default_tool: str) -> tuple[str, str, str]:
+    """(text, tool, test_key) for one listed flag, from the identifiers it carries.
 
-    Uses two strategies:
-    1. Engine format: "Test Name: N entries flagged (...)" — prefix match.
-    2. Distinctive-word scoring: words that appear in only one test get
-       higher weight, preventing generic words like "entries" from
-       causing false matches.
+    Sprint 887 (OUT-17): the test is never inferred from the flag's words (an
+    employee named "Benford Law Gross Pay" once moved a PR-T12 flag to PR-T8).
+    A flag without identifiers — a text-only payload — is listed with no
+    suggested procedure.
     """
-    finding_lower = finding_text.lower()
-
-    # Collect all words per test
-    test_words: list[tuple[str, set[str]]] = []
-    for tr in test_results:
-        name = tr.get("test_name", "")
-        key = tr.get("test_key", "")
-
-        # Engine format: "Test Name: N entries flagged (...)"
-        if finding_lower.startswith(name.lower() + ":"):
-            return str(key)
-
-        key_words = set(key.split("_"))
-        name_words = set(name.lower().split())
-        all_words = {w for w in (key_words | name_words) if len(w) > 2}
-        test_words.append((key, all_words))
-
-    # Build word frequency map across tests for distinctiveness scoring
-    word_freq: dict[str, int] = {}
-    for _, words in test_words:
-        for w in words:
-            word_freq[w] = word_freq.get(w, 0) + 1
-
-    best_key = ""
-    best_score = 0.0
-
-    for key, words in test_words:
-        score = 0.0
-        for w in words:
-            if w in finding_lower:
-                # Words unique to this test score 2.0; shared words score less
-                score += 2.0 / word_freq.get(w, 1)
-        if score > best_score:
-            best_score = score
-            best_key = key
-
-    return best_key if best_score > 0 else ""
+    if isinstance(item, dict):
+        text = str(item["text"]) if "text" in item else fmt(item)
+        return text, str(item.get("tool") or default_tool), str(item.get("test_key") or "")
+    return fmt(item), "", ""
 
 
 def _plural(unit: str) -> str:
@@ -310,32 +278,25 @@ def generate_testing_memo(
         section_counter = 4  # next section is IV
 
         # 5. KEY FINDINGS (conditional) with follow-up procedure suggestions
-        top_findings = composite.get("top_findings", [])
+        # Sprint 887 (OUT-17): flags with explicit identifiers (``top_flags``; payroll's dict
+        # flags carry them too). The suggestion depends only on (client, tool, test).
+        listed = composite.get("top_flags") or composite.get("top_findings") or []
         fmt = format_finding or _default_format_finding
-        if top_findings:
+        if listed:
             section_label = _roman(section_counter)
             story.append(Paragraph(f"{user_text(section_label)}. Key Items Flagged", styles["MemoSection"]))
             story.append(LedgerRule(doc_width))
 
-            # BUG-001 fix: incorporate entity/filename into rotation seed so
-            # different reports for different entities rotate through alternates
-            rotation_seed = hash(client_name) if client_name else (hash(filename) if filename else 0)
-
-            for i, finding in enumerate(top_findings[:5], 1):
-                story.append(Paragraph(f"{user_text(i)}. {user_text(fmt(finding))}", styles["MemoBody"]))
-                # Match finding to test_key for follow-up lookup (dict-based, not index-based)
-                test_key = _resolve_test_key(str(finding), test_results)
-                # Add benchmark context if available
-                benchmark = get_finding_benchmark(test_key)
+            seed = client_name or filename or ""
+            for i, item in enumerate(listed[:5], 1):
+                text, tool, test_key = _flag_identity(item, fmt, config.tool)
+                story.append(Paragraph(f"{user_text(i)}. {user_text(text)}", styles["MemoBody"]))
+                if not (tool and test_key):
+                    continue
+                benchmark = get_finding_benchmark(tool, test_key)
                 if benchmark:
-                    story.append(
-                        Paragraph(
-                            f"<i>{user_text(benchmark)}</i>",
-                            styles["MemoBodySmall"],
-                        )
-                    )
-                # Add follow-up suggestion if available (rotate across findings)
-                procedure = get_follow_up_procedure(test_key, rotation_index=rotation_seed + i)
+                    story.append(Paragraph(f"<i>{user_text(benchmark)}</i>", styles["MemoBodySmall"]))
+                procedure = get_follow_up_procedure(tool, test_key, seed=seed)
                 if procedure:
                     story.append(
                         Paragraph(

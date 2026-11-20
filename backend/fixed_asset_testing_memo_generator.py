@@ -75,6 +75,7 @@ _FA_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 500 (Audit Evidence) and ISA 540 (Auditing Accounting Estimates)",
     tool_domain="fixed_asset_testing",
+    tool="fixed_asset_testing",  # Sprint 887 (OUT-17): procedure library key
 )
 
 _MAX_DETAIL_ROWS = 20

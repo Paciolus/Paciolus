@@ -2135,6 +2135,10 @@ def calculate_payroll_composite_score(
     all_flagged.sort(key=lambda f: SEVERITY_WEIGHTS.get(Severity(f.severity), 0), reverse=True)
     top_findings = [
         {
+            # Sprint 887 (OUT-17): explicit identifiers — the memo never guesses the test from text.
+            "tool": "payroll_testing",
+            "test_key": f.test_key,
+            "employee_id": f.entry.employee_id,
             "employee": f.entry.employee_name,
             "test": f.test_name,
             "issue": f.issue,

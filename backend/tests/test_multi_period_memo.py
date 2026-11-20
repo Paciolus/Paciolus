@@ -747,35 +747,35 @@ class TestSuggestedProcedures:
     """Test suggested procedures on material movements."""
 
     def test_follow_up_procedures_exist(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        apc_keys = [k for k in FOLLOW_UP_PROCEDURES if k.startswith("apc_")]
+        apc_keys = [k for k in PROCEDURES["multi_period"] if k.startswith("apc_")]
         assert len(apc_keys) >= 8  # revenue, cogs, asset, cash, liability, expense, sign_change, dormant
 
     def test_revenue_procedure_exists(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        assert "apc_revenue_increase" in FOLLOW_UP_PROCEDURES
+        assert "apc_revenue_increase" in PROCEDURES["multi_period"]
 
     def test_cogs_procedure_exists(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        assert "apc_cogs_increase" in FOLLOW_UP_PROCEDURES
+        assert "apc_cogs_increase" in PROCEDURES["multi_period"]
 
     def test_cash_procedure_exists(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        assert "apc_cash_increase" in FOLLOW_UP_PROCEDURES
+        assert "apc_cash_increase" in PROCEDURES["multi_period"]
 
     def test_sign_change_procedure_exists(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        assert "apc_sign_change" in FOLLOW_UP_PROCEDURES
+        assert "apc_sign_change" in PROCEDURES["multi_period"]
 
     def test_dormant_procedure_exists(self):
-        from shared.follow_up_procedures import FOLLOW_UP_PROCEDURES
+        from shared.follow_up_procedures import PROCEDURES
 
-        assert "apc_dormant_account" in FOLLOW_UP_PROCEDURES
+        assert "apc_dormant_account" in PROCEDURES["multi_period"]
 
 
 # =============================================================================

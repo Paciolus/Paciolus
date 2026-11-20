@@ -548,6 +548,8 @@ class ARCompositeScore:
     total_flagged: int
     flags_by_severity: dict[str, int] = field(default_factory=dict)
     top_findings: list[str] = field(default_factory=list)
+    # Sprint 887 (OUT-17): each flag with its tool and test identifiers.
+    top_flags: list[dict] = field(default_factory=list)
     score_basis: list[str] = field(default_factory=list)  # Sprint 831: floors applied
     has_subledger: bool = False
 
@@ -560,6 +562,7 @@ class ARCompositeScore:
             "total_flagged": self.total_flagged,
             "flags_by_severity": self.flags_by_severity,
             "top_findings": self.top_findings,
+            "top_flags": self.top_flags,
             "score_basis": self.score_basis,
             "has_subledger": self.has_subledger,
         }
@@ -2103,9 +2106,11 @@ def calculate_ar_composite_score(
 
     # AR uses different top_findings format: sorted by entries_flagged, "{name}: N flagged"
     top_findings: list[str] = []
+    top_flags: list[dict] = []
     for tr in sorted(active_results, key=lambda r: r.entries_flagged, reverse=True):
         if tr.entries_flagged > 0 and len(top_findings) < 5:
             top_findings.append(f"{tr.test_name}: {tr.entries_flagged} flagged")
+            top_flags.append({"tool": "ar_aging", "test_key": tr.test_key, "text": top_findings[-1]})
 
     return ARCompositeScore(
         score=result.score,
@@ -2115,6 +2120,7 @@ def calculate_ar_composite_score(
         total_flagged=result.total_flagged,
         flags_by_severity=result.flags_by_severity,
         top_findings=top_findings,
+        top_flags=top_flags,
         has_subledger=has_subledger,
         score_basis=result.score_basis,
     )

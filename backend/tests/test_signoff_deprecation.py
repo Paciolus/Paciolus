@@ -40,12 +40,6 @@ def _make_config() -> TestingMemoConfig:
         domain="test domain",
         test_descriptions={"test_a": "Description A"},
         methodology_intro="Automated tests were applied per ISA 999:",
-        risk_assessments={
-            "low": "LOW risk.",
-            "elevated": "ELEVATED risk.",
-            "moderate": "MODERATE risk.",
-            "high": "HIGH risk.",
-        },
         isa_reference="ISA 999",
     )
 

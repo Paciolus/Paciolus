@@ -530,7 +530,7 @@ def _build_key_findings(
                 styles["MemoBody"],
             )
         )
-        procedure = get_follow_up_procedure("reconciling_difference", rotation_index=finding_num)
+        procedure = get_follow_up_procedure("bank_reconciliation", "reconciling_difference")
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
 
@@ -568,20 +568,13 @@ def _build_key_findings(
                 styles["MemoBody"],
             )
         )
-        procedure = get_follow_up_procedure("outstanding_volume", rotation_index=finding_num)
+        procedure = get_follow_up_procedure("bank_reconciliation", "outstanding_volume")
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))
 
     # Dynamic findings from rec_tests
     rec_tests = rec_result.get("rec_tests") or []
-    test_key_map = {
-        "Stale Deposits (>10 days)": "stale_deposits",
-        "Stale Checks (>90 days)": "stale_checks",
-        "NSF / Returned Items": "nsf_items",
-        "Interbank Transfers": "interbank_transfers",
-        "High Value (>Materiality)": "high_value_transactions",
-    }
 
     for rt in rec_tests:
         flagged = rt.get("flagged_count", 0)
@@ -603,8 +596,8 @@ def _build_key_findings(
                 styles["MemoBody"],
             )
         )
-        test_key = test_key_map.get(test_name, "")
-        procedure = get_follow_up_procedure(test_key, rotation_index=finding_num)
+        # Sprint 887 (OUT-17): the test's own identifier; a test without one gets no suggestion.
+        procedure = get_follow_up_procedure("bank_reconciliation", str(rt.get("test_key") or ""))
         if procedure:
             story.append(Paragraph(f"<i>Suggested follow-up: {user_text(procedure)}</i>", styles["MemoBodySmall"]))
         story.append(Spacer(1, 4))

@@ -376,12 +376,6 @@ class TestMemoBaseLongDescriptions:
             domain="test domain",
             test_descriptions={"TEST-01": long_desc},
             methodology_intro="Testing methodology intro.",
-            risk_assessments={
-                "low": "Low risk.",
-                "elevated": "Elevated risk.",
-                "moderate": "Moderate risk.",
-                "high": "High risk.",
-            },
             isa_reference="ISA 240",
             tool_domain="journal_entry_testing",
         )

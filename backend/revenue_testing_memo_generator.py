@@ -130,6 +130,7 @@ _REVENUE_CONFIG = TestingMemoConfig(
     ),
     isa_reference="ISA 240 (presumed fraud risk in revenue recognition) and ISA 500",
     tool_domain="revenue_testing",
+    tool="revenue_testing",  # Sprint 887 (OUT-17): procedure library key
 )
 
 _MAX_DETAIL_ROWS = 20
