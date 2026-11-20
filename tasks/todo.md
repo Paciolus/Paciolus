@@ -740,7 +740,11 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       Jest `resultVocabulary.test.ts` scans 23 result-component folders (failed first on exactly the two strings).
       **Not changed (outside the brief, follow-up):** the TB diagnostic and accrual/expense engines' own suggested
       procedures are still imperative.
-- [ ] 12J / OUT-31 — ASC 606-10-32 title
+- [x] **12J / OUT-31 — ASC 606-10-32 is Measurement.** Title was "… — Contract Costs" (that is ASC 340-40, which no
+      procedure cites). Paragraphs checked against what the revenue tests and procedures cite: 25-13, 25-23 and 25-30
+      were outside the listed "25-1 through 25-5" — now listed; 32-33 sits in the allocation paragraphs, now listed as
+      "32-28 through 32-41". Tests: `test_sprint887_citations.py` (2, both failed first — the title, and every cited
+      606-10 paragraph appears in the YAML). Memo snapshot and `route_testing_exports` re-recorded (title only).
 - [ ] 12K / OUT-32 — GASB 101 replaces GASB 16 by period
 - [ ] 12L — expense category: one computation and the same thresholds on screen, CSV and PDF
 

@@ -72,13 +72,18 @@ tools:
   revenue_testing:
     data_description: "revenue transaction detail"
     references:
+      # Sprint 887 (OUT-31): the paragraphs the revenue tests and procedures cite —
+      # 25-13 (contract modifications), 25-23 (satisfying a performance obligation),
+      # 25-30 (control transferred at a point in time), 32-33 (estimating standalone
+      # selling prices, applied consistently). Section 32 is Measurement; contract
+      # costs are ASC 340-40, which no procedure cites.
       - codification: "ASC 606-10-25"
         topic: "Revenue from Contracts with Customers — Recognition"
-        paragraph: "25-1 through 25-5"
+        paragraph: "25-1 through 25-5, 25-13, 25-23, 25-30"
         status: "Current"
       - codification: "ASC 606-10-32"
-        topic: "Revenue from Contracts with Customers — Contract Costs"
-        paragraph: "32-1 through 32-40"
+        topic: "Revenue from Contracts with Customers — Measurement"
+        paragraph: "32-28 through 32-41 (allocating the transaction price)"
         status: "Current"
 
   ar_aging_testing:
