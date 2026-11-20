@@ -51,12 +51,16 @@ def gen_tb_diagnostic() -> None:
         "difference": 0.00,
         "row_count": 247,
         "materiality_threshold": 50_000.00,
+        "materiality_source": "entered",
+        "materiality_basis": {"amount": 50_000.00, "purpose": "test_threshold", "origin": "entered"},
         "material_count": 3,
         "immaterial_count": 5,
         "risk_summary": {
             "total_anomalies": 8,
+            # Severity counts of the eight items below (not material/immaterial counts).
             "high_severity": 3,
-            "low_severity": 5,
+            "medium_severity": 1,
+            "low_severity": 4,
             "anomaly_types": {
                 "abnormal_balance": 2,
                 "suspense_account": 1,
@@ -1520,6 +1524,10 @@ def gen_ar_aging() -> None:
         null_fields=14,
         amount_parse_errors=2,
     )
+    # AR results carry two column detections (TB and sub-ledger), not ``column_detection``.
+    result.pop("column_detection", None)
+    result["tb_column_detection"] = {"overall_confidence": 0.94}
+    result["sl_column_detection"] = {"overall_confidence": 0.86}
 
     pdf = generate_ar_aging_memo(
         result,

@@ -882,15 +882,15 @@
      612.0,
      792.0
     ],
-    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTB Accounts Analyzed ................................ 0\nAnalysis Mode .................... TB-Only (Structural)\nTests Applied ...................................... 11\nData Quality Score ................................ 93%\nReporting Framework .................... FASB (US GAAP)\nThe automated accounts receivable aging analysis procedures documented in this workpaper were performed on the\naccounts receivable aging detail provided by management for the period under examination. These procedures are\ndesigned to identify potential data anomalies that may warrant further investigation by the engagement team. The analysis\nwas performed with reference to the FASB Accounting Standards Codification and applicable professional auditing\nstandards.\nProof Summary\nMetric\nValue\nData Completeness\n93%\nColumn Confidence\nNot available\nTests Executed\n11\nTests With No Exceptions Flagged\n3\nItems for Review\n17\nII. Methodology\nThe following automated tests were applied to the accounts receivable trial balance and sub-ledger data with reference to\nprofessional auditing standards (ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates — receivables\nvaluation and expected credit loss estimation, PCAOB AS 2501: Auditing Accounting Estimates). Results represent\nreceivables anomaly indicators, not allowance sufficiency conclusions:\n Test\nTier\nDescription\nSign Anomalies\nStructural\nFlags receivable entries with debit balances where a credit is expected, or credit\nbalances in contra-receivable accounts where a debit is expected, indicating\npotential mispostings.\nMissing Allowance\nStructural\nChecks for the existence of an Allowance for Doubtful Accounts (contra-AR).\nIFRS 9 / ASC 326 require expected credit losses to be measured and recognised;\nthey do not require a separately named account, so an absent allowance account\nmay warrant review rather than indicating non-compliance.\nNegative Aging Buckets\nStructural\nIdentifies aging buckets with negative balances, which may indicate unapplied\ncredits, overpayments, or data entry errors in the subledger.\n",
+    "text": "ACME Audit Partners LLP\n— 2 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTB Accounts Analyzed ................................ 0\nAnalysis Mode .................... TB-Only (Structural)\nTests Applied ...................................... 11\nData Quality Score ................................ 93%\nReporting Framework .................... FASB (US GAAP)\nThe automated accounts receivable aging analysis procedures documented in this workpaper were performed on the\naccounts receivable aging detail provided by management for the period under examination. These procedures are\ndesigned to identify potential data anomalies that may warrant further investigation by the engagement team. The analysis\nwas performed with reference to the FASB Accounting Standards Codification and applicable professional auditing\nstandards.\nProof Summary\nMetric\nValue\nData Completeness\n93%\nColumn Confidence\n90%\nTests Executed\n11\nTests With No Exceptions Flagged\n3\nItems for Review\n17\nII. Methodology\nThe following automated tests were applied to the accounts receivable trial balance and sub-ledger data with reference to\nprofessional auditing standards (ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates — receivables\nvaluation and expected credit loss estimation, PCAOB AS 2501: Auditing Accounting Estimates). Results represent\nreceivables anomaly indicators, not allowance sufficiency conclusions:\n Test\nTier\nDescription\nSign Anomalies\nStructural\nFlags receivable entries with debit balances where a credit is expected, or credit\nbalances in contra-receivable accounts where a debit is expected, indicating\npotential mispostings.\nMissing Allowance\nStructural\nChecks for the existence of an Allowance for Doubtful Accounts (contra-AR).\nIFRS 9 / ASC 326 require expected credit losses to be measured and recognised;\nthey do not require a separately named account, so an absent allowance account\nmay warrant review rather than indicating non-compliance.\nNegative Aging Buckets\nStructural\nIdentifies aging buckets with negative balances, which may indicate unapplied\ncredits, overpayments, or data entry errors in the subledger.\n",
     "text_bbox": [
      60.0,
      12.0,
      511.5,
      766.8
     ],
-    "runs": "9e6719947aebfb8f",
-    "content": "d47f989e9979b434"
+    "runs": "5b627a57a0cc7deb",
+    "content": "60f4303e53dc05ef"
    },
    {
     "size": [
@@ -972,15 +972,15 @@
      612.0,
      792.0
     ],
-    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTB Accounts Analyzed ................................ 0\nAnalysis Mode .................... TB-Only (Structural)\nTests Applied ...................................... 11\nData Quality Score ................................ 93%\nReporting Framework .................... FASB (US GAAP)\nThe automated accounts receivable aging analysis procedures documented in this workpaper were performed on the\naccounts receivable aging detail provided by management for the period under examination. These procedures are\ndesigned to identify potential data anomalies that may warrant further investigation by the engagement team. The analysis\nwas performed with reference to the FASB Accounting Standards Codification and applicable professional auditing\nstandards.\nProof Summary\nMetric\nValue\nData Completeness\n93%\nColumn Confidence\nNot available\nTests Executed\n11\nTests With No Exceptions Flagged\n3\nItems for Review\n17\nII. Methodology\nThe following automated tests were applied to the accounts receivable trial balance and sub-ledger data with reference to\nprofessional auditing standards (ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates — receivables\nvaluation and expected credit loss estimation, PCAOB AS 2501: Auditing Accounting Estimates). Results represent\nreceivables anomaly indicators, not allowance sufficiency conclusions:\n Test\nTier\nDescription\nSign Anomalies\nStructural\nFlags receivable entries with debit balances where a credit is expected, or credit\nbalances in contra-receivable accounts where a debit is expected, indicating\npotential mispostings.\nMissing Allowance\nStructural\nChecks for the existence of an Allowance for Doubtful Accounts (contra-AR).\nIFRS 9 / ASC 326 require expected credit losses to be measured and recognised;\nthey do not require a separately named account, so an absent allowance account\nmay warrant review rather than indicating non-compliance.\nNegative Aging Buckets\nStructural\nIdentifies aging buckets with negative balances, which may indicate unapplied\ncredits, overpayments, or data entry errors in the subledger.\n",
+    "text": "— 2 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nI. Scope\nPeriod Tested ... FY 2025 (January 1 – December 31, 2025)\nTB Accounts Analyzed ................................ 0\nAnalysis Mode .................... TB-Only (Structural)\nTests Applied ...................................... 11\nData Quality Score ................................ 93%\nReporting Framework .................... FASB (US GAAP)\nThe automated accounts receivable aging analysis procedures documented in this workpaper were performed on the\naccounts receivable aging detail provided by management for the period under examination. These procedures are\ndesigned to identify potential data anomalies that may warrant further investigation by the engagement team. The analysis\nwas performed with reference to the FASB Accounting Standards Codification and applicable professional auditing\nstandards.\nProof Summary\nMetric\nValue\nData Completeness\n93%\nColumn Confidence\n90%\nTests Executed\n11\nTests With No Exceptions Flagged\n3\nItems for Review\n17\nII. Methodology\nThe following automated tests were applied to the accounts receivable trial balance and sub-ledger data with reference to\nprofessional auditing standards (ISA 500: Audit Evidence, ISA 540: Auditing Accounting Estimates — receivables\nvaluation and expected credit loss estimation, PCAOB AS 2501: Auditing Accounting Estimates). Results represent\nreceivables anomaly indicators, not allowance sufficiency conclusions:\n Test\nTier\nDescription\nSign Anomalies\nStructural\nFlags receivable entries with debit balances where a credit is expected, or credit\nbalances in contra-receivable accounts where a debit is expected, indicating\npotential mispostings.\nMissing Allowance\nStructural\nChecks for the existence of an Allowance for Doubtful Accounts (contra-AR).\nIFRS 9 / ASC 326 require expected credit losses to be measured and recognised;\nthey do not require a separately named account, so an absent allowance account\nmay warrant review rather than indicating non-compliance.\nNegative Aging Buckets\nStructural\nIdentifies aging buckets with negative balances, which may indicate unapplied\ncredits, overpayments, or data entry errors in the subledger.\n",
     "text_bbox": [
      60.0,
      24.0,
      511.5,
      703.0
     ],
-    "runs": "362657b4579f5973",
-    "content": "9e4011a0c1d6fa3e"
+    "runs": "88df3e92c914c9bd",
+    "content": "f1345007b980512b"
    },
    {
     "size": [
@@ -1516,7 +1516,7 @@
   ],
   "sheets": {
    "Summary": {
-    "cells": "1a43ff8bba7d01d0",
+    "cells": "38748db0a233fedf",
     "cell_count": 24,
     "merged": [
      "A1:D1",
@@ -1542,7 +1542,7 @@
     }
    },
    "Flagged Accounts": {
-    "cells": "93a233dd75066ce5",
+    "cells": "3debae98077729d9",
     "cell_count": 73,
     "merged": [
      "A11:G11",
@@ -4482,15 +4482,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nTotal Debits ........................... $12,847,392.50\nTotal Credits .......................... $12,847,392.50\nVariance ........................................ $0.00\nRows Analyzed ..................................... 247\nMateriality Threshold ...................... $50,000.00\nMateriality Source ...................... Not available\nFlagged Value (Material) ................ $7,207,850.00\nTotal TB Population .................... $12,847,392.50\nRisk-Weighted Coverage .......................... 56.1%\nMaterial exceptions affect 56.1% of total trial balance value by amount. Accounts above materiality threshold warrant\ncorroborating procedures before conclusions can be drawn.\nPopulation Composition\nAccount Type\nCount\nGross Balance\n% of Gross Total\nAsset\n60\n$4,892,000.00\n21.4%\nLiability\n47\n$3,180,392.50\n13.9%\nEquity\n8\n$2,524,000.00\n11.0%\nRevenue\n22\n$6,850,000.00\n30.0%\nExpense\n110\n$5,401,000.00\n23.6%\nTotal\n247\n$22,847,392.50\n100.0%\nGross Balance represents the sum of absolute account-level balances within each type. This column is not additive to a net\ntrial balance total, as it includes both debit and credit balances without netting.\nDiagnostic Score\nComposite Diagnostic Score ................. 52.0 / 100\n",
+    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 3 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nTotal Debits ........................... $12,847,392.50\nTotal Credits .......................... $12,847,392.50\nVariance ........................................ $0.00\nRows Analyzed ..................................... 247\nMateriality Threshold ...................... $50,000.00\nMateriality Source ... Test threshold — Entered for this run\nFlagged Value (Material) ................ $7,207,850.00\nTotal TB Population .................... $12,847,392.50\nRisk-Weighted Coverage .......................... 56.1%\nMaterial exceptions affect 56.1% of total trial balance value by amount. Accounts above materiality threshold warrant\ncorroborating procedures before conclusions can be drawn.\nPopulation Composition\nAccount Type\nCount\nGross Balance\n% of Gross Total\nAsset\n60\n$4,892,000.00\n21.4%\nLiability\n47\n$3,180,392.50\n13.9%\nEquity\n8\n$2,524,000.00\n11.0%\nRevenue\n22\n$6,850,000.00\n30.0%\nExpense\n110\n$5,401,000.00\n23.6%\nTotal\n247\n$22,847,392.50\n100.0%\nGross Balance represents the sum of absolute account-level balances within each type. This column is not additive to a net\ntrial balance total, as it includes both debit and credit balances without netting.\nDiagnostic Score\nComposite Diagnostic Score ................. 52.0 / 100\n",
     "text_bbox": [
      60.0,
      12.0,
      441.6,
      766.8
     ],
-    "runs": "e785c37a3ad44767",
-    "content": "655af4231419b8c4"
+    "runs": "b6fcea6c0f8974f9",
+    "content": "a127d501edb55bd4"
    },
    {
     "size": [
@@ -4499,15 +4499,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 4 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Tier ....................... HIGH (52.0/100)\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nSeverity counts ......................... Not available\nException Details\nItems Above Materiality (3)\n",
+    "text": "Particularis de Computis\nACME Audit Partners LLP\n— 4 —\nConfidential - Prepared for ACME Client Corp.\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Tier ....................... HIGH (52.0/100)\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nItems Flagged\nHigh Severity\nMedium Severity\nLow Severity\nInformational Notes\n8 3 1 4 0\nException Details\nItems Above Materiality (3)\n",
     "text_bbox": [
      60.0,
      12.0,
-     292.5,
+     473.3,
      766.8
     ],
-    "runs": "ff83abde5289d5d6",
-    "content": "448a5b34932a81ba"
+    "runs": "7b4791073c2fece5",
+    "content": "f1993f3680927109"
    },
    {
     "size": [
@@ -4606,15 +4606,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\n— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nTotal Debits ........................... $12,847,392.50\nTotal Credits .......................... $12,847,392.50\nVariance ........................................ $0.00\nRows Analyzed ..................................... 247\nMateriality Threshold ...................... $50,000.00\nMateriality Source ...................... Not available\nFlagged Value (Material) ................ $7,207,850.00\nTotal TB Population .................... $12,847,392.50\nRisk-Weighted Coverage .......................... 56.1%\nMaterial exceptions affect 56.1% of total trial balance value by amount. Accounts above materiality threshold warrant\ncorroborating procedures before conclusions can be drawn.\nPopulation Composition\nAccount Type\nCount\nGross Balance\n% of Gross Total\nAsset\n60\n$4,892,000.00\n21.4%\nLiability\n47\n$3,180,392.50\n13.9%\nEquity\n8\n$2,524,000.00\n11.0%\nRevenue\n22\n$6,850,000.00\n30.0%\nExpense\n110\n$5,401,000.00\n23.6%\nTotal\n247\n$22,847,392.50\n100.0%\nGross Balance represents the sum of absolute account-level balances within each type. This column is not additive to a net\ntrial balance total, as it includes both debit and credit balances without netting.\nDiagnostic Score\nComposite Diagnostic Score ................. 52.0 / 100\n",
+    "text": "Particularis de Computis\n— 3 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nTotal Debits ........................... $12,847,392.50\nTotal Credits .......................... $12,847,392.50\nVariance ........................................ $0.00\nRows Analyzed ..................................... 247\nMateriality Threshold ...................... $50,000.00\nMateriality Source ... Test threshold — Entered for this run\nFlagged Value (Material) ................ $7,207,850.00\nTotal TB Population .................... $12,847,392.50\nRisk-Weighted Coverage .......................... 56.1%\nMaterial exceptions affect 56.1% of total trial balance value by amount. Accounts above materiality threshold warrant\ncorroborating procedures before conclusions can be drawn.\nPopulation Composition\nAccount Type\nCount\nGross Balance\n% of Gross Total\nAsset\n60\n$4,892,000.00\n21.4%\nLiability\n47\n$3,180,392.50\n13.9%\nEquity\n8\n$2,524,000.00\n11.0%\nRevenue\n22\n$6,850,000.00\n30.0%\nExpense\n110\n$5,401,000.00\n23.6%\nTotal\n247\n$22,847,392.50\n100.0%\nGross Balance represents the sum of absolute account-level balances within each type. This column is not additive to a net\ntrial balance total, as it includes both debit and credit balances without netting.\nDiagnostic Score\nComposite Diagnostic Score ................. 52.0 / 100\n",
     "text_bbox": [
      60.0,
      24.0,
      441.6,
      694.0
     ],
-    "runs": "bf65e59733a147ff",
-    "content": "b0ccca0cd7fb0b86"
+    "runs": "ea631539f3aa9310",
+    "content": "d75d31f2ce03d606"
    },
    {
     "size": [
@@ -4623,15 +4623,15 @@
      612.0,
      792.0
     ],
-    "text": "Particularis de Computis\n— 4 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Tier ....................... HIGH (52.0/100)\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nSeverity counts ......................... Not available\nException Details\nItems Above Materiality (3)\n",
+    "text": "Particularis de Computis\n— 4 —\nPrepared using Paciolus. Does not constitute an audit, review, or attestation engagement.\nDiagnostic Tier ....................... HIGH (52.0/100)\nDiagnostic Score Scale: 0–10 = Low | 11–25 = Moderate | 26–50 = Elevated | 51–100 = High\nBasis: automated flag density, raised where HIGH-severity flags warrant it — auditor judgment required per ISA 315. The\nscore, its tiers and those floors are Paciolus conventions, not measures prescribed by any standard. The diagnostic tier is an\nindicator, not a risk assessment or a conclusion on internal control.\nScore Decomposition\nRevenue — Consulting Services: revenue concentration ... +8\nCost of Goods Sold: expense concentration ........ +8\nSuspense — Clearing Account: uncleared suspense ... +8\nMinor observations (5 flagged) .................. +10\nAnomaly-weighted coverage exceeds 50% ........... +10\nSuspense balance at period end ................... +5\nCredit balance in asset account .................. +3\nTotal (capped at 100) ............................ 52\nItems Flagged\nHigh Severity\nMedium Severity\nLow Severity\nInformational Notes\n8 3 1 4 0\nException Details\nItems Above Materiality (3)\n",
     "text_bbox": [
      60.0,
      24.0,
-     292.5,
+     473.3,
      704.0
     ],
-    "runs": "a2f461a51b5091e2",
-    "content": "105ec7b82e5cf6ac"
+    "runs": "9fe8d66ee1f58700",
+    "content": "ed3fd47b5bdeb6bb"
    },
    {
     "size": [

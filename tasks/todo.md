@@ -628,9 +628,8 @@ by the full run (`test_export_pdf_contract` required a TWM "Composite" label; `t
 baseline (ten new errors found and fixed). Frontend: Jest 219 suites / 2,138 passed; `tsc` and eslint clean; `next
 build` compiled every route (`ƒ`) — first run exited 1 on Next.js's `SecurityFatalError` advisory gate, retry passed.
 OpenAPI snapshot: additive only.
-**Open for the CEO:** (1) regenerate `sample-reports/` and the public sample memo
-`frontend/public/samples/paciolus-sample-je-testing-memo.pdf` — the memo wording changed (framework line, unit
-labels, one-decimal tiers); (2) fixed-asset category composition could be computed from the register's category
+**Samples regenerated (follow-up commit):** `sample-reports/` (all 21) and the public `frontend/public/samples/paciolus-sample-je-testing-memo.pdf` (same Sprint 865 synthetic file, now run through `/audit/journal-entries` and `/export/je-testing-memo` as the page does; stamped as before). The sample generator's TB data still carried the OUT-09 mislabel (3 "high"/5 "low" were material/immaterial counts; the eight items are 3 high, 1 medium, 4 low) and no materiality basis; its AR data carried `column_detection` instead of the TB and sub-ledger detections; both fixed so no sample prints "Not available". Memo render snapshot re-recorded for those two (tb_diagnostic, ar_aging, Excel workpaper).
+**Open for the CEO:** (1) done, see above; (2) fixed-asset category composition could be computed from the register's category
 column if wanted (removed sections had no data source); (3) the payroll sample still feeds `gl_salaries_wages`, which
 the engine never computes — same class as the removed fixed-asset sections, not in this review.
 

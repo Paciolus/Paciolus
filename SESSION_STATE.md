@@ -35,8 +35,7 @@ Vercel (status `success` on the commit). Render workspace `tea-d6ie7bngi27c738fa
   `tasks/todo.md` Sprint 886.
 - CEO decisions taken this session: three-way match shows the engine's LOW/MEDIUM/HIGH, no score; bank rec tests,
   score and aging shown on screen; unlinked memos say FASB is the default; scores one decimal everywhere.
-- Not done here (needs a deliberate run): regenerate `sample-reports/` and the public
-  `frontend/public/samples/paciolus-sample-je-testing-memo.pdf` — memo wording changed.
+- `sample-reports/` and the public JE sample memo regenerated on the Sprint 886 code (follow-up commit).
 
 ## Verification
 
