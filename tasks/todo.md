@@ -122,6 +122,8 @@
 >       Professional/Enterprise (Sprint 858 note) · H12: verify or relabel the ISA 315 "Appendix 1 matrix" citation.
 > - [ ] Sprint 853 (firm-owned client data) is blocked on a CEO decision.
 > - [ ] Sprint 884 follow-up: should the TB response carry the currency conversion it computes (today it is dropped)?
+> - [ ] Sprint 887: review the PR-T12/PR-T13 drafts and `reports/sprint-887-wording.md`; decide where `57c79d91` lives
+>       and whether the anomaly summary gets a download button. Engineering follow-ups are listed under the sprint.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** PENDING — filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
@@ -774,12 +776,24 @@ three tests still passing `risk_assessments` (12C), the aggregator mocks and the
 ruff clean on every changed file; mypy 288 = baseline. Frontend: Jest 2,145 passed (pre-commit gate), `tsc` and eslint
 clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/sitemap.xml` static) — first run exited
 1 on Next.js's `SecurityFatalError` advisory gate, retry passed. OpenAPI snapshot regenerated (additive only).
-**Open for the CEO:** (1) review the drafted PR-T12 / PR-T13 suggestions and the 163-row old/new procedure table
-(`reports/sprint-887-wording.md`); (2) the anomaly summary has no page that downloads it — `fill_from_saved` is API-only
-until a button is wanted; (3) migration `c3e7a1f9d524` (`tool_runs.flag_count`) runs on deploy; runs before it show
-"results unavailable"; (4) regenerate `sample-reports/` and the public JE sample memo (wording changed again);
-(5) follow-ups outside this brief: the TB diagnostic, accrual and expense engines' own suggested procedures are still
-imperative; the bank-rec memo says "No items requiring further investigation were identified."
+**Open — CEO**
+- [ ] Review the drafted PR-T12 / PR-T13 suggestions (12D) and the 163-row old/new procedure table
+      (`reports/sprint-887-wording.md`).
+- [ ] Decide on `57c79d91` (Sprint 886 sample regeneration, committed by another session onto this branch): leave it
+      here, or move it onto `sprint-886-export-fidelity` (still at `61312c4e`) before 886 is pushed.
+- [ ] Decide whether the anomaly summary gets a download button (today no page offers it; `fill_from_saved` is API-only).
+
+**Open — engineering**
+- [ ] Merge order 883 → 884 → 885 → 886 → 887, then push.
+- [ ] On deploy: migration `c3e7a1f9d524` (`tool_runs.flag_count`) runs; runs recorded before it show "Results
+      unavailable" — confirm the live deploy SHA and the migration head.
+- [ ] Regenerate `sample-reports/` and the public JE sample memo (wording changed again).
+- [ ] Re-record Sprint 819 `test_engagement_export_routes_unchanged` (fails on `main` already; the 12E anomaly-summary
+      changes alter its golden too).
+- [ ] Follow-up (outside this brief): the TB diagnostic, accrual and expense engines' own suggested procedures are still
+      imperative — reword to "The auditor may consider…" and extend the `test_memo_banned_phrases.py` procedure rule.
+- [ ] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
+      reword to "No exceptions flagged" form.
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
