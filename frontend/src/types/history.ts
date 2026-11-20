@@ -83,7 +83,7 @@ export function mapActivityLogToAuditActivity(log: ActivityLogResponse): AuditAc
 // What IS stored vs NOT stored (Sprint 841: matches the activity_logs columns)
 export const STORED_METADATA = [
   'Timestamp of audit',
-  'File hash (SHA-256) and the first 8 characters of the filename',
+  'A SHA-256 hash of the filename and its first characters (up to 12)',
   'Row count',
   'Balance status (Balanced/Unbalanced)',
   'Summary totals (Debits/Credits)',

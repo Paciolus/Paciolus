@@ -801,7 +801,8 @@ clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/
       reword to "No exceptions flagged" form.
 
 ### Sprint 888: What we publish about plans, billing and data handling matches the code
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-888-published-claims`, stacked on Sprint 887.
+**Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-888-published-claims`, stacked on Sprint 887;
+legal copy on `counsel-redline-863` (`e4175662`, do not merge without counsel).
 **Priority:** P0 (launch copy). **Source:** CEO brief 13 (review AZ-12, TQ-08 + plan and data-handling tables, at
 `ef5e567`). **Agents:** executor, guardian (copy vs code), critic (no new promises).
 **Decisions (CEO):** paid features pause at the first failed payment (copy changes, not behaviour); bulk upload will
@@ -815,7 +816,7 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       24 h / 48 h, bulk upload (endpoint + todo feature), runbooks superseded, retired tier aliases.
       Done: bulk upload 501 + build plan; FAQ/README/guide facts (`test_sprint_888_plan_facts.py`); both pricing
       runbooks marked superseded; rate-limit aliases starter/team/organization and "Team" plan comments removed.
-- [ ] 13C: 10-minute cache claim, Data Handling contradictions, retired wording + old sample PDFs, log content claim,
+- [x] 13C: 10-minute cache claim, Data Handling contradictions, retired wording + old sample PDFs, log content claim,
       closure/cancellation report, "what we keep" drafts, subprocessor list.
       Done: three parser log lines no longer carry the filename, OFX currency/account/type/dates or IIF dates
       (`test_sprint_888_logs_carry_no_upload_content.py`).
@@ -825,13 +826,32 @@ statement replaces "Zero-Storage" wording. Privacy/Terms/DPA edits go in one leg
       snapshot and the brief's retired phrases. The 22 sample PDFs carry no retired wording (checked).
 - [x] 13D: billing tests use real `/billing/usage` shapes and the real UsageMeter; misleading test renamed;
       Professional 499 allowed / 500 refused.
-- [ ] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
+- [x] Legal-copy commit (Privacy, Terms, DPA) on `counsel-redline-863`; each change listed for the CEO.
 
 **Found (13A), for the CEO — not fixed:** `invoice.paid` sets the subscription ACTIVE but leaves `user.tier` on Free,
 and its write moves `updated_at`, so Stripe's `customer.subscription.updated` for the same recovery (same second or
 earlier) is skipped as stale. A subscriber who pays after a failure can stay on Free. Pinned by a strict xfail in
 `tests/test_sprint_888_payment_failure.py`. Proposed fix: `invoice.paid` restores `user.tier` from `sub.tier` (and org
 members) when it moves PAST_DUE → ACTIVE.
+
+**Review (2026-11-20).** Commits: `767fa4cc` 13A · `0759f02c` 13D · `6e1c65e2` bulk 501 · `d0d3bae5` plan facts ·
+`004cf558` runbooks · `7fdd43eb` tier aliases · `3be7cd65` parser logs · `ab86bd97` Data Handling + Subprocessors ·
+`f005917f` README/API wording · (record commit) history-page filename wording. Legal copy `e4175662` on the redline.
+Verification: backend `-m "not slow"` 11,335 passed, 1 xfailed (the recovery defect above), 1 failed — Sprint 819
+`test_engagement_export_routes_unchanged`, already failing on `main` (Sprint 887 follow-up); frontend Jest 2,145+
+(pre-commit gate) and `next build` (second run; first exits on Next's `SecurityFatalError` advisory gate).
+
+**Open — CEO** (detail in the session summary)
+- [ ] Recovery defect above: approve the `invoice.paid` fix.
+- [ ] Preview cache: unused entries are evicted lazily (next preview or restart), so "held for up to 10 minutes, then
+      released" is not strictly true. Fix the code (a one-minute sweep) or reword to "can be reused for up to 10 minutes".
+- [ ] Terms and DPA promise deletion within 30 days of termination; no job does it (erasure is manual or self-serve).
+- [ ] Firm logos stay in S3 after account erasure (`erase_account` deletes the row, not the object).
+- [ ] Confirm on Render: `S3_BUCKET_NAME` set (logos), `FORMAT_ODS_ENABLED` unset/false (copy now omits ODS), no
+      `RATE_LIMIT_{STARTER,TEAM,ORGANIZATION}_*` variables (now ignored).
+- [ ] Seven stale `.docx` exports under `docs/` still carry "Zero-Storage" (USER_GUIDE.docx, ARCHITECTURE.docx, …):
+      delete or regenerate.
+- [ ] Until `counsel-redline-863` merges, Privacy/Terms on this branch still say "up to 48 hours" and list bulk upload.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

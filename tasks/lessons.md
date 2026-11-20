@@ -215,3 +215,12 @@
   sessions their own worktree.
 - **In this harness, write edit scripts to files, not shell heredocs (Sprint 887).** Inline heredocs dropped or
   doubled backslashes (`\u2265`, `\b`) and once failed to parse; the same script written with the file tool ran.
+- **An event handler can make its sibling event look stale (Sprint 888).** `invoice.paid` writes the subscription row,
+  moving the `updated_at` that the webhook ordering guard compares with `event.created`, so Stripe's
+  `customer.subscription.updated` for the same recovery is skipped and the paying user stays on Free. Rule: when a
+  handler writes the row an ordering guard reads, test every delivery order of the events Stripe sends together.
+- **"Held for up to N minutes, then released" needs a timer, not lazy eviction (Sprint 888).** The preview cache
+  checks expiry only on the next `put()` or lookup, so an unused file stays in memory indefinitely. Check how expiry
+  is enforced, not only the TTL constant, before publishing a retention sentence.
+- **Derive copy checks from the code, not a literal list (Sprint 888).** The format test computes the enabled set from
+  `FORMAT_PROFILES` and `is_format_enabled`, so turning ODS on fails the copy test until the FAQ names it.
