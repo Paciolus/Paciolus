@@ -93,7 +93,7 @@
 >       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
 > - [ ] **Sprint 886** (in review) — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
 >       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
-> - [ ] **Sprint 887** (in progress) — generated wording: no audit conclusions, no contradiction of the results, correct
+> - [ ] **Sprint 887** (in review) — generated wording: no audit conclusions, no contradiction of the results, correct
 >       citations (review OUT-07/08/13/17/20/21/22/29/30/31/32 + expense-category table). Local branch, stacked on 886.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
@@ -636,8 +636,8 @@ column if wanted (removed sections had no data source); (3) the payroll sample s
 the engine never computes — same class as the removed fixed-asset sections, not in this review.
 
 ### Sprint 887: Generated wording states no audit conclusions, matches the results, cites correctly
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-887-generated-wording`, stacked on Sprint 886 (`61312c4e`);
-not pushed. **Priority:** P0. **Source:** read-only review at `ef5e567` (OUT-07/08/13/17/20/21/22/29/30/31/32 +
+**Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-887-generated-wording`, stacked on Sprint 886
+(`57c79d91`, which another session committed onto this branch after it was cut from `61312c4e`); not pushed. **Priority:** P0. **Source:** read-only review at `ef5e567` (OUT-07/08/13/17/20/21/22/29/30/31/32 +
 comparison table). **Agents:** Executor, Critic, Accounting Expert.
 **Position (CEO, 2026-11-20):** Paciolus runs tests and reports what they flagged; the auditor evaluates and concludes.
 Nothing flagged is "no exceptions flagged" — never passed, clean or verified. Software output is "items flagged", not
@@ -762,6 +762,24 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       Tests: `test_sprint887_expense_category_bands.py` (9, all failed first — real route → screen, CSV, PDF; band
       cases); Jest `ExpenseCategoryChangeBand.test.tsx` (3; 2 failed first); old `_assign_risk` / arrow tests
       rewritten. Sample bands derived with the engine's `change_band`; snapshot re-recorded.
+
+**Commits:** `7bcc0a04` (12A), `72c1467d` (12B), `14139462` (12C), `27050859` (12D), `c2baa10f` (12E + 12F), `503d5e6a`
+(12G), `c7a06ff5` (12H), `970a65c0` (12I), `25e000e6` (12J), `41e37fd9` (12K), `5ee0ae1c` (12L); record + four contract
+tests + one mypy cast: the commit after `5ee0ae1c`.
+**Verified (final tree):** backend full suite 11,317 passed, 5 failed → the four were contract tests of intended changes
+(TB factor name 12I, expense CSV header 12L, flux section label 12H, recorder signature 12E), updated in the record commit
+(133/133 pass); the fifth is the pre-existing Sprint 819 `test_engagement_export_routes_unchanged` (fails on `main`; its
+golden will also differ by the 12E anomaly-summary changes once re-recorded). An earlier full run (after 12D) found
+three tests still passing `risk_assessments` (12C), the aggregator mocks and the 12A thresholds dict — fixed in 12D.
+ruff clean on every changed file; mypy 288 = baseline. Frontend: Jest 2,145 passed (pre-commit gate), `tsc` and eslint
+clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/sitemap.xml` static) — first run exited
+1 on Next.js's `SecurityFatalError` advisory gate, retry passed. OpenAPI snapshot regenerated (additive only).
+**Open for the CEO:** (1) review the drafted PR-T12 / PR-T13 suggestions and the 163-row old/new procedure table
+(`reports/sprint-887-wording.md`); (2) the anomaly summary has no page that downloads it — `fill_from_saved` is API-only
+until a button is wanted; (3) migration `c3e7a1f9d524` (`tool_runs.flag_count`) runs on deploy; runs before it show
+"results unavailable"; (4) regenerate `sample-reports/` and the public JE sample memo (wording changed again);
+(5) follow-ups outside this brief: the TB diagnostic, accrual and expense engines' own suggested procedures are still
+imperative; the bank-rec memo says "No items requiring further investigation were identified."
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

@@ -586,13 +586,13 @@ class TestScoreDecompositionTopN:
             abnormal_balances=findings,
         )
         # Named material factors: 8 individual + 1 summary for remaining 7
-        material_factors = [f for f in factors if f[1] == 8 or "additional findings" in f[0]]
-        named_factors = [f for f in material_factors if "additional findings" not in f[0]]
-        summary_factors = [f for f in material_factors if "additional findings" in f[0]]
+        material_factors = [f for f in factors if f[1] == 8 or "additional items flagged" in f[0]]
+        named_factors = [f for f in material_factors if "additional items flagged" not in f[0]]
+        summary_factors = [f for f in material_factors if "additional items flagged" in f[0]]
 
         assert len(named_factors) == 8
         assert len(summary_factors) == 1
-        assert "7 additional findings" in summary_factors[0][0]
+        assert "7 additional items flagged" in summary_factors[0][0]
 
     def test_few_findings_no_summary(self):
         """With <= 8 material findings, all should be named (no summary line)."""
@@ -617,7 +617,7 @@ class TestScoreDecompositionTopN:
         )
         material_factors = [f for f in factors if f[1] == 8]
         assert len(material_factors) == 5
-        assert not any("additional findings" in f[0] for f in factors)
+        assert not any("additional items flagged" in f[0] for f in factors)
 
     def test_total_reconciles(self):
         """Total score must reconcile regardless of decomposition structure."""

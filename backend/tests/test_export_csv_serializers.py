@@ -329,11 +329,22 @@ class TestSerializeExpenseCategoryCsv:
         )
         rows = _parse(serialize_expense_category_csv(ec))
         # Check that prior period header is used
-        assert ["Category", "Amount", "% of Revenue", "Prior Amount", "Dollar Change", "Exceeds Materiality"] in rows
+        # Sprint 887: the engine's % change and change band, as on screen and in the memo.
+        assert [
+            "Category",
+            "Amount",
+            "% of Revenue",
+            "Prior Amount",
+            "Dollar Change",
+            "% Change",
+            "Exceeds Materiality",
+            "Change Band",
+        ] in rows
         data_row = next(r for r in rows if r and r[0] == "Rent")
         assert data_row[3] == "1000.00"
         assert data_row[4] == "200.00"
-        assert data_row[5] == "Yes"
+        assert data_row[5] == "N/A"  # % Change: this payload predates the engine field
+        assert data_row[6] == "Yes"
 
     def test_na_when_pct_of_revenue_missing(self):
         ec = ExpenseCategoryCSVInput(

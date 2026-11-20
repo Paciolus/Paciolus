@@ -589,7 +589,7 @@ FLUX_EXPECTATIONS_MEMO_REQUIRED_SECTIONS: tuple[str, ...] = (
     "Scope",  # section I header
     "Variance",  # section II content + per-item observed variance table
     "Conclusion",  # per-item structured conclusion block
-    "Sign-Off",  # section III "Formal Sign-Off"
+    "Completion Status",  # section III (Sprint 887: the signature table is off by default)
     "Disclaimer",  # section IV header
 )
 

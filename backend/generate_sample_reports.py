@@ -3662,6 +3662,8 @@ def gen_population_profile() -> None:
 # 18. EXPENSE CATEGORY MEMO
 # ─────────────────────────────────────────────────────────────────────
 def gen_expense_category() -> None:
+    from typing import cast
+
     from expense_category_engine import change_band
     from expense_category_memo import generate_expense_category_memo
 
@@ -3727,7 +3729,7 @@ def gen_expense_category() -> None:
         "change_thresholds": {"pct_both": 20.0, "pct_either": 10.0, "materiality": 50_000.00},
     }
     # Sprint 887: % change and change band as the engine computes them.
-    for cat in report_result["categories"]:
+    for cat in cast(list[dict], report_result["categories"]):
         pct = round((cat["amount"] - cat["prior_amount"]) / cat["prior_amount"] * 100, 2)
         cat["pct_change"] = pct
         cat["change_band"] = change_band(pct, cat["exceeds_threshold"])

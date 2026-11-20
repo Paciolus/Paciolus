@@ -202,4 +202,16 @@
   content instead — the working file with the later item's text reverted — via `git hash-object -w` + `git
   update-index --cacheinfo`; lint-staged keeps the unstaged remainder. On Windows, pipe patches as bytes (text mode
   turns LF into CRLF) and normalise CRLF before matching.
-
+- **Grep for every removed name across the tests before committing; then run the full suite (Sprint 887).** Removing
+  `TestingMemoConfig.risk_assessments` (12C) passed the targeted memo tests, but three other test files still passed
+  the field and a fourth pinned the 12A thresholds dict; only the full run found them, two commits later. A second
+  full run at the end found four more contract tests (CSV header, PDF section label, recorder signature, a factor
+  name). Rule: `git grep <removed symbol or string>` in `backend/tests` and `frontend/src/__tests__` before each
+  commit that renames or removes, and one full backend run before the record commit.
+- **Scan for whole words when checking that a word is gone (Sprint 887).** A test that "LOW" no longer appears failed
+  on "FOLLOW-UP ITEM POINTS". Use word boundaries (and allow listed terms such as "Passed AJE") in vocabulary scans.
+- **Another session can commit onto your branch when sessions share a working tree (Sprint 887).** A Sprint 886
+  follow-up landed on `sprint-887-generated-wording` mid-task. Check `git log` before each commit, and give parallel
+  sessions their own worktree.
+- **In this harness, write edit scripts to files, not shell heredocs (Sprint 887).** Inline heredocs dropped or
+  doubled backslashes (`\u2265`, `\b`) and once failed to parse; the same script written with the file tool ran.
