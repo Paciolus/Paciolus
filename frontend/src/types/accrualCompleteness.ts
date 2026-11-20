@@ -58,6 +58,8 @@ export interface AccrualCompletenessReport {
   monthly_run_rate: number | null
   accrual_to_run_rate_pct: number | null
   threshold_pct: number
+  /** Sprint 887: where the threshold came from — the Paciolus default or entered for the run. */
+  threshold_source?: 'default' | 'entered' | null
   meets_threshold: boolean
   below_threshold: boolean
   prior_operating_expenses: number | null

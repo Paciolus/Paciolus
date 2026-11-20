@@ -54,6 +54,13 @@ def _money(value: object) -> str:
     return f"${amount:,.2f}"
 
 
+# Sprint 887 (OUT-08): the threshold's origin as the memo states it.
+_THRESHOLD_SOURCE_TEXT = {
+    "default": "Paciolus default (a software setting, not a professional standard)",
+    "entered": "entered for this run",
+}
+
+
 def generate_accrual_completeness_memo(
     report_result: dict,
     filename: str = "accrual_completeness",
@@ -107,6 +114,9 @@ def generate_accrual_completeness_memo(
         ratio = report_result.get("accrual_to_run_rate_pct")
         threshold = report_result.get("threshold_pct", 50)
         meets_threshold = report_result.get("meets_threshold", False)
+        # Sprint 887 (OUT-08): where the threshold came from, said wherever it is shown.
+        threshold_source = _THRESHOLD_SOURCE_TEXT.get(report_result.get("threshold_source") or "", "Not available")
+        at_or_above_label = f"At or Above Threshold (\u2265{threshold:.0f}%)"
         prior_available = report_result.get("prior_available", False)
         prior_opex = report_result.get("prior_operating_expenses")
         deferred_revenue_accounts = report_result.get("deferred_revenue_accounts", [])
@@ -147,6 +157,7 @@ def generate_accrual_completeness_memo(
             [
                 create_leader_dots("Prior Period Data", "Included" if prior_available else "Not provided"),
                 create_leader_dots("Threshold", f"{threshold:.0f}%"),
+                create_leader_dots("Threshold Source", threshold_source),
             ]
         )
 
@@ -158,7 +169,7 @@ def generate_accrual_completeness_memo(
             scope_lines.append(create_leader_dots("Accrual-to-Run-Rate", f"{ratio:.1f}%"))
             scope_lines.append(
                 create_leader_dots(
-                    "Meets Minimum Accrual Threshold (\u226550%)",
+                    at_or_above_label,
                     "Yes" if meets_threshold else "No",
                 )
             )
@@ -327,7 +338,7 @@ def generate_accrual_completeness_memo(
             analysis_data.append(["Threshold", f"{threshold:.0f}%"])
             analysis_data.append(
                 [
-                    "Meets Minimum Accrual Threshold (\u226550%)",
+                    at_or_above_label,
                     "Yes" if meets_threshold else "No",
                 ]
             )
@@ -338,31 +349,26 @@ def generate_accrual_completeness_memo(
             story.append(analysis_table)
             story.append(Spacer(1, 8))
 
-            # Dynamic conclusion
+            # Sprint 887 (OUT-08): the comparison and the threshold's origin only. The ratio
+            # compares the accrued balance with one month of prior-period operating expenses;
+            # whether balances are reasonable or complete is for the auditor to evaluate.
             if ratio is not None:
-                if meets_threshold:
-                    conclusion = (
-                        f"The accrual-to-run-rate ratio of {ratio:.1f}% meets the {threshold:.0f}% "
-                        f"minimum threshold, indicating accrual balances are within a reasonable range "
-                        f"relative to operating activity levels."
-                    )
-                else:
-                    conclusion = (
-                        f"The accrual-to-run-rate ratio of {ratio:.1f}% falls below the {threshold:.0f}% "
-                        f"minimum threshold, suggesting accrual balances may require additional "
-                        f"completeness procedures."
-                    )
-
-                    # Count missing accruals
+                position = "at or above" if meets_threshold else "below"
+                conclusion = (
+                    f"The accrual-to-run-rate ratio is {ratio:.1f}%, {position} the {threshold:.0f}% threshold. "
+                    f"Threshold source: {threshold_source}."
+                )
+                if not meets_threshold:
                     missing_count = sum(
                         1 for c in expected_checklist if isinstance(c, dict) and not c.get("detected", True)
                     )
                     if missing_count > 0:
                         conclusion += (
-                            f" Combined with {missing_count} potential missing accrual "
-                            f"categor{'y' if missing_count == 1 else 'ies'} identified in Section III, "
-                            f"the engagement team should perform additional completeness procedures."
+                            f" {missing_count} expected accrual "
+                            f"categor{'y' if missing_count == 1 else 'ies'} not detected in the trial balance "
+                            f"{'is' if missing_count == 1 else 'are'} listed in Section IV-A."
                         )
+                conclusion += " The auditor evaluates these results."
 
                 story.append(Paragraph(conclusion, styles["MemoBody"]))
                 story.append(Spacer(1, 8))
@@ -493,7 +499,7 @@ def generate_accrual_completeness_memo(
                 key=lambda f: _tier_severity.get((f.get("risk", "low") if isinstance(f, dict) else "low").lower(), 3),
             )
 
-            finding_headers = ["#", "Area", "Item", "Risk", "Action Required"]
+            finding_headers = ["#", "Area", "Item", "Risk", "Suggested Procedure"]
             finding_widths = [0.3 * inch, 1.2 * inch, 2.5 * inch, 0.7 * inch, 1.8 * inch]
             finding_data = [finding_headers]
 

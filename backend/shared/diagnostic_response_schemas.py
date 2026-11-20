@@ -568,6 +568,8 @@ class AccrualCompletenessReportResponse(BaseModel):
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float
+    # Sprint 887 (OUT-08): "default" or "entered" — where the threshold came from.
+    threshold_source: Optional[Literal["default", "entered"]] = None
     meets_threshold: bool = False
     below_threshold: bool = False
     prior_operating_expenses: Optional[float] = None

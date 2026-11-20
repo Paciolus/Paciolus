@@ -279,6 +279,8 @@ class AccrualCompletenessReport:
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float = DEFAULT_THRESHOLD_PCT
+    # Sprint 887 (OUT-08): "default" (the Paciolus setting) or "entered" (supplied for this run).
+    threshold_source: str = "default"
     meets_threshold: bool = False
     prior_operating_expenses: Optional[float] = None
     prior_available: bool = False
@@ -316,6 +318,7 @@ class AccrualCompletenessReport:
             if self.accrual_to_run_rate_pct is not None
             else None,
             "threshold_pct": round(self.threshold_pct, 2),
+            "threshold_source": self.threshold_source,
             "meets_threshold": self.meets_threshold,
             "below_threshold": self.below_threshold,
             "prior_operating_expenses": round(self.prior_operating_expenses, 2)
@@ -657,10 +660,10 @@ def _generate_findings(
                 area="Accrual Completeness",
                 finding=(
                     f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the "
-                    f"{threshold:.0f}% minimum threshold after excluding Deferred Revenue"
+                    f"{threshold:.0f}% threshold after excluding Deferred Revenue"
                 ),
                 risk="High",
-                action_required="Perform additional completeness procedures",
+                action_required="The auditor may consider requesting management's schedule of accrued liabilities.",
             )
         )
 
@@ -676,7 +679,7 @@ def _generate_findings(
                         f"expected estimate by {abs(r.variance_pct or 0):.0%}"
                     ),
                     risk="Moderate",
-                    action_required=f"Obtain {r.account_name.lower()} accrual schedule",
+                    action_required=f"The auditor may consider requesting the {r.account_name.lower()} accrual schedule.",
                 )
             )
         elif "Significant Variance" in r.status:
@@ -688,7 +691,7 @@ def _generate_findings(
                         f"({abs(r.variance_pct or 0):.0%}) from expected estimate"
                     ),
                     risk="High",
-                    action_required=f"Investigate {r.account_name.lower()} — obtain supporting schedules",
+                    action_required=f"The auditor may consider requesting supporting schedules for {r.account_name.lower()}.",
                 )
             )
 
@@ -704,7 +707,7 @@ def _generate_findings(
                     + (f" and {len(missing_names) - 5} more" if len(missing_names) > 5 else "")
                 ),
                 risk="Moderate" if len(missing_names) <= 3 else "High",
-                action_required="Inquire with management regarding completeness of accrued liabilities",
+                action_required="The auditor may consider asking management whether these accrual types apply to the entity.",
             )
         )
 
@@ -714,9 +717,9 @@ def _generate_findings(
         findings.append(
             Finding(
                 area="Deferred Revenue",
-                finding=f"Deferred Revenue balance of ${total_deferred:,.0f} requires ASC 606 completeness verification",
+                finding=f"Deferred Revenue balance of ${total_deferred:,.0f} (contract liabilities, ASC 606) is excluded from the ratio and listed separately",
                 risk="Moderate",
-                action_required="Obtain deferred revenue rollforward schedule",
+                action_required="The auditor may consider requesting the deferred revenue rollforward schedule.",
             )
         )
 
@@ -728,7 +731,7 @@ def _generate_findings(
                 area="Reasonableness Testing",
                 finding=(f"{len(driver_unavailable)} account(s) could not be tested against a run-rate driver"),
                 risk="Low",
-                action_required="Obtain supporting documentation for accounts without determinable drivers",
+                action_required="The auditor may consider requesting supporting documentation for these accounts.",
             )
         )
 
@@ -842,6 +845,7 @@ def compute_accrual_completeness(
     prior_operating_expenses: Optional[float] = None,
     threshold_pct: float = DEFAULT_THRESHOLD_PCT,
     total_revenue: Optional[float] = None,
+    threshold_source: str = "default",
 ) -> AccrualCompletenessReport:
     """Compute accrual completeness estimator from pre-aggregated account balances.
 
@@ -857,6 +861,7 @@ def compute_accrual_completeness(
     """
     if not account_balances:
         return AccrualCompletenessReport(
+            threshold_source=threshold_source,
             threshold_pct=threshold_pct,
             narrative="No account data available for analysis.",
         )
@@ -959,6 +964,7 @@ def compute_accrual_completeness(
     )
 
     return AccrualCompletenessReport(
+        threshold_source=threshold_source,
         accrual_accounts=accrual_accounts,
         total_accrued_balance=total_accrued,
         accrual_account_count=accrual_count,
@@ -1042,6 +1048,7 @@ def run_accrual_completeness(
     prior_operating_expenses: Optional[float] = None,
     threshold_pct: float = DEFAULT_THRESHOLD_PCT,
     total_revenue: Optional[float] = None,
+    threshold_source: str = "default",
 ) -> AccrualCompletenessReport:
     """Run accrual completeness analysis from raw parsed file data.
 
@@ -1057,6 +1064,7 @@ def run_accrual_completeness(
 
     if not account_col or not debit_col or not credit_col:
         return AccrualCompletenessReport(
+            threshold_source=threshold_source,
             threshold_pct=threshold_pct,
             narrative="Required columns (account, debit, credit) could not be detected.",
         )
@@ -1093,4 +1101,5 @@ def run_accrual_completeness(
         prior_operating_expenses=prior_operating_expenses,
         threshold_pct=threshold_pct,
         total_revenue=total_revenue,
+        threshold_source=threshold_source,
     )

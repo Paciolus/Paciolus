@@ -3677,6 +3677,7 @@ def gen_accrual_completeness() -> None:
         "monthly_run_rate": round(monthly_rr, 2),
         "accrual_to_run_rate_pct": round(ratio, 2),
         "threshold_pct": 50.0,
+        "threshold_source": "default",  # Sprint 887: as the engine reports it
         "meets_threshold": ratio >= 50.0,
         "below_threshold": ratio < 50.0,
         "prior_available": True,
@@ -3845,33 +3846,33 @@ def gen_accrual_completeness() -> None:
         "findings": [
             {
                 "area": "Accrual Completeness",
-                "finding": f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the 50% minimum threshold after excluding Deferred Revenue",
+                "finding": f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the 50% threshold after excluding Deferred Revenue",
                 "risk": "High",
-                "action_required": "Perform additional completeness procedures",
+                "action_required": "The auditor may consider requesting management's schedule of accrued liabilities.",
             },
             {
                 "area": "Accrued Payroll",
                 "finding": f"Balance of $142,000 exceeds expected estimate by {abs(payroll_var_pct):.0%}",
                 "risk": "Moderate",
-                "action_required": "Obtain accrued payroll accrual schedule",
+                "action_required": "The auditor may consider requesting the accrued payroll accrual schedule.",
             },
             {
                 "area": "Missing Accruals",
                 "finding": "6 expected accrual type(s) not identified in TB: Tax Accrual, Rent Accrual, Insurance Accrual, Bonus Accrual, Professional Fees and 1 more",
                 "risk": "High",
-                "action_required": "Inquire with management regarding completeness of accrued liabilities",
+                "action_required": "The auditor may consider asking management whether these accrual types apply to the entity.",
             },
             {
                 "area": "Deferred Revenue",
-                "finding": "Deferred Revenue balance of $60,550 requires ASC 606 completeness verification",
+                "finding": "Deferred Revenue balance of $60,550 (contract liabilities, ASC 606) is excluded from the ratio and listed separately",
                 "risk": "Moderate",
-                "action_required": "Obtain deferred revenue rollforward schedule",
+                "action_required": "The auditor may consider requesting the deferred revenue rollforward schedule.",
             },
             {
                 "area": "Reasonableness Testing",
                 "finding": "3 account(s) could not be tested against a run-rate driver",
                 "risk": "Low",
-                "action_required": "Obtain supporting documentation for accounts without determinable drivers",
+                "action_required": "The auditor may consider requesting supporting documentation for these accounts.",
             },
         ],
         "suggested_procedures": [

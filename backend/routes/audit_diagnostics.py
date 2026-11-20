@@ -170,7 +170,8 @@ async def accrual_completeness_check(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     prior_operating_expenses: Optional[float] = Form(default=None),
-    threshold_pct: float = Form(default=50.0),
+    # Sprint 887 (OUT-08): None = the Paciolus default; the memo says which.
+    threshold_pct: Optional[float] = Form(default=None, ge=0),
     total_revenue: Optional[float] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
@@ -180,7 +181,7 @@ async def accrual_completeness_check(
     log_secure_operation("accrual_completeness_upload", f"Accrual completeness check for file: {file.filename}")
 
     def _analyze(file_bytes: bytes, filename: str) -> dict[str, Any]:
-        from accrual_completeness_engine import run_accrual_completeness
+        from accrual_completeness_engine import DEFAULT_THRESHOLD_PCT, run_accrual_completeness
 
         column_names, rows = parse_uploaded_file(file_bytes, filename)
         report = run_accrual_completeness(
@@ -188,8 +189,9 @@ async def accrual_completeness_check(
             rows,
             filename,
             prior_operating_expenses=prior_operating_expenses,
-            threshold_pct=threshold_pct,
+            threshold_pct=DEFAULT_THRESHOLD_PCT if threshold_pct is None else threshold_pct,
             total_revenue=total_revenue,
+            threshold_source="default" if threshold_pct is None else "entered",
         )
         result = report.to_dict()
         del column_names, rows

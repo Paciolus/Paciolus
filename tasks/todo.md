@@ -654,7 +654,16 @@ and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` ad
       `test_sprint887_multi_period_summary.py` (7, all failed first — real `/audit/compare-periods` → memo, Low with
       and without flags, every tier); old BUG-002 tests that required the conclusion wording rewritten; Jest case in
       `useMultiPeriodMemoExport.test.ts` (failed on the old hook). Memo snapshot and OpenAPI (additive) re-recorded.
-- [ ] 12B / OUT-08 — accrual memo: above/below the threshold and its origin; no reasonableness claim
+- [x] **12B / OUT-08 — accrual memo: above/below the threshold and where it came from.** "…meets the 50% minimum
+      threshold, indicating accrual balances are within a reasonable range…" / "…may require additional completeness
+      procedures" / "the engagement team should perform additional completeness procedures" replaced by "The ratio is
+      n%, at or above / below the t% threshold. Threshold source: Paciolus default (a software setting, not a
+      professional standard) | entered for this run." The route's `threshold_pct` is now optional (None = default), the
+      engine reports `threshold_source`; the label "Meets Minimum Accrual Threshold (≥50%)" (hard-coded 50 even for
+      another threshold) is "At or Above Threshold (≥t%)". The flagged-items register's "Action Required" directives
+      ("Perform additional completeness procedures", "Inquire … regarding completeness") are suggestions under
+      "Suggested Procedure". Tests: `test_sprint887_accrual_threshold_wording.py` (4, all failed first — real
+      `/audit/accrual-completeness` above/below/entered/absent → memo).
 - [ ] 12C / OUT-13 — testing memo summaries: "no exceptions flagged" only when nothing was flagged; counts otherwise
 - [ ] 12D / OUT-17 — explicit tool/test ids on flags; procedure library keyed by them; stable selection; PR-T12/T13
 - [ ] 12E / OUT-20 — anomaly summary: latest successful run, real flag counts, four states; worksheet blank by default

@@ -2610,6 +2610,21 @@
             "title": "Threshold Pct",
             "type": "number"
           },
+          "threshold_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "entered"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Source"
+          },
           "total_accrued_balance": {
             "default": 0.0,
             "title": "Total Accrued Balance",
@@ -2753,6 +2768,21 @@
           "threshold_pct": {
             "title": "Threshold Pct",
             "type": "number"
+          },
+          "threshold_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "entered"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Source"
           },
           "total_accrued_balance": {
             "title": "Total Accrued Balance",
@@ -6198,9 +6228,16 @@
             "title": "Prior Operating Expenses"
           },
           "threshold_pct": {
-            "default": 50.0,
-            "title": "Threshold Pct",
-            "type": "number"
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Pct"
           },
           "total_revenue": {
             "anyOf": [

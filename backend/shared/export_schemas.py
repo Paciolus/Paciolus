@@ -648,6 +648,8 @@ class AccrualCompletenessMemoInput(WorkpaperMetadata):
     monthly_run_rate: Optional[float] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float = 50.0
+    # Sprint 887 (OUT-08): absent → the memo prints "Threshold source: Not available".
+    threshold_source: Optional[Literal["default", "entered"]] = None
     meets_threshold: bool = False
     below_threshold: bool = False
     prior_operating_expenses: Optional[float] = None
