@@ -2596,6 +2596,12 @@ def gen_multi_period() -> None:
         "budget_label": None,
         "total_accounts": 247,
         "dormant_account_count": 3,
+        # Sprint 887: the thresholds the engine reports (engine defaults + a materiality figure).
+        "active_thresholds": {
+            "significant_variance_percent": 10.0,
+            "significant_variance_amount": 10000.0,
+            "materiality_threshold": 50000.0,
+        },
         "movements_by_type": {
             "new_account": 4,
             "closed_account": 2,

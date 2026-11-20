@@ -26,8 +26,7 @@ import pytest
 from multi_period_memo_generator import (
     _COGS_KEYWORDS,
     _REVENUE_KEYWORDS,
-    _RISK_CONCLUSION_SUFFIXES,
-    _build_risk_conclusion,
+    _build_results_summary_text,
     _match_keyword,
     compute_apc_diagnostic_score,
     generate_multi_period_memo,
@@ -497,31 +496,32 @@ class TestAPCRiskScoring:
 # =============================================================================
 
 
-class TestRiskConclusions:
-    """Test risk tier conclusion text (BUG-002: score-aware)."""
+_COUNTS = {"material": 1, "significant": 2, "minor": 3, "sign_change": 0, "new": 1, "closed": 0, "dormant": 0}
+_THRESHOLDS = {"significant_variance_percent": 10.0, "significant_variance_amount": 10000.0}
 
-    def test_four_tiers_defined(self):
-        assert set(_RISK_CONCLUSION_SUFFIXES.keys()) == {"low", "moderate", "elevated", "high"}
 
-    def test_low_conclusion_no_additional_procedures(self):
-        assert "No additional substantive procedures" in _build_risk_conclusion("low", 5.0)
+class TestResultsSummaryText:
+    """Sprint 887 (OUT-07): every tier states facts and hands over; none states a conclusion.
 
-    def test_moderate_conclusion_isa_520(self):
-        assert "ISA 520" in _build_risk_conclusion("moderate", 20.0)
+    Replaces the BUG-002 tier-conclusion tests, which required the Low text to say
+    "No additional substantive procedures" and the High text to name misstatement risk.
+    """
 
-    def test_elevated_conclusion_expanded(self):
-        text = _build_risk_conclusion("elevated", 35.0)
-        assert "ELEVATED" in text
-        assert "ISA 520" in text
+    @pytest.mark.parametrize("tier", ["low", "moderate", "elevated", "high"])
+    def test_no_tier_comments_on_further_procedures(self, tier):
+        text = _build_results_summary_text(tier, 20.0, _COUNTS, _THRESHOLDS).lower()
+        assert "procedure" not in text
+        assert "misstatement" not in text
+        assert "the auditor evaluates these results." in text
 
-    def test_high_conclusion_misstatement_risk(self):
-        text = _build_risk_conclusion("high", 60.0)
-        assert "HIGH" in text
-        assert "misstatement risk" in text
+    def test_score_and_tier_included(self):
+        """BUG-002 kept: the summary carries the numeric score."""
+        text = _build_results_summary_text("moderate", 20.0, _COUNTS, _THRESHOLDS)
+        assert "20.0 of 100" in text and "MODERATE" in text
 
-    def test_score_included_in_conclusion(self):
-        """BUG-002: Conclusion must include numeric score."""
-        assert "20.0/100" in _build_risk_conclusion("moderate", 20.0)
+    def test_thresholds_absent_say_not_available(self):
+        text = _build_results_summary_text("low", 2.0, _COUNTS, None)
+        assert "Significance thresholds: Not available" in text
 
 
 # =============================================================================
@@ -885,11 +885,11 @@ class TestMultiPeriodMemoGuardrails:
         source = inspect.getsource(generate_multi_period_memo)
         assert "build_workpaper_signoff" in source
 
-    def test_risk_conclusions_no_assertive_language(self):
-        """Risk conclusions should not use banned assertive terms."""
+    def test_results_summary_no_assertive_language(self):
+        """The results summary should not use banned assertive terms."""
         banned = ["we conclude", "we believe", "we are satisfied", "the statements are"]
-        for tier in _RISK_CONCLUSION_SUFFIXES:
-            text = _build_risk_conclusion(tier, 50.0)
+        for tier in ("low", "moderate", "elevated", "high"):
+            text = _build_results_summary_text(tier, 50.0, _COUNTS, _THRESHOLDS)
             for phrase in banned:
                 assert phrase.lower() not in text.lower(), f"Banned phrase '{phrase}' in {tier}"
 

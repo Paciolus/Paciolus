@@ -421,6 +421,15 @@ class BankRecMemoInput(BankRecExportResult, WorkpaperMetadata):
     filename: str = "bank_reconciliation"
 
 
+class MultiPeriodThresholdsInput(BaseModel):
+    """Sprint 887: the thresholds the comparison applied, as the engine reports them."""
+
+    significant_variance_percent: float = Field(ge=0)
+    significant_variance_amount: float = Field(ge=0)
+    # 0 (or absent) means no materiality threshold was supplied for the run.
+    materiality_threshold: Optional[float] = Field(default=None, ge=0)
+
+
 class MultiPeriodMemoInput(WorkpaperMetadata):
     """Input model for multi-period comparison memo export (MovementSummaryResponse shape)."""
 
@@ -434,6 +443,8 @@ class MultiPeriodMemoInput(WorkpaperMetadata):
     lead_sheet_summaries: list = []
     dormant_account_count: int = 0
     dormant_accounts: list[str] = []
+    # Sprint 887: the summary states the thresholds applied ("Not available" when absent).
+    active_thresholds: Optional[MultiPeriodThresholdsInput] = None
     filename: str = "multi_period_comparison"
 
 

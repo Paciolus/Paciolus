@@ -75,6 +75,12 @@ export interface MovementSummaryResponse {
   prior_total_credits: number
   current_total_debits: number
   current_total_credits: number
+  // Sprint 887: the thresholds the engine applied (the memo summary states them).
+  active_thresholds?: {
+    significant_variance_percent: number
+    significant_variance_amount: number
+    materiality_threshold?: number | null
+  } | null
   // Three-way fields (Sprint 63)
   budget_label?: string
   budget_total_debits?: number

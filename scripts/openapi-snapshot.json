@@ -17855,6 +17855,16 @@
       "MultiPeriodMemoInput": {
         "description": "Input model for multi-period comparison memo export (MovementSummaryResponse shape).",
         "properties": {
+          "active_thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MultiPeriodThresholdsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "budget_label": {
             "anyOf": [
               {
@@ -18042,6 +18052,39 @@
           }
         },
         "title": "MultiPeriodMemoInput",
+        "type": "object"
+      },
+      "MultiPeriodThresholdsInput": {
+        "description": "Sprint 887: the thresholds the comparison applied, as the engine reports them.",
+        "properties": {
+          "materiality_threshold": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Materiality Threshold"
+          },
+          "significant_variance_amount": {
+            "minimum": 0.0,
+            "title": "Significant Variance Amount",
+            "type": "number"
+          },
+          "significant_variance_percent": {
+            "minimum": 0.0,
+            "title": "Significant Variance Percent",
+            "type": "number"
+          }
+        },
+        "required": [
+          "significant_variance_percent",
+          "significant_variance_amount"
+        ],
+        "title": "MultiPeriodThresholdsInput",
         "type": "object"
       },
       "NextReferenceResponse": {

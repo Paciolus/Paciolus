@@ -171,4 +171,17 @@ describe('useMultiPeriodMemoExport', () => {
     expect(result.current.exporting).toBe(false)
     expect(mockDownloadBlob).not.toHaveBeenCalled()
   })
+  it('Sprint 887: sends the thresholds the comparison applied', async () => {
+    mockApiDownload.mockResolvedValue({ ok: true, blob: new Blob(), filename: 'm.pdf' })
+    const thresholds = {
+      significant_variance_percent: 10,
+      significant_variance_amount: 10000,
+      materiality_threshold: 25000,
+    }
+    const { result } = renderHook(() => useMultiPeriodMemoExport('test-token'))
+    await act(async () => {
+      await result.current.exportMemo({ ...sampleComparison, active_thresholds: thresholds }, baseMetadata)
+    })
+    expect(mockApiDownload.mock.calls[0][2].body.active_thresholds).toEqual(thresholds)
+  })
 })

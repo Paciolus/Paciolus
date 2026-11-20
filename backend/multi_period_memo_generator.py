@@ -14,7 +14,7 @@ Sections:
    dormant accounts, new/closed accounts, ratio trends, suggested procedures)
 6. Lead Sheet Summary (net changes by lead sheet category with % change)
 7. Authoritative References
-8. Conclusion (risk-tier-based professional assessment)
+8. Summary of Results (score, movement counts and thresholds applied; no conclusion)
 """
 
 from typing import Any, Optional
@@ -107,42 +107,44 @@ def compute_apc_diagnostic_score(
 compute_apc_risk_score = compute_apc_diagnostic_score
 
 
-# Conclusion suffixes by risk tier — BUG-002: score-aware
-_RISK_CONCLUSION_SUFFIXES: dict[str, str] = {
-    "low": (
-        "Account balances are consistent with prior "
-        "period expectations. No additional substantive procedures are indicated."
-    ),
-    "moderate": (
-        "Several accounts exhibit period-over-period "
-        "changes that should be corroborated with management explanations and additional "
-        "substantive procedures per ISA 520."
-    ),
-    "elevated": (
-        "Material movements and structural changes "
-        "were detected that require focused investigation. The engagement team should "
-        "evaluate whether expanded substantive procedures are appropriate per ISA 520 "
-        "and PCAOB AS 2305."
-    ),
-    "high": (
-        "Significant variances, sign changes, and/or "
-        "structural changes indicate potential misstatement risk across multiple account "
-        "categories. Expanded substantive procedures are recommended per ISA 520 and "
-        "PCAOB AS 2305."
-    ),
-}
+def _build_results_summary_text(
+    risk_tier: str,
+    score: float,
+    counts: dict[str, int],
+    thresholds: Optional[dict[str, Any]],
+) -> str:
+    """State the score, the movement counts and the thresholds applied (Sprint 887 / OUT-07).
 
-
-def _build_risk_conclusion(risk_tier: str, score: float) -> str:
-    """Build score-aware risk conclusion text (BUG-002)."""
-    tier_upper = risk_tier.upper() if risk_tier else "LOW"
-    suffix = _RISK_CONCLUSION_SUFFIXES.get(risk_tier, _RISK_CONCLUSION_SUFFIXES["low"])
-    return (
-        f"Based on the analytical procedures applied, the trial balance comparison "
-        f"returned {tier_upper} movement density "
-        f"(Composite Diagnostic Score: {score:.1f}/100). "
-        f"{suffix}"
-    )
+    The software reports what its tests flagged; the auditor evaluates it. The
+    summary therefore says nothing about whether further procedures are needed,
+    for any tier (the old Low text said "No additional substantive procedures
+    are indicated"; the others recommended procedures).
+    """
+    tier_upper = (risk_tier or "").upper() or "NOT AVAILABLE"
+    parts = [
+        f"Composite diagnostic score: {score:.1f} of 100 ({tier_upper} on the score scale shown in Section III).",
+        f"Movements classified: {counts['material']} material, {counts['significant']} significant, "
+        f"{counts['minor']} minor; {counts['sign_change']} sign changes, {counts['new']} new accounts, "
+        f"{counts['closed']} closed accounts and {counts['dormant']} dormant accounts.",
+    ]
+    if thresholds:
+        pct = float(thresholds["significant_variance_percent"])
+        amt = float(thresholds["significant_variance_amount"])
+        parts.append(
+            f"Thresholds applied: a movement is significant at a change of {pct:.1f}% or "
+            f"{_format_currency(amt)} or more; new, closed and sign-changing accounts are always at least significant."
+        )
+        materiality = thresholds.get("materiality_threshold")
+        if materiality:
+            parts.append(
+                f"Materiality threshold: {_format_currency(float(materiality))} (a movement at or above it is material)."
+            )
+        else:
+            parts.append("Materiality threshold: none supplied, so no movement is classified as material.")
+    else:
+        parts.append("Significance thresholds: Not available. Materiality threshold: Not available.")
+    parts.append("The auditor evaluates these results.")
+    return " ".join(parts)
 
 
 # =============================================================================
@@ -1258,8 +1260,21 @@ def generate_multi_period_memo(
         story.append(Paragraph(f"{user_text(section_num)}. Summary of Results", styles["MemoSection"]))
         story.append(LedgerRule(doc_width))
 
-        assessment = _build_risk_conclusion(risk_tier, risk_score)
-        story.append(Paragraph(assessment, styles["MemoBody"]))
+        assessment = _build_results_summary_text(
+            str(risk_tier),
+            risk_score,
+            {
+                "material": material_count,
+                "significant": significant_count,
+                "minor": minor_count,
+                "sign_change": sign_change_count,
+                "new": new_count,
+                "closed": closed_count,
+                "dormant": dormant_count,
+            },
+            comparison_result.get("active_thresholds"),
+        )
+        story.append(Paragraph(user_text(assessment), styles["MemoBody"]))
         story.append(Spacer(1, 12))
 
         # WORKPAPER SIGN-OFF

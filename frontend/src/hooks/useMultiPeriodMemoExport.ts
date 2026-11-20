@@ -62,6 +62,8 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
             dormant_account_count: comparison.dormant_accounts.length,
             // Sprint 886: the names the screen lists, not only their count.
             dormant_accounts: comparison.dormant_accounts,
+            // Sprint 887: the summary states the thresholds applied.
+            active_thresholds: comparison.active_thresholds ?? null,
             client_name: metadata.clientName || 'Not specified',
             period_tested: metadata.fiscalYearEnd || 'Not specified',
             prepared_by: metadata.practitioner || 'Not specified',

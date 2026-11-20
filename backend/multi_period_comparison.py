@@ -774,7 +774,8 @@ def compare_trial_balances(
         current_total_debits=float(current_total_debits),
         current_total_credits=float(current_total_credits),
         duplicate_account_warnings=duplicate_account_warnings,
-        active_thresholds=active_thresholds.to_dict(),
+        # Sprint 887: the materiality threshold applied is disclosed with the others.
+        active_thresholds={**active_thresholds.to_dict(), "materiality_threshold": materiality_threshold},
     )
 
 
@@ -1181,7 +1182,8 @@ def compare_three_periods(
         accounts_under_budget=under_budget,
         accounts_on_budget=on_budget,
         duplicate_account_warnings=two_way.duplicate_account_warnings,
-        active_thresholds=active_thresholds.to_dict(),
+        # Sprint 887: the materiality threshold applied is disclosed with the others.
+        active_thresholds={**active_thresholds.to_dict(), "materiality_threshold": materiality_threshold},
     )
 
 

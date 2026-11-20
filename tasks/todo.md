@@ -93,6 +93,8 @@
 >       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
 > - [ ] **Sprint 886** (in review) — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
 >       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
+> - [ ] **Sprint 887** (in progress) — generated wording: no audit conclusions, no contradiction of the results, correct
+>       citations (review OUT-07/08/13/17/20/21/22/29/30/31/32 + expense-category table). Local branch, stacked on 886.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -632,6 +634,37 @@ OpenAPI snapshot: additive only.
 **Open for the CEO:** (1) done, see above; (2) fixed-asset category composition could be computed from the register's category
 column if wanted (removed sections had no data source); (3) the payroll sample still feeds `gl_salaries_wages`, which
 the engine never computes — same class as the removed fixed-asset sections, not in this review.
+
+### Sprint 887: Generated wording states no audit conclusions, matches the results, cites correctly
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-887-generated-wording`, stacked on Sprint 886 (`61312c4e`);
+not pushed. **Priority:** P0. **Source:** read-only review at `ef5e567` (OUT-07/08/13/17/20/21/22/29/30/31/32 +
+comparison table). **Agents:** Executor, Critic, Accounting Expert.
+**Position (CEO, 2026-11-20):** Paciolus runs tests and reports what they flagged; the auditor evaluates and concludes.
+Nothing flagged is "no exceptions flagged" — never passed, clean or verified. Software output is "items flagged", not
+"findings". Suggested procedures are suggestions. Titles of standards and disclaimers reserving judgment stay.
+**Decided (CEO, 2026-11-20):** engagement indicator = "Follow-Up Item Points", bands "Under 8 points" / "8–14 points" /
+"15 points or more" (points only, no /100, no risk or tier words, no high-count overrides); every tier's summary text
+replaced (not only Low); expense-category % change and threshold result computed by the engine and shown on screen, CSV
+and PDF ("Risk Level" and "Explanation Req." removed); `tool_runs.flag_count` added (nullable).
+- [x] **12A / OUT-07 — multi-period memo summary states results, not conclusions.** All four tier texts (Low: "No
+      additional substantive procedures are indicated"; the others recommended procedures) replaced by one summary:
+      score and tier, movement counts, the thresholds applied, "The auditor evaluates these results." The engine's
+      `active_thresholds` now includes `materiality_threshold`; `MultiPeriodMemoInput.active_thresholds` is typed and
+      the page sends it (absent → "Not available"; no materiality → "none supplied"). Tests:
+      `test_sprint887_multi_period_summary.py` (7, all failed first — real `/audit/compare-periods` → memo, Low with
+      and without flags, every tier); old BUG-002 tests that required the conclusion wording rewritten; Jest case in
+      `useMultiPeriodMemoExport.test.ts` (failed on the old hook). Memo snapshot and OpenAPI (additive) re-recorded.
+- [ ] 12B / OUT-08 — accrual memo: above/below the threshold and its origin; no reasonableness claim
+- [ ] 12C / OUT-13 — testing memo summaries: "no exceptions flagged" only when nothing was flagged; counts otherwise
+- [ ] 12D / OUT-17 — explicit tool/test ids on flags; procedure library keyed by them; stable selection; PR-T12/T13
+- [ ] 12E / OUT-20 — anomaly summary: latest successful run, real flag counts, four states; worksheet blank by default
+- [ ] 12F / OUT-21 — Follow-Up Item Points: every band reachable, weights and edges printed
+- [ ] 12G / OUT-22 — population memo: outlier/skew only from an explicit statistic; zero/uniform/symmetric neutral
+- [ ] 12H / OUT-29 — every signature block behind one off-by-default switch; no invented dates
+- [ ] 12I / OUT-30 — leftover vocabulary + a scanning test
+- [ ] 12J / OUT-31 — ASC 606-10-32 title
+- [ ] 12K / OUT-32 — GASB 101 replaces GASB 16 by period
+- [ ] 12L — expense category: one computation and the same thresholds on screen, CSV and PDF
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).
