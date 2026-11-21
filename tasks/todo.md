@@ -983,7 +983,7 @@ already failing on `main`); frontend Jest via the pre-commit gate. 16B's first c
 rate, ceiling, limit and gate before and after (fixture) — identical.
 
 ### Sprint 892: Behaviour-neutral refactors (Excel reads, organization services, testing page shell, large units)
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-892-refactors`, stacked on Sprint 891. Partial completion
+**Status:** PARTIAL (2026-11-20) — local branch `sprint-892-refactors`, stacked on Sprint 891. Partial completion
 is allowed by the brief. **Source:** CEO brief 17 (review ST-15/12/13/14). Each step must leave every output
 unchanged (snapshot, PDF contract and memo equivalence tests run per step).
 
@@ -1008,6 +1008,13 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       payroll analysis (9), JE analysis (8), revenue analysis (7), audit/pipeline (6), ratio_engine (6).
       Done: `sampling_memo_generator` — Section I (Scope) and the method label out of `_generate_sampling_memo`
       (memo equivalence and output snapshots unchanged). Remaining: its sections II–Next Steps, then the next units.
+
+**Review (2026-11-20).** Commits: `4cb6966e` / `e77eb970` / `d0ce7824` 17A · `ca50d8f3` / `7f278f35` / `5e878409` /
+`c9c35d16` 17B · `09b41267` / `f7cadada` 17C · `b38952ed` 17D step 1 · (record commit). Each step ran the output
+snapshots, the PDF contract and memo equivalence, plus the suites for the code it touched; 17C steps compared old and
+new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437 passed, 2 xfailed, 1 failed (Sprint
+819 export golden, already failing on `main`); `next build` passes. Stopped here (the brief allows partial):
+17C AP / Payroll / JE / Revenue and 17D's remaining sections and units are listed above.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
