@@ -149,35 +149,37 @@ def read_excel_multi_sheet_chunked(
     """Yield chunks from multiple sheets as (DataFrame, rows_processed, sheet_name) tuples."""
     log_secure_operation("read_excel_multi_sheet", f"Reading {len(sheet_names)} sheets: {sheet_names}")
 
-    for sheet_name in sheet_names:
-        log_secure_operation("read_sheet_start", f"Processing sheet: {sheet_name}")
+    # Sprint 892 (17A): one open of the workbook for every selected sheet (it was re-opened and
+    # re-parsed per sheet). ExcelFile.parse takes the same arguments as read_excel, so the frames
+    # are identical; chunks are still copied because callers modify them.
+    buffer = io.BytesIO(file_bytes)
+    try:
+        with pd.ExcelFile(buffer) as workbook:
+            for sheet_name in sheet_names:
+                log_secure_operation("read_sheet_start", f"Processing sheet: {sheet_name}")
+                rows_processed = 0
 
-        buffer = io.BytesIO(file_bytes)
-        rows_processed = 0
+                full_df = workbook.parse(sheet_name=sheet_name, dtype=dtype)
+                total_rows = len(full_df)
 
-        try:
-            full_df = pd.read_excel(buffer, sheet_name=sheet_name, dtype=dtype)
-            total_rows = len(full_df)
+                for start_idx in range(0, total_rows, chunk_size):
+                    end_idx = min(start_idx + chunk_size, total_rows)
+                    chunk = full_df.iloc[start_idx:end_idx].copy()
+                    rows_processed = end_idx
 
-            for start_idx in range(0, total_rows, chunk_size):
-                end_idx = min(start_idx + chunk_size, total_rows)
-                chunk = full_df.iloc[start_idx:end_idx].copy()
-                rows_processed = end_idx
+                    yield chunk, rows_processed, sheet_name
 
-                yield chunk, rows_processed, sheet_name
+                    del chunk
+                    gc.collect()
 
-                del chunk
+                del full_df
                 gc.collect()
 
-            del full_df
-            gc.collect()
-
-        finally:
-            buffer.close()
-            del buffer
-            gc.collect()
-
-        log_secure_operation("read_sheet_done", f"Sheet '{sheet_name}': {rows_processed} rows")
+                log_secure_operation("read_sheet_done", f"Sheet '{sheet_name}': {rows_processed} rows")
+    finally:
+        buffer.close()
+        del buffer
+        gc.collect()
 
 
 _CURRENCY_NUMERIC_RE = re.compile(r"^\s*[\$£€]?\s*\(?\s*[\d,]+(?:\.\d+)?\s*\)?\s*$")
