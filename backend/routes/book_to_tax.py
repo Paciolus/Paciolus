@@ -32,6 +32,7 @@ from book_to_tax_engine import (
 from database import get_db
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
+from shared.promoted_tool_response_schemas import BookToTaxResponse
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -120,14 +121,14 @@ def list_standard_adjustments(
     }
 
 
-@router.post("/audit/book-to-tax")
+@router.post("/audit/book-to-tax", response_model=BookToTaxResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def calculate(
     request: Request,
     payload: BookToTaxRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> BookToTaxResponse:
     # Sprint 689f: gate promoted tool at tier + upload-limit level;
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
@@ -143,7 +144,7 @@ def calculate(
         route_logger=logger,
         failure_log="Book-to-tax calculation failed",
     )
-    return result.to_dict()
+    return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
 @router.post("/audit/book-to-tax/export.csv")

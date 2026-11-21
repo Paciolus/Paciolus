@@ -2048,6 +2048,25 @@
         "title": "AccountAffected",
         "type": "object"
       },
+      "AccountBalanceResponse": {
+        "description": "One value of ``account_balances`` (Sprint 890, 15C).",
+        "properties": {
+          "credit": {
+            "title": "Credit",
+            "type": "number"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "number"
+          }
+        },
+        "required": [
+          "debit",
+          "credit"
+        ],
+        "title": "AccountBalanceResponse",
+        "type": "object"
+      },
       "AccountDeleteRequest": {
         "description": "Re-authenticate and confirm before an irreversible erasure.",
         "properties": {
@@ -7433,6 +7452,159 @@
         "title": "Body_upload_rate_table_audit_currency_rates_post",
         "type": "object"
       },
+      "BookToTaxAdjustmentLineResponse": {
+        "additionalProperties": false,
+        "description": "``AdjustmentLine.to_dict``.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "difference_type": {
+            "enum": [
+              "permanent",
+              "temporary"
+            ],
+            "title": "Difference Type",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "add",
+              "subtract"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "signed_amount": {
+            "title": "Signed Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "code",
+          "difference_type",
+          "direction",
+          "amount",
+          "signed_amount"
+        ],
+        "title": "BookToTaxAdjustmentLineResponse",
+        "type": "object"
+      },
+      "BookToTaxDeferredTaxResponse": {
+        "additionalProperties": false,
+        "description": "``DeferredTaxRollforward.to_dict``.",
+        "properties": {
+          "beginning_dta": {
+            "title": "Beginning Dta",
+            "type": "string"
+          },
+          "beginning_dtl": {
+            "title": "Beginning Dtl",
+            "type": "string"
+          },
+          "current_year_movement": {
+            "title": "Current Year Movement",
+            "type": "string"
+          },
+          "current_year_temporary_adjustments": {
+            "title": "Current Year Temporary Adjustments",
+            "type": "string"
+          },
+          "ending_dta": {
+            "title": "Ending Dta",
+            "type": "string"
+          },
+          "ending_dtl": {
+            "title": "Ending Dtl",
+            "type": "string"
+          },
+          "tax_rate": {
+            "title": "Tax Rate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "beginning_dta",
+          "beginning_dtl",
+          "current_year_temporary_adjustments",
+          "tax_rate",
+          "current_year_movement",
+          "ending_dta",
+          "ending_dtl"
+        ],
+        "title": "BookToTaxDeferredTaxResponse",
+        "type": "object"
+      },
+      "BookToTaxProvisionResponse": {
+        "additionalProperties": false,
+        "description": "``TaxProvision.to_dict`` (Sprint 889: ``is_complete`` + ``limitations``).",
+        "properties": {
+          "current_federal_tax": {
+            "title": "Current Federal Tax",
+            "type": "string"
+          },
+          "current_state_tax": {
+            "title": "Current State Tax",
+            "type": "string"
+          },
+          "deferred_tax_expense": {
+            "title": "Deferred Tax Expense",
+            "type": "string"
+          },
+          "effective_rate": {
+            "title": "Effective Rate",
+            "type": "string"
+          },
+          "is_complete": {
+            "title": "Is Complete",
+            "type": "boolean"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "taxable_income": {
+            "title": "Taxable Income",
+            "type": "string"
+          },
+          "total_tax_expense": {
+            "title": "Total Tax Expense",
+            "type": "string"
+          }
+        },
+        "required": [
+          "taxable_income",
+          "current_federal_tax",
+          "current_state_tax",
+          "deferred_tax_expense",
+          "total_tax_expense",
+          "effective_rate",
+          "is_complete",
+          "limitations"
+        ],
+        "title": "BookToTaxProvisionResponse",
+        "type": "object"
+      },
       "BookToTaxRequest": {
         "properties": {
           "adjustments": {
@@ -7496,6 +7668,181 @@
           "federal_tax_rate"
         ],
         "title": "BookToTaxRequest",
+        "type": "object"
+      },
+      "BookToTaxResponse": {
+        "additionalProperties": false,
+        "description": "``BookToTaxResult.to_dict`` — ``POST /audit/book-to-tax``.",
+        "properties": {
+          "deferred_tax": {
+            "$ref": "#/components/schemas/BookToTaxDeferredTaxResponse"
+          },
+          "entity_size": {
+            "enum": [
+              "small",
+              "large"
+            ],
+            "title": "Entity Size",
+            "type": "string"
+          },
+          "schedule_m1": {
+            "$ref": "#/components/schemas/BookToTaxScheduleM1Response"
+          },
+          "schedule_m3": {
+            "$ref": "#/components/schemas/BookToTaxScheduleM3Response"
+          },
+          "tax_provision": {
+            "$ref": "#/components/schemas/BookToTaxProvisionResponse"
+          },
+          "tax_year": {
+            "title": "Tax Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tax_year",
+          "entity_size",
+          "schedule_m1",
+          "schedule_m3",
+          "deferred_tax",
+          "tax_provision"
+        ],
+        "title": "BookToTaxResponse",
+        "type": "object"
+      },
+      "BookToTaxScheduleM1Response": {
+        "additionalProperties": false,
+        "description": "``ScheduleM1.to_dict``.",
+        "properties": {
+          "federal_income_tax_per_books": {
+            "title": "Federal Income Tax Per Books",
+            "type": "string"
+          },
+          "net_income_per_books": {
+            "title": "Net Income Per Books",
+            "type": "string"
+          },
+          "permanent_additions": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxAdjustmentLineResponse"
+            },
+            "title": "Permanent Additions",
+            "type": "array"
+          },
+          "permanent_subtractions": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxAdjustmentLineResponse"
+            },
+            "title": "Permanent Subtractions",
+            "type": "array"
+          },
+          "taxable_income": {
+            "title": "Taxable Income",
+            "type": "string"
+          },
+          "temporary_additions": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxAdjustmentLineResponse"
+            },
+            "title": "Temporary Additions",
+            "type": "array"
+          },
+          "temporary_subtractions": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxAdjustmentLineResponse"
+            },
+            "title": "Temporary Subtractions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "net_income_per_books",
+          "federal_income_tax_per_books",
+          "permanent_additions",
+          "temporary_additions",
+          "permanent_subtractions",
+          "temporary_subtractions",
+          "taxable_income"
+        ],
+        "title": "BookToTaxScheduleM1Response",
+        "type": "object"
+      },
+      "BookToTaxScheduleM3Response": {
+        "additionalProperties": false,
+        "description": "``ScheduleM3.to_dict``.",
+        "properties": {
+          "expense_items": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxScheduleM3SectionResponse"
+            },
+            "title": "Expense Items",
+            "type": "array"
+          },
+          "income_items": {
+            "items": {
+              "$ref": "#/components/schemas/BookToTaxScheduleM3SectionResponse"
+            },
+            "title": "Income Items",
+            "type": "array"
+          },
+          "income_per_books": {
+            "title": "Income Per Books",
+            "type": "string"
+          },
+          "taxable_income": {
+            "title": "Taxable Income",
+            "type": "string"
+          }
+        },
+        "required": [
+          "income_per_books",
+          "income_items",
+          "expense_items",
+          "taxable_income"
+        ],
+        "title": "BookToTaxScheduleM3Response",
+        "type": "object"
+      },
+      "BookToTaxScheduleM3SectionResponse": {
+        "additionalProperties": false,
+        "description": "``ScheduleM3Section.to_dict``.",
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "permanent": {
+            "title": "Permanent",
+            "type": "string"
+          },
+          "temporary": {
+            "title": "Temporary",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "code",
+          "permanent",
+          "temporary",
+          "total"
+        ],
+        "title": "BookToTaxScheduleM3SectionResponse",
         "type": "object"
       },
       "BrandingResponse": {
@@ -7724,6 +8071,246 @@
         "title": "CancelRequest",
         "type": "object"
       },
+      "CashFlowApDeferralCandidateResponse": {
+        "additionalProperties": false,
+        "description": "One dict from ``_ap_deferral_candidates``.",
+        "properties": {
+          "bucket": {
+            "enum": [
+              "current",
+              "1-30",
+              "31-60",
+              "61-90",
+              "over-90"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "defer_amount": {
+            "title": "Defer Amount",
+            "type": "string"
+          },
+          "defer_rate": {
+            "title": "Defer Rate",
+            "type": "string"
+          },
+          "outstanding": {
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "paid_between_days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Paid Between Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "bucket",
+          "outstanding",
+          "defer_amount",
+          "defer_rate",
+          "paid_between_days"
+        ],
+        "title": "CashFlowApDeferralCandidateResponse",
+        "type": "object"
+      },
+      "CashFlowCollectionPriorityResponse": {
+        "additionalProperties": false,
+        "description": "``CollectionPriority.to_dict``.",
+        "properties": {
+          "amount_outstanding": {
+            "title": "Amount Outstanding",
+            "type": "string"
+          },
+          "bucket": {
+            "enum": [
+              "current",
+              "1-30",
+              "31-60",
+              "61-90",
+              "over-90"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "collection_probability": {
+            "title": "Collection Probability",
+            "type": "string"
+          },
+          "expected_collection": {
+            "title": "Expected Collection",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bucket",
+          "amount_outstanding",
+          "expected_collection",
+          "collection_probability"
+        ],
+        "title": "CashFlowCollectionPriorityResponse",
+        "type": "object"
+      },
+      "CashFlowDailyPointResponse": {
+        "additionalProperties": false,
+        "description": "``DailyPoint.to_dict``.",
+        "properties": {
+          "ap_outflow": {
+            "title": "Ap Outflow",
+            "type": "string"
+          },
+          "ar_inflow": {
+            "title": "Ar Inflow",
+            "type": "string"
+          },
+          "day_date": {
+            "title": "Day Date",
+            "type": "string"
+          },
+          "day_index": {
+            "title": "Day Index",
+            "type": "integer"
+          },
+          "ending_balance": {
+            "title": "Ending Balance",
+            "type": "string"
+          },
+          "net_change": {
+            "title": "Net Change",
+            "type": "string"
+          },
+          "recurring_net": {
+            "title": "Recurring Net",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day_index",
+          "day_date",
+          "ar_inflow",
+          "ap_outflow",
+          "recurring_net",
+          "net_change",
+          "ending_balance"
+        ],
+        "title": "CashFlowDailyPointResponse",
+        "type": "object"
+      },
+      "CashFlowForecastResponse": {
+        "additionalProperties": false,
+        "description": "``CashFlowForecast.to_dict`` — ``POST /audit/cash-flow-projector``.",
+        "properties": {
+          "horizon_days": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Horizon Days",
+            "type": "array"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/CashFlowInputsResponse"
+          },
+          "scenarios": {
+            "$ref": "#/components/schemas/CashFlowScenariosResponse"
+          }
+        },
+        "required": [
+          "inputs",
+          "scenarios",
+          "horizon_days"
+        ],
+        "title": "CashFlowForecastResponse",
+        "type": "object"
+      },
+      "CashFlowHorizonSummaryResponse": {
+        "additionalProperties": false,
+        "description": "``HorizonSummary.to_dict``.",
+        "properties": {
+          "cumulative_inflow": {
+            "title": "Cumulative Inflow",
+            "type": "string"
+          },
+          "cumulative_outflow": {
+            "title": "Cumulative Outflow",
+            "type": "string"
+          },
+          "day": {
+            "title": "Day",
+            "type": "integer"
+          },
+          "ending_balance": {
+            "title": "Ending Balance",
+            "type": "string"
+          },
+          "lowest_balance": {
+            "title": "Lowest Balance",
+            "type": "string"
+          },
+          "lowest_balance_day": {
+            "title": "Lowest Balance Day",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "cumulative_inflow",
+          "cumulative_outflow",
+          "ending_balance",
+          "lowest_balance",
+          "lowest_balance_day"
+        ],
+        "title": "CashFlowHorizonSummaryResponse",
+        "type": "object"
+      },
+      "CashFlowInputsResponse": {
+        "additionalProperties": false,
+        "description": "The ``inputs`` dict built in ``project_cash_flow``.",
+        "properties": {
+          "ap_total": {
+            "title": "Ap Total",
+            "type": "string"
+          },
+          "ar_total": {
+            "title": "Ar Total",
+            "type": "string"
+          },
+          "min_safe_cash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Safe Cash"
+          },
+          "opening_balance": {
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "recurring_flow_count": {
+            "title": "Recurring Flow Count",
+            "type": "integer"
+          },
+          "start_date": {
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "opening_balance",
+          "start_date",
+          "ar_total",
+          "ap_total",
+          "recurring_flow_count",
+          "min_safe_cash"
+        ],
+        "title": "CashFlowInputsResponse",
+        "type": "object"
+      },
       "CashFlowProjectionRequest": {
         "properties": {
           "ap_aging": {
@@ -7781,6 +8368,114 @@
           "start_date"
         ],
         "title": "CashFlowProjectionRequest",
+        "type": "object"
+      },
+      "CashFlowScenarioResponse": {
+        "additionalProperties": false,
+        "description": "``ScenarioResult.to_dict``. ``horizon`` is keyed by the day as a string (\"30\", \"60\", \"90\").",
+        "properties": {
+          "ap_deferral_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowApDeferralCandidateResponse"
+            },
+            "title": "Ap Deferral Candidates",
+            "type": "array"
+          },
+          "ap_deferral_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ap Deferral Rule"
+          },
+          "breach_min_safe_cash": {
+            "title": "Breach Min Safe Cash",
+            "type": "boolean"
+          },
+          "collection_priorities": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowCollectionPriorityResponse"
+            },
+            "title": "Collection Priorities",
+            "type": "array"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/CashFlowDailyPointResponse"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "first_negative_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Negative Day"
+          },
+          "goes_negative": {
+            "title": "Goes Negative",
+            "type": "boolean"
+          },
+          "horizon": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CashFlowHorizonSummaryResponse"
+            },
+            "title": "Horizon",
+            "type": "object"
+          },
+          "scenario": {
+            "enum": [
+              "base",
+              "stress",
+              "best"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "daily",
+          "horizon",
+          "goes_negative",
+          "first_negative_day",
+          "breach_min_safe_cash",
+          "collection_priorities",
+          "ap_deferral_candidates",
+          "ap_deferral_rule"
+        ],
+        "title": "CashFlowScenarioResponse",
+        "type": "object"
+      },
+      "CashFlowScenariosResponse": {
+        "additionalProperties": false,
+        "description": "The ``scenarios`` dict: always exactly base, stress and best.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/CashFlowScenarioResponse"
+          },
+          "best": {
+            "$ref": "#/components/schemas/CashFlowScenarioResponse"
+          },
+          "stress": {
+            "$ref": "#/components/schemas/CashFlowScenarioResponse"
+          }
+        },
+        "required": [
+          "base",
+          "stress",
+          "best"
+        ],
+        "title": "CashFlowScenariosResponse",
         "type": "object"
       },
       "CategoryVarianceResponse": {
@@ -14315,6 +15010,218 @@
         "title": "ForgotPasswordResponse",
         "type": "object"
       },
+      "Form1099BelowThresholdPayeeResponse": {
+        "additionalProperties": false,
+        "description": "``BelowThresholdPayee.to_dict``.",
+        "properties": {
+          "box_amounts": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099BoxAmountResponse"
+            },
+            "title": "Box Amounts",
+            "type": "array"
+          },
+          "form_type": {
+            "enum": [
+              "1099-NEC",
+              "1099-MISC",
+              "1099-INT"
+            ],
+            "title": "Form Type",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "vendor_name",
+          "form_type",
+          "total",
+          "box_amounts",
+          "reason"
+        ],
+        "title": "Form1099BelowThresholdPayeeResponse",
+        "type": "object"
+      },
+      "Form1099BoxAmountResponse": {
+        "additionalProperties": false,
+        "description": "``VendorBoxAmount.to_dict``.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "box": {
+            "title": "Box",
+            "type": "integer"
+          },
+          "category": {
+            "enum": [
+              "nonemployee_comp",
+              "rents",
+              "royalties",
+              "medical",
+              "legal",
+              "attorney_fees",
+              "interest",
+              "other"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "form_type": {
+            "enum": [
+              "1099-NEC",
+              "1099-MISC",
+              "1099-INT"
+            ],
+            "title": "Form Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "form_type",
+          "box",
+          "amount"
+        ],
+        "title": "Form1099BoxAmountResponse",
+        "type": "object"
+      },
+      "Form1099CandidateResponse": {
+        "additionalProperties": false,
+        "description": "``Form1099Candidate.to_dict``.",
+        "properties": {
+          "box_amounts": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099BoxAmountResponse"
+            },
+            "title": "Box Amounts",
+            "type": "array"
+          },
+          "excluded_amount": {
+            "title": "Excluded Amount",
+            "type": "string"
+          },
+          "flagged_for_review": {
+            "title": "Flagged For Review",
+            "type": "boolean"
+          },
+          "form_type": {
+            "enum": [
+              "1099-NEC",
+              "1099-MISC",
+              "1099-INT"
+            ],
+            "title": "Form Type",
+            "type": "string"
+          },
+          "payment_count": {
+            "title": "Payment Count",
+            "type": "integer"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Reasons",
+            "type": "array"
+          },
+          "total_reportable": {
+            "title": "Total Reportable",
+            "type": "string"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "vendor_name",
+          "form_type",
+          "total_reportable",
+          "box_amounts",
+          "payment_count",
+          "excluded_amount",
+          "flagged_for_review",
+          "review_reasons"
+        ],
+        "title": "Form1099CandidateResponse",
+        "type": "object"
+      },
+      "Form1099DataQualityResponse": {
+        "additionalProperties": false,
+        "description": "``VendorDataQuality.to_dict``.",
+        "properties": {
+          "has_issue": {
+            "title": "Has Issue",
+            "type": "boolean"
+          },
+          "invalid_tin_format": {
+            "title": "Invalid Tin Format",
+            "type": "boolean"
+          },
+          "missing_address": {
+            "title": "Missing Address",
+            "type": "boolean"
+          },
+          "missing_tin": {
+            "title": "Missing Tin",
+            "type": "boolean"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "unknown_entity_type": {
+            "title": "Unknown Entity Type",
+            "type": "boolean"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "vendor_name",
+          "missing_tin",
+          "invalid_tin_format",
+          "missing_address",
+          "unknown_entity_type",
+          "has_issue",
+          "notes"
+        ],
+        "title": "Form1099DataQualityResponse",
+        "type": "object"
+      },
       "Form1099Request": {
         "properties": {
           "engagement_id": {
@@ -14356,6 +15263,235 @@
           "tax_year"
         ],
         "title": "Form1099Request",
+        "type": "object"
+      },
+      "Form1099Response": {
+        "additionalProperties": false,
+        "description": "``Form1099Result.to_dict`` — ``POST /audit/form-1099``.",
+        "properties": {
+          "below_threshold_payees": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099BelowThresholdPayeeResponse"
+            },
+            "title": "Below Threshold Payees",
+            "type": "array"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099CandidateResponse"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "data_quality": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099DataQualityResponse"
+            },
+            "title": "Data Quality",
+            "type": "array"
+          },
+          "notices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notices",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/Form1099SummaryResponse"
+          },
+          "tax_year": {
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "thresholds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Form1099ThresholdScheduleResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "w9_collection_list": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099W9CollectionRowResponse"
+            },
+            "title": "W9 Collection List",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tax_year",
+          "candidates",
+          "data_quality",
+          "w9_collection_list",
+          "summary",
+          "thresholds",
+          "notices",
+          "below_threshold_payees"
+        ],
+        "title": "Form1099Response",
+        "type": "object"
+      },
+      "Form1099SummaryResponse": {
+        "additionalProperties": false,
+        "description": "The ``summary`` dict built in ``prepare_1099s``.",
+        "properties": {
+          "below_threshold_count": {
+            "title": "Below Threshold Count",
+            "type": "integer"
+          },
+          "counts_by_form": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts By Form",
+            "type": "object"
+          },
+          "data_quality_issue_count": {
+            "title": "Data Quality Issue Count",
+            "type": "integer"
+          },
+          "payments_outside_tax_year": {
+            "title": "Payments Outside Tax Year",
+            "type": "integer"
+          },
+          "payments_without_vendor": {
+            "title": "Payments Without Vendor",
+            "type": "integer"
+          },
+          "total_candidates": {
+            "title": "Total Candidates",
+            "type": "integer"
+          },
+          "totals_by_form": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Totals By Form",
+            "type": "object"
+          },
+          "w9_collection_count": {
+            "title": "W9 Collection Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_candidates",
+          "totals_by_form",
+          "counts_by_form",
+          "w9_collection_count",
+          "data_quality_issue_count",
+          "payments_without_vendor",
+          "payments_outside_tax_year",
+          "below_threshold_count"
+        ],
+        "title": "Form1099SummaryResponse",
+        "type": "object"
+      },
+      "Form1099ThresholdItemResponse": {
+        "additionalProperties": false,
+        "description": "``ThresholdItem.to_dict``.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "box": {
+            "title": "Box",
+            "type": "integer"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "form_type": {
+            "enum": [
+              "1099-NEC",
+              "1099-MISC",
+              "1099-INT"
+            ],
+            "title": "Form Type",
+            "type": "string"
+          },
+          "needs_confirmation": {
+            "title": "Needs Confirmation",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "form_type",
+          "box",
+          "description",
+          "amount",
+          "basis",
+          "needs_confirmation"
+        ],
+        "title": "Form1099ThresholdItemResponse",
+        "type": "object"
+      },
+      "Form1099ThresholdScheduleResponse": {
+        "additionalProperties": false,
+        "description": "``ThresholdSchedule.to_dict``.",
+        "properties": {
+          "confirm_against": {
+            "title": "Confirm Against",
+            "type": "string"
+          },
+          "figures_from_tax_year": {
+            "title": "Figures From Tax Year",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Form1099ThresholdItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "tax_year": {
+            "title": "Tax Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tax_year",
+          "figures_from_tax_year",
+          "items",
+          "confirm_against"
+        ],
+        "title": "Form1099ThresholdScheduleResponse",
+        "type": "object"
+      },
+      "Form1099W9CollectionRowResponse": {
+        "additionalProperties": false,
+        "description": "``W9CollectionRow.to_dict``.",
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "vendor_id": {
+            "title": "Vendor Id",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vendor_id",
+          "vendor_name",
+          "reason"
+        ],
+        "title": "Form1099W9CollectionRowResponse",
         "type": "object"
       },
       "Form941QuarterRequest": {
@@ -15187,6 +16323,157 @@
         "title": "IndustryRatiosResponse",
         "type": "object"
       },
+      "IntercompanyConsolidationColumnResponse": {
+        "additionalProperties": false,
+        "description": "``ConsolidationColumn.to_dict``.",
+        "properties": {
+          "credit_total": {
+            "title": "Credit Total",
+            "type": "string"
+          },
+          "debit_total": {
+            "title": "Debit Total",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_name": {
+            "title": "Entity Name",
+            "type": "string"
+          },
+          "intercompany_gross": {
+            "title": "Intercompany Gross",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_name",
+          "debit_total",
+          "credit_total",
+          "intercompany_gross"
+        ],
+        "title": "IntercompanyConsolidationColumnResponse",
+        "type": "object"
+      },
+      "IntercompanyEliminationJEResponse": {
+        "additionalProperties": false,
+        "description": "``EliminationJE.to_dict``.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "credit_account": {
+            "title": "Credit Account",
+            "type": "string"
+          },
+          "credit_entity": {
+            "title": "Credit Entity",
+            "type": "string"
+          },
+          "debit_account": {
+            "title": "Debit Account",
+            "type": "string"
+          },
+          "debit_entity": {
+            "title": "Debit Entity",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "description",
+          "debit_entity",
+          "debit_account",
+          "credit_entity",
+          "credit_account",
+          "amount"
+        ],
+        "title": "IntercompanyEliminationJEResponse",
+        "type": "object"
+      },
+      "IntercompanyEliminationPairResponse": {
+        "additionalProperties": false,
+        "description": "``EliminationPair.to_dict`` (``a_has_debit_balance`` is not serialised).",
+        "properties": {
+          "account_a": {
+            "title": "Account A",
+            "type": "string"
+          },
+          "account_b": {
+            "title": "Account B",
+            "type": "string"
+          },
+          "amount_a": {
+            "title": "Amount A",
+            "type": "string"
+          },
+          "amount_b": {
+            "title": "Amount B",
+            "type": "string"
+          },
+          "direction_a": {
+            "enum": [
+              "receivable",
+              "payable",
+              "revenue",
+              "expense",
+              "investment",
+              "unknown"
+            ],
+            "title": "Direction A",
+            "type": "string"
+          },
+          "direction_b": {
+            "enum": [
+              "receivable",
+              "payable",
+              "revenue",
+              "expense",
+              "investment",
+              "unknown"
+            ],
+            "title": "Direction B",
+            "type": "string"
+          },
+          "entity_a": {
+            "title": "Entity A",
+            "type": "string"
+          },
+          "entity_b": {
+            "title": "Entity B",
+            "type": "string"
+          },
+          "net_residual": {
+            "title": "Net Residual",
+            "type": "string"
+          },
+          "reconciles": {
+            "title": "Reconciles",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity_a",
+          "entity_b",
+          "account_a",
+          "account_b",
+          "direction_a",
+          "direction_b",
+          "amount_a",
+          "amount_b",
+          "net_residual",
+          "reconciles"
+        ],
+        "title": "IntercompanyEliminationPairResponse",
+        "type": "object"
+      },
       "IntercompanyEliminationRequest": {
         "properties": {
           "engagement_id": {
@@ -15221,6 +16508,274 @@
           "entities"
         ],
         "title": "IntercompanyEliminationRequest",
+        "type": "object"
+      },
+      "IntercompanyEliminationResponse": {
+        "additionalProperties": false,
+        "description": "``IntercompanyEliminationResult.to_dict`` — ``POST /audit/intercompany-elimination``.",
+        "properties": {
+          "elimination_journal_entries": {
+            "items": {
+              "$ref": "#/components/schemas/IntercompanyEliminationJEResponse"
+            },
+            "title": "Elimination Journal Entries",
+            "type": "array"
+          },
+          "intercompany_lines": {
+            "items": {
+              "$ref": "#/components/schemas/IntercompanyLineResponse"
+            },
+            "title": "Intercompany Lines",
+            "type": "array"
+          },
+          "mismatches": {
+            "items": {
+              "$ref": "#/components/schemas/IntercompanyMismatchResponse"
+            },
+            "title": "Mismatches",
+            "type": "array"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/IntercompanyEliminationPairResponse"
+            },
+            "title": "Pairs",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/IntercompanySummaryResponse"
+          },
+          "worksheet": {
+            "$ref": "#/components/schemas/IntercompanyWorksheetResponse"
+          }
+        },
+        "required": [
+          "intercompany_lines",
+          "pairs",
+          "mismatches",
+          "elimination_journal_entries",
+          "worksheet",
+          "summary"
+        ],
+        "title": "IntercompanyEliminationResponse",
+        "type": "object"
+      },
+      "IntercompanyLineResponse": {
+        "additionalProperties": false,
+        "description": "``IntercompanyLine.to_dict``.",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "counterparty_entity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty Entity"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "string"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "receivable",
+              "payable",
+              "revenue",
+              "expense",
+              "investment",
+              "unknown"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "net_balance": {
+            "title": "Net Balance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "account",
+          "direction",
+          "counterparty_entity",
+          "net_balance",
+          "debit",
+          "credit"
+        ],
+        "title": "IntercompanyLineResponse",
+        "type": "object"
+      },
+      "IntercompanyMismatchResponse": {
+        "additionalProperties": false,
+        "description": "``Mismatch.to_dict``.",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "counterparty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterparty"
+          },
+          "direction": {
+            "enum": [
+              "receivable",
+              "payable",
+              "revenue",
+              "expense",
+              "investment",
+              "unknown"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "no_reciprocal",
+              "amount_mismatch",
+              "direction_mismatch"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "entity",
+          "counterparty",
+          "account",
+          "direction",
+          "amount",
+          "message"
+        ],
+        "title": "IntercompanyMismatchResponse",
+        "type": "object"
+      },
+      "IntercompanySummaryResponse": {
+        "additionalProperties": false,
+        "description": "The ``summary`` dict built in ``run_intercompany_elimination``.",
+        "properties": {
+          "consolidation_complete": {
+            "title": "Consolidation Complete",
+            "type": "boolean"
+          },
+          "elimination_je_count": {
+            "title": "Elimination Je Count",
+            "type": "integer"
+          },
+          "entity_count": {
+            "title": "Entity Count",
+            "type": "integer"
+          },
+          "intercompany_line_count": {
+            "title": "Intercompany Line Count",
+            "type": "integer"
+          },
+          "matched_pair_count": {
+            "title": "Matched Pair Count",
+            "type": "integer"
+          },
+          "mismatch_count": {
+            "title": "Mismatch Count",
+            "type": "integer"
+          },
+          "reconciling_pair_count": {
+            "title": "Reconciling Pair Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entity_count",
+          "intercompany_line_count",
+          "matched_pair_count",
+          "reconciling_pair_count",
+          "mismatch_count",
+          "elimination_je_count",
+          "consolidation_complete"
+        ],
+        "title": "IntercompanySummaryResponse",
+        "type": "object"
+      },
+      "IntercompanyWorksheetResponse": {
+        "additionalProperties": false,
+        "description": "``ConsolidationWorksheet.to_dict``.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/IntercompanyConsolidationColumnResponse"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "consolidated_credits": {
+            "title": "Consolidated Credits",
+            "type": "string"
+          },
+          "consolidated_debits": {
+            "title": "Consolidated Debits",
+            "type": "string"
+          },
+          "elimination_credits": {
+            "title": "Elimination Credits",
+            "type": "string"
+          },
+          "elimination_debits": {
+            "title": "Elimination Debits",
+            "type": "string"
+          },
+          "total_entity_credits": {
+            "title": "Total Entity Credits",
+            "type": "string"
+          },
+          "total_entity_debits": {
+            "title": "Total Entity Debits",
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "total_entity_debits",
+          "total_entity_credits",
+          "elimination_debits",
+          "elimination_credits",
+          "consolidated_debits",
+          "consolidated_credits"
+        ],
+        "title": "IntercompanyWorksheetResponse",
         "type": "object"
       },
       "InvColumnDetectionResponse": {
@@ -27976,6 +29531,40 @@
         "title": "TrialBalanceAccountInput",
         "type": "object"
       },
+      "TrialBalanceAccountResponse": {
+        "description": "One entry of ``all_accounts`` (Sprint 890, 15C): amounts are exact JSON numbers, like the totals.",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "number"
+          },
+          "debit": {
+            "title": "Debit",
+            "type": "number"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "type_supplied": {
+            "default": false,
+            "title": "Type Supplied",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account",
+          "debit",
+          "credit",
+          "type"
+        ],
+        "title": "TrialBalanceAccountResponse",
+        "type": "object"
+      },
       "TrialBalanceResponse": {
         "description": "Complete trial balance audit response.\n\nUses extra='ignore' — unknown fields silently dropped (Sprint 561 hardening).",
         "properties": {
@@ -27989,7 +29578,9 @@
           "account_balances": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/AccountBalanceResponse"
+                },
                 "type": "object"
               },
               {
@@ -28026,8 +29617,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/TrialBalanceAccountResponse"
                 },
                 "type": "array"
               },
@@ -29374,6 +30964,198 @@
         "title": "VerifyEmailRequest",
         "type": "object"
       },
+      "W2CheckNotRunResponse": {
+        "additionalProperties": false,
+        "description": "One ``checks_not_run`` notice (``_checks_not_run`` / ``_check_form_941``).",
+        "properties": {
+          "check": {
+            "title": "Check",
+            "type": "string"
+          },
+          "employee_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Employee Ids",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "limit_not_supplied",
+              "age_not_supplied",
+              "form_941_quarters_incomplete",
+              "form_941_field_not_supplied"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "check",
+          "reason",
+          "employee_ids",
+          "message"
+        ],
+        "title": "W2CheckNotRunResponse",
+        "type": "object"
+      },
+      "W2DiscrepancyResponse": {
+        "additionalProperties": false,
+        "description": "``Discrepancy.to_dict``.",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "string"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "employee_id": {
+            "title": "Employee Id",
+            "type": "string"
+          },
+          "employee_name": {
+            "title": "Employee Name",
+            "type": "string"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ss_wages",
+              "ss_wage_base_exceeded",
+              "ss_tax_withholding",
+              "medicare_wages",
+              "medicare_withholding",
+              "additional_medicare",
+              "federal_wages",
+              "federal_withholding",
+              "hsa_over_limit",
+              "retirement_over_limit",
+              "form_941_mismatch",
+              "ss_tax_withheld_vs_payroll",
+              "medicare_tax_withheld_vs_payroll",
+              "box_12_vs_payroll"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "employee_id",
+          "employee_name",
+          "kind",
+          "severity",
+          "expected",
+          "actual",
+          "difference",
+          "message"
+        ],
+        "title": "W2DiscrepancyResponse",
+        "type": "object"
+      },
+      "W2Form941MismatchResponse": {
+        "additionalProperties": false,
+        "description": "``Form941Mismatch.to_dict``. ``quarter`` is None for the four-quarter sum.",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "string"
+          },
+          "compared_with": {
+            "enum": [
+              "payroll_ytd",
+              "w3"
+            ],
+            "title": "Compared With",
+            "type": "string"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "expected": {
+            "title": "Expected",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "ss_wages",
+              "ss_wage_base_exceeded",
+              "ss_tax_withholding",
+              "medicare_wages",
+              "medicare_withholding",
+              "additional_medicare",
+              "federal_wages",
+              "federal_withholding",
+              "hsa_over_limit",
+              "retirement_over_limit",
+              "form_941_mismatch",
+              "ss_tax_withheld_vs_payroll",
+              "medicare_tax_withheld_vs_payroll",
+              "box_12_vs_payroll"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "quarter": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarter"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quarter",
+          "compared_with",
+          "kind",
+          "severity",
+          "expected",
+          "actual",
+          "difference",
+          "message"
+        ],
+        "title": "W2Form941MismatchResponse",
+        "type": "object"
+      },
       "W2ReconciliationRequest": {
         "properties": {
           "employees": {
@@ -29442,6 +31224,179 @@
         "title": "W2ReconciliationRequest",
         "type": "object"
       },
+      "W2ReconciliationResponse": {
+        "additionalProperties": false,
+        "description": "``W2ReconciliationResult.to_dict`` — ``POST /audit/w2-reconciliation``.",
+        "properties": {
+          "checks_not_run": {
+            "items": {
+              "$ref": "#/components/schemas/W2CheckNotRunResponse"
+            },
+            "title": "Checks Not Run",
+            "type": "array"
+          },
+          "employee_discrepancies": {
+            "items": {
+              "$ref": "#/components/schemas/W2DiscrepancyResponse"
+            },
+            "title": "Employee Discrepancies",
+            "type": "array"
+          },
+          "form_941_mismatches": {
+            "items": {
+              "$ref": "#/components/schemas/W2Form941MismatchResponse"
+            },
+            "title": "Form 941 Mismatches",
+            "type": "array"
+          },
+          "statutory_basis": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statutory Basis"
+          },
+          "statutory_basis_note": {
+            "title": "Statutory Basis Note",
+            "type": "string"
+          },
+          "statutory_basis_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statutory Basis Source"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/W2SummaryResponse"
+          },
+          "tax_year": {
+            "title": "Tax Year",
+            "type": "integer"
+          },
+          "w3_totals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/W2W3TotalsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tax_year",
+          "employee_discrepancies",
+          "form_941_mismatches",
+          "w3_totals",
+          "summary",
+          "statutory_basis",
+          "statutory_basis_source",
+          "checks_not_run",
+          "statutory_basis_note"
+        ],
+        "title": "W2ReconciliationResponse",
+        "type": "object"
+      },
+      "W2SummaryResponse": {
+        "additionalProperties": false,
+        "description": "The ``summary`` dict built in ``reconcile_w2``.",
+        "properties": {
+          "discrepancies_by_kind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Discrepancies By Kind",
+            "type": "object"
+          },
+          "duplicate_w2_drafts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Duplicate W2 Drafts",
+            "type": "array"
+          },
+          "employee_count": {
+            "title": "Employee Count",
+            "type": "integer"
+          },
+          "employees_missing_w2_draft": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Employees Missing W2 Draft",
+            "type": "array"
+          },
+          "form_941_quarters_duplicated": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Form 941 Quarters Duplicated",
+            "type": "array"
+          },
+          "form_941_quarters_missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Form 941 Quarters Missing",
+            "type": "array"
+          },
+          "informational_notices": {
+            "title": "Informational Notices",
+            "type": "integer"
+          },
+          "orphan_w2_drafts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Orphan W2 Drafts",
+            "type": "array"
+          },
+          "total_employee_discrepancies": {
+            "title": "Total Employee Discrepancies",
+            "type": "integer"
+          },
+          "total_form_941_mismatches": {
+            "title": "Total Form 941 Mismatches",
+            "type": "integer"
+          },
+          "w3_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "W3 Status"
+          }
+        },
+        "required": [
+          "employee_count",
+          "employees_missing_w2_draft",
+          "duplicate_w2_drafts",
+          "orphan_w2_drafts",
+          "total_employee_discrepancies",
+          "informational_notices",
+          "total_form_941_mismatches",
+          "form_941_quarters_missing",
+          "form_941_quarters_duplicated",
+          "w3_status",
+          "discrepancies_by_kind"
+        ],
+        "title": "W2SummaryResponse",
+        "type": "object"
+      },
       "W2SupportedYearsResponse": {
         "description": "Tax years the app can reconcile without a statutory-limits override.",
         "properties": {
@@ -29462,6 +31417,51 @@
           "note"
         ],
         "title": "W2SupportedYearsResponse",
+        "type": "object"
+      },
+      "W2W3TotalsResponse": {
+        "additionalProperties": false,
+        "description": "``W3Totals.to_dict``.",
+        "properties": {
+          "employee_count": {
+            "title": "Employee Count",
+            "type": "integer"
+          },
+          "total_federal_wages": {
+            "title": "Total Federal Wages",
+            "type": "string"
+          },
+          "total_federal_withholding": {
+            "title": "Total Federal Withholding",
+            "type": "string"
+          },
+          "total_medicare_tax_withheld": {
+            "title": "Total Medicare Tax Withheld",
+            "type": "string"
+          },
+          "total_medicare_wages": {
+            "title": "Total Medicare Wages",
+            "type": "string"
+          },
+          "total_ss_tax_withheld": {
+            "title": "Total Ss Tax Withheld",
+            "type": "string"
+          },
+          "total_ss_wages": {
+            "title": "Total Ss Wages",
+            "type": "string"
+          }
+        },
+        "required": [
+          "total_federal_wages",
+          "total_federal_withholding",
+          "total_ss_wages",
+          "total_ss_tax_withheld",
+          "total_medicare_wages",
+          "total_medicare_tax_withheld",
+          "employee_count"
+        ],
+        "title": "W2W3TotalsResponse",
         "type": "object"
       },
       "WaitlistRequest": {
@@ -31186,9 +33186,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Calculate Audit Book To Tax Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BookToTaxResponse"
                 }
               }
             },
@@ -31307,9 +33305,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Projection Audit Cash Flow Projector Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CashFlowForecastResponse"
                 }
               }
             },
@@ -31971,9 +33967,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Prepare 1099 Candidates Audit Form 1099 Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/Form1099Response"
                 }
               }
             },
@@ -32111,9 +34105,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Consolidation Audit Intercompany Elimination Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/IntercompanyEliminationResponse"
                 }
               }
             },
@@ -33238,9 +35230,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Run Reconciliation Audit W2 Reconciliation Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/W2ReconciliationResponse"
                 }
               }
             },

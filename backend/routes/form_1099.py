@@ -31,6 +31,7 @@ from form_1099_engine import (
 )
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
+from shared.promoted_tool_response_schemas import Form1099Response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -119,14 +120,14 @@ def _build_config(payload: Form1099Request) -> Form1099Config:
     )
 
 
-@router.post("/audit/form-1099")
+@router.post("/audit/form-1099", response_model=Form1099Response)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def prepare_1099_candidates(
     request: Request,
     payload: Form1099Request,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> Form1099Response:
     # Sprint 689e: gate promoted tool at tier + upload-limit level;
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
@@ -143,7 +144,7 @@ def prepare_1099_candidates(
         route_logger=logger,
         failure_log="1099 threshold review failed",
     )
-    return result.to_dict()
+    return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
 @router.post("/audit/form-1099/export.csv")

@@ -22,6 +22,7 @@ from auth import User, require_verified_user
 from database import get_db
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer, sanitize_csv_value
+from shared.promoted_tool_response_schemas import W2ReconciliationResponse
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
@@ -248,14 +249,14 @@ def get_supported_tax_years() -> W2SupportedYearsResponse:
     )
 
 
-@router.post("/audit/w2-reconciliation")
+@router.post("/audit/w2-reconciliation", response_model=W2ReconciliationResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def run_reconciliation(
     request: Request,
     payload: W2ReconciliationRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> W2ReconciliationResponse:
     # Sprint 689d: gate promoted tool at tier + upload-limit level;
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
@@ -272,7 +273,7 @@ def run_reconciliation(
         route_logger=logger,
         failure_log="W-2 reconciliation failed",
     )
-    return result.to_dict()
+    return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
 @router.post("/audit/w2-reconciliation/export.csv")

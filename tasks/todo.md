@@ -921,6 +921,7 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
 - [x] 15B backend serves upload limits and enabled formats; frontend derives pickers, checks, labels, messages.
 - [ ] 15C typed nested TB account models; five promoted routes get response models; wire types checked.
       Done: `all_accounts` / `account_balances` typed (`TrialBalanceAccountResponse`, `AccountBalanceResponse`).
+      Done: response models for the five promoted JSON tools (`shared/promoted_tool_response_schemas.py`).
 - [x] Found in 15D and fixed: every multi-sheet TB analysis returned 500 (no `classification_summary`).
 - [ ] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
       Done: lead sheets grouped once, in both engines; post-processor adds section density only; rate-table

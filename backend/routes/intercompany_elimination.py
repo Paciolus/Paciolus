@@ -28,6 +28,7 @@ from intercompany_elimination_engine import (
 )
 from shared.export_helpers import MEDIA_CSV, attachment_response
 from shared.filenames import number_cell, safe_csv_writer
+from shared.promoted_tool_response_schemas import IntercompanyEliminationResponse
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_amount
 from shared.request_decimal import parse_request_decimal as _to_decimal
@@ -80,14 +81,14 @@ def _build_config(payload: IntercompanyEliminationRequest) -> IntercompanyConfig
     )
 
 
-@router.post("/audit/intercompany-elimination")
+@router.post("/audit/intercompany-elimination", response_model=IntercompanyEliminationResponse)
 @limiter.limit(RATE_LIMIT_AUDIT)
 def run_consolidation(
     request: Request,
     payload: IntercompanyEliminationRequest,
     current_user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
-) -> dict:
+) -> IntercompanyEliminationResponse:
     # Sprint 689c: gate promoted tool at tier + upload-limit level;
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
@@ -103,7 +104,7 @@ def run_consolidation(
         route_logger=logger,
         failure_log="Intercompany elimination failed",
     )
-    return result.to_dict()
+    return result.to_dict()  # type: ignore[return-value]  # FastAPI validates the dict against response_model
 
 
 @router.post("/audit/intercompany-elimination/export.csv")
