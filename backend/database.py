@@ -14,9 +14,11 @@ ZERO-STORAGE EXCEPTION: This database stores ONLY:
 Trial balance data is NEVER persisted - it remains in-memory only.
 """
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
+from contextlib import AbstractContextManager, contextmanager
 from typing import Any
 
+from fastapi import Request
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -103,6 +105,34 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+SessionScope = Callable[[], AbstractContextManager[Session]]
+
+
+def get_session_scope(request: Request) -> SessionScope:
+    """Dependency: a factory that opens a session for one synchronous unit of work.
+
+    Sprint 890 (15E): work moved off the event loop (``asyncio.to_thread``) must create, use and
+    close its own session inside the worker thread — a session is never shared across threads.
+    The factory resolves ``get_db`` through ``app.dependency_overrides``, so tests that override
+    ``get_db`` with their transactional session keep working.
+    """
+    provider = request.app.dependency_overrides.get(get_db, get_db)
+
+    @contextmanager
+    def scope() -> Generator[Session, None, None]:
+        made = provider()
+        if isinstance(made, Session):
+            yield made
+            return
+        db = next(made)
+        try:
+            yield db
+        finally:
+            made.close()
+
+    return scope
 
 
 def init_db() -> None:

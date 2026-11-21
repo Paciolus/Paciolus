@@ -9,6 +9,7 @@ Sprint F adds: PRICING_V2_ENABLED feature flag gating seat/promo endpoints.
 Self-Serve Checkout: Base Plan + Seat Add-On dual line items, seat validation.
 """
 
+import asyncio
 import logging
 from typing import Annotated
 
@@ -16,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from auth import reject_impersonation, require_current_user, require_verified_user
-from database import get_db
+from database import SessionScope, get_db, get_session_scope
 from models import User
 from schemas.billing_schemas import (  # noqa: F401 — backward compat re-exports
     BillingMessageResponse,
@@ -358,109 +359,28 @@ def get_weekly_review_endpoint(
 @limiter.limit(RATE_LIMIT_WEBHOOK)
 async def stripe_webhook(
     request: Request,
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> Response:
     """Stripe webhook endpoint. No auth — uses Stripe signature verification.
 
     CSRF-exempt (added to CSRF_EXEMPT_PATHS in security_middleware.py).
+
+    Sprint 890 (15E): only the body is read on the event loop. Signature verification,
+    de-duplication, the handler (which may call Stripe) and the commit run in
+    ``billing.webhook_service.handle_stripe_webhook`` through the thread pool, with a session it
+    opens and closes itself.
     """
     from billing.stripe_client import is_stripe_enabled
 
     if not is_stripe_enabled():
         return Response(status_code=200)
 
-    from config import STRIPE_WEBHOOK_SECRET
+    from billing.webhook_service import handle_stripe_webhook
 
     payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-
-    if not sig_header:
-        # 400: Missing required header — bad request, not retryable.
-        logger.warning("Webhook rejected: missing stripe-signature header")
-        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
-
-    from billing.stripe_client import get_stripe
-
-    stripe = get_stripe()
-
-    try:
-        event = stripe.Webhook.construct_event(
-            payload,
-            sig_header,
-            STRIPE_WEBHOOK_SECRET,
-        )
-    except ValueError:
-        # 400: Malformed JSON payload — bad request, not retryable.
-        logger.warning("Webhook rejected: invalid JSON payload")
-        raise HTTPException(status_code=400, detail="Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        # 400: Signature mismatch — forged or corrupted request, not retryable.
-        logger.warning(
-            "Webhook signature verification failed (sig prefix: %s)",
-            sig_header[:20] if sig_header else "none",
-        )
-        raise HTTPException(status_code=400, detail="Invalid signature")
-
-    # Atomic deduplication: insert the event marker BEFORE processing.
-    # Uses INSERT ... ON CONFLICT DO NOTHING (upsert) — only the winner proceeds.
-    # This prevents duplicate side effects under concurrent delivery (Stripe retries).
-    from sqlalchemy.exc import IntegrityError
-
-    from billing.stripe_client import to_plain_dict
-
-    # stripe-python >= 15: an Event is not a dict, and the handlers read it
-    # with .get(). Convert once here (Sprint 786b).
-    event = to_plain_dict(event)
-    event_id = event.get("id")
-    if event_id:
-        from subscription_model import ProcessedWebhookEvent
-
-        # Attempt to claim this event atomically
-        try:
-            db.add(ProcessedWebhookEvent(stripe_event_id=event_id))
-            db.flush()  # Will raise IntegrityError if already exists
-        except IntegrityError:
-            db.rollback()
-            logger.debug("Duplicate webhook event %s — skipping", event_id)
-            return Response(status_code=200)
-        except Exception:
-            # 500: Operational DB error (connection failure, schema error, etc.)
-            # Must NOT return 200 — Stripe should retry with backoff.
-            db.rollback()
-            logger.error("DB error during webhook dedup for event %s", event_id, exc_info=True)
-            return Response(status_code=500)
-
-    from billing.webhook_handler import process_webhook_event
-
-    event_type = event.get("type", "")
-    event_data = event.get("data", {}).get("object", {})
-
-    # Store the Stripe event created timestamp for ordering guard
-    event_created = event.get("created")  # Unix timestamp from Stripe
-
-    # All handler logic uses db.flush() internally — single commit at the end
-    # ensures atomicity between the dedup marker and business logic changes.
-    try:
-        process_webhook_event(db, event_type, event_data, event_created=event_created)
-        # Commit the dedup marker + any business logic changes together
-        db.commit()
-    except (ValueError, KeyError) as exc:
-        # 400: Data validation error — malformed event payload, missing fields,
-        # or unknown enum value. Retrying won't fix bad data.
-        db.rollback()
-        logger.warning(
-            "Webhook data error for event %s (%s): %s: %s",
-            event_id,
-            event_type,
-            type(exc).__name__,
-            str(exc),
-        )
-        return Response(status_code=400)
-    except Exception:
-        # 500: Operational error — DB failure, Stripe API timeout, etc.
-        # Stripe should retry with exponential backoff.
-        db.rollback()
-        logger.error("Webhook processing failed for event %s (%s)", event_id, event_type, exc_info=True)
-        return Response(status_code=500)
-
-    return Response(status_code=200)
+    outcome = await asyncio.to_thread(
+        handle_stripe_webhook, payload, request.headers.get("stripe-signature"), session_scope
+    )
+    if outcome.detail is not None:
+        raise HTTPException(status_code=outcome.status_code, detail=outcome.detail)
+    return Response(status_code=outcome.status_code)
