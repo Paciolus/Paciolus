@@ -1,0 +1,120 @@
+{
+  "max_file_size_bytes": 104857600,
+  "max_file_size_mb": 100,
+  "max_rows": 500000,
+  "bulk_max_files": 5,
+  "formats": [
+    {
+      "format": "csv",
+      "label": "CSV",
+      "extensions": [
+        ".csv"
+      ],
+      "mime_types": [
+        "application/csv",
+        "application/octet-stream",
+        "text/csv"
+      ]
+    },
+    {
+      "format": "xlsx",
+      "label": "Excel (.xlsx)",
+      "extensions": [
+        ".xlsx"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ]
+    },
+    {
+      "format": "xls",
+      "label": "Excel (.xls)",
+      "extensions": [
+        ".xls"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/vnd.ms-excel"
+      ]
+    },
+    {
+      "format": "tsv",
+      "label": "TSV (.tsv)",
+      "extensions": [
+        ".tsv"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "text/tab-separated-values"
+      ]
+    },
+    {
+      "format": "txt",
+      "label": "Text (.txt)",
+      "extensions": [
+        ".txt"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "text/plain"
+      ]
+    },
+    {
+      "format": "qbo",
+      "label": "QBO (.qbo)",
+      "extensions": [
+        ".qbo"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/ofx",
+        "application/x-ofx"
+      ]
+    },
+    {
+      "format": "ofx",
+      "label": "OFX (.ofx)",
+      "extensions": [
+        ".ofx"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/ofx",
+        "application/x-ofx"
+      ]
+    },
+    {
+      "format": "iif",
+      "label": "IIF (.iif)",
+      "extensions": [
+        ".iif"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/x-iif"
+      ]
+    },
+    {
+      "format": "pdf",
+      "label": "PDF",
+      "extensions": [
+        ".pdf"
+      ],
+      "mime_types": [
+        "application/pdf"
+      ]
+    },
+    {
+      "format": "docx",
+      "label": "Word (.docx)",
+      "extensions": [
+        ".docx"
+      ],
+      "mime_types": [
+        "application/octet-stream",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ]
+    }
+  ]
+}

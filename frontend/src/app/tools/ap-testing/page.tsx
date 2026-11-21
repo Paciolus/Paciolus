@@ -10,8 +10,9 @@ import { useAPTesting } from '@/hooks/useAPTesting'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * AP Payment Testing — Full Tool (Sprint 75)
@@ -20,6 +21,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
  * Upload → Process → Results with 13-test battery.
  */
 export default function APTestingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = useAPTesting()
   useCanvasAccentSync(status)
@@ -123,7 +125,7 @@ export default function APTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                    accept={upload.accept}
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -139,7 +141,7 @@ export default function APTestingPage() {
                     Drop your payment register here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel — up to 50MB
+                    CSV, TSV, TXT, or Excel — up to {upload.sizeLabel}
                   </p>
                 </div>
 

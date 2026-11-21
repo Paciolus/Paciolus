@@ -6,8 +6,8 @@ import { useAuthSession } from '@/contexts/AuthSessionContext';
 import { useDiagnostic } from '@/contexts/DiagnosticContext';
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext';
 import { GuestCTA } from '@/components/shared';
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities';
 import type { FluxItem, FluxSummary, ReconScore, ReconStats } from '@/types/diagnostic';
-import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats';
 import { withLinkedEngagement } from '@/utils/linkedEngagement';
 import { getRiskLevelClasses, type ThresholdRiskLevel } from '@/utils/themeUtils';
 import { formatCurrency, downloadBlob, apiDownload, apiPost } from '@/utils';
@@ -31,6 +31,7 @@ interface FluxAnalysisResponse {
 }
 
 export default function FluxPage() {
+  const upload = useUploadCapabilities()
     const { token, isAuthenticated } = useAuthSession();
     // Sprint 886 (OUT-18): the memo resolves the client's reporting framework from it.
     const engagementId = useOptionalEngagementContext()?.engagementId ?? null;
@@ -182,7 +183,7 @@ export default function FluxPage() {
                                 hidden
                                 ref={currentInputRef}
                                 onChange={(e) => setCurrentFile(e.target.files?.[0] || null)}
-                                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                                accept={upload.accept}
                             />
                             <p className="text-sm font-sans text-content-secondary">{currentFile ? currentFile.name : "Select Trial Balance"}</p>
                         </div>
@@ -202,7 +203,7 @@ export default function FluxPage() {
                                 hidden
                                 ref={priorInputRef}
                                 onChange={(e) => setPriorFile(e.target.files?.[0] || null)}
-                                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                                accept={upload.accept}
                             />
                             <p className="text-sm font-sans text-content-secondary">{priorFile ? priorFile.name : "Select Prior TB"}</p>
                         </div>

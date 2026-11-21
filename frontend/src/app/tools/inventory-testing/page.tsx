@@ -10,8 +10,9 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * Inventory Testing — Tool 11 (Sprint 119)
@@ -21,6 +22,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
  * for inventory anomaly indicators across structural, statistical, and advanced tiers.
  */
 export default function InventoryTestingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = useInventoryTesting()
   useCanvasAccentSync(status)
@@ -105,7 +107,7 @@ export default function InventoryTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                    accept={upload.accept}
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -121,7 +123,7 @@ export default function InventoryTestingPage() {
                     Drop your inventory register here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel &mdash; up to 50MB
+                    CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}
                   </p>
                 </div>
 

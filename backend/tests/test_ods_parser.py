@@ -295,8 +295,12 @@ class TestOdsProfile:
 
         assert "application/vnd.oasis.opendocument.spreadsheet" in ALLOWED_CONTENT_TYPES
 
-    def test_display_includes_ods(self):
+    def test_display_includes_ods_only_when_enabled(self):
+        # Sprint 890 (15B): the display is computed from the enabled formats; ODS is off by default.
+        from unittest.mock import patch
+
         from shared.file_formats import get_active_extensions_display
 
-        display = get_active_extensions_display()
-        assert ".ods" in display
+        assert ".ods" not in get_active_extensions_display()
+        with patch("config.FORMAT_ODS_ENABLED", True):
+            assert ".ods" in get_active_extensions_display()

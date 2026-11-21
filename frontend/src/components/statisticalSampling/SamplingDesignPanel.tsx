@@ -4,10 +4,11 @@ import { useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { UploadHandlingNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingDesignConfig, SamplingMethod } from '@/types/statisticalSampling'
 import { CONFIDENCE_LEVELS, SAMPLING_METHOD_LABELS } from '@/types/statisticalSampling'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 interface SamplingDesignPanelProps {
   status: UploadStatus
@@ -26,6 +27,7 @@ const DEFAULT_CONFIG: SamplingDesignConfig = {
 }
 
 export function SamplingDesignPanel({ status, error, onRun, isVerified }: SamplingDesignPanelProps) {
+  const upload = useUploadCapabilities()
   const [config, setConfig] = useState<SamplingDesignConfig>(DEFAULT_CONFIG)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [validationError, setValidationError] = useState('')
@@ -179,7 +181,7 @@ export function SamplingDesignPanel({ status, error, onRun, isVerified }: Sampli
         <input
           ref={fileInputRef}
           type="file"
-          accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+          accept={upload.accept}
           onChange={handleFileSelect}
           className="hidden"
         />

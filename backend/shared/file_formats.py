@@ -364,5 +364,16 @@ def get_active_format_labels() -> list[str]:
 
 
 def get_active_extensions_display() -> str:
-    """Return a display string like 'CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), QBO, or OFX' for error messages."""
-    return "CSV (.csv), TSV (.tsv), Text (.txt), Excel (.xlsx, .xls), ODS (.ods), Word (.docx), QBO (.qbo), OFX (.ofx), IIF (.iif), or PDF (.pdf)"
+    """The enabled formats, for error messages ("CSV (.csv), ... or PDF (.pdf)").
+
+    Sprint 890 (15B): computed from the enabled profiles; it was a fixed string that named ODS
+    even though ``FORMAT_ODS_ENABLED`` defaults to false.
+    """
+    labels = [
+        profile.label if "(" in profile.label else f"{profile.label} ({', '.join(sorted(profile.extensions))})"
+        for fmt, profile in FORMAT_PROFILES.items()
+        if profile.parse_supported and is_format_enabled(fmt)
+    ]
+    if len(labels) <= 1:
+        return "".join(labels)
+    return ", ".join(labels[:-1]) + " or " + labels[-1]

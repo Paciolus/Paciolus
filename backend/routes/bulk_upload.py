@@ -23,6 +23,8 @@ from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 
 router = APIRouter(prefix="/upload/bulk", tags=["bulk-upload"])
 
+# The planned limit (served by /upload/capabilities so the batch UI and the backend agree).
+BULK_MAX_FILES = 5
 BULK_UPLOAD_NOT_AVAILABLE = "Bulk upload is not available yet."
 
 

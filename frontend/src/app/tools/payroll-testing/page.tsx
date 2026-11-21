@@ -10,8 +10,9 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { usePayrollTesting } from '@/hooks/usePayrollTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * Payroll & Employee Testing — Full Tool (Sprint 87)
@@ -22,6 +23,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
  * Sprint 125: Migrated to semantic theme tokens (light theme).
  */
 export default function PayrollTestingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = usePayrollTesting()
   useCanvasAccentSync(status)
@@ -127,7 +129,7 @@ export default function PayrollTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                    accept={upload.accept}
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -143,7 +145,7 @@ export default function PayrollTestingPage() {
                     Drop your payroll register here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel — up to 50MB
+                    CSV, TSV, TXT, or Excel — up to {upload.sizeLabel}
                   </p>
                 </div>
 

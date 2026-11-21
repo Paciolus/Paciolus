@@ -36,6 +36,7 @@ jest.mock('@/hooks/useBatchUpload', () => ({
 }))
 
 jest.mock('@/utils/fileFormats', () => ({
+  ...jest.requireActual('@/utils/fileFormats'),
   ACCEPTED_FILE_EXTENSIONS_STRING: '.csv,.xlsx,.xls',
 }))
 

@@ -6,6 +6,7 @@
  */
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { DEFAULT_UPLOAD_CAPABILITIES, acceptString, setUploadCapabilities } from '@/utils/fileFormats'
 import { fireEvent, render, screen } from '@/test-utils'
 
 // Re-export for convenience
@@ -75,6 +76,32 @@ export function runStandardToolPageScenarios(config: ToolPageTestConfig) {
     it('shows upload zone for authenticated verified user', () => {
       render(<config.Component />)
       expect(screen.getByText(config.uploadPromptPattern)).toBeInTheDocument()
+    })
+
+    // Sprint 890 (15B): the size and accepted types come from GET /upload/capabilities.
+    it('shows the size limit and accepted types the backend serves', () => {
+      setUploadCapabilities({ ...DEFAULT_UPLOAD_CAPABILITIES, max_file_size_mb: 25 })
+      try {
+        const { container } = render(<config.Component />)
+        expect(screen.getAllByText(/up to 25 MB/).length).toBeGreaterThan(0)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        expect(input.accept).toBe(acceptString(DEFAULT_UPLOAD_CAPABILITIES))
+        expect(input.accept).not.toContain('.ods')
+      } finally {
+        setUploadCapabilities(DEFAULT_UPLOAD_CAPABILITIES)
+      }
+    })
+
+    it('offers ODS only when the backend enables it', () => {
+      const ods = { format: 'ods', label: 'ODS (.ods)', extensions: ['.ods'], mime_types: ['application/vnd.oasis.opendocument.spreadsheet'] }
+      setUploadCapabilities({ ...DEFAULT_UPLOAD_CAPABILITIES, formats: [...DEFAULT_UPLOAD_CAPABILITIES.formats, ods] })
+      try {
+        const { container } = render(<config.Component />)
+        const input = container.querySelector('input[type="file"]') as HTMLInputElement
+        expect(input.accept).toContain('.ods')
+      } finally {
+        setUploadCapabilities(DEFAULT_UPLOAD_CAPABILITIES)
+      }
     })
 
     it('shows sign-in CTA for unauthenticated user', () => {

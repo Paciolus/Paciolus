@@ -50,6 +50,7 @@ from routes.sod import router as sod_router
 from routes.three_way_match import router as three_way_match_router
 from routes.trends import router as trends_router
 from routes.uncorrected_misstatements import router as uncorrected_misstatements_router
+from routes.upload_capabilities import router as upload_capabilities_router
 from routes.users import router as users_router
 from routes.w2_reconciliation import router as w2_reconciliation_router
 
@@ -97,6 +98,7 @@ all_routers = [
     admin_dashboard_router,
     branding_router,
     bulk_upload_router,
+    upload_capabilities_router,
     composite_risk_router,
     account_risk_heatmap_router,
     sod_router,

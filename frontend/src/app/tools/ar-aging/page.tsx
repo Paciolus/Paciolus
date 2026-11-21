@@ -8,8 +8,9 @@ import { ProofSummaryBar, ProofPanel, extractARProof } from '@/components/shared
 import { useARAging } from '@/hooks/useARAging'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * AR Aging Analysis — Tool 9 (Sprint 109)
@@ -20,6 +21,7 @@ import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fil
  * statistical, and advanced tiers.
  */
 export default function ARAgingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = useARAging()
   useCanvasAccentSync(status)
@@ -129,7 +131,7 @@ export default function ARAgingPage() {
                     <input
                       ref={tbInputRef}
                       type="file"
-                      accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                      accept={upload.accept}
                       onChange={e => { if (e.target.files?.[0]) handleTbFile(e.target.files[0]) }}
                       className="hidden"
                     />
@@ -154,7 +156,7 @@ export default function ARAgingPage() {
                         <p className="font-sans text-sm text-content-secondary mb-1">
                           Drop your trial balance file here
                         </p>
-                        <p className="font-sans text-xs text-content-tertiary">CSV, TSV, TXT, or Excel &mdash; up to 50MB</p>
+                        <p className="font-sans text-xs text-content-tertiary">CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}</p>
                       </>
                     )}
                   </div>
@@ -179,7 +181,7 @@ export default function ARAgingPage() {
                     <input
                       ref={slInputRef}
                       type="file"
-                      accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                      accept={upload.accept}
                       onChange={e => { if (e.target.files?.[0]) handleSlFile(e.target.files[0]) }}
                       className="hidden"
                     />

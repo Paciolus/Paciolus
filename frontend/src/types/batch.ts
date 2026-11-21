@@ -9,7 +9,7 @@
  * - Queue state is ephemeral (lost on page refresh)
  */
 
-import { isAcceptedFileType as _isAcceptedFileType } from '@/utils/fileFormats'
+import { isAcceptedFileType as _isAcceptedFileType , DEFAULT_UPLOAD_CAPABILITIES } from '@/utils/fileFormats'
 
 /**
  * Status of an individual file in the queue
@@ -63,6 +63,7 @@ export const FILE_ERROR_CODES = {
  */
 export { ACCEPTED_FILE_EXTENSIONS_STRING, ACCEPTED_MIME_TYPES, isAcceptedFileType } from '@/utils/fileFormats'
 
+
 export const SUPPORTED_FILE_TYPES = {
   CSV: 'text/csv',
   TSV: 'text/tab-separated-values',
@@ -79,10 +80,12 @@ export const SUPPORTED_FILE_TYPES = {
 /**
  * File size limits
  */
+// Sprint 890 (15B): the backend's limits (100 MiB per file, 5 files per bulk upload), not separate
+// figures. Bulk upload itself is not available yet (Sprint 888); this unmounted UI keeps the shape.
 export const FILE_SIZE_LIMITS = {
-  MAX_FILE_SIZE: 50 * 1024 * 1024,  // 50MB per file
-  MAX_BATCH_SIZE: 200 * 1024 * 1024, // 200MB total
-  MAX_FILES: 10, // Maximum files in a batch
+  MAX_FILE_SIZE: DEFAULT_UPLOAD_CAPABILITIES.max_file_size_bytes,
+  MAX_BATCH_SIZE: DEFAULT_UPLOAD_CAPABILITIES.max_file_size_bytes * DEFAULT_UPLOAD_CAPABILITIES.bulk_max_files,
+  MAX_FILES: DEFAULT_UPLOAD_CAPABILITIES.bulk_max_files,
 } as const;
 
 /**

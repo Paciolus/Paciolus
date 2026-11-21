@@ -12,6 +12,7 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useToast } from '@/contexts/ToastContext'
 import type { UploadStatus } from '@/types/shared'
+import { fileTooLargeMessage, unsupportedFormatMessage } from '@/utils/fileFormats'
 import { uploadFetch } from '@/utils/uploadTransport'
 
 /** Discriminated union on status — Sprint 226
@@ -53,10 +54,10 @@ function getActionableError(
     return `Your current plan doesn't include ${toolName}. Upgrade to unlock all diagnostic tools.`
   }
   if (status === 413) {
-    return 'File is too large. Maximum upload size is 50 MB. Try splitting your data into smaller files.'
+    return fileTooLargeMessage()
   }
   if (status === 415) {
-    return 'Unsupported file format. Please upload a CSV, Excel (.xlsx/.xls), TSV, TXT, OFX, QBO, IIF, PDF, or ODS file.'
+    return unsupportedFormatMessage()
   }
   if (status === 422) {
     // Column mapping / validation errors from backend — pass through

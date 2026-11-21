@@ -11,8 +11,9 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useJETesting } from '@/hooks/useJETesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import type { HolidayCalendar } from '@/types/jeTesting'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 // Sprint 772a: BenfordChart pulls recharts (~90 kB gzipped). Defer until
 // the success branch actually renders it so first-load JS for the upload
@@ -29,6 +30,7 @@ const BenfordChart = dynamic(
  * Upload → Process → Results with Benford's Law visualization.
  */
 export default function JournalEntryTestingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const [holidayCalendar, setHolidayCalendar] = useState<HolidayCalendar>({ exclude: [], closed_dates: [] })
   const { status, result, error, runTests, reset } = useJETesting(holidayCalendar)
@@ -133,7 +135,7 @@ export default function JournalEntryTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                    accept={upload.accept}
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -149,7 +151,7 @@ export default function JournalEntryTestingPage() {
                     Drop your GL file here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel — up to 50MB
+                    CSV, TSV, TXT, or Excel — up to {upload.sizeLabel}
                   </p>
                 </div>
 

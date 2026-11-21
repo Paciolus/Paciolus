@@ -28816,6 +28816,76 @@
         "title": "UpdateOrgRequest",
         "type": "object"
       },
+      "UploadCapabilitiesResponse": {
+        "properties": {
+          "bulk_max_files": {
+            "title": "Bulk Max Files",
+            "type": "integer"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/UploadFormatResponse"
+            },
+            "title": "Formats",
+            "type": "array"
+          },
+          "max_file_size_bytes": {
+            "title": "Max File Size Bytes",
+            "type": "integer"
+          },
+          "max_file_size_mb": {
+            "title": "Max File Size Mb",
+            "type": "integer"
+          },
+          "max_rows": {
+            "title": "Max Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_file_size_bytes",
+          "max_file_size_mb",
+          "max_rows",
+          "bulk_max_files",
+          "formats"
+        ],
+        "title": "UploadCapabilitiesResponse",
+        "type": "object"
+      },
+      "UploadFormatResponse": {
+        "properties": {
+          "extensions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Extensions",
+            "type": "array"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "mime_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mime Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "format",
+          "label",
+          "extensions",
+          "mime_types"
+        ],
+        "title": "UploadFormatResponse",
+        "type": "object"
+      },
       "UsageByMemberResponse": {
         "description": "Single entry in the usage-by-member list.",
         "properties": {
@@ -41725,6 +41795,28 @@
         "summary": "Get Bulk Status",
         "tags": [
           "bulk-upload"
+        ]
+      }
+    },
+    "/upload/capabilities": {
+      "get": {
+        "description": "Effective upload limits and enabled file formats (public reference data).",
+        "operationId": "get_upload_capabilities_upload_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadCapabilitiesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Upload Capabilities",
+        "tags": [
+          "reference"
         ]
       }
     },

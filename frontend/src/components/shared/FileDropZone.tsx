@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, type KeyboardEvent } from 'react'
-import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 
 /**
  * Shared file drag-and-drop upload zone.
@@ -42,9 +42,12 @@ export function FileDropZone({
   onFileSelect,
   disabled = false,
   icon,
-  accept = ACCEPTED_FILE_EXTENSIONS_STRING,
+  accept: acceptOverride,
   className = '',
 }: FileDropZoneProps) {
+  // Sprint 890 (15B): the enabled formats come from the backend unless the caller narrows them.
+  const upload = useUploadCapabilities()
+  const accept = acceptOverride ?? upload.accept
   const [isDragging, setIsDragging] = useState(false)
 
   const handleDrop = useCallback((e: React.DragEvent) => {

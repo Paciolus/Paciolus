@@ -13,7 +13,7 @@ import { AuditResultsPanel } from '@/components/trialBalance/AuditResultsPanel'
 import { WorkbookInspector } from '@/components/workbook'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useTrialBalanceAudit } from '@/hooks/useTrialBalanceAudit'
-import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 
 /** Extended preflight report type that includes balance_check (not in base PreFlightReport type) */
 interface PreFlightReportWithBalance {
@@ -26,6 +26,7 @@ interface PreFlightReportWithBalance {
 }
 
 function HomeContent() {
+  const upload = useUploadCapabilities()
   const {
     // Auth
     user, isAuthenticated, token, isVerified,
@@ -129,7 +130,7 @@ function HomeContent() {
               >
                 <input
                   type="file"
-                  accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                  accept={upload.accept}
                   onChange={handleFileSelect}
                   className={`absolute inset-0 w-full h-full opacity-0 ${auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' ? 'cursor-pointer' : 'pointer-events-none'}`}
                   tabIndex={auditStatus === 'idle' && !showPreflight && preflightStatus !== 'loading' ? 0 : -1}
@@ -141,7 +142,7 @@ function HomeContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <p className="text-content-secondary text-lg font-sans mb-2">Drag and drop your trial balance</p>
-                    <p className="text-content-tertiary text-sm font-sans">or click to browse. CSV, TSV, TXT, or Excel &mdash; up to 50MB</p>
+                    <p className="text-content-tertiary text-sm font-sans">or click to browse. CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}</p>
                   </>
                 )}
 

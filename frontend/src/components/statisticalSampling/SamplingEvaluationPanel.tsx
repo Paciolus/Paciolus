@@ -3,9 +3,10 @@
 import { useState, useCallback } from 'react'
 import { UploadHandlingNotice } from '@/components/shared'
 import { useFileUpload } from '@/hooks/useFileUpload'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import type { UploadStatus } from '@/types/shared'
 import type { SamplingEvaluationConfig, SamplingDesignResult } from '@/types/statisticalSampling'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 interface SamplingEvaluationPanelProps {
   status: UploadStatus
@@ -16,6 +17,7 @@ interface SamplingEvaluationPanelProps {
 }
 
 export function SamplingEvaluationPanel({ status, error, designResult, onRun, isVerified }: SamplingEvaluationPanelProps) {
+  const upload = useUploadCapabilities()
   // Pre-fill from design result when available
   const [config, setConfig] = useState<SamplingEvaluationConfig>({
     method: designResult?.method ?? 'mus',
@@ -145,7 +147,7 @@ export function SamplingEvaluationPanel({ status, error, designResult, onRun, is
         <input
           ref={fileInputRef}
           type="file"
-          accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+          accept={upload.accept}
           onChange={handleFileSelect}
           className="hidden"
         />

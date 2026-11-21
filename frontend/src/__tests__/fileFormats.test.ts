@@ -1,142 +1,76 @@
+/**
+ * Sprint 890 (CEO brief 15B): accepted types, labels and limits are derived from the
+ * backend's GET /upload/capabilities response; DEFAULT_UPLOAD_CAPABILITIES mirrors the
+ * backend defaults (100 MiB, 500,000 rows, 5 bulk files, ODS off).
+ */
 import {
-  ACCEPTED_FILE_EXTENSIONS,
-  ACCEPTED_FILE_EXTENSIONS_STRING,
-  ACCEPTED_FORMATS_LABEL,
-  ACCEPTED_MIME_TYPES,
+  DEFAULT_UPLOAD_CAPABILITIES,
+  acceptString,
+  fileTooLargeMessage,
+  formatsLabel,
+  getUploadCapabilities,
   isAcceptedFileType,
+  setUploadCapabilities,
+  sizeLimitLabel,
+  type UploadCapabilities,
 } from '@/utils/fileFormats'
 
-describe('fileFormats constants', () => {
-  it('ACCEPTED_FILE_EXTENSIONS has 11 entries', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS).toEqual(['.csv', '.tsv', '.txt', '.xlsx', '.xls', '.ods', '.docx', '.qbo', '.ofx', '.iif', '.pdf'])
+const makeFile = (name: string, type = ''): File => new File([''], name, { type })
+
+const withOds: UploadCapabilities = {
+  ...DEFAULT_UPLOAD_CAPABILITIES,
+  formats: [
+    ...DEFAULT_UPLOAD_CAPABILITIES.formats,
+    { format: 'ods', label: 'ODS (.ods)', extensions: ['.ods'], mime_types: ['application/vnd.oasis.opendocument.spreadsheet'] },
+  ],
+}
+
+afterEach(() => setUploadCapabilities(DEFAULT_UPLOAD_CAPABILITIES))
+
+describe('defaults mirror the backend', () => {
+  it('100 MB, 500,000 rows, 5 bulk files', () => {
+    expect(DEFAULT_UPLOAD_CAPABILITIES.max_file_size_bytes).toBe(100 * 1024 * 1024)
+    expect(sizeLimitLabel(DEFAULT_UPLOAD_CAPABILITIES)).toBe('100 MB')
+    expect(DEFAULT_UPLOAD_CAPABILITIES.max_rows).toBe(500_000)
+    expect(DEFAULT_UPLOAD_CAPABILITIES.bulk_max_files).toBe(5)
   })
 
-  it('ACCEPTED_FILE_EXTENSIONS_STRING matches HTML accept format', () => {
-    expect(ACCEPTED_FILE_EXTENSIONS_STRING).toBe('.csv,.tsv,.txt,.xlsx,.xls,.ods,.docx,.qbo,.ofx,.iif,.pdf')
+  it('ODS is off by default; DOCX is on', () => {
+    const accept = acceptString(DEFAULT_UPLOAD_CAPABILITIES)
+    expect(accept).not.toContain('.ods')
+    expect(accept).toContain('.docx')
+    expect(accept.split(',')).toHaveLength(10)
+  })
+})
+
+describe('a disabled format', () => {
+  it('is refused by the client-side check', () => {
+    expect(isAcceptedFileType(makeFile('sheet.ods'))).toBe(false)
+    expect(isAcceptedFileType(makeFile('sheet.ods'), withOds)).toBe(true)
   })
 
-  it('ACCEPTED_MIME_TYPES includes 13 types', () => {
-    expect(ACCEPTED_MIME_TYPES).toHaveLength(13)
-    expect(ACCEPTED_MIME_TYPES).toContain('text/csv')
-    expect(ACCEPTED_MIME_TYPES).toContain('text/tab-separated-values')
-    expect(ACCEPTED_MIME_TYPES).toContain('text/plain')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/vnd.ms-excel')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/vnd.oasis.opendocument.spreadsheet')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/x-ofx')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/ofx')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/x-iif')
-    expect(ACCEPTED_MIME_TYPES).toContain('application/pdf')
-  })
-
-  it('ACCEPTED_FORMATS_LABEL is human-readable', () => {
-    expect(ACCEPTED_FORMATS_LABEL).toContain('CSV')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('TSV')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('Text')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('.xlsx')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('ODS')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('Word')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('.docx')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('QBO')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('OFX')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('IIF')
-    expect(ACCEPTED_FORMATS_LABEL).toContain('PDF')
+  it('is left out of the picker and the label until the backend enables it', () => {
+    expect(formatsLabel()).not.toContain('ODS')
+    setUploadCapabilities(withOds)
+    expect(getUploadCapabilities()).toBe(withOds)
+    expect(acceptString()).toContain('.ods')
+    expect(formatsLabel()).toContain('ODS')
   })
 })
 
 describe('isAcceptedFileType', () => {
-  const makeFile = (name: string, type: string): File =>
-    new File([''], name, { type })
-
-  it('accepts CSV by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('data.csv', 'text/csv'))).toBe(true)
+  it('decides by extension, whatever the browser reports as MIME type', () => {
+    expect(isAcceptedFileType(makeFile('data.CSV', ''))).toBe(true)
+    expect(isAcceptedFileType(makeFile('report.xlsx', 'application/octet-stream'))).toBe(true)
+    expect(isAcceptedFileType(makeFile('notes.dat', 'text/plain'))).toBe(false)
+    expect(isAcceptedFileType(makeFile('noextension', 'text/csv'))).toBe(false)
   })
+})
 
-  it('accepts XLSX by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('report.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))).toBe(true)
-  })
-
-  it('accepts CSV by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('data.csv', ''))).toBe(true)
-  })
-
-  it('accepts XLS by extension when MIME is wrong', () => {
-    expect(isAcceptedFileType(makeFile('data.xls', 'application/json'))).toBe(true)
-  })
-
-  it('accepts TSV by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('data.tsv', 'text/tab-separated-values'))).toBe(true)
-  })
-
-  it('accepts TSV by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('data.tsv', ''))).toBe(true)
-  })
-
-  it('accepts TXT by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('data.txt', 'text/plain'))).toBe(true)
-  })
-
-  it('accepts TXT by extension when MIME is wrong', () => {
-    expect(isAcceptedFileType(makeFile('data.txt', 'application/json'))).toBe(true)
-  })
-
-  it('accepts QBO by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('bank.qbo', 'application/x-ofx'))).toBe(true)
-  })
-
-  it('accepts QBO by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('bank.qbo', ''))).toBe(true)
-  })
-
-  it('accepts OFX by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('bank.ofx', 'application/ofx'))).toBe(true)
-  })
-
-  it('accepts OFX by extension when MIME is wrong', () => {
-    expect(isAcceptedFileType(makeFile('bank.ofx', 'application/json'))).toBe(true)
-  })
-
-  it('accepts IIF by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('data.iif', 'application/x-iif'))).toBe(true)
-  })
-
-  it('accepts IIF by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('data.iif', ''))).toBe(true)
-  })
-
-  it('accepts PDF by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('doc.pdf', 'application/pdf'))).toBe(true)
-  })
-
-  it('accepts PDF by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('report.pdf', ''))).toBe(true)
-  })
-
-  it('accepts ODS by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('data.ods', 'application/vnd.oasis.opendocument.spreadsheet'))).toBe(true)
-  })
-
-  it('accepts ODS by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('data.ods', ''))).toBe(true)
-  })
-
-  it('accepts ODS by extension when MIME is wrong', () => {
-    expect(isAcceptedFileType(makeFile('data.ods', 'application/json'))).toBe(true)
-  })
-
-  it('accepts DOCX by MIME type', () => {
-    expect(isAcceptedFileType(makeFile('doc.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'))).toBe(true)
-  })
-
-  it('accepts DOCX by extension when MIME is empty', () => {
-    expect(isAcceptedFileType(makeFile('report.docx', ''))).toBe(true)
-  })
-
-  it('accepts DOCX by extension when MIME is wrong', () => {
-    expect(isAcceptedFileType(makeFile('data.docx', 'application/json'))).toBe(true)
-  })
-
-  it('accepts octet-stream (common browser behavior for CSV)', () => {
-    expect(isAcceptedFileType(makeFile('data.bin', 'application/octet-stream'))).toBe(true)
+describe('messages follow the served limit', () => {
+  it('too-large message names the limit', () => {
+    expect(fileTooLargeMessage()).toContain('100 MB')
+    setUploadCapabilities({ ...DEFAULT_UPLOAD_CAPABILITIES, max_file_size_mb: 25 })
+    expect(fileTooLargeMessage()).toContain('25 MB')
   })
 })

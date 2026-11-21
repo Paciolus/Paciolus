@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useCurrencyRates } from '@/hooks/useCurrencyRates'
-import { ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 
 const COMMON_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY']
 
@@ -21,6 +21,7 @@ interface CurrencyRatePanelProps {
 }
 
 export function CurrencyRatePanel({ defaultOpen = false }: CurrencyRatePanelProps = {}) {
+  const upload = useUploadCapabilities()
   const {
     rateStatus,
     uploadStatus,
@@ -165,7 +166,7 @@ export function CurrencyRatePanel({ defaultOpen = false }: CurrencyRatePanelProp
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                accept={upload.accept}
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0]

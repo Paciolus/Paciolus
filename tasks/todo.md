@@ -918,7 +918,7 @@ offloading items and brief 17B's webhook move.
 date and source beside each figure — not ASC 830 / IAS 21 translation.
 
 - [x] 15A failed saves and exports are reported; preferences ignore late responses; stable onError.
-- [ ] 15B backend serves upload limits and enabled formats; frontend derives pickers, checks, labels, messages.
+- [x] 15B backend serves upload limits and enabled formats; frontend derives pickers, checks, labels, messages.
 - [ ] 15C typed nested TB account models; five promoted routes get response models; wire types checked.
 - [ ] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
 - [ ] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.

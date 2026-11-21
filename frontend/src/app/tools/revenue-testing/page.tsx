@@ -10,9 +10,10 @@ import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { useFileUpload } from '@/hooks/useFileUpload'
 import { useRevenueTesting } from '@/hooks/useRevenueTesting'
 import { useTestingExport } from '@/hooks/useTestingExport'
+import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
 import type { ContractEvidenceLevel } from '@/types/revenueTesting'
-import { isAcceptedFileType, ACCEPTED_FILE_EXTENSIONS_STRING } from '@/utils/fileFormats'
+import { isAcceptedFileType } from '@/utils/fileFormats'
 
 const EVIDENCE_LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   full: { label: 'Full Contract Data', color: 'bg-sage-50 border-sage-200 text-sage-700' },
@@ -58,6 +59,7 @@ function ContractEvidenceBadge({ evidence }: { evidence: ContractEvidenceLevel }
  * for revenue anomaly indicators across structural, statistical, advanced, and contract tiers.
  */
 export default function RevenueTestingPage() {
+  const upload = useUploadCapabilities()
   const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
   const { status, result, error, runTests, reset } = useRevenueTesting()
   useCanvasAccentSync(status)
@@ -142,7 +144,7 @@ export default function RevenueTestingPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept={ACCEPTED_FILE_EXTENSIONS_STRING}
+                    accept={upload.accept}
                     onChange={handleFileSelect}
                     className="hidden"
                   />
@@ -158,7 +160,7 @@ export default function RevenueTestingPage() {
                     Drop your revenue general ledger extract here or click to browse
                   </p>
                   <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel &mdash; up to 50MB
+                    CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}
                   </p>
                 </div>
 
