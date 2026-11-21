@@ -908,7 +908,7 @@ pre-commit gate on every commit.
 - [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load (Sprint 868).
 
 ### Sprint 890: The edges between frontend, API and background work
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-890-edges`, stacked on Sprint 889.
+**Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-890-edges`, stacked on Sprint 889.
 **Priority:** P1. **Source:** CEO brief 15 (review ST-08/05/10/11/03 at `ef5e567`), in the brief's order. **Agents:**
 executor, critic (no new framework), guardian (sessions never shared across threads). 15E absorbs Sprint 821's
 offloading items and brief 17B's webhook move.
@@ -930,6 +930,17 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
       Done: step 3 upload validation (`shared/upload_pipeline.validate_upload_bytes` in the thread pool).
       Done: step 4 file tools (`run_single_file_testing`, `execute_file_tool`: gate, engine + `to_dict`, recording;
       materiality and reference-date lookups) as synchronous units with their own sessions.
+
+**Review (2026-11-20).** Commits: `63ad0d8d` 15A · `126e065b` 15B · `5ec3c339` + `42d7657c` + `61519e66` 15C ·
+`e4fabf44` multi-sheet 500 fix · `9ed9aeb6` + `3b2ad532` 15D · `1047a24b` / `ac696133` / `2c7a1aee` / `e9591f9e` 15E
+steps 1–4 · (record commit). Verification: backend `-m "not slow"` 11,415 passed, 2 xfailed, 1 failed — Sprint 819
+`test_engagement_export_routes_unchanged` (already failing on `main`); frontend Jest via the pre-commit gate on every
+commit; `next build` passes (second run, Next's advisory gate). mypy: no errors in the changed files.
+
+**Open — CEO**
+- [ ] 15D: multi-sheet files are not converted (only the single-sheet engine captures currencies). Wanted?
+- [ ] 15A: other callers of `apiPut`/`apiDownload` (19 files) were not audited for the `ok: false` pattern.
+- [ ] 15C: engine strings are not uniformly formatted (M-3 `"0"`, intercompany copies input decimals).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

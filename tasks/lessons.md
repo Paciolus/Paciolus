@@ -236,4 +236,15 @@
   backend on a fresh SQLite file, so the secret account could never log in — and the repo had no secrets anyway, so
   everything skipped. Seed a fixed account into the throwaway database instead; use a domain the email validator
   accepts (`.test` is rejected).
+- **Moving work off the event loop needs a session per unit, and tests must still see the test database (Sprint 890).**
+  `database.get_session_scope` resolves `get_db` through `app.dependency_overrides`, so a synchronous unit opens its
+  own session in production and the test's transactional session in tests. Never call `rollback()` in such a unit
+  just to discard a probe — under the test override it rolls back the fixtures.
+- **Prove "off the event loop" with a probe, not an AST check (Sprint 890).** Hold the blocking dependency open on a
+  `threading.Event` and require `GET /health/live` to finish meanwhile (`tests/helpers/event_loop_probe.py`). Every
+  step's probe failed before its change.
+- **A static guard that reads one function at a time breaks when work moves into nested helpers (Sprint 890).** The
+  Sprint 790 metering guard now judges a function together with the helpers defined inside it.
+- **Replace a whole function by its boundaries, not by searching for its last statement (Sprint 890).** Twice an edit
+  stopped at an earlier `return Response(...)` and left the old body behind; cut from `def` to the next decorator.
 
