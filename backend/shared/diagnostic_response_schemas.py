@@ -771,6 +771,27 @@ class MaterialityBasisResponse(BaseModel):
     origin: Literal["software_default", "firm_setting", "engagement", "entered", "none"]
 
 
+class TrialBalanceAccountResponse(BaseModel):
+    """One entry of ``all_accounts`` (Sprint 890, 15C): amounts are exact JSON numbers, like the totals."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    account: str
+    debit: MonetaryDecimal
+    credit: MonetaryDecimal
+    type: str
+    type_supplied: bool = False
+
+
+class AccountBalanceResponse(BaseModel):
+    """One value of ``account_balances`` (Sprint 890, 15C)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    debit: MonetaryDecimal
+    credit: MonetaryDecimal
+
+
 class TrialBalanceResponse(BaseModel):
     """Complete trial balance audit response.
 
@@ -808,8 +829,8 @@ class TrialBalanceResponse(BaseModel):
 
     # Sprint 573: Previously undeclared fields returned by pipeline
     data_quality: Optional[dict[str, Any]] = None
-    all_accounts: Optional[list[dict[str, Any]]] = None
-    account_balances: Optional[dict[str, Any]] = None
+    all_accounts: Optional[list[TrialBalanceAccountResponse]] = None
+    account_balances: Optional[dict[str, AccountBalanceResponse]] = None
     classified_accounts: Optional[dict[str, str]] = None
     account_subtypes: Optional[dict[str, str]] = None
 
