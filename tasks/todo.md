@@ -953,6 +953,8 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
       checked against the catalog. Not yet derived (listed for a later pass): workpaper index, `tool-ledger.ts`,
       `app/tools/page.tsx`, `toolbarConfig.ts` (workpaper refs and export capabilities not yet in the registry).
 - [ ] 16B one plan file (`shared/plans.json`): Python loads it, TypeScript generated; first commit changes no value.
+      Done: step 1 — `backend/shared/plans.json` loaded by `price_config.py` and `entitlements.py`; every value
+      compared before/after (`test_sprint_891_plan_file.py` + fixture).
 - [ ] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
 - [ ] 16D unused declarations removed; flags wired or removed; leftovers listed.
 

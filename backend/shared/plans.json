@@ -1,0 +1,124 @@
+{
+  "_comment": "Sprint 891 (CEO brief 16B): the one source for plan prices, seat rates, limits and feature gates. Loaded by billing/price_config.py and shared/entitlements.py; frontend/src/content/plans.generated.ts is written from it by scripts/generate_plans_ts.py. Prices are in cents. 0 for uploads_per_month or max_clients means unlimited; an empty tools_allowed or formats_allowed list means all. Stripe price IDs stay in environment configuration.",
+  "tiers": {
+    "free": {
+      "price_cents": {
+        "annual": 0,
+        "monthly": 0
+      },
+      "entitlements": {
+        "activity_logs": false,
+        "admin_dashboard": false,
+        "bulk_upload": false,
+        "csv_export": false,
+        "custom_branding": false,
+        "excel_export": false,
+        "export_sharing": false,
+        "formats_allowed": [
+          "csv",
+          "tsv",
+          "txt",
+          "xls",
+          "xlsx"
+        ],
+        "max_clients": 3,
+        "max_team_seats": 0,
+        "pdf_export": false,
+        "priority_support": false,
+        "seats_included": 1,
+        "share_ttl_hours": 0,
+        "tools_allowed": [
+          "flux_analysis",
+          "trial_balance"
+        ],
+        "uploads_per_month": 10,
+        "workspace": false
+      }
+    },
+    "solo": {
+      "price_cents": {
+        "annual": 100000,
+        "monthly": 10000
+      },
+      "entitlements": {
+        "activity_logs": false,
+        "admin_dashboard": false,
+        "bulk_upload": false,
+        "csv_export": true,
+        "custom_branding": false,
+        "excel_export": true,
+        "export_sharing": false,
+        "formats_allowed": [],
+        "max_clients": 0,
+        "max_team_seats": 0,
+        "pdf_export": true,
+        "priority_support": false,
+        "seats_included": 1,
+        "share_ttl_hours": 0,
+        "tools_allowed": [],
+        "uploads_per_month": 100,
+        "workspace": true
+      }
+    },
+    "professional": {
+      "price_cents": {
+        "annual": 500000,
+        "monthly": 50000
+      },
+      "entitlements": {
+        "activity_logs": true,
+        "admin_dashboard": true,
+        "bulk_upload": false,
+        "csv_export": true,
+        "custom_branding": false,
+        "excel_export": true,
+        "export_sharing": true,
+        "formats_allowed": [],
+        "max_clients": 0,
+        "max_team_seats": 20,
+        "pdf_export": true,
+        "priority_support": true,
+        "seats_included": 7,
+        "share_ttl_hours": 24,
+        "tools_allowed": [],
+        "uploads_per_month": 500,
+        "workspace": true
+      }
+    },
+    "enterprise": {
+      "price_cents": {
+        "annual": 1000000,
+        "monthly": 100000
+      },
+      "entitlements": {
+        "activity_logs": true,
+        "admin_dashboard": true,
+        "bulk_upload": true,
+        "csv_export": true,
+        "custom_branding": true,
+        "excel_export": true,
+        "export_sharing": true,
+        "formats_allowed": [],
+        "max_clients": 0,
+        "max_team_seats": 100,
+        "pdf_export": true,
+        "priority_support": true,
+        "seats_included": 20,
+        "share_ttl_hours": 48,
+        "tools_allowed": [],
+        "uploads_per_month": 0,
+        "workspace": true
+      }
+    }
+  },
+  "seat_price_cents": {
+    "professional": {
+      "annual": 65000,
+      "monthly": 6500
+    },
+    "enterprise": {
+      "annual": 45000,
+      "monthly": 4500
+    }
+  }
+}

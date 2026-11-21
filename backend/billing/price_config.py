@@ -14,14 +14,12 @@ Seat pricing:
 - Enterprise: $45/mo, $450/yr per additional seat (max 100 total)
 """
 
+from shared.entitlements import PLANS
+
 # Price table: {tier: {interval: price_cents}}
 # Annual prices embed ~17% discount vs 12x monthly.
-PRICE_TABLE: dict[str, dict[str, int]] = {
-    "free": {"monthly": 0, "annual": 0},
-    "solo": {"monthly": 10000, "annual": 100000},  # $100/mo, $1,000/yr
-    "professional": {"monthly": 50000, "annual": 500000},  # $500/mo, $5,000/yr
-    "enterprise": {"monthly": 100000, "annual": 1000000},  # $1,000/mo, $10,000/yr
-}
+# Sprint 891 (16B): read from shared/plans.json, the one plan file.
+PRICE_TABLE: dict[str, dict[str, int]] = {tier: dict(plan["price_cents"]) for tier, plan in PLANS["tiers"].items()}
 
 # Stripe Price IDs — loaded from env vars at runtime.
 _PAID_TIERS = ("solo", "professional", "enterprise")
@@ -49,12 +47,12 @@ def _load_stripe_price_ids() -> dict[str, dict[str, str]]:
 # ---------------------------------------------------------------------------
 
 # Professional tier: $65/mo, $650/yr per additional seat
-PROFESSIONAL_SEAT_PRICE: dict[str, int] = {"monthly": 6500, "annual": 65000}
-MAX_SELF_SERVE_SEATS_PROFESSIONAL = 20
+PROFESSIONAL_SEAT_PRICE: dict[str, int] = dict(PLANS["seat_price_cents"]["professional"])
+MAX_SELF_SERVE_SEATS_PROFESSIONAL: int = PLANS["tiers"]["professional"]["entitlements"]["max_team_seats"]
 
 # Enterprise tier: $45/mo, $450/yr per additional seat
-ENTERPRISE_SEAT_PRICE: dict[str, int] = {"monthly": 4500, "annual": 45000}
-MAX_SELF_SERVE_SEATS_ENTERPRISE = 100
+ENTERPRISE_SEAT_PRICE: dict[str, int] = dict(PLANS["seat_price_cents"]["enterprise"])
+MAX_SELF_SERVE_SEATS_ENTERPRISE: int = PLANS["tiers"]["enterprise"]["entitlements"]["max_team_seats"]
 
 
 def get_max_self_serve_seats(tier: str) -> int:

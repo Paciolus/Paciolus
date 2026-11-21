@@ -16,7 +16,9 @@ Used by entitlement_checks.py dependency functions to gate access.
 # and marketing surfaces. If tools are added or removed, update this comment and all
 # references identified in docs/archive/COHESION_REMEDIATION.md before merging.
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from models import UserTier
 
@@ -46,99 +48,22 @@ class TierEntitlements:
     share_ttl_hours: int
 
 
-# Tool route names matching ToolName enum values
-_FREE_TOOLS = frozenset(
-    {
-        "trial_balance",
-        "flux_analysis",
-    }
-)
+# Sprint 891 (CEO brief 16B): limits and gates come from shared/plans.json, the one plan file
+# (prices, seat rates and seat ceilings live there too). Lists become frozensets; an empty set
+# still means "all".
+_PLANS_PATH = Path(__file__).with_name("plans.json")
+PLANS: dict = json.loads(_PLANS_PATH.read_text(encoding="utf-8"))
 
-_ALL_TOOLS: frozenset[str] = frozenset()  # Empty = all tools allowed
 
-# Per-tier format access
-_FREE_FORMATS = frozenset({"csv", "xlsx", "xls", "tsv", "txt"})
-
-_ALL_FORMATS: frozenset[str] = frozenset()  # Empty = all formats allowed
+def _entitlements_from(raw: dict) -> TierEntitlements:
+    values = dict(raw)
+    values["tools_allowed"] = frozenset(values["tools_allowed"])
+    values["formats_allowed"] = frozenset(values["formats_allowed"])
+    return TierEntitlements(**values)
 
 
 TIER_ENTITLEMENTS: dict[UserTier, TierEntitlements] = {
-    UserTier.FREE: TierEntitlements(
-        uploads_per_month=10,
-        max_clients=3,
-        tools_allowed=_FREE_TOOLS,
-        formats_allowed=_FREE_FORMATS,
-        max_team_seats=0,
-        seats_included=1,
-        pdf_export=False,  # Free = view only, no exports
-        excel_export=False,
-        csv_export=False,
-        workspace=False,
-        priority_support=False,
-        export_sharing=False,
-        activity_logs=False,
-        admin_dashboard=False,
-        bulk_upload=False,
-        custom_branding=False,
-        share_ttl_hours=0,
-    ),
-    UserTier.SOLO: TierEntitlements(
-        uploads_per_month=100,
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,  # All 18 tools
-        formats_allowed=_ALL_FORMATS,  # All formats
-        max_team_seats=0,  # No team features
-        seats_included=1,
-        pdf_export=True,
-        excel_export=True,
-        csv_export=True,
-        workspace=True,
-        priority_support=False,
-        export_sharing=False,
-        activity_logs=False,
-        admin_dashboard=False,
-        bulk_upload=False,
-        custom_branding=False,
-        share_ttl_hours=0,
-    ),
-    UserTier.PROFESSIONAL: TierEntitlements(
-        uploads_per_month=500,
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,
-        formats_allowed=_ALL_FORMATS,
-        max_team_seats=20,
-        seats_included=7,
-        pdf_export=True,
-        excel_export=True,
-        csv_export=True,
-        workspace=True,
-        priority_support=True,
-        export_sharing=True,
-        activity_logs=True,
-        admin_dashboard=True,
-        bulk_upload=False,
-        custom_branding=False,
-        share_ttl_hours=24,
-    ),
-    UserTier.ENTERPRISE: TierEntitlements(
-        uploads_per_month=0,  # unlimited
-        max_clients=0,  # unlimited
-        tools_allowed=_ALL_TOOLS,
-        formats_allowed=_ALL_FORMATS,
-        max_team_seats=100,
-        seats_included=20,
-        pdf_export=True,
-        excel_export=True,
-        csv_export=True,
-        workspace=True,
-        priority_support=True,
-        export_sharing=True,
-        activity_logs=True,
-        admin_dashboard=True,
-        bulk_upload=True,
-        custom_branding=True,
-        share_ttl_hours=48,
-    ),
+    UserTier(tier): _entitlements_from(plan["entitlements"]) for tier, plan in PLANS["tiers"].items()
 }
 
 
