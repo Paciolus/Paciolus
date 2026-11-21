@@ -872,7 +872,28 @@ allowance is computed and never presents the provision as complete. (Closes Spri
 - [x] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
 - [x] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.
 - [ ] 14G PostgreSQL job runs `alembic upgrade head`; enum round-trip; schema parity; upgrade from existing rows.
-- [ ] 14H mapping E2E in PR CI; financial-correctness slow tests before merge; workflow check.
+      **BLOCKED — CEO go-ahead needed (brief: stop on a real mismatch).** Probed on an embedded PostgreSQL 16
+      (pgserver, scratch only): `alembic upgrade head` on an empty database has never completed. Each failure was
+      patched in a scratch copy only (reverted) to find the next:
+      (1) `a7b8c9d0e1f2` adds `clients.reporting_framework` / `entity_type` without creating the enum types
+          (`type "reportingframework" does not exist`);
+      (2) `d9e0f1a2b3c4` adds enum value `solo` and uses it in the same transaction (`UnsafeNewEnumValueUsage`; the
+          chain also runs as one transaction, so `c4d5e6f7a8b9`'s `starter` hits the same rule), and adds `solo` to
+          `usertier` but not `subscription_tier`;
+      (3) `c1d2e3f4a5b6` writes `'enterprise'`, a label the rebuilt `usertier` no longer has.
+      Production was built by `create_all` and stamped, so it is unaffected today; a disaster-recovery rebuild from
+      migrations is not possible. Plus the known label drift (ORM writes `FREE`, migrations create `free`). Proposed:
+      a squashed baseline migration generated from the models (labels decided once), the old chain kept for history,
+      then the round-trip and parity tests in the PostgreSQL job.
+- [x] 14H mapping E2E in PR CI; financial-correctness slow tests before merge; workflow check.
+      Both specs now run on every PR against a local backend seeded with a fixed account
+      (`scripts/seed_e2e_user.py`; no secrets — the repo has none, so both specs used to skip). Slow tests: none of
+      the 7 checks financial results (all timing/memory), so nothing needed moving before merge.
+      **Found (engineering):** run locally (Chromium, `next start` + uvicorn on SQLite), login and export pass but the
+      three upload tests fail — after a full-page navigation the session is gone (`/auth/refresh` 401, no 200s),
+      though the same refresh succeeds from curl. Same symptom as Sprint 868; investigate there. The job stays
+      advisory, so this does not block merges. The `.test` email domain is rejected by the validator — the CI
+      account uses `example.com`.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
