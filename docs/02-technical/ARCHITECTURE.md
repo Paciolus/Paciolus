@@ -10,12 +10,12 @@
 
 ## Executive Summary
 
-Paciolus is a modern, cloud-native audit intelligence platform built on a **Zero-Storage architecture** with an 18-tool diagnostic suite. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
+Paciolus is a cloud-hosted audit intelligence platform with an 18-tool diagnostic suite (`backend/tools_registry.py`). Uploaded files are processed in memory and not kept after analysis; it saves the account, client list, analysis summaries and anything entered in an engagement. This document provides a comprehensive technical overview of the system design, technology stack, and architectural patterns.
 
 **Current Version:** 2.1.0 (Phase LXIX Complete)
 
 **Key Architectural Decisions:**
-- ✅ **Zero-Storage Backend** — Raw financial data processed in-memory, never persisted; aggregate metadata retained
+- ✅ **Uploads not kept** — uploaded files are processed in memory and not kept after analysis; summaries and engagement entries are saved (`docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md`)
 - ✅ **Serverless Frontend** — Next.js on Vercel CDN for global performance
 - ✅ **Stateless API** — FastAPI with JWT authentication, horizontally scalable
 - ✅ **Multi-Tenant Database** — PostgreSQL with row-level user isolation
@@ -101,13 +101,13 @@ The term "Diagnostic Workspace" is retired. Use "Workspace" throughout.
 **Key Characteristics:**
 - **3-tier architecture**: Frontend (Next.js) → API (FastAPI) → Database (PostgreSQL)
 - **Stateless backend**: No session storage on server (JWT-based auth)
-- **Zero-Storage processing**: Raw financial data exists only in ephemeral memory; aggregate metadata persisted
+- **Upload processing**: uploaded files are processed in memory and not kept after analysis; summaries and engagement entries are saved
 
 ### 1.2 Design Principles
 
 | Principle | Implementation | Benefit |
 |-----------|---------------|---------|
-| **Zero-Storage** | Raw financial data in BytesIO buffers, never disk; aggregate metadata persisted | Security, privacy, compliance |
+| **Uploads not kept** | Uploaded files processed in memory and not kept after analysis; summaries and engagement entries saved | Security, privacy |
 | **Stateless** | JWT authentication, no server sessions | Horizontal scalability |
 | **API-First** | Backend as REST API, frontend as consumer | Flexibility, future mobile apps |
 | **Multi-Tenant** | User-level data isolation (PostgreSQL RLS equivalent) | Security, SaaS-ready |
@@ -123,7 +123,7 @@ The term "Diagnostic Workspace" is retired. Use "Workspace" throughout.
 |------------|---------|---------|---------|
 | **Next.js** | 16.1.7 (Turbopack) | React framework, SSG/SSR | MIT |
 | **React** | 19.x | UI library | MIT |
-| **TypeScript** | 5.9.x | Type safety | Apache 2.0 |
+| **TypeScript** | 6.x (`frontend/package.json`) | Type safety | Apache 2.0 |
 | **Tailwind CSS** | 4.2.x | Utility-first CSS | MIT |
 | **framer-motion** | 12.x | Animations | MIT |
 | **Lucide React** | (icons) | Icon library | ISC |
@@ -220,7 +220,7 @@ frontend/
 │   │   ├── bankRec/            # Match table, summary cards, bridge
 │   │   └── ...
 │   │
-│   ├── context/                # React Context providers
+│   ├── contexts/               # React Context providers
 │   │   ├── AuthContext.tsx     # Authentication state
 │   │   └── MappingContext.tsx  # Column mapping state
 │   │
@@ -322,34 +322,12 @@ const MappingContext = createContext<MappingContextType>({
 
 ### 3.4 API Integration
 
-**Centralized API client:**
-
-```typescript
-// lib/api.ts
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-export async function apiRequest<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
-  const token = sessionStorage.getItem('token');
-  
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...options?.headers,
-    },
-  });
-  
-  if (!response.ok) {
-    throw new Error(`API error: ${response.statusText}`);
-  }
-  
-  return response.json();
-}
-```
+**Centralized API client:** `frontend/src/utils/apiClient.ts` (`apiGet`, `apiPost`, `apiPut`, `apiPatch`,
+`apiDelete`) over `utils/transport.ts`. Requests go with `credentials: 'include'`: the access and refresh tokens
+are HttpOnly cookies (never `sessionStorage`), and the CSRF token is sent as a header. Downloads use
+`utils/downloadAdapter.ts` (`apiDownload`); uploads `utils/uploadTransport.ts`. These return `{ ok: false }` on
+failure rather than throwing — check `ok`. Components do not call `fetch` directly. (Sprint 891: this section
+showed a `lib/api.ts` with `sessionStorage` and bare `fetch`, which no longer exists.)
 
 **Custom hooks** abstract API calls:
 
@@ -377,7 +355,7 @@ export function useClients() {
 
 ```
 backend/
-├── main.py                       # FastAPI app, middleware, router registration (~63 lines)
+├── main.py                       # FastAPI app, middleware, router registration
 ├── config.py                     # Environment configuration
 ├── database.py                   # SQLAlchemy engine, session
 ├── models.py                     # SQLAlchemy models (User, Client, etc.)
@@ -412,7 +390,7 @@ backend/
 ├── security_utils.py             # File processing utilities
 ├── secrets_manager.py            # Production credential management
 │
-├── routes/                       # 30 APIRouter modules
+├── routes/                       # APIRouter modules, one per domain
 │   ├── __init__.py               # Router registry
 │   ├── health.py                 # Health checks
 │   ├── auth_routes.py            # Auth endpoints (login, register, refresh, verify, etc.)
@@ -506,13 +484,13 @@ backend/
 | `/settings` | GET/PUT | Yes | User settings |
 | `/benchmarks/*` | GET | No | Industry benchmarks (public) |
 
-**30 APIRouter modules** organized by domain. See `backend/routes/` for details.
+**APIRouter modules** organized by domain (registered in `backend/routes/__init__.py`). See `backend/routes/`.
 
 **OpenAPI documentation** auto-generated at `/docs` (Swagger UI).
 
-### 4.3 Zero-Storage Processing
+### 4.3 Upload Processing
 
-**Core principle:** Raw financial data processed in-memory, never written to disk. Aggregate metadata (category totals, ratios) is persisted to the database.
+**Core principle:** uploaded files are processed in memory and not kept after analysis. Summaries (category totals, ratios, row counts) and engagement entries are saved. What exactly is kept, and for how long: `docs/04-compliance/DATA_HANDLING_ARCHITECTURE.md`.
 
 ```python
 # audit_engine.py
@@ -725,7 +703,7 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
 ```
 
 **Total time:** 3-5 seconds (typical)  
-**Raw financial data persistence:** 0 seconds (Zero-Storage); aggregate metadata persisted
+**Uploaded file kept after the response:** no (a previewed file may be held in memory for reuse; see the Data Handling document)
 
 ---
 
@@ -745,13 +723,13 @@ CREATE INDEX idx_diagnostic_summaries_user_id ON diagnostic_summaries(user_id);
 | **SQL Injection** | ORM parameterization | SQLAlchemy (no raw SQL) |
 | **XSS** | React auto-escaping | No dangerouslySetInnerHTML |
 | **CSRF** | Stateless HMAC tokens | Separate CSRF_SECRET_KEY, exempt policy for bearer-auth paths |
-| **Data** | Zero-Storage | Raw financial data never persisted; aggregate metadata only |
+| **Data** | Uploads not kept | Uploaded files not kept after analysis; summaries and engagement entries saved |
 
 ### 6.2 Threat Model
 
 **Primary threats:**
 - **Data breach** (financial data exposure)
-  **Mitigation:** Zero-Storage architecture — no raw financial data exists to breach (aggregate metadata only)
+  **Mitigation:** uploaded files are not kept after analysis, so they are not at rest to leak; the summaries, engagement entries and backups that are kept are client financial content, protected as the Security Policy describes
   
 - **Credential theft** (user account compromise)  
   **Mitigation:** bcrypt hashing, JWT short expiration, HTTPS only
@@ -972,7 +950,7 @@ jobs:
 
 | Term | Definition |
 |------|------------|
-| **Zero-Storage** | Architecture where raw financial data is never persisted; aggregate metadata may be retained |
+| **Zero-Storage** | Retired term (Sprint 841): it read as a promise about all data. See the approved statement in `frontend/src/content/storage-statement.ts` |
 | **SSG** | Static Site Generation (Next.js pre-renders pages at build time) |
 | **SSR** | Server-Side Rendering (pages rendered on-demand) |
 | **CSR** | Client-Side Rendering (browser renders pages) |

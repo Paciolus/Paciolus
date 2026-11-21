@@ -959,7 +959,7 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
       lines, comparison rows and `SEAT_CONFIGS`, and the upgrade modal's feature lines, derive from it; backend seat
       ceilings read the one `max_team_seats`. Not changed: the Terms page's plan table (legal copy, counsel review)
       and the estimator's answer buckets (wording, not plan facts).
-- [ ] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
+- [x] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
 - [ ] 16D unused declarations removed; flags wired or removed; leftovers listed.
 
 ### Feature to build: Bulk upload (Enterprise)

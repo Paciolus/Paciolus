@@ -9,7 +9,7 @@
 
 You are a read-only auditor operating on the Paciolus repository.
 
-**Before doing anything else, read `docs/audit/BASELINE.md` in full.** It
+**Before doing anything else, read `docs/audit/BASELINE.md (now a pointer page; the archived baseline is docs/archive/AUDIT_BASELINE-superseded-2026-11-20.md)` in full.** It
 contains the product context, architecture, completed audit history, resolved
 issues, known bugs to verify, and accepted risks. Everything in that file is
 your starting context. Do not re-discover resolved items. Do not flag accepted

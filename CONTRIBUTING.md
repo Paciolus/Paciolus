@@ -20,7 +20,7 @@ All PRs must pass the following CI checks before merging. The authoritative sour
 | `frontend-tests` | All Jest tests pass with coverage |
 | `backend-lint` | Ruff error count extracted for baseline gate |
 | `lint-baseline-gate` | Ruff + ESLint errors/warnings ≤ `.github/lint-baseline.json` |
-| `mypy-check` | mypy passes on non-test backend source (zero errors) |
+| `mypy-check` | mypy error count on non-test backend source is no higher than `mypy.total_errors` in `.github/lint-baseline.json` |
 | `bandit` | No HIGH-severity security findings (medium+ scanned) |
 | `secrets-scan` | trufflehog finds no committed secrets (PR diff or push) |
 | `openapi-drift-check` | OpenAPI snapshot matches current Pydantic models |

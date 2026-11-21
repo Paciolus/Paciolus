@@ -159,7 +159,7 @@
   {
     "id": "ap-payment-testing",
     "category": "audit-report",
-    "description": "A user can run a 13-test AP payment testing battery for duplicate detection, fraud indicators, and vendor analysis (Tool 4)",
+    "description": "A user can run a 14-test AP payment testing battery for duplicate detection, fraud indicators, and vendor analysis (Tool 4)",
     "verification_steps": [
       "POST /audit/ap-payments with AP payment register",
       "Verify 13 test results with flagged payments",
@@ -185,7 +185,7 @@
   {
     "id": "payroll-testing",
     "category": "audit-report",
-    "description": "A user can run an 11-test payroll testing battery for employee and compensation analysis (Tool 6)",
+    "description": "A user can run a 13-test payroll testing battery for employee and compensation analysis (Tool 6)",
     "verification_steps": [
       "POST /audit/payroll with payroll register",
       "Verify 11 test results returned",
@@ -211,7 +211,7 @@
   {
     "id": "revenue-testing",
     "category": "audit-report",
-    "description": "A user can run a 16-test revenue testing battery with ASC 606/IFRS 15 contract analysis (Tool 8)",
+    "description": "A user can run an 18-test revenue testing battery with ASC 606/IFRS 15 contract analysis (Tool 8)",
     "verification_steps": [
       "POST /audit/revenue with revenue data",
       "Verify 16 test results returned",
@@ -224,7 +224,7 @@
   {
     "id": "ar-aging",
     "category": "audit-report",
-    "description": "A user can run an 11-test AR aging analysis for receivables risk assessment (Tool 9)",
+    "description": "A user can run a 12-test AR aging analysis for receivables risk assessment (Tool 9)",
     "verification_steps": [
       "POST /audit/ar-aging with AR data",
       "Verify 11 test results and aging buckets",
@@ -237,7 +237,7 @@
   {
     "id": "fixed-asset-testing",
     "category": "audit-report",
-    "description": "A user can run a 9-test fixed asset testing battery with lease indicator (FA-10) (Tool 10)",
+    "description": "A user can run an 11-test fixed asset testing battery with lease indicator (FA-10) (Tool 10)",
     "verification_steps": [
       "POST /audit/fixed-assets with asset register",
       "Verify 9 test results returned",
@@ -250,7 +250,7 @@
   {
     "id": "inventory-testing",
     "category": "audit-report",
-    "description": "A user can run a 9-test inventory testing battery for valuation and obsolescence analysis (Tool 11)",
+    "description": "A user can run a 10-test inventory testing battery for valuation and obsolescence analysis (Tool 11)",
     "verification_steps": [
       "POST /audit/inventory with inventory data",
       "Verify 9 test results returned",
@@ -311,8 +311,8 @@
       "POST /audit/w2-reconciliation with statutory_limits.ss_wage_base set and verify the ss_wage_base_exceeded finding changes accordingly"
     ],
     "status": "partial",
-    "last_verified": "2026-10-21",
-    "notes": "PARTIAL (Sprint 793b): the engine holds one fixed set of statutory limits — SS wage base, HSA self-only/family, 401(k) and SIMPLE elective deferrals — and applies them to any tax_year from 2000 to 2099 without selecting by year. The wage comparisons and the 941 reconciliation are sound; the cap and over-limit findings are only as current as the configured constants. Sprint 793a DID close the override half: the route now accepts a statutory_limits object covering all eleven limits, so a practitioner can supply the correct figures for their filing year per request. What remains for 793b is the year-keyed table and practitioner-confirmed defaults. CSV export only."
+    "last_verified": "2026-11-20",
+    "notes": "PARTIAL: statutory limits are keyed by tax year (STATUTORY_LIMITS_BY_YEAR; 2025 tabulated) and statutory_limits_for_year() refuses a year with no table rather than substituting another year's figures. A practitioner can supply the figures for any year per request (the statutory_limits override, Sprint 793a). Still open: the 2026 table, awaiting practitioner-confirmed figures (Sprint 793b; annual sign-off in Sprint 860). Catch-up checks run only when their figure is supplied; the result's checks_not_run says which did not. CSV export."
   },
   {
     "id": "form-1099-preparation",
@@ -325,8 +325,8 @@
       "POST /audit/form-1099/export.csv returns a CSV export"
     ],
     "status": "partial",
-    "last_verified": "2026-10-21",
-    "notes": "PARTIAL (Sprint 793): the reporting thresholds are static ($600 NEC / $600 MISC / $10 INT) and applied to any tax_year without varying by year or sub-category, so for a year in which a threshold has moved the candidate list errs in both directions. Vendor aggregation, the corporate safe harbour, the processor exemption and the data-quality report are sound. CSV export carries candidates only — not the data-quality report or the W-9 collection list."
+    "last_verified": "2026-11-20",
+    "notes": "PARTIAL: reporting thresholds are keyed by table year (THRESHOLDS_BY_TABLE_YEAR: 2025 and 2026; thresholds_for_year()). 2026 applies the $2,000 1099-NEC / 1099-MISC threshold with a notice that it rests on secondary sources; attorney gross proceeds (box 10) are tested at $600 pending confirmation; years after the latest table use it with a notice. Still open: practitioner confirmation of the 2026 figures (Sprint 860 annual sign-off). Vendor aggregation, the corporate safe harbour, the processor exemption and the data-quality report are sound. CSV export."
   },
   {
     "id": "book-to-tax-reconciliation",
