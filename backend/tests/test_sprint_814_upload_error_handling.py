@@ -71,7 +71,7 @@ async def test_testing_route_maps_arithmetic_error_to_400_at_warning(caplog):
                 column_mapping=None,
                 engagement_id=None,
                 current_user=MagicMock(id=1),
-                db=MagicMock(),
+                session_scope=_scope_of(MagicMock()),
                 background_tasks=MagicMock(),
                 tool_name="ap_testing",
                 mapping_key="ap_testing",
@@ -230,3 +230,14 @@ async def test_every_float_form_field_on_both_sampling_routes_rejects_non_finite
         )
     assert response.status_code == 422, response.text
     assert field_name in response.text, response.text
+
+
+def _scope_of(db):
+    """Sprint 890 (15E): the helpers take a session factory, not a session."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def scope():
+        yield db
+
+    return scope

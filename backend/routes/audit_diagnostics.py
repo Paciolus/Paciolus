@@ -2,14 +2,14 @@
 Paciolus API — Audit Diagnostic Routes (Preflight, Population, Expense, Accrual)
 """
 
+import asyncio
 import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
-from sqlalchemy.orm import Session
 
 from auth import require_verified_user
-from database import get_db
+from database import SessionScope, call_in_session, get_session_scope
 from models import User
 from security_utils import log_secure_operation
 from services.audit.file_tool_scaffold import execute_file_tool
@@ -36,7 +36,7 @@ async def preflight_check(
     file: UploadFile = File(...),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> PreFlightReportResponse:
     """Run a lightweight data quality pre-flight assessment on a trial balance file."""
     log_secure_operation("preflight_upload", f"Pre-flight check for file: {file.filename}")
@@ -60,7 +60,7 @@ async def preflight_check(
         "preflight",
         _analyze,
         background_tasks,
-        db,
+        session_scope,
         engagement_id,
         current_user.id,
         "preflight_error",
@@ -76,7 +76,7 @@ async def population_profile_check(
     file: UploadFile = File(...),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> PopulationProfileResponse:
     """Compute population profile statistics for a trial balance file."""
     log_secure_operation("population_profile_upload", f"Population profile for file: {file.filename}")
@@ -95,7 +95,7 @@ async def population_profile_check(
         "population_profile",
         _analyze,
         background_tasks,
-        db,
+        session_scope,
         engagement_id,
         current_user.id,
         "population_profile_error",
@@ -118,15 +118,12 @@ async def expense_category_analytics(
     prior_revenue: Optional[float] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> ExpenseCategoryReportResponse:
     """Compute expense category analytical procedures for a trial balance file."""
     # Sprint 310: Resolve materiality from engagement cascade if not explicitly set
-    materiality_threshold, _exp_mat_source = resolve_materiality(
-        materiality_threshold,
-        engagement_id,
-        current_user.id,
-        db,
+    materiality_threshold, _exp_mat_source = await asyncio.to_thread(
+        call_in_session, session_scope, resolve_materiality, materiality_threshold, engagement_id, current_user.id
     )
     log_secure_operation("expense_category_upload", f"Expense category analytics for file: {file.filename}")
 
@@ -153,7 +150,7 @@ async def expense_category_analytics(
         "expense_category",
         _analyze,
         background_tasks,
-        db,
+        session_scope,
         engagement_id,
         current_user.id,
         "expense_category_error",
@@ -175,7 +172,7 @@ async def accrual_completeness_check(
     total_revenue: Optional[float] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> AccrualCompletenessReportResponse:
     """Compute accrual completeness estimator for a trial balance file."""
     log_secure_operation("accrual_completeness_upload", f"Accrual completeness check for file: {file.filename}")
@@ -202,7 +199,7 @@ async def accrual_completeness_check(
         "accrual_completeness",
         _analyze,
         background_tasks,
-        db,
+        session_scope,
         engagement_id,
         current_user.id,
         "accrual_completeness_error",

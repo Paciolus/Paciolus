@@ -147,7 +147,7 @@ class TestFileToolScaffoldArithmeticError:
                     tool_name="preflight",
                     analyze_fn=_raise_invalid_op,
                     background_tasks=_FakeBackgroundTasks(),  # type: ignore[arg-type]
-                    db=_FakeDB(),  # type: ignore[arg-type]
+                    session_scope=_scope_of(_FakeDB()),  # type: ignore[arg-type]
                     engagement_id=None,
                     user_id=1,
                     error_context="preflight_error",
@@ -176,7 +176,7 @@ class TestFileToolScaffoldArithmeticError:
                     tool_name="population_profile",
                     analyze_fn=_raise_value_error,
                     background_tasks=_FakeBackgroundTasks(),  # type: ignore[arg-type]
-                    db=_FakeDB(),  # type: ignore[arg-type]
+                    session_scope=_scope_of(_FakeDB()),  # type: ignore[arg-type]
                     engagement_id=None,
                     user_id=1,
                     error_context="population_profile_error",
@@ -200,7 +200,7 @@ class TestFileToolScaffoldArithmeticError:
                     tool_name="preflight",
                     analyze_fn=_raise_runtime,
                     background_tasks=_FakeBackgroundTasks(),  # type: ignore[arg-type]
-                    db=_FakeDB(),  # type: ignore[arg-type]
+                    session_scope=_scope_of(_FakeDB()),  # type: ignore[arg-type]
                     engagement_id=None,
                     user_id=1,
                     error_context="preflight_error",
@@ -324,3 +324,14 @@ class TestSendGridHTTPErrorCatch:
         assert "unknown" not in bg_msg, (
             f"warning must not fall back to 'unknown' when result.message is set, got: {bg_msg!r}"
         )
+
+
+def _scope_of(db):
+    """Sprint 890 (15E): the helpers take a session factory, not a session."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def scope():
+        yield db
+
+    return scope

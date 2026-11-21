@@ -5,10 +5,9 @@ Paciolus API — Payroll Testing Routes
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
-from sqlalchemy.orm import Session
 
 from auth import require_verified_user
-from database import get_db
+from database import SessionScope, get_session_scope
 from models import User
 from payroll_testing_engine import run_payroll_testing
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -28,7 +27,7 @@ async def audit_payroll_testing(
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, object]:
     """Run automated payroll & employee testing on a payroll register."""
     # Sprint 836: the user's saved thresholds, reported back on the result.
@@ -38,7 +37,7 @@ async def audit_payroll_testing(
         column_mapping=column_mapping,
         engagement_id=engagement_id,
         current_user=current_user,
-        db=db,
+        session_scope=session_scope,
         background_tasks=background_tasks,
         tool_name="payroll_testing",
         mapping_key="payroll_testing",

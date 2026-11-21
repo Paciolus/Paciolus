@@ -2,13 +2,13 @@
 Paciolus API — Inventory Testing Routes (Sprint 117)
 """
 
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
-from sqlalchemy.orm import Session
 
 from auth import require_verified_user
-from database import get_db
+from database import SessionScope, call_in_session, get_session_scope
 from inventory_testing_engine import InventoryTestingConfig, run_inventory_testing
 from models import User
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -29,7 +29,7 @@ async def audit_inventory(
     engagement_id: Optional[int] = Form(default=None),
     as_of_date: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, object]:
     """Run automated inventory register testing.
 
@@ -37,7 +37,9 @@ async def audit_inventory(
     ISA 540: Auditing accounting estimates (NRV indicators).
     """
     # Sprint 816: measure elapsed time to period end, not to the processing date.
-    reference_date, reference_date_source = resolve_reference_date(as_of_date, engagement_id, current_user.id, db)
+    reference_date, reference_date_source = await asyncio.to_thread(
+        call_in_session, session_scope, resolve_reference_date, as_of_date, engagement_id, current_user.id
+    )
     config = InventoryTestingConfig(reference_date=reference_date, reference_date_source=reference_date_source)
 
     return await run_single_file_testing(
@@ -45,7 +47,7 @@ async def audit_inventory(
         column_mapping=column_mapping,
         engagement_id=engagement_id,
         current_user=current_user,
-        db=db,
+        session_scope=session_scope,
         background_tasks=background_tasks,
         tool_name="inventory_testing",
         mapping_key="inventory_testing",

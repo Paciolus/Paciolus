@@ -5,11 +5,10 @@ Paciolus API — AP Testing Routes
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
-from sqlalchemy.orm import Session
 
 from ap_testing_engine import run_ap_testing
 from auth import require_verified_user
-from database import get_db
+from database import SessionScope, get_session_scope
 from models import User
 from shared.account_extractors import extract_ap_accounts
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
@@ -29,7 +28,7 @@ async def audit_ap_payments(
     column_mapping: Optional[str] = Form(default=None),
     engagement_id: Optional[int] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, object]:
     """Run automated AP payment testing on an accounts payable extract."""
     # Sprint 836: the user's saved thresholds, reported back on the result.
@@ -39,7 +38,7 @@ async def audit_ap_payments(
         column_mapping=column_mapping,
         engagement_id=engagement_id,
         current_user=current_user,
-        db=db,
+        session_scope=session_scope,
         background_tasks=background_tasks,
         tool_name="ap_testing",
         mapping_key="ap_testing",

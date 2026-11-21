@@ -924,10 +924,12 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
 - [x] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
       Done: lead sheets grouped once, in both engines; post-processor adds section density only; rate-table
       helper moved to `shared/currency_rate_store.py`.
-- [ ] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.
+- [x] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.
       Done: step 1 webhook (`billing/webhook_service.py`; the Deferred/Intake webhook-decomposition rows removed).
       Done: step 2 logo upload (`routes/branding.authorize_logo_write` + `store_logo` in the thread pool).
       Done: step 3 upload validation (`shared/upload_pipeline.validate_upload_bytes` in the thread pool).
+      Done: step 4 file tools (`run_single_file_testing`, `execute_file_tool`: gate, engine + `to_dict`, recording;
+      materiality and reference-date lookups) as synchronous units with their own sessions.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

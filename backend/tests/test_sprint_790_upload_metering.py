@@ -781,7 +781,23 @@ def _consumes(call: ast.Call) -> bool:
 
 
 def _functions(tree: ast.Module) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
-    return [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    """Module-level functions and methods — not functions nested inside them.
+
+    Sprint 890 (15E step 4): a route's gate and its metered success record now sit in nested
+    helpers run through the thread pool (``_gate``, ``_process_and_record``). ``ast.walk`` of the
+    enclosing function covers its nested helpers, so the enclosing function is the unit judged.
+    """
+    out: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                out.append(child)  # do not descend: nested functions belong to this one
+            elif isinstance(child, ast.ClassDef):
+                visit(child)
+
+    visit(tree)
+    return out
 
 
 def _is_gated(fn) -> bool:

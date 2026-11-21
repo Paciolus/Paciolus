@@ -116,3 +116,31 @@ async def test_upload_validation_leaves_the_loop_free(override_auth_verified):
             ),
         )
     assert response.status_code == 200, response.text[:300]
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+async def test_file_tool_database_checks_leave_the_loop_free(override_auth_verified):
+    """Step 4: the tier/quota check (and the run recording) of a testing tool run in the thread pool."""
+    csv = b"Vendor Name,Amount,Payment Date\nAcme,100.00,2026-01-05\nBeta,250.00,2026-01-06\n"
+    stand_in = blocking_stand_in(result=None)
+    with patch("shared.testing_route.check_upload_limit", side_effect=stand_in):
+        response = await run_probe(
+            stand_in,
+            lambda c: c.post("/audit/ap-payments", files={"file": ("ap.csv", csv, "text/csv")}),
+        )
+    assert response.status_code in (200, 400), response.text[:300]
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+async def test_diagnostic_file_tool_recording_leaves_the_loop_free(override_auth_verified):
+    """Step 4: execute_file_tool records the run in the thread pool."""
+    csv = b"Account Name,Debit,Credit\nCash,100.00,0\nCommon Stock,0,100.00\n"
+    stand_in = blocking_stand_in(result=None)
+    with patch("services.audit.file_tool_scaffold.maybe_record_tool_run", side_effect=stand_in):
+        response = await run_probe(
+            stand_in,
+            lambda c: c.post("/audit/preflight", files={"file": ("tb.csv", csv, "text/csv")}),
+        )
+    assert response.status_code == 200, response.text[:300]

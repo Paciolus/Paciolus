@@ -12,10 +12,9 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 from auth import require_verified_user
-from database import get_db
+from database import SessionScope, get_session_scope
 from je_testing_engine import (
     JETestingConfig,
     detect_gl_columns,
@@ -109,7 +108,7 @@ async def audit_journal_entries(
     engagement_id: Optional[int] = Form(default=None),
     holiday_calendar: Optional[str] = Form(default=None),
     current_user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    session_scope: SessionScope = Depends(get_session_scope),
 ) -> dict[str, Any]:
     """Run automated journal entry testing on a General Ledger extract."""
     # Sprint 836: saved practice settings, with the per-run holiday calendar
@@ -121,7 +120,7 @@ async def audit_journal_entries(
         column_mapping=column_mapping,
         engagement_id=engagement_id,
         current_user=current_user,
-        db=db,
+        session_scope=session_scope,
         background_tasks=background_tasks,
         tool_name="journal_entry_testing",
         mapping_key="je_testing",

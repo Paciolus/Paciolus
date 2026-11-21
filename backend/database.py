@@ -135,6 +135,12 @@ def get_session_scope(request: Request) -> SessionScope:
     return scope
 
 
+def call_in_session(session_scope: SessionScope, fn: Callable[..., Any], *args: Any) -> Any:
+    """Run ``fn(*args, db)`` in a session of its own (Sprint 890, 15E): for ``asyncio.to_thread``."""
+    with session_scope() as db:
+        return fn(*args, db)
+
+
 def init_db() -> None:
     """Initialize database tables and log connection info.
 

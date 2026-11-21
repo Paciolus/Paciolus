@@ -24,6 +24,7 @@ from fastapi import BackgroundTasks, HTTPException, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from database import SessionScope
 from models import User, UserTier
 from security_utils import log_secure_operation
 from shared.entitlement_checks import check_upload_limit, get_effective_entitlements
@@ -137,7 +138,7 @@ async def run_single_file_testing(
     column_mapping: Optional[str],
     engagement_id: Optional[int],
     current_user: User,
-    db: Session,
+    session_scope: SessionScope,
     background_tasks: BackgroundTasks,
     tool_name: str,
     mapping_key: str,
@@ -149,12 +150,16 @@ async def run_single_file_testing(
 ) -> dict:
     """Run a single-file testing endpoint with standard boilerplate.
 
+    Sprint 890 (15E step 4): only reading the upload awaits on the event loop. The tier and quota
+    checks, the parse + engine + ``to_dict()`` serialization, and the run recording are explicit
+    synchronous units run through the thread pool, each with a session it opens and closes.
+
     Args:
         file: Uploaded CSV/Excel file.
         column_mapping: Optional JSON string of column overrides.
         engagement_id: Optional engagement to record tool run against.
         current_user: Authenticated user.
-        db: Database session.
+        session_scope: Factory for a session per synchronous unit (``database.get_session_scope``).
         background_tasks: FastAPI BackgroundTasks for deferred work.
         tool_name: Tool identifier for tool run recording.
         mapping_key: Key for parse_json_mapping context.
@@ -165,46 +170,57 @@ async def run_single_file_testing(
         result_extras: Optional fields merged into the returned result (Sprint 836:
             ``settings_applied`` / ``settings_ignored``).
     """
-    # Sprint 367: Entitlement check — verify tool access before processing
-    enforce_tool_access(current_user, tool_name, db)
-    # Sprint 678: every testing-tool upload counts against the monthly quota.
-    check_upload_limit(current_user, db)
+    user_id = current_user.id
+
+    def _gate() -> None:
+        # Sprint 367: tool access; Sprint 678: every testing-tool upload counts against the quota.
+        with session_scope() as db:
+            enforce_tool_access(current_user, tool_name, db)
+            check_upload_limit(current_user, db)
+
+    await asyncio.to_thread(_gate)
 
     column_mapping_dict = parse_json_mapping(column_mapping, mapping_key)
 
     log_secure_operation(f"{mapping_key}_upload", f"Processing {log_label} file: {file.filename}")
+
+    def _record_failure() -> None:
+        with session_scope() as db:
+            maybe_record_tool_run(db, engagement_id, user_id, tool_name, False)
 
     with memory_cleanup():
         try:
             file_bytes = await validate_file_size(file)
             filename = file.filename or ""
 
-            def _process() -> Any:
+            def _process_and_record() -> dict:
                 column_names, rows = parse_uploaded_file(file_bytes, filename)
                 result = run_engine(rows, column_names, column_mapping_dict, filename)
-                return result
+                result_dict = result.to_dict()
+                score = (
+                    result.composite_score.score
+                    if hasattr(result, "composite_score") and result.composite_score
+                    else None
+                )
+                flagged = extract_accounts(result_dict) if extract_accounts else None
+                with session_scope() as db:
+                    maybe_record_tool_run(
+                        db,
+                        engagement_id,
+                        user_id,
+                        tool_name,
+                        True,
+                        score,
+                        flagged,
+                        filename,
+                        result_dict.get("record_count"),
+                        consumes_upload=True,
+                        # Sprint 887 (OUT-20): distinct items the run flagged.
+                        flag_count=(result_dict.get("composite_score") or {}).get("total_flagged"),
+                    )
+                return result_dict
 
-            result = await asyncio.to_thread(_process)
-
-            result_dict = result.to_dict()
-            score = (
-                result.composite_score.score if hasattr(result, "composite_score") and result.composite_score else None
-            )
-            flagged = extract_accounts(result_dict) if extract_accounts else None
-            maybe_record_tool_run(
-                db,
-                engagement_id,
-                current_user.id,
-                tool_name,
-                True,
-                score,
-                flagged,
-                filename,
-                result_dict.get("record_count"),
-                consumes_upload=True,
-                # Sprint 887 (OUT-20): distinct items the run flagged.
-                flag_count=(result_dict.get("composite_score") or {}).get("total_flagged"),
-            )
+            result_dict = await asyncio.to_thread(_process_and_record)
 
             response = dict(result_dict)
             if result_extras:
@@ -217,5 +233,5 @@ async def run_single_file_testing(
             # from a malformed amount cell — a user-facing 400, so WARNING, not
             # a Sentry-paging ERROR.
             logger.warning("%s rejected [%s]", tool_name, type(e).__name__)  # Sprint 840 (S6): type only
-            maybe_record_tool_run(db, engagement_id, current_user.id, tool_name, False)
+            await asyncio.to_thread(_record_failure)
             raise HTTPException(status_code=400, detail=sanitize_error(e, "analysis", error_key))
