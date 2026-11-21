@@ -943,7 +943,8 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
 - [ ] 15C: engine strings are not uniformly formatted (M-3 `"0"`, intercompany copies input decimals).
 
 ### Sprint 891: One tool catalog, one plan file, accurate instructions, dead code removed
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-891-one-catalog`, stacked on Sprint 890.
+**Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-891-one-catalog`, stacked on Sprint 890
+(16A's remaining tables listed below).
 **Priority:** P2. **Source:** CEO brief 16 (review ST-07/06/17/18 at `ef5e567`). Supersedes the freeze for this work.
 **Agents:** executor, critic (no behaviour change in 16B's first commit), guardian (copy matches the storage statement).
 
@@ -975,6 +976,24 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
       - bcrypt verify branch for share passcodes: shares live ≤48 h, so it is dead once no unexpired share row has a
         bcrypt hash. Removal needs one read-only production query (count of unexpired `export_shares` whose hash starts
         `$2`) returning 0.
+
+**Review (2026-11-20).** Commits: `201d6613` 16A · `fcef659b` + `e2286e27` 16B · `a1df9ed4` 16C · `b5749f85` 16D ·
+(record commit). Verification: backend `-m "not slow"` 11,430 passed, 2 xfailed, 1 failed (Sprint 819 export golden,
+already failing on `main`); frontend Jest via the pre-commit gate. 16B's first commit compared every price, seat
+rate, ceiling, limit and gate before and after (fixture) — identical.
+
+### Sprint 892: Behaviour-neutral refactors (Excel reads, organization services, testing page shell, large units)
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-892-refactors`, stacked on Sprint 891. Partial completion
+is allowed by the brief. **Source:** CEO brief 17 (review ST-15/12/13/14). Each step must leave every output
+unchanged (snapshot, PDF contract and memo equivalence tests run per step).
+
+- [ ] 17A Excel: measure peak memory; one open per workbook; reuse bytes read for hashing; row limit in the parser.
+      Baseline (100k rows x 2 sheets, 4 MB): `read_excel_chunked` peak 32.7 MB; multi-sheet 33.6 MB / 89 s;
+      `parse_uploaded_file` 42.9 MB. The XLSX pre-parse estimate re-opens the workbook and returns 0 for unsized
+      sheets (a no-op that costs a full load).
+- [ ] 17B organization workflows into services (create, invite, accept, remove).
+- [ ] 17C one testing page shell (Fixed Assets and Inventory first).
+- [ ] 17D split the largest units (one at a time).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
