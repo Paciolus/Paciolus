@@ -7,9 +7,7 @@ Route group prefix: /organization
 Auth: require_current_user (all endpoints)
 """
 
-import hashlib
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -27,9 +25,7 @@ from organization_model import (
     OrgRole,
 )
 from services import organization_workflows
-from shared.entitlement_checks import check_seat_limit_for_org
 from shared.organization_policy import (
-    apply_org_subscription_to_user,
     get_user_org,
     require_admin,
     require_owner,
@@ -214,64 +210,10 @@ def accept_invite(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Accept an organization invite. Links the current user to the org."""
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-
-    invite = (
-        db.query(OrganizationInvite)
-        .filter(
-            OrganizationInvite.invite_token_hash == token_hash,
-            OrganizationInvite.status == InviteStatus.PENDING,
-        )
-        .first()
-    )
-    if not invite:
-        raise HTTPException(status_code=404, detail="Invite not found or already used.")
-
-    # Security: Verify the accepting user's email matches the invite recipient.
-    # Prevents a leaked/intercepted token from being used by an unintended account.
-    if invite.invitee_email and user.email.lower() != invite.invitee_email.lower():
-        raise HTTPException(
-            status_code=403,
-            detail="This invite was sent to a different email address.",
-        )
-
-    if invite.is_expired:
-        invite.status = InviteStatus.EXPIRED
-        db.commit()
-        raise HTTPException(status_code=410, detail="This invite has expired.")
-
-    # Check seat limit for the org (uses org subscription, not inviter's)
-    org = _lock_org_for_seat_check(db, invite.organization_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found.")
-
-    check_seat_limit_for_org(db, org.id, exclude_invite_id=invite.id)
-
-    # Check user isn't already in an org
-    existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="You already belong to an organization.")
-
-    # Create membership
-    membership = OrganizationMember(
-        organization_id=org.id,
-        user_id=user.id,
-        role=invite.role,
-        invited_by_user_id=invite.invited_by_user_id,
-    )
-    db.add(membership)
-
-    # Update user + inherit org's subscription tier (backfills org.subscription_id
-    # when it can be resolved only from the org owner's personal subscription).
-    user.organization_id = org.id
-    apply_org_subscription_to_user(db, user, org)
-
-    # Mark invite accepted
-    invite.status = InviteStatus.ACCEPTED
-    invite.accepted_at = datetime.now(UTC)
-    invite.accepted_by_user_id = user.id
-
-    db.commit()
+    try:
+        organization_workflows.accept_invite(db, user, token)
+    except organization_workflows.OrganizationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     return {"detail": "Invite accepted. You are now a member of the organization."}
 
 
