@@ -592,8 +592,9 @@ class TestDescriptionLengthAnomaly:
             )
         entries.append(JournalEntry(account="Cash", debit=100, row_number=11, description=""))
         result = run_desc_length_test(entries, JETestingConfig())
-        if result.entries_flagged > 0:
-            assert "mean_length" in result.flagged_entries[0].details
+        # Sprint 889 (14C): the empty description (row 11) must be flagged.
+        assert result.entries_flagged >= 1
+        assert "mean_length" in result.flagged_entries[0].details
 
 
 # =============================================================================

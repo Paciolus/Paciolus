@@ -276,12 +276,13 @@ class TestUnusualPaymentAmounts:
         payments = self._vendor_payments(base)
         config = APTestingConfig(unusual_amount_stddev=3.0)
         result = run_unusual_amounts_test(payments, config)
-        if result.entries_flagged > 0:
-            d = result.flagged_entries[0].details
-            assert "z_score" in d
-            assert "vendor_mean" in d
-            assert "vendor_stdev" in d
-            assert "vendor_payment_count" in d
+        # Sprint 889 (14C): the 100,000 outlier among twenty 100s must be flagged.
+        assert result.entries_flagged >= 1
+        d = result.flagged_entries[0].details
+        assert "z_score" in d
+        assert "vendor_mean" in d
+        assert "vendor_stdev" in d
+        assert "vendor_payment_count" in d
 
     def test_test_tier_statistical(self):
         payments = self._vendor_payments([100, 100, 100, 100, 100])

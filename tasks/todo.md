@@ -867,7 +867,7 @@ allowance is computed and never presents the provision as complete. (Closes Spri
       "Increase" badge and counts under "Increases" beside a -60% display change (strict xfail
       `test_revenue_that_falls_is_labelled_a_decrease`). Also: the sign-change generator recorded the current AR
       (83,900.84) as its prior (78,412.00) — corrected.
-- [ ] 14C if-guarded assertions become assertions.
+- [x] 14C if-guarded assertions become assertions.
 - [ ] 14D frontend activity mapper + JE success case from real response shapes.
 - [ ] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
 - [ ] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.

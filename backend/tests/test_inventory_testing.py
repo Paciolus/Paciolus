@@ -738,8 +738,10 @@ class TestUnitCostOutliers:
         entries = make_entries(rows)
         config = InventoryTestingConfig()
         result = run_cost_outliers_test(entries, config)
-        if result.entries_flagged > 0:
-            assert "z_score" in result.flagged_entries[0].details
+        # Sprint 889 (14C): the 99,999 unit cost must be flagged.
+        flagged_ids = [f.entry.item_id for f in result.flagged_entries]
+        assert "OUT" in flagged_ids
+        assert "z_score" in result.flagged_entries[flagged_ids.index("OUT")].details
 
 
 class TestQuantityOutliers:
@@ -1270,13 +1272,15 @@ class TestSerialization:
         entries = make_entries(rows, ["Item ID", "Quantity", "Unit Cost", "Extended Value"])
         config = InventoryTestingConfig()
         result = run_zero_value_test(entries, config)
-        if result.entries_flagged > 0:
-            d = result.flagged_entries[0].to_dict()
-            assert "entry" in d
-            assert "test_name" in d
-            assert "severity" in d
-            assert "issue" in d
-            assert "confidence" in d
+        # Sprint 889 (14C): Z1 (quantity 100, unit cost and value 0) gets exactly one zero-value flag.
+        assert result.entries_flagged == 1
+        assert [f.entry.item_id for f in result.flagged_entries] == ["Z1"]
+        d = result.flagged_entries[0].to_dict()
+        assert "entry" in d
+        assert "test_name" in d
+        assert "severity" in d
+        assert "issue" in d
+        assert "confidence" in d
 
     def test_composite_score_risk_tier_string(self):
         entries = make_entries(sample_inv_rows())

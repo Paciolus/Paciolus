@@ -406,8 +406,9 @@ class TestMonthEndClustering:
         result = run_month_end_test(entries, JETestingConfig())
         # Feb should be flagged but not Jan
         flagged_dates = [f.details.get("month") for f in result.flagged_entries]
-        if result.entries_flagged > 0:
-            assert "2025-02" in flagged_dates
+        # Sprint 889 (14C): February is flagged and January is not.
+        assert "2025-02" in flagged_dates
+        assert "2025-01" not in flagged_dates
 
     def test_test_key(self):
         entries = [JournalEntry(posting_date="2025-01-15", debit=100, row_number=1)]

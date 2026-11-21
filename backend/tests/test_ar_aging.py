@@ -1049,8 +1049,11 @@ class TestCompositeScoring:
         config = ARAgingConfig()
         results = run_ar_test_battery(accounts, [], config, False)
         composite = run_composite_score(results, False)
-        if composite.total_flagged > 0:
-            assert len(composite.top_findings) > 0
+        # Sprint 889 (14C): an AR balance of -50,000 must raise the sign flag.
+        sign = next(r for r in results if r.test_key == "ar_sign_anomalies")
+        assert sign.entries_flagged >= 1
+        assert composite.total_flagged >= 1
+        assert len(composite.top_findings) > 0
 
     def test_score_capped_at_100(self):
         composite = ARCompositeScore(
