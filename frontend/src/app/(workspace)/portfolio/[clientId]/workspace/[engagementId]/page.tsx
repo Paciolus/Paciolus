@@ -27,8 +27,10 @@ import {
 import { useAnalyticalExpectations } from '@/hooks/useAnalyticalExpectations';
 import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import { useUncorrectedMisstatements } from '@/hooks/useUncorrectedMisstatements';
+import { MARKETING_AUDIT_TOOL_COUNT } from '@/content/tool-catalog.generated'
 import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
 import { formatCurrency } from '@/utils/formatting';
+import { completedMarketedToolCount } from '@/utils/toolCoverage'
 import { apiDownload, downloadBlob , apiGet } from '@/utils';
 import { fadeUp } from '@/lib/motion';
 
@@ -216,7 +218,7 @@ export default function WorkspaceDetailPage() {
                   <svg className="w-3.5 h-3.5 text-theme-success-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
-                  {toolRuns.length}/18 tools
+                  {completedMarketedToolCount(toolRuns)}/{MARKETING_AUDIT_TOOL_COUNT} tools
                 </span>
               </div>
             </div>

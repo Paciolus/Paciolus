@@ -29,6 +29,7 @@ from shared.filenames import (
 )
 from shared.rate_limits import RATE_LIMIT_WRITE, limiter
 from shared.soft_delete import soft_delete_bulk
+from tools_registry import TOOLS
 
 router = APIRouter(tags=["activity"])
 
@@ -392,21 +393,11 @@ def get_dashboard_stats(
 # =============================================================================
 
 # Mapping from backend tool_name to user-friendly label
-TOOL_LABELS: dict[str, str] = {
-    "trial_balance": "TB Diagnostics",
-    "multi_period": "Multi-Period Analysis",
-    "journal_entry_testing": "Journal Entry Testing",
-    "ap_testing": "AP Testing",
-    "bank_reconciliation": "Bank Reconciliation",
-    "payroll_testing": "Payroll Testing",
-    "three_way_match": "Three-Way Match",
-    "revenue_testing": "Revenue Testing",
-    "ar_aging": "AR Aging",
-    "fixed_asset_testing": "Fixed Assets",
-    "inventory_testing": "Inventory Testing",
-    "statistical_sampling": "Statistical Sampling",
-    "flux_analysis": "Flux Analysis",
-}
+# Sprint 891 (16A): labels come from the tool registry (``short_label``); it used to be a separate
+# table that omitted the six most recently promoted tools, so the feed showed "book_to_tax".
+# Flux Analysis is recorded as a tool run but is not a registry tool: an explicit override.
+TOOL_LABEL_OVERRIDES: dict[str, str] = {"flux_analysis": "Flux Analysis"}
+TOOL_LABELS: dict[str, str] = {t.slug: t.short_label or t.display_name for t in TOOLS} | TOOL_LABEL_OVERRIDES
 
 
 @router.get("/activity/tool-feed", response_model=list[ToolActivityResponse])

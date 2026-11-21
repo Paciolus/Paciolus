@@ -37,6 +37,11 @@ class Tool:
     is_marketing_audit_tool: bool  # counts toward the "18 tools" marketing claim
     has_dedicated_page: bool  # has /tools/<slug> page (vs side-car only)
     summary: str  # one-liner for tool-ledger.ts
+    # Sprint 891 (16A): what the dashboard, activity feed and command surfaces read.
+    href: str | None = None  # page URL, None for tools without a dedicated page
+    short_label: str = ""  # Quick Launch / activity-feed label
+    dashboard_description: str = ""  # empty = not on the dashboard
+    dashboard_icon: str = ""  # key in components/dashboard/ToolIcon.tsx
 
 
 # ───────────────── Registry ─────────────────
@@ -45,6 +50,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     # ── Core Analysis (4) ───────────────────────────────
     Tool(
         slug="trial_balance",
+        href="/tools/trial-balance",
+        short_label="TB Diagnostics",
+        dashboard_description="Ratio analysis, anomaly detection, lead sheets",
+        dashboard_icon="chart",
         display_name="Trial Balance Diagnostics",
         category="Core Analysis",
         test_count=None,
@@ -55,6 +64,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="multi_period",
+        href="/tools/multi-period",
+        short_label="Multi-Period",
+        dashboard_description="Trend analysis across reporting periods",
+        dashboard_icon="clock",
         display_name="Multi-Period Comparison",
         category="Core Analysis",
         test_count=None,
@@ -65,6 +78,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="bank_reconciliation",
+        href="/tools/bank-rec",
+        short_label="Bank Rec",
+        dashboard_description="Bank-to-book reconciliation testing",
+        dashboard_icon="banknotes",
         display_name="Bank Reconciliation",
         category="Core Analysis",
         test_count=None,
@@ -78,6 +95,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="three_way_match",
+        href="/tools/three-way-match",
+        short_label="Three-Way Match",
+        dashboard_description="PO, receipt, and invoice matching",
+        dashboard_icon="receipt",
         display_name="Three-Way Match",
         category="Core Analysis",
         test_count=None,
@@ -89,6 +110,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     # ── Testing Suite (7) ───────────────────────────────
     Tool(
         slug="journal_entry_testing",
+        href="/tools/journal-entry-testing",
+        short_label="JE Testing",
+        dashboard_description="19-test battery incl. Benford and fraud-risk indicators",
+        dashboard_icon="shield",
         display_name="Journal Entry Testing",
         category="Testing Suite",
         test_count=19,
@@ -99,6 +124,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="ap_testing",
+        href="/tools/ap-testing",
+        short_label="AP Testing",
+        dashboard_description="Duplicate payments, vendor anomalies",
+        dashboard_icon="calculator",
         display_name="AP Payment Testing",
         category="Testing Suite",
         test_count=14,
@@ -109,6 +138,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="revenue_testing",
+        href="/tools/revenue-testing",
+        short_label="Revenue Testing",
+        dashboard_description="ASC 606 / IFRS 15 contract analysis",
+        dashboard_icon="banknotes",
         display_name="Revenue Testing",
         category="Testing Suite",
         test_count=18,
@@ -119,6 +152,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="ar_aging",
+        href="/tools/ar-aging",
+        short_label="AR Aging",
+        dashboard_description="Receivables aging and collectibility",
+        dashboard_icon="clock",
         display_name="AR Aging",
         category="Testing Suite",
         test_count=12,
@@ -129,6 +166,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="payroll_testing",
+        href="/tools/payroll-testing",
+        short_label="Payroll Testing",
+        dashboard_description="Ghost-employee indicators, rate anomalies",
+        dashboard_icon="calculator",
         display_name="Payroll Testing",
         category="Testing Suite",
         test_count=13,
@@ -139,6 +180,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="fixed_asset_testing",
+        href="/tools/fixed-assets",
+        short_label="Fixed Assets",
+        dashboard_description="Depreciation, impairment, disposals",
+        dashboard_icon="building",
         display_name="Fixed Assets",
         category="Testing Suite",
         test_count=11,
@@ -149,6 +194,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="inventory_testing",
+        href="/tools/inventory-testing",
+        short_label="Inventory Testing",
+        dashboard_description="Valuation, obsolescence, cutoff",
+        dashboard_icon="box",
         display_name="Inventory Testing",
         category="Testing Suite",
         test_count=10,
@@ -161,6 +210,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     # ── Advanced — Original (1) ─────────────────────────
     Tool(
         slug="statistical_sampling",
+        href="/tools/statistical-sampling",
+        short_label="Stat Sampling",
+        dashboard_description="ISA 530 sample design and evaluation",
+        dashboard_icon="percentage",
         display_name="Statistical Sampling",
         category="Advanced",
         test_count=None,
@@ -172,6 +225,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     # ── Advanced — Promoted in 689b–g (6) ───────────────
     Tool(
         slug="sod_checker",
+        href="/tools/sod",
+        short_label="Segregation of Duties",
+        dashboard_description="Conflicting roles and access combinations",
+        dashboard_icon="shield",
         display_name="Segregation of Duties",
         category="Advanced",
         test_count=None,
@@ -182,6 +239,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="intercompany_elimination",
+        href="/tools/intercompany",
+        short_label="Intercompany",
+        dashboard_description="Elimination entries and mismatches",
+        dashboard_icon="building",
         display_name="Intercompany Elimination",
         category="Advanced",
         test_count=None,
@@ -192,6 +253,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="w2_reconciliation",
+        href="/tools/w2-reconciliation",
+        short_label="W-2 / W-3",
+        dashboard_description="W-2, W-3 and Form 941 reconciliation",
+        dashboard_icon="receipt",
         display_name="W-2 / W-3 Reconciliation",
         category="Advanced",
         test_count=None,
@@ -202,6 +267,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="form_1099",
+        href="/tools/form-1099",
+        short_label="1099 Review",
+        dashboard_description="Vendor payments against 1099 thresholds",
+        dashboard_icon="receipt",
         display_name="1099 Vendor Threshold Review",
         category="Advanced",
         test_count=None,
@@ -212,6 +281,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="book_to_tax",
+        href="/tools/book-to-tax",
+        short_label="Book-to-Tax",
+        dashboard_description="Schedule M-1 / M-3 and tax provision draft",
+        dashboard_icon="calculator",
         display_name="Book-to-Tax Reconciliation",
         category="Advanced",
         test_count=None,
@@ -222,6 +295,10 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         slug="cash_flow_projector",
+        href="/tools/cash-flow-projector",
+        short_label="Cash Flow",
+        dashboard_description="90-day cash position across scenarios",
+        dashboard_icon="banknotes",
         display_name="Cash Flow Projector",
         category="Advanced",
         test_count=None,
@@ -235,6 +312,8 @@ TOOLS: Final[tuple[Tool, ...]] = (
     # ── Side-car (not counted toward the 18) ────────────
     Tool(
         slug="currency_rates",
+        href="/tools/multi-currency",
+        short_label="Multi-Currency",
         display_name="Multi-Currency Conversion",
         category="Advanced",
         test_count=None,

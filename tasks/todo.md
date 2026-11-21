@@ -942,6 +942,20 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
 - [ ] 15A: other callers of `apiPut`/`apiDownload` (19 files) were not audited for the `ok: false` pattern.
 - [ ] 15C: engine strings are not uniformly formatted (M-3 `"0"`, intercompany copies input decimals).
 
+### Sprint 891: One tool catalog, one plan file, accurate instructions, dead code removed
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-891-one-catalog`, stacked on Sprint 890.
+**Priority:** P2. **Source:** CEO brief 16 (review ST-07/06/17/18 at `ef5e567`). Supersedes the freeze for this work.
+**Agents:** executor, critic (no behaviour change in 16B's first commit), guardian (copy matches the storage statement).
+
+- [x] 16A registry gains page URL, short label and dashboard details; `tool-catalog.generated.ts` (generator +
+      staleness test) drives the dashboard list; activity labels from the registry (Flux Analysis an explicit
+      override); workspace counts distinct completed marketed tools against the catalog. Command-palette links are
+      checked against the catalog. Not yet derived (listed for a later pass): workpaper index, `tool-ledger.ts`,
+      `app/tools/page.tsx`, `toolbarConfig.ts` (workpaper refs and export capabilities not yet in the registry).
+- [ ] 16B one plan file (`shared/plans.json`): Python loads it, TypeScript generated; first commit changes no value.
+- [ ] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
+- [ ] 16D unused declarations removed; flags wired or removed; leftovers listed.
+
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
 page does not list it and `POST /upload/bulk` answers 501 "Bulk upload is not available yet." (Sprint 888).

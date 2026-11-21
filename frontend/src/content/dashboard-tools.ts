@@ -10,10 +10,11 @@
  * a short label for the Quick Launch grid, a one-line description, a
  * category bucket, and an icon key the `<ToolIcon>` component renders.
  *
- * When adding a tool, also update the homepage `tool-ledger.ts` if the
- * tool should appear on the marketing surface, and verify the icon key
- * exists in `components/dashboard/ToolIcon.tsx::TOOL_ICON_PATHS`.
+ * Sprint 891: tools come from the registry; add a tool there (with `dashboard_description` and
+ * `dashboard_icon`) and regenerate with `python scripts/generate_tool_catalog_ts.py`.
  */
+
+import { TOOL_CATALOG } from '@/content/tool-catalog.generated'
 
 export type DashboardToolIconKey =
   | 'chart'
@@ -45,21 +46,26 @@ export interface DashboardToolDef {
   icon: DashboardToolIconKey
 }
 
-export const DASHBOARD_TOOLS: DashboardToolDef[] = [
-  { key: 'trial_balance', label: 'TB Diagnostics', href: '/tools/trial-balance', description: 'Ratio analysis, anomaly detection, lead sheets', category: 'Core Analysis', icon: 'chart' },
-  { key: 'multi_period', label: 'Multi-Period', href: '/tools/multi-period', description: 'Trend analysis across reporting periods', category: 'Core Analysis', icon: 'clock' },
-  { key: 'bank_reconciliation', label: 'Bank Rec', href: '/tools/bank-rec', description: 'Bank-to-book reconciliation testing', category: 'Core Analysis', icon: 'banknotes' },
-  { key: 'three_way_match', label: 'Three-Way Match', href: '/tools/three-way-match', description: 'PO, receipt, and invoice matching', category: 'Core Analysis', icon: 'receipt' },
-  { key: 'journal_entry_testing', label: 'JE Testing', href: '/tools/journal-entry-testing', description: '19-test battery incl. Benford and fraud-risk indicators', category: 'Testing Suite', icon: 'shield' },
-  { key: 'ap_testing', label: 'AP Testing', href: '/tools/ap-testing', description: 'Duplicate payments, vendor anomalies', category: 'Testing Suite', icon: 'calculator' },
-  { key: 'revenue_testing', label: 'Revenue Testing', href: '/tools/revenue-testing', description: 'ASC 606 / IFRS 15 contract analysis', category: 'Testing Suite', icon: 'banknotes' },
-  { key: 'ar_aging', label: 'AR Aging', href: '/tools/ar-aging', description: 'Receivables aging and collectibility', category: 'Testing Suite', icon: 'clock' },
-  { key: 'payroll_testing', label: 'Payroll Testing', href: '/tools/payroll-testing', description: 'Ghost-employee indicators, rate anomalies', category: 'Testing Suite', icon: 'calculator' },
-  { key: 'fixed_asset_testing', label: 'Fixed Assets', href: '/tools/fixed-assets', description: 'Depreciation, impairment, disposals', category: 'Testing Suite', icon: 'building' },
-  { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Valuation, obsolescence, cutoff', category: 'Testing Suite', icon: 'box' },
-  { key: 'statistical_sampling', label: 'Stat Sampling', href: '/tools/statistical-sampling', description: 'ISA 530 sample design and evaluation', category: 'Advanced', icon: 'percentage' },
+/**
+ * Sprint 891 (16A): derived from the tool registry (backend/tools_registry.py, via the generated
+ * content/tool-catalog.generated.ts) — every tool with dashboard details, in registry order. The
+ * list used to be kept by hand and was missing the six most recently promoted tools.
+ */
+const FROM_CATALOG: DashboardToolDef[] = TOOL_CATALOG.filter(t => t.dashboard && t.href).map(t => ({
+  key: t.slug,
+  label: t.shortLabel,
+  href: t.href as string,
+  description: t.dashboard!.description,
+  category: t.category,
+  icon: t.dashboard!.icon as DashboardToolIconKey,
+}))
+
+/** Explicit extra: Flux Analysis has a page but is not a registry tool (it is part of multi-period). */
+const EXTRAS: DashboardToolDef[] = [
   { key: 'flux_analysis', label: 'Flux Analysis', href: '/flux', description: 'Account-level variance analysis', category: 'Advanced', icon: 'search' },
 ]
+
+export const DASHBOARD_TOOLS: DashboardToolDef[] = [...FROM_CATALOG, ...EXTRAS]
 
 /** Default favorites surfaced when the user hasn't pinned any. */
 export const DEFAULT_FAVORITES: string[] = [
