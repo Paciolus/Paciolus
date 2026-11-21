@@ -50,3 +50,35 @@ async def test_webhook_processing_leaves_the_loop_free(db_session):
     finally:
         app.dependency_overrides.pop(get_db, None)
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+async def test_logo_storage_leaves_the_loop_free(db_session):
+    """Step 2: the S3 put (and the image checks and commit) run in the thread pool."""
+    import io
+
+    from PIL import Image
+
+    from auth import require_current_user
+    from database import get_db
+    from main import app
+    from tests.test_branding_api import enterprise_user_with_org
+
+    user = enterprise_user_with_org.__wrapped__(db_session)
+    buf = io.BytesIO()
+    Image.new("RGB", (120, 40)).save(buf, format="PNG")
+    stand_in = blocking_stand_in(result=True)
+    app.dependency_overrides[get_db] = lambda: db_session
+    app.dependency_overrides[require_current_user] = lambda: user
+    try:
+        with patch("shared.storage_client.upload_bytes", side_effect=stand_in):
+            response = await run_probe(
+                stand_in,
+                lambda c: c.post("/branding/logo", files={"file": ("logo.png", buf.getvalue(), "image/png")}),
+            )
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(require_current_user, None)
+    assert response.status_code == 200, response.text
+    assert response.json()["logo_size_bytes"] == len(buf.getvalue())

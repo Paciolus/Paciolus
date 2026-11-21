@@ -926,6 +926,7 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
       helper moved to `shared/currency_rate_store.py`.
 - [ ] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.
       Done: step 1 webhook (`billing/webhook_service.py`; the Deferred/Intake webhook-decomposition rows removed).
+      Done: step 2 logo upload (`routes/branding.authorize_logo_write` + `store_logo` in the thread pool).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

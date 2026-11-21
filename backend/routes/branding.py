@@ -7,6 +7,7 @@ Logo upload (S3), header/footer text.
 Route group prefix: /branding
 """
 
+import asyncio
 import io
 from typing import Any
 
@@ -16,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
-from database import get_db
+from database import SessionScope, get_db, get_session_scope
 from firm_branding_model import FirmBranding
 from models import User
 from organization_model import OrganizationMember, OrgRole
@@ -139,24 +140,29 @@ def update_branding(
     return branding.to_dict()
 
 
-@router.post("/logo", response_model=BrandingResponse)
-@limiter.limit(RATE_LIMIT_WRITE)
-async def upload_logo(
-    request: Request,
-    file: UploadFile = File(...),
-    user: User = Depends(require_current_user),
-    db: Session = Depends(get_db),
-) -> dict[str, Any]:
-    """Upload a logo image. Enterprise only. Max 500KB, PNG/JPG."""
-    branding, org_id = _get_branding(db, user, write=True)
+def authorize_logo_write(user_id: int, session_scope: SessionScope) -> None:
+    """Tier and role check for changing the logo, in its own session (Sprint 890, 15E step 2)."""
+    with session_scope() as db:
+        user = db.get(User, user_id)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+        # Read-only form of _get_branding(write=True): the same checks, without creating the row.
+        check_custom_branding_access(user, db)
+        member = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="No organization found.")
+        if member.role not in (OrgRole.OWNER, OrgRole.ADMIN):
+            raise HTTPException(status_code=403, detail="Access denied.")
 
-    if file.content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(status_code=400, detail="Only PNG and JPG images are allowed.")
 
-    contents = await file.read()
-    if len(contents) > MAX_LOGO_SIZE:
-        raise HTTPException(status_code=413, detail="Logo must be under 500KB.")
+def store_logo(user_id: int, content_type: str, contents: bytes, session_scope: SessionScope) -> dict[str, Any]:
+    """Validate, store and record a firm logo — one synchronous unit (Sprint 890, 15E step 2).
 
+    Runs in the thread pool: the image checks (PIL decodes the header), the S3 ``put_object`` and
+    the commit are all blocking. It opens and closes its own session. The failure behaviour is the
+    one the route always had: 400 for a disguised file, 413/400 from the dimension check, and 503
+    (with nothing saved) when the object did not reach storage.
+    """
     # SECURITY: Validate magic bytes match declared content type (prevents disguised uploads)
     _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
     is_png = contents.startswith(_PNG_MAGIC)
@@ -169,33 +175,65 @@ async def upload_logo(
         )
     _validate_logo_dimensions(contents)
 
-    # Store in S3 (or local for development)
-    s3_key = f"branding/{org_id}/logo"
-    upload_succeeded = False
-    try:
-        from shared.storage_client import upload_bytes
+    with session_scope() as db:
+        user = db.get(User, user_id)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+        branding, org_id = _get_branding(db, user, write=True)
 
-        upload_succeeded = upload_bytes(s3_key, contents, file.content_type or "image/png")
-    except ImportError:
+        # Store in S3 (or local for development)
+        s3_key = f"branding/{org_id}/logo"
         upload_succeeded = False
+        try:
+            from shared.storage_client import upload_bytes
 
-    # Sprint 677: Only persist logo metadata when the object is actually in S3.
-    # Previously the DB row was committed regardless of upload success, leaving
-    # dangling logo_s3_key rows in dev / S3-unconfigured environments that Sprint
-    # 679's PDF branding pipeline would then try to fetch and fail on.
-    if not upload_succeeded:
-        raise HTTPException(
-            status_code=503,
-            detail="Logo storage is not configured. Contact support to enable custom branding.",
-        )
+            upload_succeeded = upload_bytes(s3_key, contents, content_type or "image/png")
+        except ImportError:
+            upload_succeeded = False
 
-    branding.logo_s3_key = s3_key
-    branding.logo_content_type = file.content_type
-    branding.logo_size_bytes = len(contents)
+        # Sprint 677: Only persist logo metadata when the object is actually in S3.
+        # Previously the DB row was committed regardless of upload success, leaving
+        # dangling logo_s3_key rows in dev / S3-unconfigured environments that Sprint
+        # 679's PDF branding pipeline would then try to fetch and fail on.
+        if not upload_succeeded:
+            raise HTTPException(
+                status_code=503,
+                detail="Logo storage is not configured. Contact support to enable custom branding.",
+            )
 
-    db.commit()
-    db.refresh(branding)
-    return branding.to_dict()
+        branding.logo_s3_key = s3_key
+        branding.logo_content_type = content_type
+        branding.logo_size_bytes = len(contents)
+
+        db.commit()
+        db.refresh(branding)
+        return branding.to_dict()
+
+
+@router.post("/logo", response_model=BrandingResponse)
+@limiter.limit(RATE_LIMIT_WRITE)
+async def upload_logo(
+    request: Request,
+    file: UploadFile = File(...),
+    user: User = Depends(require_current_user),
+    session_scope: SessionScope = Depends(get_session_scope),
+) -> dict[str, Any]:
+    """Upload a logo image. Enterprise only. Max 500KB, PNG/JPG.
+
+    Sprint 890 (15E step 2): only the cheap checks and the read happen on the event loop;
+    ``store_logo`` validates, uploads and saves in the thread pool.
+    """
+    # Authorization first, as before (a member who may not write gets 403 whatever the file).
+    await asyncio.to_thread(authorize_logo_write, user.id, session_scope)
+
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail="Only PNG and JPG images are allowed.")
+
+    contents = await file.read()
+    if len(contents) > MAX_LOGO_SIZE:
+        raise HTTPException(status_code=413, detail="Logo must be under 500KB.")
+
+    return await asyncio.to_thread(store_logo, user.id, file.content_type or "image/png", contents, session_scope)
 
 
 @router.delete("/logo", response_model=DetailResponse)
