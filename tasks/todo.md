@@ -1001,6 +1001,8 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       Done: `components/shared/testing/SingleFileTestingPage.tsx`; Fixed Assets moved (old vs new page HTML compared in
       six states — guest, unverified, idle, loading, error, success — identical).
       Done: Inventory moved (same six-state comparison, identical).
+      Remaining (later session): AP, Payroll, then JE (sampling as an extension slot) and Revenue (contract inputs);
+      AR aging stays outside the shell (two files).
 - [ ] 17D split the largest units (one at a time).
 
 ### Feature to build: Bulk upload (Enterprise)

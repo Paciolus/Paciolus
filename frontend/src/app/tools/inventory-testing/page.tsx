@@ -1,18 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { InventoryScoreCard, InventoryTestResultGrid, InventoryDataQualityBadge, FlaggedInventoryTable } from '@/components/inventoryTesting'
-import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractInventoryProof } from '@/components/shared/proof'
-import { Button } from '@/components/ui/Button'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import { useFileUpload } from '@/hooks/useFileUpload'
+import { SingleFileTestingPage } from '@/components/shared/testing/SingleFileTestingPage'
 import { useInventoryTesting } from '@/hooks/useInventoryTesting'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * Inventory Testing — Tool 11 (Sprint 119)
@@ -20,239 +13,102 @@ import { isAcceptedFileType } from '@/utils/fileFormats'
  * IAS 2 / ISA 500 / ISA 540: inventory register anomaly indicators (no count attendance — ISA 501 not cited).
  * Upload an inventory register for automated testing — 9-test battery
  * for inventory anomaly indicators across structural, statistical, and advanced tiers.
+ *
+ * Sprint 892 (17C): the page shell is shared (SingleFileTestingPage); this file holds what is
+ * specific to the tool.
  */
 export default function InventoryTestingPage() {
-  const upload = useUploadCapabilities()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
-  const { status, result, error, runTests, reset } = useInventoryTesting()
-  useCanvasAccentSync(status)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
-    '/export/inventory-memo', '/export/csv/inventory',
-    'InventoryTesting_Memo.pdf', 'InventoryTesting_Flagged.csv',
-  )
-
-  const exportBody = result ? {
-    composite_score: result.composite_score,
-    test_results: result.test_results,
-    data_quality: result.data_quality,
-    column_detection: result.column_detection,
-    filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'inventory_testing',
-  } : null
-
-  const handleFileUpload = useCallback(async (file: File) => {
-    if (!isAcceptedFileType(file)) return
-    setSelectedFile(file)
-    await runTests(file)
-  }, [runTests])
-
-  const { isDragging, fileInputRef, handleDrop, handleDragOver, handleDragLeave, handleFileSelect } = useFileUpload(handleFileUpload)
-
-  const handleNewTest = useCallback(() => {
-    reset()
-    setSelectedFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [reset, fileInputRef])
-
-  const isVerified = user?.is_verified !== false
-
+  const tool = useInventoryTesting()
   return (
-    <main id="main-content" className="min-h-screen bg-surface-page">
-      <div className="page-container">
-        {/* Hero Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
-            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">IAS 2 / ISA 500 Inventory Analysis</span>
-          </div>
-          <h1 className="type-tool-title mb-3">
-            Inventory Testing
-          </h1>
-          <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
+    <SingleFileTestingPage
+      toolName="inventory_testing"
+      tool={tool}
+      hero={{
+        badge: <>IAS 2 / ISA 500 Inventory Analysis</>,
+        title: <>Inventory Testing</>,
+        subtitle: (
+          <>
             Upload an inventory register for automated testing &mdash; 10-test battery
             for inventory anomaly indicators per IAS 2.
-          </p>
-        </div>
+          </>
+        ),
+      }}
+      guestDescription="Inventory Testing requires a verified account. Sign in or create an account to analyze your inventory register."
+      upload={{
+        title: <>Upload Inventory Register</>,
+        prompt: <>Drop your inventory register here or click to browse</>,
+        iconClassName: 'w-8 h-8 text-content-tertiary',
+      }}
+      spinnerClassName="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin"
+      loadingText={name => <>Running {testCountFor('inventory_testing')}-test inventory battery on {name}...</>}
+      exports={{
+        memoEndpoint: '/export/inventory-memo',
+        csvEndpoint: '/export/csv/inventory',
+        memoFilename: 'InventoryTesting_Memo.pdf',
+        csvFilename: 'InventoryTesting_Flagged.csv',
+        defaultStem: 'inventory_testing',
+      }}
+      renderResult={result => (
+        <>
+          {/* Evidence Summary */}
+          <ProofSummaryBar proof={extractInventoryProof(result)} />
+          <ProofPanel proof={extractInventoryProof(result)} />
 
-        {/* Guest CTA */}
-        {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Inventory Testing requires a verified account. Sign in or create an account to analyze your inventory register." />
-        )}
+          {/* Score Card */}
+          <InventoryScoreCard score={result.composite_score} />
 
-        {!authLoading && isAuthenticated && !isVerified && (
-          <UnverifiedCTA />
-        )}
+          {/* Data Quality */}
+          <InventoryDataQualityBadge quality={result.data_quality} />
 
-        {/* State blocks */}
-        {isAuthenticated && isVerified && (
-          <UpgradeGate toolName="inventory_testing">
-          <ToolStatePresence status={status}>
-            {/* Upload Zone */}
-            {status === 'idle' && (
-              <div>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer
-                    ${isDragging
-                      ? 'border-sage-500 bg-theme-success-bg'
-                      : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
-                    }`}
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={upload.accept}
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-oatmeal-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  </div>
-                  <h3 className="type-tool-section mb-2">
-                    Upload Inventory Register
-                  </h3>
-                  <p className="font-sans text-sm text-content-secondary mb-1">
-                    Drop your inventory register here or click to browse
-                  </p>
-                  <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}
-                  </p>
-                </div>
-
-                <UploadHandlingNotice className="mt-4" />
-              </div>
-            )}
-
-            {/* Loading State */}
-            {status === 'loading' && (
-              <div className="text-center py-16" aria-live="polite">
-                <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
-                  <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-500 rounded-full animate-spin" />
-                  <span className="font-sans text-content-primary">
-                    Running {testCountFor('inventory_testing')}-test inventory battery on {selectedFile?.name}...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {status === 'error' && (
-              <div
-                className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
-                role="alert"
-              >
-                <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
-                <p className="font-sans text-sm text-content-secondary">{error}</p>
-                <Button variant="secondary" onClick={handleNewTest} className="mt-3">
-                  Try Again
-                </Button>
-              </div>
-            )}
-
-            {/* Results */}
-            {status === 'success' && result && (
-              <div className="space-y-6">
-                {/* Action bar */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <p className="font-sans text-sm text-content-secondary">
-                      Results for <span className="text-content-primary">{selectedFile?.name}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="primary"
-                      onClick={() => exportBody && handleExportMemo(exportBody)}
-                      disabled={exporting !== null || !result}
-                    >
-                      {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => exportBody && handleExportCSV(exportBody)}
-                      disabled={exporting !== null || !result}
-                    >
-                      {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
-                    </Button>
-                    <Button variant="secondary" onClick={handleNewTest}>
-                      New Test
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Evidence Summary */}
-                <ProofSummaryBar proof={extractInventoryProof(result)} />
-                <ProofPanel proof={extractInventoryProof(result)} />
-
-                {/* Score Card */}
-                <InventoryScoreCard score={result.composite_score} />
-
-                {/* Data Quality */}
-                <InventoryDataQualityBadge quality={result.data_quality} />
-
-                {/* Test Results Grid */}
-                <div>
-                  <h2 className="type-tool-section mb-4">Test Results</h2>
-                  <InventoryTestResultGrid results={result.test_results} />
-                </div>
-
-                {/* Flagged Inventory Table */}
-                <div>
-                  <h2 className="type-tool-section mb-4">Flagged Inventory Items</h2>
-                  <FlaggedInventoryTable results={result.test_results} />
-                </div>
-
-                <DisclaimerBox>
-                  This automated inventory testing
-                  tool provides analytical procedures to assist professional auditors in evaluating inventory register
-                  anomaly indicators per <Citation code="IAS 2" /> and <Citation code="ISA 540" />. It analyses
-                  register data only and does not replace attendance at a physical inventory count.
-                  Results are not NRV adequacy conclusions or obsolescence determinations and should be interpreted
-                  in the context of the specific engagement. They are not a substitute for professional judgment or
-                  sufficient audit evidence per <Citation code="ISA 500" />.
-                </DisclaimerBox>
-                <CitationFooter standards={['IAS 2', 'ISA 540', 'ISA 500']} />
-              </div>
-            )}
-          </ToolStatePresence>
-          </UpgradeGate>
-        )}
-
-        {/* Info cards for idle state */}
-        {status === 'idle' && isAuthenticated && isVerified && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">3 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Missing fields, negative values, extended value mismatch
-              </p>
-            </div>
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">4 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Unit cost outliers, quantity outliers, slow-moving inventory, category concentration
-              </p>
-            </div>
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">2 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Duplicate items, zero-value items
-              </p>
-            </div>
+          {/* Test Results Grid */}
+          <div>
+            <h2 className="type-tool-section mb-4">Test Results</h2>
+            <InventoryTestResultGrid results={result.test_results} />
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* Flagged Inventory Table */}
+          <div>
+            <h2 className="type-tool-section mb-4">Flagged Inventory Items</h2>
+            <FlaggedInventoryTable results={result.test_results} />
+          </div>
+
+          <DisclaimerBox>
+            This automated inventory testing
+            tool provides analytical procedures to assist professional auditors in evaluating inventory register
+            anomaly indicators per <Citation code="IAS 2" /> and <Citation code="ISA 540" />. It analyses
+            register data only and does not replace attendance at a physical inventory count.
+            Results are not NRV adequacy conclusions or obsolescence determinations and should be interpreted
+            in the context of the specific engagement. They are not a substitute for professional judgment or
+            sufficient audit evidence per <Citation code="ISA 500" />.
+          </DisclaimerBox>
+          <CitationFooter standards={['IAS 2', 'ISA 540', 'ISA 500']} />
+        </>
+      )}
+      infoCards={
+        <>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">3 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Missing fields, negative values, extended value mismatch
+            </p>
+          </div>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">4 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Unit cost outliers, quantity outliers, slow-moving inventory, category concentration
+            </p>
+          </div>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">2 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Duplicate items, zero-value items
+            </p>
+          </div>
+        </>
+      }
+    />
   )
 }
