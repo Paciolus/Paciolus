@@ -4,6 +4,7 @@
  */
 import JournalEntryTestingPage from '@/app/tools/journal-entry-testing/page'
 import { useJETesting } from '@/hooks/useJETesting'
+import jeTestingResponse from './fixtures/je-testing-response.json'
 import { runStandardToolPageScenarios } from './helpers/toolPageScenarios'
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
@@ -65,5 +66,7 @@ runStandardToolPageScenarios({
   loadingTextPattern: /Running 19-test battery/,
   successTestIds: ['je-score-card', 'test-result-grid', 'flagged-table'],
   infoCardLabels: ['Structural Tests', 'Statistical Tests', 'Advanced Tests'],
-  mockSuccessResult: { composite_score: {}, test_results: [], data_quality: {}, benford_result: { digits: [] }, multi_currency_warning: null },
+  // Sprint 889 (14D): a body valid against JETestingResponse (checked by
+  // backend/tests/test_sprint_889_frontend_fixtures_match_schemas.py), not empty objects.
+  mockSuccessResult: jeTestingResponse,
 })

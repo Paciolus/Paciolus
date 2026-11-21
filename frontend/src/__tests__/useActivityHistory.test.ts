@@ -8,7 +8,6 @@ import { useActivityHistory } from '@/hooks/useActivityHistory'
 
 const mockApiGet = jest.fn()
 const mockPrefetch = jest.fn()
-const mockMapActivityLogToAuditActivity = jest.fn((x: unknown) => x)
 
 jest.mock('@/contexts/AuthSessionContext', () => ({
   useAuthSession: jest.fn(() => ({
@@ -24,29 +23,35 @@ jest.mock('@/utils', () => ({
   prefetch: (...args: unknown[]) => mockPrefetch(...args),
 }))
 
-jest.mock('@/types/history', () => ({
-  mapActivityLogToAuditActivity: (...args: unknown[]) => mockMapActivityLogToAuditActivity(...args),
-}))
-
 
 const mockUseAuthSession = useAuthSession as jest.Mock
 
-const mockActivity = {
+/**
+ * Sprint 889 (14D, review TQ-09): a raw `/activity/history` item exactly as
+ * ActivityLogResponse (backend/routes/activity.py) sends it, run through the
+ * real mapper. The old test replaced the mapper with an identity function and
+ * mocked camelCase fields the backend never sends.
+ */
+const rawActivityLog = {
   id: 1,
+  filename_hash: 'abc123',
+  filename_display: 'TB-2026.xlsx',
   timestamp: '2026-02-15T10:00:00Z',
-  filenameHash: 'abc123',
-  rowCount: 100,
-  balanced: true,
-  totalDebits: 50000,
-  totalCredits: 50000,
-  materialityThreshold: 1000,
-  anomalyCount: 2,
-  materialCount: 1,
-  immaterialCount: 1,
+  record_count: 100,
+  total_debits: 50000.25,
+  total_credits: 50000,
+  materiality_threshold: 1000,
+  was_balanced: false,
+  anomaly_count: 2,
+  material_count: 1,
+  immaterial_count: 1,
+  is_consolidated: false,
+  sheet_count: null,
+  chain_hash: null,
 }
 
 const mockApiResponse = {
-  items: [mockActivity],
+  items: [rawActivityLog],
   total_count: 55,
   page: 1,
   page_size: 50,
@@ -60,7 +65,6 @@ describe('useActivityHistory', () => {
       isAuthenticated: true,
       isLoading: false,
     })
-    mockMapActivityLogToAuditActivity.mockImplementation((x: unknown) => x)
   })
 
   it('initializes with empty activities and loading', () => {
@@ -89,7 +93,14 @@ describe('useActivityHistory', () => {
       '/activity/history?page=1&page_size=50',
       'test-token'
     )
-    expect(result.current.activities).toEqual([mockActivity])
+    expect(result.current.activities).toHaveLength(1)
+    const [activity] = result.current.activities
+    expect(activity.rowCount).toBe(100)
+    expect(activity.totalDebits).toBe(50000.25)
+    expect(activity.totalCredits).toBe(50000)
+    expect(activity.difference).toBeCloseTo(0.25, 10)
+    expect(activity.balanced).toBe(false)
+    expect(activity.filenameDisplay).toBe('TB-2026.xlsx')
     expect(result.current.isLoading).toBe(false)
   })
 

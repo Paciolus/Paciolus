@@ -1,0 +1,74 @@
+{
+  "composite_score": {
+    "score": 42.5,
+    "risk_tier": "elevated",
+    "tests_run": 19,
+    "total_entries": 1200,
+    "total_flagged": 36,
+    "flag_rate": 0.03,
+    "flags_by_severity": { "high": 4, "medium": 12, "low": 20 },
+    "top_findings": ["Round Dollar Amounts: 2 of 1,200 entries flagged"],
+    "top_flags": [],
+    "score_basis": []
+  },
+  "test_results": [
+    {
+      "test_name": "Round Dollar Amounts",
+      "test_key": "round_amounts",
+      "test_tier": "structural",
+      "entries_flagged": 2,
+      "total_entries": 1200,
+      "flag_rate": 0.0017,
+      "severity": "medium",
+      "description": "Entries posted in round dollar amounts.",
+      "flagged_entries": [
+        {
+          "entry": {
+            "entry_id": "JE-1001",
+            "posting_date": "2026-03-31",
+            "account": "6100 Rent Expense",
+            "description": "Accrual",
+            "debit": 50000.0,
+            "credit": null,
+            "row_number": 17
+          },
+          "test_name": "Round Dollar Amounts",
+          "test_key": "round_amounts",
+          "test_tier": "structural",
+          "severity": "medium",
+          "issue": "Amount is a round 50,000",
+          "confidence": 0.8,
+          "details": { "amount": 50000.0 }
+        },
+        {
+          "entry": {
+            "entry_id": "JE-1002",
+            "posting_date": "2026-03-31",
+            "account": "2100 Accrued Liabilities",
+            "description": "Accrual",
+            "debit": null,
+            "credit": 50000.0,
+            "row_number": 18
+          },
+          "test_name": "Round Dollar Amounts",
+          "test_key": "round_amounts",
+          "test_tier": "structural",
+          "severity": "medium",
+          "issue": "Amount is a round 50,000",
+          "confidence": 0.8,
+          "details": { "amount": 50000.0 }
+        }
+      ]
+    }
+  ],
+  "data_quality": {
+    "completeness_score": 98.5,
+    "field_fill_rates": { "posting_date": 1.0, "account": 1.0, "description": 0.97 },
+    "detected_issues": [],
+    "total_rows": 1200
+  },
+  "multi_currency_warning": null,
+  "benford_result": null,
+  "settings_applied": {},
+  "settings_ignored": []
+}
