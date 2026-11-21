@@ -107,6 +107,9 @@ export default function BookToTaxPage() {
                 the adjustments you enter. Classification of an item as permanent versus temporary, and
                 the application of uncertain-tax-position analysis under <span className="font-mono">ASC 740</span>, remain preparer
                 judgments; the output is a working-paper draft, not a filed return.
+                {' '}There is no input for net operating loss carryforwards from earlier years: in a profitable
+                year after a loss, current tax is computed before any NOL deduction and may be overstated. A
+                loss year is shown without an NOL deferred tax asset or valuation allowance.
               </DisclaimerBox>
               <CitationFooter standards={[]} />
             </div>

@@ -82,6 +82,10 @@ export interface TaxProvision {
   deferred_tax_expense: string
   total_tax_expense: string
   effective_rate: string
+  /** Sprint 889: false for a loss year — no NOL asset or valuation allowance computed. */
+  is_complete: boolean
+  /** Sprint 889: plain-language limits on the provision, shown with it. */
+  limitations: string[]
 }
 
 export interface BookToTaxResponse {

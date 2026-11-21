@@ -28,6 +28,18 @@ ZERO = Decimal("0")
 
 M3_THRESHOLD_TOTAL_ASSETS = Decimal("10000000")  # IRS Schedule M-3 trigger
 
+# Sprint 889 (CEO decision 2026-11-20, brief 14F): NOL recognition is out of scope. A loss year
+# says so and is never presented as a complete provision; every run carries the scope note,
+# because the tool has no input for carryforwards from earlier years.
+LOSS_YEAR_LIMITATION = (
+    "Taxable loss for the year: no net operating loss deferred tax asset or valuation allowance has been "
+    "computed, so this tax provision is not complete."
+)
+NOL_CARRYFORWARD_SCOPE_NOTE = (
+    "This tool has no input for net operating loss carryforwards from earlier years. In a profitable year "
+    "after a loss, current tax is computed before any NOL deduction and may be overstated."
+)
+
 
 class DifferenceType(str, Enum):
     PERMANENT = "permanent"
@@ -298,6 +310,9 @@ class TaxProvision:
     deferred_tax_expense: Decimal  # Change in DTL less change in DTA
     total_tax_expense: Decimal
     effective_rate: Decimal  # total_tax_expense / book_pretax_income
+    # Sprint 889 (14F): False for a loss year (no NOL asset or valuation allowance computed).
+    is_complete: bool = True
+    limitations: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -307,6 +322,8 @@ class TaxProvision:
             "deferred_tax_expense": str(self.deferred_tax_expense),
             "total_tax_expense": str(self.total_tax_expense),
             "effective_rate": str(self.effective_rate),
+            "is_complete": self.is_complete,
+            "limitations": list(self.limitations),
         }
 
 
@@ -522,6 +539,9 @@ def calculate_book_to_tax(config: BookToTaxConfig) -> BookToTaxResult:
     else:
         effective = ZERO
 
+    loss_year = taxable_income < ZERO
+    limitations = ([LOSS_YEAR_LIMITATION] if loss_year else []) + [NOL_CARRYFORWARD_SCOPE_NOTE]
+
     provision = TaxProvision(
         taxable_income=_quantise(taxable_income),
         current_federal_tax=current_fed,
@@ -529,6 +549,8 @@ def calculate_book_to_tax(config: BookToTaxConfig) -> BookToTaxResult:
         deferred_tax_expense=deferred_expense,
         total_tax_expense=total_tax,
         effective_rate=effective,
+        is_complete=not loss_year,
+        limitations=limitations,
     )
 
     entity_size = "large" if config.total_assets >= M3_THRESHOLD_TOTAL_ASSETS else "small"

@@ -210,5 +210,11 @@ def export_book_to_tax_csv(
     writer.writerow(["", "Total Tax Expense", number_cell(p.total_tax_expense)])
     writer.writerow(["", "Effective Rate", number_cell(p.effective_rate)])
 
+    # Sprint 889 (14F): the limitations travel with every copy of the provision.
+    writer.writerow([])
+    writer.writerow(["Limitations"])
+    for note in p.limitations:
+        writer.writerow(["", note])
+
     buffer.seek(0)
     return attachment_response(buffer.getvalue(), f"book_to_tax_{result.tax_year}.csv", MEDIA_CSV, quote_filename=False)

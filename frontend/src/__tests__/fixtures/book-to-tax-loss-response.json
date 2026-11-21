@@ -1,0 +1,41 @@
+{
+  "tax_year": 2026,
+  "entity_size": "small",
+  "schedule_m1": {
+    "net_income_per_books": "-100000.00",
+    "federal_income_tax_per_books": "0.00",
+    "permanent_additions": [],
+    "temporary_additions": [],
+    "permanent_subtractions": [],
+    "temporary_subtractions": [],
+    "taxable_income": "-100000.00"
+  },
+  "schedule_m3": {
+    "income_per_books": "-100000.00",
+    "income_items": [],
+    "expense_items": [],
+    "taxable_income": "-100000.00"
+  },
+  "deferred_tax": {
+    "beginning_dta": "0.00",
+    "beginning_dtl": "0.00",
+    "current_year_temporary_adjustments": "0.00",
+    "tax_rate": "0.21",
+    "current_year_movement": "0.00",
+    "ending_dta": "0",
+    "ending_dtl": "0.00"
+  },
+  "tax_provision": {
+    "taxable_income": "-100000.00",
+    "current_federal_tax": "0.00",
+    "current_state_tax": "0.00",
+    "deferred_tax_expense": "0.00",
+    "total_tax_expense": "0.00",
+    "effective_rate": "-0.0000",
+    "is_complete": false,
+    "limitations": [
+      "Taxable loss for the year: no net operating loss deferred tax asset or valuation allowance has been computed, so this tax provision is not complete.",
+      "This tool has no input for net operating loss carryforwards from earlier years. In a profitable year after a loss, current tax is computed before any NOL deduction and may be overstated."
+    ]
+  }
+}

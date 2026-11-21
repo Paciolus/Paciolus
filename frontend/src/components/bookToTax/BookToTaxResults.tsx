@@ -73,7 +73,9 @@ export function BookToTaxResults({ result }: Props) {
       </section>
 
       <section className="theme-card p-6">
-        <h3 className="font-serif text-lg text-content-primary mb-4">Tax Provision</h3>
+        <h3 className="font-serif text-lg text-content-primary mb-4">
+          {tax_provision.is_complete ? 'Tax Provision' : 'Tax Provision (not complete)'}
+        </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-sans">
           <Stat label="Current federal" value={formatAmount(tax_provision.current_federal_tax)} />
           <Stat label="Current state" value={formatAmount(tax_provision.current_state_tax)} />
@@ -81,6 +83,20 @@ export function BookToTaxResults({ result }: Props) {
           <Stat label="Total tax expense" value={formatAmount(tax_provision.total_tax_expense)} />
           <Stat label="Effective rate" value={formatRate(tax_provision.effective_rate)} />
         </div>
+        {tax_provision.limitations.length > 0 && (
+          <ul className="mt-4 space-y-2" data-testid="provision-limitations">
+            {tax_provision.limitations.map(note => (
+              <li
+                key={note}
+                className={`font-sans text-sm leading-relaxed border-l-2 pl-3 ${
+                  tax_provision.is_complete ? 'border-theme text-content-secondary' : 'border-clay-500 text-clay-600'
+                }`}
+              >
+                {note}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )

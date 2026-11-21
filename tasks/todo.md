@@ -870,7 +870,7 @@ allowance is computed and never presents the provision as complete. (Closes Spri
 - [x] 14C if-guarded assertions become assertions.
 - [x] 14D frontend activity mapper + JE success case from real response shapes.
 - [x] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
-- [ ] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.
+- [x] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.
 - [ ] 14G PostgreSQL job runs `alembic upgrade head`; enum round-trip; schema parity; upgrade from existing rows.
 - [ ] 14H mapping E2E in PR CI; financial-correctness slow tests before merge; workflow check.
 
@@ -1035,7 +1035,8 @@ Full history: [`archive/open-sprint-history-2026-11.md`](archive/open-sprint-his
 HIGH with an excise-tax message.
 
 Still open:
-- [ ] F5, F9, B1, B2, B5, B6. (W4 W-3 vs 941, W8, W9 done in Sprint 855.)
+- [ ] F5, F9, B2, B5, B6. (B1 — NOL and valuation allowance — closed by Sprint 889 14F: CEO scope call 2026-11-20,
+      a loss year states that no NOL asset or valuation allowance is computed.) (W4 W-3 vs 941, W8, W9 done in Sprint 855.)
 
 Full history: [`archive/open-sprint-history-2026-11.md`](archive/open-sprint-history-2026-11.md) (Sprint 826).
 
