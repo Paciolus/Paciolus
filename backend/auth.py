@@ -109,14 +109,6 @@ def resolve_access_token(
     return request.cookies.get(ACCESS_COOKIE_NAME)
 
 
-class TokenResponse(BaseModel):
-    """JWT token response model."""
-
-    access_token: str
-    token_type: str = "bearer"  # nosec B105 — OAuth2 token type, not a password
-    expires_in: int  # seconds until expiration
-
-
 class TokenData(BaseModel):
     """Data extracted from JWT token."""
 

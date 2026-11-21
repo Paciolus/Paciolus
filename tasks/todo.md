@@ -960,7 +960,21 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
       ceilings read the one `max_team_seats`. Not changed: the Terms page's plan table (legal copy, counsel review)
       and the estimator's answer buckets (wording, not plan facts).
 - [x] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
-- [ ] 16D unused declarations removed; flags wired or removed; leftovers listed.
+- [x] 16D unused declarations removed; flags wired or removed; leftovers listed.
+      Removed (no consumer, git-grepped): `TokenResponse`, `get_all_base_price_ids`, `IngestionResult` /
+      `AnomalyFinding` / `AnomalyResult`, `_looks_like_bcrypt`, `compute_tb_risk_score` / `get_risk_tier` aliases, and
+      the `INTELLIGENCE_WATERMARK` and `FORMAT_ODS` flags (formats now come from `/upload/capabilities`).
+      **Left for a decision (not touched):**
+      - Unmounted batch-upload frontend (`BatchUploadContext`, `BatchDropZone`, `useBatchUpload`): mount it when the
+        bulk-upload feature is built (see "Feature to build: Bulk upload"), or delete with that entry.
+      - `engagement_dashboard_engine.py` + `engagement_dashboard_memo.py`: no route calls them. Finishing needs a route,
+        a page and a memo export test; removing is two files and their tests.
+      - `shared/intercompany_resolver.py` + `Engagement.intercompany_counterparties`: only `audit/rules/relationships.py`
+        and one test read them; finishing needs a UI to enter counterparties; removing needs a migration to drop the
+        column.
+      - bcrypt verify branch for share passcodes: shares live ≤48 h, so it is dead once no unexpired share row has a
+        bcrypt hash. Removal needs one read-only production query (count of unexpired `export_shares` whose hash starts
+        `$2`) returning 0.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

@@ -10,34 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-import pandas as pd
-
-from column_detector import ColumnDetectionResult
-
-
-@dataclass
-class IngestionResult:
-    """Output of the ingestion stage: a normalized DataFrame plus metadata.
-
-    Attributes:
-        df: Normalized trial-balance DataFrame with stripped column names
-            and numeric debit/credit columns.
-        filename: Original upload filename (for logging/error messages).
-        row_count: Total rows ingested (across all chunks).
-        column_detection: Column mapping metadata discovered during parsing.
-        account_col: Resolved account-name column header.
-        debit_col: Resolved debit column header.
-        credit_col: Resolved credit column header.
-    """
-
-    df: pd.DataFrame
-    filename: str
-    row_count: int
-    column_detection: ColumnDetectionResult | None = None
-    account_col: str | None = None
-    debit_col: str | None = None
-    credit_col: str | None = None
-
 
 @dataclass
 class ClassificationResult:
@@ -61,43 +33,6 @@ class ClassificationResult:
     provided_account_types: dict[str, str] = field(default_factory=dict)
     provided_account_subtypes: dict[str, str] = field(default_factory=dict)
     classification_stats: dict[str, int] = field(default_factory=dict)
-
-
-@dataclass
-class AnomalyFinding:
-    """A single anomaly finding dictionary wrapper.
-
-    The underlying dict matches the existing API contract shape. This wrapper
-    is provided for forward-compatible typing without breaking consumers that
-    expect plain dicts.
-    """
-
-    data: dict[str, Any]
-
-    def __getitem__(self, key: str) -> Any:
-        return self.data[key]
-
-    def get(self, key: str, default: Any = None) -> Any:
-        return self.data.get(key, default)
-
-
-@dataclass
-class AnomalyResult:
-    """Output of the anomaly detection stage.
-
-    Attributes:
-        findings: Merged list of all anomaly findings (abnormal balances,
-            suspense, concentration, rounding, related-party, intercompany,
-            equity signals, revenue/expense concentration).
-        material_count: Number of findings with materiality == 'material'.
-        immaterial_count: Number of findings below materiality.
-        informational_count: Number of informational-tier findings.
-    """
-
-    findings: list[dict[str, Any]]
-    material_count: int = 0
-    immaterial_count: int = 0
-    informational_count: int = 0
 
 
 @dataclass

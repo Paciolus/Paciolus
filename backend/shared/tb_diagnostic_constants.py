@@ -630,5 +630,3 @@ def get_diagnostic_tier(score: int) -> str:
 
 
 # Backward-compatible aliases (internal callers may still use old names)
-compute_tb_risk_score = compute_tb_diagnostic_score
-get_risk_tier = get_diagnostic_tier

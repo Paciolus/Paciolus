@@ -12,18 +12,14 @@
 export type FeatureFlag =
   | 'SONIFICATION'
   | 'INSIGHT_MICROCOPY'
-  | 'INTELLIGENCE_WATERMARK'
-  | 'FORMAT_ODS'
 
 const FLAG_REGISTRY: Record<FeatureFlag, boolean> = {
   /** Web Audio API tones on upload/success/error/export */
   SONIFICATION: true,
   /** AI-style contextual messages in InsightRail */
   INSIGHT_MICROCOPY: true,
-  /** "Paciolus Intelligence" stamp on PDF exports */
-  INTELLIGENCE_WATERMARK: true,
-  /** ODS file format upload support (Sprint 436 — off by default) */
-  FORMAT_ODS: false,
+  // Sprint 891 (16D): INTELLIGENCE_WATERMARK (nothing read it) and FORMAT_ODS (enabled formats now come
+  // from the backend's GET /upload/capabilities) were removed.
 }
 
 /**

@@ -268,12 +268,6 @@ def get_stripe_price_id(tier: str, interval: str) -> str | None:
     return ids.get(tier, {}).get(interval)
 
 
-def get_all_base_price_ids() -> set[str]:
-    """Return the set of all configured base plan Stripe Price IDs."""
-    ids = _load_stripe_price_ids()
-    return {v for tier_ids in ids.values() for v in tier_ids.values() if v}
-
-
 # ---------------------------------------------------------------------------
 # Startup billing config validation
 # ---------------------------------------------------------------------------

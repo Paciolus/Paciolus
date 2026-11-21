@@ -13,15 +13,15 @@ describe('useFeatureFlag', () => {
     expect(result.current).toBe(true)
   })
 
-  it('returns false for flags off by default', () => {
-    // FORMAT_ODS is gated off per the registry.
-    const { result } = renderHook(() => useFeatureFlag('FORMAT_ODS'))
+  it('returns false for a name that is not in the registry', () => {
+    // Sprint 891: the off-by-default FORMAT_ODS flag was removed (formats come from the backend).
+    const { result } = renderHook(() => useFeatureFlag('NOT_A_FLAG' as never))
     expect(result.current).toBe(false)
   })
 
   it('re-renders idempotent — same flag returns the same value across calls', () => {
-    const first = renderHook(() => useFeatureFlag('INTELLIGENCE_WATERMARK'))
-    const second = renderHook(() => useFeatureFlag('INTELLIGENCE_WATERMARK'))
+    const first = renderHook(() => useFeatureFlag('INSIGHT_MICROCOPY'))
+    const second = renderHook(() => useFeatureFlag('INSIGHT_MICROCOPY'))
     expect(first.result.current).toBe(second.result.current)
   })
 })

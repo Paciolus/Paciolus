@@ -170,7 +170,6 @@ def _is_legacy_hash_format(hash_str: str) -> bool:
 # Backward-compat alias — a few older code paths may have imported the
 # pre-rename symbol. Kept as an alias so we don't have to ripple the
 # rename through unrelated modules right now.
-_looks_like_bcrypt = _is_bcrypt_hash
 
 
 def verify_passcode(passcode: str, stored_hash: str) -> bool:

@@ -15,11 +15,6 @@ describe('isFeatureEnabled', () => {
     expect(typeof result).toBe('boolean')
   })
 
-  it('returns a boolean for INTELLIGENCE_WATERMARK', () => {
-    const result = isFeatureEnabled('INTELLIGENCE_WATERMARK')
-    expect(typeof result).toBe('boolean')
-  })
-
   it('returns false for unknown keys cast at runtime', () => {
     // Runtime safety: dynamic string that bypasses compile-time check
     const result = isFeatureEnabled('NONEXISTENT_FLAG' as FeatureFlag)
