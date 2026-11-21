@@ -211,20 +211,6 @@ def _estimate_csv_row_count(file_bytes: bytes, sample_bytes: int = 65536) -> int
     return estimated
 
 
-def _estimate_xlsx_row_count(file_bytes: bytes) -> int:
-    """Read sheet dimensions from XLSX metadata without loading cell values."""
-    import openpyxl
-
-    try:
-        wb = openpyxl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
-        ws = wb.active
-        max_row = ws.max_row or 0
-        wb.close()
-        return max_row
-    except Exception:
-        return 0
-
-
 def _sniff_text_format(file_bytes: bytes, declared_extension: str) -> bool:
     """Lightweight content validation for text-based upload formats."""
     header = file_bytes[:512]
@@ -577,7 +563,7 @@ def _parse_docx(file_bytes: bytes, filename: str) -> pd.DataFrame:
     return parse_docx(file_bytes, filename)
 
 
-def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
+def _parse_excel(file_bytes: bytes, filename: str, max_rows: int | None = None) -> pd.DataFrame:
     """Parse Excel (.xlsx/.xls) bytes into a DataFrame.
 
     SECURITY NOTE: XLSX ingestion explicitly disables formula evaluation,
@@ -615,6 +601,21 @@ def _parse_excel(file_bytes: bytes, filename: str) -> pd.DataFrame:
         )
         try:
             ws = wb.active
+            # Sprint 892 (17A): the row-limit check on the sheet's recorded dimensions, made on
+            # this open of the workbook — it used to open it a second time just for this.
+            # Unsized sheets report None, as before; the post-parse check covers them.
+            if max_rows is not None:
+                recorded_rows = ws.max_row or 0
+                if recorded_rows > max_rows:
+                    log_secure_operation(
+                        "pre_parse_row_limit",
+                        f"File '{filename}' has {recorded_rows:,} rows in metadata (limit {max_rows:,})",
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
+                        f"(estimated {recorded_rows:,} rows). Please reduce the file size.",
+                    )
             data = ws.values
             headers = next(data, None)
             if headers is None:
@@ -745,7 +746,6 @@ def parse_uploaded_file_by_format(
 
     # Pre-parse row-count gate (20% buffer — estimates aren't exact).
     _TEXT_FORMATS = {FileFormat.CSV, FileFormat.TSV, FileFormat.TXT}
-    _XLSX_FORMATS = {FileFormat.XLSX, FileFormat.XLS}
     row_estimate_limit = int(max_rows * 1.2)
 
     if detected.format in _TEXT_FORMATS:
@@ -760,24 +760,12 @@ def parse_uploaded_file_by_format(
                 detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
                 f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
             )
-    elif detected.format in _XLSX_FORMATS:
-        estimated_rows = _estimate_xlsx_row_count(file_bytes)
-        if estimated_rows > max_rows:
-            log_secure_operation(
-                "pre_parse_row_limit",
-                f"File '{filename}' has {estimated_rows:,} rows in metadata (limit {max_rows:,})",
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=f"File appears to exceed the maximum row limit of {max_rows:,} rows "
-                f"(estimated {estimated_rows:,} rows). Please reduce the file size.",
-            )
 
     active_parses.labels(format=fmt_label).inc()
     try:
         with parse_duration_seconds.labels(format=fmt_label, stage="parse").time():
             if detected.format in (FileFormat.XLSX, FileFormat.XLS):
-                df = _parse_excel(file_bytes, filename)
+                df = _parse_excel(file_bytes, filename, max_rows=max_rows)
             elif detected.format == FileFormat.CSV:
                 df = _parse_csv(file_bytes, filename)
             elif detected.format == FileFormat.TSV:
