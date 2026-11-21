@@ -854,7 +854,8 @@ Verification: backend `-m "not slow"` 11,335 passed, 1 xfailed (the recovery def
 - [ ] Until `counsel-redline-863` merges, Privacy/Terms on this branch still say "up to 48 hours" and list bulk upload.
 
 ### Sprint 889: Tests that fail when a number or a rule is wrong
-**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-889-tests-that-fail`, stacked on Sprint 888.
+**Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-889-tests-that-fail`, stacked on
+Sprint 888, except 14G (blocked on a CEO go-ahead).
 **Priority:** P1. **Source:** CEO brief 14 (review TQ-04/06/07/09/10/14/15/16 at `ef5e567`). **Agents:** critic
 (could this test pass with the bug?), executor, guardian (14G schema). Expected values are worked out by hand; each new
 test is shown to fail under a temporary mutation, then the mutation is reverted.
@@ -894,6 +895,19 @@ allowance is computed and never presents the provision as complete. (Closes Spri
       though the same refresh succeeds from curl. Same symptom as Sprint 868; investigate there. The job stays
       advisory, so this does not block merges. The `.test` email domain is rejected by the validator — the CI
       account uses `example.com`.
+
+**Review (2026-11-20).** Commits: `3868d262` 14A · `8bdb1dc1` 14B · `31f68b94` 14C · `b50686d9` 14D · `b5e43307` 14E ·
+`54b84081` 14F · `58b2d9a2` 14H · (record commit) Sprint 819 book-to-tax golden re-recorded for 14F's two added fields
+and the CSV's Limitations rows (diffed: nothing else changed). Every new test was shown to fail under the brief's
+mutation (scratch script, file restored after each run); for 14A, 14B, 14C and the MUS shift in 14E the old suite
+passed the same mutation. Verification: backend `-m "not slow"` 11,362 passed, 2 xfailed (CEO findings in 888 and
+14B), 1 failed — Sprint 819 `test_engagement_export_routes_unchanged`, already failing on `main`; frontend Jest via the
+pre-commit gate on every commit.
+
+**Open — CEO**
+- [ ] 14G go-ahead: rebuild the migration chain (squashed baseline from the models) so a fresh PostgreSQL can be built.
+- [ ] 14B finding: should falling revenue be labelled "decrease" (movement_type on the display basis)?
+- [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load (Sprint 868).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

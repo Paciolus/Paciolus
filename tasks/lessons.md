@@ -224,3 +224,16 @@
   is enforced, not only the TTL constant, before publishing a retention sentence.
 - **Derive copy checks from the code, not a literal list (Sprint 888).** The format test computes the enabled set from
   `FORMAT_PROFILES` and `is_format_enabled`, so turning ODS on fails the copy test until the FAQ names it.
+- **Run the old tests against the mutation too (Sprint 889).** A mutation that fails the new test proves little if it also
+  failed the old suite. Running both showed which gaps were real (heatmap, multi-period, guarded asserts, the MUS
+  one-row shift) and which mutations other tests already caught (lease timing). Keep a scratch mutation runner that
+  restores the file in `finally`, and match CRLF endings on Windows checkouts.
+- **`alembic upgrade head` on an empty PostgreSQL is a test of its own (Sprint 889).** The chain had never completed:
+  enum types not created, new enum values used in the same transaction, a value added to one tier type but not the
+  other. Production was built with `create_all` and stamped, which hides all of it until a disaster-recovery rebuild.
+  An embedded server (`pgserver` in a scratch venv) is enough to find this without Docker.
+- **E2E credentials in repository secrets do not exist in a CI-local database (Sprint 889).** The job started its own
+  backend on a fresh SQLite file, so the secret account could never log in — and the repo had no secrets anyway, so
+  everything skipped. Seed a fixed account into the throwaway database instead; use a domain the email validator
+  accepts (`.test` is rejected).
+
