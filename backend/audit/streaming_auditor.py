@@ -69,6 +69,13 @@ from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
 from shared.parsing_helpers import parse_amount
 
 
+def _detect_currency_column(columns: list[str]) -> Optional[str]:
+    """A currency column in the file, if any (Sprint 890, 15D)."""
+    from currency_engine import detect_currency_column
+
+    return detect_currency_column(columns)
+
+
 class StreamingAuditor:
     """Memory-efficient streaming auditor that processes trial balances in chunks."""
 
@@ -120,6 +127,9 @@ class StreamingAuditor:
         # Sprint 526: Supplementary column detection
         self.account_type_col: Optional[str] = None
         self.account_name_col: Optional[str] = None
+        # Sprint 890 (15D): the currency column, if the file has one, and each account's currencies.
+        self.currency_col: Optional[str] = None
+        self.provided_account_currencies: dict[str, set[str]] = {}
 
         # Sprint 526: Provided account types and names from CSV columns
         self.provided_account_types: dict[str, str] = {}
@@ -175,6 +185,7 @@ class StreamingAuditor:
             supplementary = detect_columns(all_columns)
             self.account_type_col = supplementary.account_type_column
             self.account_name_col = supplementary.account_name_column
+            self.currency_col = _detect_currency_column(all_columns)
 
             self.column_detection = ColumnDetectionResult(
                 account_column=self.account_col,
@@ -208,6 +219,7 @@ class StreamingAuditor:
 
         self.account_type_col = self.column_detection.account_type_column
         self.account_name_col = self.column_detection.account_name_column
+        self.currency_col = _detect_currency_column(all_columns)
 
         self.columns_discovered = True
 
@@ -361,6 +373,15 @@ class StreamingAuditor:
                     balances[account_name] = {"debit": Decimal("0"), "credit": Decimal("0")}
                 balances[account_name]["debit"] += Decimal(str(debit_sum))
                 balances[account_name]["credit"] += Decimal(str(credit_sum))
+
+            # Sprint 890 (15D): each account's currency codes (three letters), for conversion.
+            if self.currency_col and self.currency_col in chunk.columns:
+                for acct_key, code in zip(
+                    chunk[self.account_col].astype(str).str.strip(),
+                    chunk[self.currency_col].astype(str).str.strip().str.upper(),
+                ):
+                    if acct_key and len(code) == 3 and code.isalpha():
+                        self.provided_account_currencies.setdefault(acct_key, set()).add(code)
 
             # Sprint 526: Extract account_type values
             if self.account_type_col and self.account_type_col in chunk.columns:

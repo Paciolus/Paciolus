@@ -12,6 +12,7 @@ import { RiskDashboard } from '@/components/risk'
 import type { DisplayMode } from '@/components/sensitivity'
 import { SensitivityToolbar } from '@/components/sensitivity'
 import { AccrualCompletenessSection } from '@/components/trialBalance/AccrualCompletenessSection'
+import { CurrencyConversionSection } from '@/components/trialBalance/CurrencyConversionSection'
 import { ExpenseCategorySection } from '@/components/trialBalance/ExpenseCategorySection'
 import { PopulationProfileSection } from '@/components/trialBalance/PopulationProfileSection'
 import type { BenchmarkComparisonResponse } from '@/hooks'
@@ -271,6 +272,8 @@ export function AuditResultsPanel({
             disabled={isRecalculating}
           />
         )}
+
+        {result.currency_conversion && <CurrencyConversionSection data={result.currency_conversion} />}
 
         {result.lead_sheet_grouping && (
           <FinancialStatementsPreview

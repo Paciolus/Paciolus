@@ -169,8 +169,13 @@ export interface AuditResult {
     debit: number
     credit: number
     type: string
+    type_supplied?: boolean
   }>
   account_balances?: Record<string, { debit: number; credit: number }>
+  /** Sprint 890: currency codes per account, when the file has a currency column. */
+  account_currencies?: Record<string, string[]>
+  /** Sprint 890: convenience conversion at one closing rate per currency (not ASC 830 / IAS 21). */
+  currency_conversion?: TBCurrencyConversion | null
   classified_accounts?: Record<string, string>
   account_subtypes?: Record<string, string>
   lease_diagnostic?: Record<string, unknown>
@@ -209,4 +214,26 @@ export function isAuditErrorResponse(
   data: AuditRunResponse | undefined | null,
 ): data is AuditErrorResponse {
   return !!data && data.status !== 'success'
+}
+
+/** Sprint 890 (15D): one account in the convenience conversion. */
+export interface TBConvertedAccount {
+  account: string
+  currency: string | null
+  original_amount: number
+  converted_amount: number | null
+  rate: string | null
+  rate_date: string | null
+  rate_source: string | null
+  issue: string | null
+}
+
+/** Sprint 890 (15D): the TB's convenience conversion — a single closing rate per currency. */
+export interface TBCurrencyConversion {
+  method: string
+  label: string
+  presentation_currency: string
+  converted_count: number
+  unconverted_count: number
+  rows: TBConvertedAccount[]
 }

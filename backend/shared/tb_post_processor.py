@@ -35,29 +35,23 @@ def apply_currency_conversion(
     user_id: int,
     db: Session,
 ) -> None:
-    """Apply multi-currency conversion to TB result if user has a rate table.
+    """Convert the TB to the user's presentation currency, if they have a rate table and the file has currencies.
 
-    Mutates `result` in place, adding result["currency_conversion"].
+    Sprint 890 (15D): this never ran — it looked for an ``accounts`` key the pipeline never emits,
+    and the response model had no ``currency_conversion`` field. It now converts every account at
+    one closing rate per currency, labelled a convenience conversion (``shared/tb_currency_conversion``).
+    Mutates ``result`` in place, adding ``result["currency_conversion"]``.
     """
-    if "accounts" not in result:
-        logger.warning("Skipping currency conversion: missing 'accounts' key")
+    if not result.get("account_currencies") or not result.get("all_accounts"):
         return
 
-    from currency_engine import convert_trial_balance
     from shared.currency_rate_store import get_user_rate_table
+    from shared.tb_currency_conversion import accounts_with_currencies, convert_accounts
 
     rate_table = get_user_rate_table(db, user_id)
-    if rate_table is None or not result.get("accounts"):
+    if rate_table is None:
         return
-
     try:
-        conversion = convert_trial_balance(
-            tb_rows=result["accounts"],
-            rate_table=rate_table,
-            amount_column="net_balance"
-            if "net_balance" in (result["accounts"][0] if result["accounts"] else {})
-            else "amount",
-        )
-        result["currency_conversion"] = conversion.to_dict()
-    except (ValueError, KeyError, TypeError, AttributeError, ArithmeticError):
+        result["currency_conversion"] = convert_accounts(accounts_with_currencies(result), rate_table).to_dict()
+    except (ValueError, KeyError, TypeError, ArithmeticError):
         logger.warning("Currency conversion failed — returning unconverted results", exc_info=True)

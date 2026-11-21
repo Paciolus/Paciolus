@@ -10217,6 +10217,91 @@
         "title": "ConvergenceResponse",
         "type": "object"
       },
+      "ConvertedAccountResponse": {
+        "description": "One account in the convenience conversion (Sprint 890, 15D).",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "converted_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue"
+          },
+          "original_amount": {
+            "title": "Original Amount",
+            "type": "number"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "rate_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Date"
+          },
+          "rate_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Source"
+          }
+        },
+        "required": [
+          "account",
+          "original_amount"
+        ],
+        "title": "ConvertedAccountResponse",
+        "type": "object"
+      },
       "CreateOrgRequest": {
         "properties": {
           "name": {
@@ -28018,6 +28103,48 @@
         "title": "SumScheduleSubtotals",
         "type": "object"
       },
+      "TBCurrencyConversionResponse": {
+        "description": "Convenience conversion at one closing rate per currency — not ASC 830 / IAS 21 translation.",
+        "properties": {
+          "converted_count": {
+            "title": "Converted Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "presentation_currency": {
+            "title": "Presentation Currency",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ConvertedAccountResponse"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "unconverted_count": {
+            "title": "Unconverted Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "method",
+          "label",
+          "presentation_currency",
+          "converted_count",
+          "unconverted_count",
+          "rows"
+        ],
+        "title": "TBCurrencyConversionResponse",
+        "type": "object"
+      },
       "TWMColumnDetectionResponse": {
         "description": "Typed column detection for all three document types.",
         "properties": {
@@ -29589,6 +29716,23 @@
             ],
             "title": "Account Balances"
           },
+          "account_currencies": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Currencies"
+          },
           "account_subtypes": {
             "anyOf": [
               {
@@ -29693,6 +29837,16 @@
               }
             ],
             "title": "Column Order Warnings"
+          },
+          "currency_conversion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TBCurrencyConversionResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "cutoff_risk": {
             "anyOf": [

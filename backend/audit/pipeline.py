@@ -477,6 +477,11 @@ def audit_trial_balance_streaming(
         ]
         result["all_accounts"] = all_accounts_list
         result["account_balances"] = display_balances
+        # Sprint 890 (15D): currency codes per account, when the file has a currency column.
+        if auditor.provided_account_currencies:
+            result["account_currencies"] = {
+                auditor._display_name(k): sorted(v) for k, v in auditor.provided_account_currencies.items()
+            }
         result["classified_accounts"] = display_classifications
         result["account_subtypes"] = display_subtypes
 

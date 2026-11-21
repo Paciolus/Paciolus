@@ -792,6 +792,30 @@ class AccountBalanceResponse(BaseModel):
     credit: MonetaryDecimal
 
 
+class ConvertedAccountResponse(BaseModel):
+    """One account in the convenience conversion (Sprint 890, 15D)."""
+
+    account: str
+    currency: Optional[str] = None
+    original_amount: MonetaryDecimal
+    converted_amount: Optional[MonetaryDecimal] = None
+    rate: Optional[str] = None
+    rate_date: Optional[str] = None
+    rate_source: Optional[str] = None
+    issue: Optional[str] = None
+
+
+class TBCurrencyConversionResponse(BaseModel):
+    """Convenience conversion at one closing rate per currency — not ASC 830 / IAS 21 translation."""
+
+    method: str
+    label: str
+    presentation_currency: str
+    converted_count: int
+    unconverted_count: int
+    rows: list[ConvertedAccountResponse]
+
+
 class TrialBalanceResponse(BaseModel):
     """Complete trial balance audit response.
 
@@ -831,6 +855,10 @@ class TrialBalanceResponse(BaseModel):
     data_quality: Optional[dict[str, Any]] = None
     all_accounts: Optional[list[TrialBalanceAccountResponse]] = None
     account_balances: Optional[dict[str, AccountBalanceResponse]] = None
+    # Sprint 890 (15D): currency codes per account (when the file has a currency column), and the
+    # convenience conversion when the user has a rate table.
+    account_currencies: Optional[dict[str, list[str]]] = None
+    currency_conversion: Optional[TBCurrencyConversionResponse] = None
     classified_accounts: Optional[dict[str, str]] = None
     account_subtypes: Optional[dict[str, str]] = None
 

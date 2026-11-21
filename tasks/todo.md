@@ -923,7 +923,7 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
       Done: `all_accounts` / `account_balances` typed (`TrialBalanceAccountResponse`, `AccountBalanceResponse`).
       Done: response models for the five promoted JSON tools (`shared/promoted_tool_response_schemas.py`).
 - [x] Found in 15D and fixed: every multi-sheet TB analysis returned 500 (no `classification_summary`).
-- [ ] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
+- [x] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
       Done: lead sheets grouped once, in both engines; post-processor adds section density only; rate-table
       helper moved to `shared/currency_rate_store.py`.
 - [ ] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.
