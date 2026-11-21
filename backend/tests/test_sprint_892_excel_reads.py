@@ -65,3 +65,33 @@ def test_multi_sheet_reader_yields_the_same_frames_as_reading_each_sheet():
         combined = pd.concat([c for c, _, s in got if s == sheet])
         pd.testing.assert_frame_equal(combined, expected)
     assert got[0][0]["Account Number"].iloc[0] == "00000"  # leading zeros kept
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("name", "content_type", "body"),
+    [
+        ("tb.exe", "application/octet-stream", b"MZ"),
+        ("tb.csv", "text/csv", b""),
+        ("tb.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", b"not a zip"),
+        ("tb.csv", "text/csv", b"Account,Debit,Credit\nCash,1,0\n"),
+    ],
+)
+async def test_bytes_variant_answers_exactly_like_the_reading_validator(name, content_type, body):
+    """Step 3: the TB route validates the bytes it read for hashing instead of reading again."""
+    from starlette.datastructures import Headers, UploadFile
+
+    from shared.upload_pipeline import validate_file_size, validate_upload_contents
+
+    def upload():
+        return UploadFile(io.BytesIO(body), filename=name, headers=Headers({"content-type": content_type}))
+
+    async def outcome(fn):
+        try:
+            return ("ok", await fn())
+        except HTTPException as e:
+            return (e.status_code, e.detail)
+
+    reading = await outcome(lambda: validate_file_size(upload()))
+    given = await outcome(lambda: validate_upload_contents(upload(), body))
+    assert reading == given

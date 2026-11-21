@@ -987,12 +987,14 @@ rate, ceiling, limit and gate before and after (fixture) — identical.
 is allowed by the brief. **Source:** CEO brief 17 (review ST-15/12/13/14). Each step must leave every output
 unchanged (snapshot, PDF contract and memo equivalence tests run per step).
 
-- [ ] 17A Excel: measure peak memory; one open per workbook; reuse bytes read for hashing; row limit in the parser.
+- [x] 17A Excel: measure peak memory; one open per workbook; reuse bytes read for hashing; row limit in the parser.
       Baseline (100k rows x 2 sheets, 4 MB): `read_excel_chunked` peak 32.7 MB; multi-sheet 33.6 MB / 89 s;
       `parse_uploaded_file` 42.9 MB. The XLSX pre-parse estimate re-opens the workbook and returns 0 for unsized
       sheets (a no-op that costs a full load).
       Done: step 1 — row-limit check on the parser's own open (`_estimate_xlsx_row_count` removed); same message.
       Done: step 2 — multi-sheet reader opens the workbook once (89.3 s -> 63.8 s, peak 33.6 MB unchanged).
+      Done: step 3 — the TB route validates the bytes it read for hashing (`validate_upload_contents`).
+      Kept: chunk `.copy()` in both readers (callers modify chunks). 17A complete.
 - [ ] 17B organization workflows into services (create, invite, accept, remove).
 - [ ] 17C one testing page shell (Fixed Assets and Inventory first).
 - [ ] 17D split the largest units (one at a time).

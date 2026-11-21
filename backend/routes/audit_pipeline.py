@@ -36,7 +36,7 @@ from shared.tb_post_processor import apply_currency_conversion, apply_section_de
 from shared.tool_run_recorder import maybe_record_tool_run
 from shared.upload_pipeline import (
     memory_cleanup,
-    validate_file_size,
+    validate_upload_contents,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,8 +82,7 @@ async def audit_trial_balance(
     if cached_entry:
         raw_bytes = cached_entry.file_bytes
     else:
-        raw_bytes = await file.read()
-        await file.seek(0)  # Reset for downstream validate_file_size
+        raw_bytes = await file.read()  # Sprint 892 (17A): read once; validated below without re-reading
 
     file_hash = hashlib.sha256(raw_bytes).hexdigest()[:16]
     dedup_key = f"{current_user.id}:{engagement_id or 0}:{file_hash}:trial_balance"
@@ -179,7 +178,7 @@ async def audit_trial_balance(
                 file_bytes = cached_entry.file_bytes
                 filename = cached_entry.filename
             else:
-                file_bytes = await validate_file_size(file)
+                file_bytes = await validate_upload_contents(file, raw_bytes)
                 filename = file.filename or ""
 
             def _analyze() -> dict[str, Any]:

@@ -246,8 +246,8 @@ def _sniff_text_format(file_bytes: bytes, declared_extension: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-async def validate_file_size(file: UploadFile) -> bytes:
-    """Read uploaded file with size, content-type, and extension validation."""
+def _check_upload_headers(file: UploadFile) -> tuple[str, str]:
+    """Extension and content-type checks (no bytes read). Returns (lower-case filename, extension)."""
     filename = (file.filename or "").lower()
     ext = os.path.splitext(filename)[1]
 
@@ -277,6 +277,26 @@ async def validate_file_size(file: UploadFile) -> bytes:
             detail=f"Unsupported file type. Please upload a {get_active_extensions_display()} file.",
         )
 
+    return filename, ext
+
+
+def _refuse_oversize(file: UploadFile, size: int) -> None:
+    if size > MAX_FILE_SIZE_BYTES:
+        log_secure_operation(
+            "file_size_exceeded",
+            f"File {file.filename} exceeds {MAX_FILE_SIZE_MB}MB limit",
+        )
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB. "
+            f"Please reduce file size or split into smaller files.",
+        )
+
+
+async def validate_file_size(file: UploadFile) -> bytes:
+    """Read uploaded file with size, content-type, and extension validation."""
+    filename, ext = _check_upload_headers(file)
+
     contents = bytearray()
     chunk_size = 1024 * 1024
 
@@ -285,22 +305,25 @@ async def validate_file_size(file: UploadFile) -> bytes:
         if not chunk:
             break
         contents.extend(chunk)
-
-        if len(contents) > MAX_FILE_SIZE_BYTES:
-            log_secure_operation(
-                "file_size_exceeded",
-                f"File {file.filename} exceeds {MAX_FILE_SIZE_MB}MB limit",
-            )
-            raise HTTPException(
-                status_code=413,
-                detail=f"File size exceeds maximum allowed size of {MAX_FILE_SIZE_MB}MB. "
-                f"Please reduce file size or split into smaller files.",
-            )
+        _refuse_oversize(file, len(contents))
 
     file_bytes = bytes(contents)
 
     # Sprint 890 (15E step 3): reading needs the event loop; validating does not. The checks
     # below open ZIP entries and decompress XML, so they run in the thread pool.
+    await asyncio.to_thread(validate_upload_bytes, file_bytes, ext, filename, file.filename)
+    return file_bytes
+
+
+async def validate_upload_contents(file: UploadFile, file_bytes: bytes) -> bytes:
+    """``validate_file_size`` for bytes the route has already read (Sprint 892, 17A step 3).
+
+    The trial balance route reads the whole upload to hash it for de-duplication; it used to
+    rewind and have ``validate_file_size`` read it again. The checks and their order are the same:
+    headers, size, then the content checks in the thread pool.
+    """
+    filename, ext = _check_upload_headers(file)
+    _refuse_oversize(file, len(file_bytes))
     await asyncio.to_thread(validate_upload_bytes, file_bytes, ext, filename, file.filename)
     return file_bytes
 
