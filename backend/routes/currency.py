@@ -25,6 +25,12 @@ from currency_engine import (
     parse_single_rate,
 )
 from database import get_db
+from shared.currency_rate_store import (  # noqa: F401 — re-exported for existing imports
+    TOOL_NAME,
+    clear_user_rate_table,
+    get_user_rate_table,
+    set_user_rate_table,
+)
 from shared.error_messages import sanitize_error
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.testing_route import enforce_tool_access
@@ -32,36 +38,15 @@ from shared.upload_pipeline import (
     memory_cleanup,
     validate_file_size,
 )
-from tool_session_model import delete_tool_session, load_tool_session, save_tool_session
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["currency"])
 
-TOOL_NAME = "currency_rates"
-
 
 # =============================================================================
 # DB-BACKED SESSION HELPERS (Sprint 262)
 # =============================================================================
-
-
-def get_user_rate_table(db: Session, user_id: int) -> Optional[CurrencyRateTable]:
-    """Load rate table from DB, or return None if missing/expired."""
-    data = load_tool_session(db, user_id, TOOL_NAME)
-    if data is None:
-        return None
-    return CurrencyRateTable.from_storage_dict(data)
-
-
-def set_user_rate_table(db: Session, user_id: int, table: CurrencyRateTable) -> None:
-    """Persist rate table to DB via upsert."""
-    save_tool_session(db, user_id, TOOL_NAME, table.to_storage_dict())
-
-
-def clear_user_rate_table(db: Session, user_id: int) -> bool:
-    """Clear rate table from DB. Returns True if it existed."""
-    return delete_tool_session(db, user_id, TOOL_NAME)
 
 
 # =============================================================================

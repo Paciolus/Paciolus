@@ -32,7 +32,7 @@ from shared.helpers import (
 )
 from shared.materiality_resolver import resolve_materiality_basis
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
-from shared.tb_post_processor import apply_currency_conversion, apply_lead_sheet_grouping
+from shared.tb_post_processor import apply_currency_conversion, apply_section_density
 from shared.tool_run_recorder import maybe_record_tool_run
 from shared.upload_pipeline import (
     memory_cleanup,
@@ -203,7 +203,7 @@ async def audit_trial_balance(
                         column_mapping=column_mapping_dict,
                     )
 
-                apply_lead_sheet_grouping(result, materiality_threshold)
+                apply_section_density(result, materiality_threshold)
 
                 return result
 

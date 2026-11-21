@@ -784,6 +784,12 @@ def audit_trial_balance_multi_sheet(
             )
         result["all_accounts"] = all_accounts_list
 
+        # Sprint 890 (15D): lead sheets are grouped here, as in the single-sheet engine; the
+        # route's post-processor no longer groups them a second time.
+        from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
+
+        result["lead_sheet_grouping"] = lead_sheet_grouping_to_dict(group_by_lead_sheet(all_accounts_list))
+
         log_secure_operation(
             "multi_sheet_audit_complete",
             f"Consolidated audit complete. {len(selected_sheets)} sheets, "

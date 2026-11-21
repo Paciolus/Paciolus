@@ -488,10 +488,14 @@ class TestLeadSheetCredits:
     """Test that the post-processor passes raw debit/credit to lead sheet grouping."""
 
     def test_credit_balance_preserved(self):
-        from shared.tb_post_processor import apply_lead_sheet_grouping
+        # Sprint 890 (15D): grouping happens once, in the engine, over every account.
+        from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
+
+        def apply_lead_sheet_grouping(result, _threshold):
+            result["lead_sheet_grouping"] = lead_sheet_grouping_to_dict(group_by_lead_sheet(result["all_accounts"]))
 
         result = {
-            "abnormal_balances": [
+            "all_accounts": [
                 {
                     "account": "Trade Accounts Payable",
                     "type": "Liability",

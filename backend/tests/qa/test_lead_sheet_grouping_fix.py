@@ -1,11 +1,17 @@
 """
 Regression tests for lead sheet grouping aggregation (NEW-006).
 
-Verifies that apply_lead_sheet_grouping uses all_accounts when available,
-producing correct A–Z aggregated groups instead of one-account-per-sheet.
+Verifies that grouping uses every account (all_accounts), producing correct A–Z aggregated
+groups instead of one-account-per-sheet. Sprint 890 (15D): grouping happens once, in the engine;
+the post-processor's abnormal-balances fallback was removed with its second grouping pass.
 """
 
-from shared.tb_post_processor import apply_lead_sheet_grouping
+
+def apply_lead_sheet_grouping(result: dict, materiality_threshold: float = 0.0) -> None:
+    """Sprint 890 (15D): what both engines now do — group every account once."""
+    from lead_sheet_mapping import group_by_lead_sheet, lead_sheet_grouping_to_dict
+
+    result["lead_sheet_grouping"] = lead_sheet_grouping_to_dict(group_by_lead_sheet(result["all_accounts"]))
 
 
 def _make_accounts(n: int) -> list[dict]:
@@ -71,30 +77,6 @@ def test_same_letter_accounts_aggregate():
     assert len(cash_groups) == 1
     assert cash_groups[0]["account_count"] == 3
     assert cash_groups[0]["total_debit"] == 35500.0
-
-
-def test_fallback_to_abnormal_balances():
-    """When all_accounts is missing, falls back to abnormal_balances."""
-    result = {
-        "abnormal_balances": [
-            {
-                "account": "1000 - Cash",
-                "debit": 10000.0,
-                "credit": 0.0,
-                "type": "asset",
-                "issue": "test",
-                "materiality": "material",
-                "severity": "high",
-                "anomaly_type": "test",
-            },
-        ],
-    }
-
-    apply_lead_sheet_grouping(result, materiality_threshold=1000.0)
-
-    grouping = result["lead_sheet_grouping"]
-    total_accounts = sum(s["account_count"] for s in grouping["summaries"])
-    assert total_accounts == 1
 
 
 def test_summed_balances_correct():
