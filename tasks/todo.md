@@ -909,6 +909,20 @@ pre-commit gate on every commit.
 - [ ] 14B finding: should falling revenue be labelled "decrease" (movement_type on the display basis)?
 - [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load (Sprint 868).
 
+### Sprint 890: The edges between frontend, API and background work
+**Status:** IN PROGRESS (2026-11-20) — local branch `sprint-890-edges`, stacked on Sprint 889.
+**Priority:** P1. **Source:** CEO brief 15 (review ST-08/05/10/11/03 at `ef5e567`), in the brief's order. **Agents:**
+executor, critic (no new framework), guardian (sessions never shared across threads). 15E absorbs Sprint 821's
+offloading items and brief 17B's webhook move.
+**Decision (CEO):** 15D converts at one closing rate for every account, labelled a convenience conversion, with rate,
+date and source beside each figure — not ASC 830 / IAS 21 translation.
+
+- [x] 15A failed saves and exports are reported; preferences ignore late responses; stable onError.
+- [ ] 15B backend serves upload limits and enabled formats; frontend derives pickers, checks, labels, messages.
+- [ ] 15C typed nested TB account models; five promoted routes get response models; wire types checked.
+- [ ] 15D lead sheets grouped once; currency conversion completed (closing rate, convenience label); helper moved.
+- [ ] 15E blocking work off the event loop: webhook, logo, upload validation, file-tool DB units.
+
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
 page does not list it and `POST /upload/bulk` answers 501 "Bulk upload is not available yet." (Sprint 888).

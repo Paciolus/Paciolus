@@ -27,6 +27,12 @@ export interface UseTestingExportReturn {
   handleExportCSV: (body: unknown) => Promise<void>
 }
 
+/** Message for an export that came back without a file (Sprint 890). */
+function exportFailureMessage(ok: boolean, error: string | undefined, what: string): string {
+  if (!ok) return error || `Unable to generate ${what}. Please try again.`
+  return `The server returned no file for the ${what}. Please try again.`
+}
+
 export function useTestingExport(
   memoEndpoint: string,
   csvEndpoint: string,
@@ -56,7 +62,7 @@ export function useTestingExport(
     if (!token) return
     setExporting('pdf')
     try {
-      const { blob, filename, ok } = await apiDownload(
+      const { blob, filename, ok, error } = await apiDownload(
         memoEndpoint,
         token,
         { method: 'POST', body: withLinkedEngagement(body as Record<string, unknown>, engagementId) },
@@ -65,6 +71,9 @@ export function useTestingExport(
         downloadBlob(blob, filename || fallbackMemoFilename)
         markComplete('pdf')
         toast.success('PDF memo exported', filename || fallbackMemoFilename)
+      } else {
+        // Sprint 890 (15A): apiDownload resolves ok: false on failure; it does not throw.
+        toast.error('Export failed', exportFailureMessage(ok, error, 'PDF memo'))
       }
     } catch {
       toast.error('Export failed', 'Unable to generate PDF memo. Please try again.')
@@ -77,7 +86,7 @@ export function useTestingExport(
     if (!token) return
     setExporting('csv')
     try {
-      const { blob, filename, ok } = await apiDownload(
+      const { blob, filename, ok, error } = await apiDownload(
         csvEndpoint,
         token,
         { method: 'POST', body: body as Record<string, unknown> },
@@ -86,6 +95,8 @@ export function useTestingExport(
         downloadBlob(blob, filename || fallbackCsvFilename)
         markComplete('csv')
         toast.success('CSV exported', filename || fallbackCsvFilename)
+      } else {
+        toast.error('Export failed', exportFailureMessage(ok, error, 'CSV export'))
       }
     } catch {
       toast.error('Export failed', 'Unable to generate CSV export. Please try again.')
