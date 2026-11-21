@@ -952,9 +952,13 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
       override); workspace counts distinct completed marketed tools against the catalog. Command-palette links are
       checked against the catalog. Not yet derived (listed for a later pass): workpaper index, `tool-ledger.ts`,
       `app/tools/page.tsx`, `toolbarConfig.ts` (workpaper refs and export capabilities not yet in the registry).
-- [ ] 16B one plan file (`shared/plans.json`): Python loads it, TypeScript generated; first commit changes no value.
+- [x] 16B one plan file (`shared/plans.json`): Python loads it, TypeScript generated; first commit changes no value.
       Done: step 1 — `backend/shared/plans.json` loaded by `price_config.py` and `entitlements.py`; every value
       compared before/after (`test_sprint_891_plan_file.py` + fixture).
+      Done: steps 2–3 — `content/plans.generated.ts` (generator + staleness test); `pricing.ts` tier prices, feature
+      lines, comparison rows and `SEAT_CONFIGS`, and the upgrade modal's feature lines, derive from it; backend seat
+      ceilings read the one `max_team_seats`. Not changed: the Terms page's plan table (legal copy, counsel review)
+      and the estimator's answer buckets (wording, not plan facts).
 - [ ] 16C entry docs point at the real commands; inventories from the registry; tax notes current; old baseline archived.
 - [ ] 16D unused declarations removed; flags wired or removed; leftovers listed.
 

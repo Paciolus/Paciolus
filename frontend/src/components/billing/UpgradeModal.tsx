@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { type BillingInterval, baseSeats, formatPrice, getTier, isSelfServePlan, maxAdditionalSeats, SALES_CONTACT_HREF, SALES_CONTACT_LABEL, seatPriceDollars } from '@/domain/pricing'
+import { type BillingInterval, baseSeats, formatPrice, getTier, isSelfServePlan, maxAdditionalSeats, SALES_CONTACT_HREF, SALES_CONTACT_LABEL, seatPriceDollars, seatsLabel, uploadsPerMonth } from '@/domain/pricing'
 import { fadeScale } from '@/lib/motion'
 
 interface UpgradeModalProps {
@@ -25,17 +25,17 @@ const TIERS = [
   {
     id: 'solo',
     name: 'Solo',
-    features: ['100 uploads/mo', 'Unlimited clients', 'All 18 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
+    features: [`${uploadsPerMonth('solo')} uploads/mo`, 'Unlimited clients', 'All 18 tools', 'PDF, Excel & CSV exports', '7-day free trial'],
   },
   {
     id: 'professional',
     name: 'Professional',
-    features: ['500 uploads/mo', 'Unlimited clients', 'All 18 tools', 'All exports', '7 seats (up to 20)', 'Export sharing', 'Admin dashboard', '7-day free trial'],
+    features: [`${uploadsPerMonth('professional')} uploads/mo`, 'Unlimited clients', 'All 18 tools', 'All exports', `${seatsLabel('professional').replace(' (', ' seats (')}`, 'Export sharing', 'Admin dashboard', '7-day free trial'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', '20 seats (up to 100)', 'Export sharing', 'Admin dashboard', 'Custom PDF branding', '7-day free trial'],
+    features: ['Unlimited uploads', 'Unlimited clients', 'All 18 tools', 'All exports', `${seatsLabel('enterprise').replace(' (', ' seats (')}`, 'Export sharing', 'Admin dashboard', 'Custom PDF branding', '7-day free trial'],
   },
 ]
 

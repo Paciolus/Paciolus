@@ -45,3 +45,14 @@ def test_seat_ceilings_are_held_once():
 
 def test_plan_file_covers_every_tier():
     assert set(PLANS["tiers"]) == {"free", "solo", "professional", "enterprise"}
+
+
+def test_generated_frontend_plan_module_is_current():
+    import subprocess
+    import sys
+
+    repo = Path(__file__).resolve().parents[2]
+    out = subprocess.run(
+        [sys.executable, str(repo / "scripts" / "generate_plans_ts.py"), "--check"], capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stdout + out.stderr

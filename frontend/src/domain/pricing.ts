@@ -4,6 +4,9 @@
  * Free-trial length in days. Mirrors `TRIAL_PERIOD_DAYS` in
  * backend/billing/price_config.py (pinned by tests/test_pricing_copy_consistency.py).
  */
+
+import { PLANS, type PlanTier } from '@/content/plans.generated'
+
 export const TRIAL_DAYS = 7
 
 /**
@@ -117,7 +120,33 @@ export function getRecommendedTier(uploads: Uploads, features: Features, teamSiz
 }
 
 /* ────────────────────────────────────────────────
-   Seat pricing constants (mirror backend price_config.py)
+   Plan facts — Sprint 891 (16B): from backend/shared/plans.json through the generated
+   content/plans.generated.ts. Prices are stored in cents there.
+   ──────────────────────────────────────────────── */
+
+const ENT = {
+  free: PLANS.tiers.free.entitlements,
+  solo: PLANS.tiers.solo.entitlements,
+  professional: PLANS.tiers.professional.entitlements,
+  enterprise: PLANS.tiers.enterprise.entitlements,
+}
+const dollars = (cents: number): number => cents / 100
+
+/** "100", or "Unlimited" when the plan file says 0. */
+export function uploadsPerMonth(tier: PlanTier): string {
+  return ENT[tier].uploads_per_month === 0 ? 'Unlimited' : String(ENT[tier].uploads_per_month)
+}
+export function clientsLimit(tier: PlanTier): string {
+  return ENT[tier].max_clients === 0 ? 'Unlimited' : String(ENT[tier].max_clients)
+}
+/** "7 seats (up to 20)" for team plans; "1" for single-seat plans. */
+export function seatsLabel(tier: PlanTier): string {
+  const e = ENT[tier]
+  return e.max_team_seats > 0 ? `${e.seats_included} (up to ${e.max_team_seats})` : String(e.seats_included)
+}
+
+/* ────────────────────────────────────────────────
+   Seat pricing (derived from the plan file)
    ──────────────────────────────────────────────── */
 
 export interface SeatCalcConfig {
@@ -130,26 +159,15 @@ export interface SeatCalcConfig {
   baseAnnual: number
 }
 
-export const SEAT_CONFIGS: SeatCalcConfig[] = [
-  {
-    label: 'Professional',
-    baseSeats: 7,
-    maxSeats: 20,
-    seatMonthly: 65,
-    seatAnnual: 650,
-    baseMonthly: 500,
-    baseAnnual: 5000,
-  },
-  {
-    label: 'Enterprise',
-    baseSeats: 20,
-    maxSeats: 100,
-    seatMonthly: 45,
-    seatAnnual: 450,
-    baseMonthly: 1000,
-    baseAnnual: 10000,
-  },
-]
+export const SEAT_CONFIGS: SeatCalcConfig[] = (['professional', 'enterprise'] as const).map(tier => ({
+  label: tier === 'professional' ? 'Professional' : 'Enterprise',
+  baseSeats: ENT[tier].seats_included,
+  maxSeats: ENT[tier].max_team_seats,
+  seatMonthly: dollars(PLANS.seat_price_cents[tier].monthly),
+  seatAnnual: dollars(PLANS.seat_price_cents[tier].annual),
+  baseMonthly: dollars(PLANS.tiers[tier].price_cents.monthly),
+  baseAnnual: dollars(PLANS.tiers[tier].price_cents.annual),
+}))
 
 export interface SeatBreakdown {
   baseCost: number
@@ -197,11 +215,11 @@ export const tiers: Tier[] = [
   {
     name: 'Solo',
     internalId: 'solo',
-    monthlyPrice: 100,
-    annualPrice: 1000,
+    monthlyPrice: dollars(PLANS.tiers.solo.price_cents.monthly),
+    annualPrice: dollars(PLANS.tiers.solo.price_cents.annual),
     priceSubtitle: (interval) => interval === 'annual' ? 'per year' : 'per month',
     features: [
-      { text: '100 uploads per month' },
+      { text: `${uploadsPerMonth('solo')} uploads per month` },
       { text: 'All 18 diagnostic tools' },
       { text: 'Unlimited clients' },
       { text: 'PDF, Excel & CSV exports' },
@@ -217,15 +235,15 @@ export const tiers: Tier[] = [
   {
     name: 'Professional',
     internalId: 'professional',
-    monthlyPrice: 500,
-    annualPrice: 5000,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 7 seats included' : 'per month, 7 seats included',
+    monthlyPrice: dollars(PLANS.tiers.professional.price_cents.monthly),
+    annualPrice: dollars(PLANS.tiers.professional.price_cents.annual),
+    priceSubtitle: (interval) => `${interval === 'annual' ? 'per year' : 'per month'}, ${ENT.professional.seats_included} seats included`,
     features: [
-      { text: '500 uploads per month' },
+      { text: `${uploadsPerMonth('professional')} uploads per month` },
       { text: 'All 18 diagnostic tools' },
       { text: 'Unlimited clients' },
       { text: 'All export formats' },
-      { text: '7 seats included (up to 20)' },
+      { text: `${ENT.professional.seats_included} seats included (up to ${ENT.professional.max_team_seats})` },
       { text: 'Export sharing' },
       { text: 'Admin dashboard & activity logs' },
       { text: 'Email support (reply within 1–2 business days)' },
@@ -240,13 +258,13 @@ export const tiers: Tier[] = [
   {
     name: 'Enterprise',
     internalId: 'enterprise',
-    monthlyPrice: 1000,
-    annualPrice: 10000,
-    priceSubtitle: (interval) => interval === 'annual' ? 'per year, 20 seats included' : 'per month, 20 seats included',
+    monthlyPrice: dollars(PLANS.tiers.enterprise.price_cents.monthly),
+    annualPrice: dollars(PLANS.tiers.enterprise.price_cents.annual),
+    priceSubtitle: (interval) => `${interval === 'annual' ? 'per year' : 'per month'}, ${ENT.enterprise.seats_included} seats included`,
     features: [
       { text: 'Everything in Professional' },
       { text: 'Unlimited uploads & clients' },
-      { text: '20 seats included (up to 100)' },
+      { text: `${ENT.enterprise.seats_included} seats included (up to ${ENT.enterprise.max_team_seats})` },
       { text: 'Custom PDF branding' },
       { text: 'Email support (reply within 1–2 business days)' },
     ],
@@ -272,16 +290,16 @@ export interface ComparisonRow {
 }
 
 export const comparisonRows: ComparisonRow[] = [
-  { feature: 'Monthly uploads', free: '10', solo: '100', professional: '500', enterprise: 'Unlimited' },
+  { feature: 'Monthly uploads', free: uploadsPerMonth('free'), solo: uploadsPerMonth('solo'), professional: uploadsPerMonth('professional'), enterprise: uploadsPerMonth('enterprise') },
   { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 18', professional: 'All 18', enterprise: 'All 18' },
-  { feature: 'Clients', free: '3', solo: 'Unlimited', professional: 'Unlimited', enterprise: 'Unlimited' },
+  { feature: 'Clients', free: clientsLimit('free'), solo: clientsLimit('solo'), professional: clientsLimit('professional'), enterprise: clientsLimit('enterprise') },
   { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'All formats', enterprise: 'All formats' },
-  { feature: 'Diagnostic Workspace', free: false, solo: true, professional: true, enterprise: true },
-  { feature: 'Team Seats', free: '1', solo: '1', professional: '7 (up to 20)', enterprise: '20 (up to 100)' },
-  { feature: 'Export Sharing', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Admin Dashboard', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Activity Logs', free: false, solo: false, professional: true, enterprise: true },
-  { feature: 'Custom PDF Branding', free: false, solo: false, professional: false, enterprise: true },
+  { feature: 'Diagnostic Workspace', free: ENT.free.workspace, solo: ENT.solo.workspace, professional: ENT.professional.workspace, enterprise: ENT.enterprise.workspace },
+  { feature: 'Team Seats', free: seatsLabel('free'), solo: seatsLabel('solo'), professional: seatsLabel('professional'), enterprise: seatsLabel('enterprise') },
+  { feature: 'Export Sharing', free: ENT.free.export_sharing, solo: ENT.solo.export_sharing, professional: ENT.professional.export_sharing, enterprise: ENT.enterprise.export_sharing },
+  { feature: 'Admin Dashboard', free: ENT.free.admin_dashboard, solo: ENT.solo.admin_dashboard, professional: ENT.professional.admin_dashboard, enterprise: ENT.enterprise.admin_dashboard },
+  { feature: 'Activity Logs', free: ENT.free.activity_logs, solo: ENT.solo.activity_logs, professional: ENT.professional.activity_logs, enterprise: ENT.enterprise.activity_logs },
+  { feature: 'Custom PDF Branding', free: ENT.free.custom_branding, solo: ENT.solo.custom_branding, professional: ENT.professional.custom_branding, enterprise: ENT.enterprise.custom_branding },
   { feature: 'Support', free: 'Email', solo: 'Email', professional: 'Email', enterprise: 'Email' },
   {
     feature: 'Free Trial',

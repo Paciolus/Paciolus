@@ -14,14 +14,10 @@ from pathlib import Path
 import tools_registry
 from billing.price_config import (
     ENTERPRISE_SEAT_PRICE,
-    MAX_SELF_SERVE_SEATS_ENTERPRISE,
-    MAX_SELF_SERVE_SEATS_PROFESSIONAL,
     PROFESSIONAL_SEAT_PRICE,
     SELF_SERVE_TEAM_TIERS_ENABLED,
     TRIAL_PERIOD_DAYS,
 )
-from models import UserTier
-from shared.entitlements import TIER_ENTITLEMENTS
 from shared.upload_pipeline import MAX_FILE_SIZE_MB, MAX_ROW_COUNT
 
 REPO = Path(__file__).resolve().parents[2]
@@ -63,34 +59,23 @@ def test_marketing_test_count_is_derived_not_typed():
         assert "140" not in source, rel
 
 
-def test_monthly_upload_limits_match_entitlements():
+def test_monthly_upload_limits_are_derived_from_the_plan_file():
+    """Sprint 891 (16B): the row reads the plan file both sides load, so it cannot drift.
+
+    (Before, this test parsed the literal numbers; frontend/src/__tests__/Sprint891PlanFile.test.ts
+    now pins the values the page shows.)
+    """
     row = re.search(r"feature: 'Monthly uploads',(.*?)\}", PRICING_TS).group(1)
-    expected = {
-        "free": TIER_ENTITLEMENTS[UserTier.FREE].uploads_per_month,
-        "solo": TIER_ENTITLEMENTS[UserTier.SOLO].uploads_per_month,
-        "professional": TIER_ENTITLEMENTS[UserTier.PROFESSIONAL].uploads_per_month,
-        "enterprise": TIER_ENTITLEMENTS[UserTier.ENTERPRISE].uploads_per_month,
-    }
-    for tier, limit in expected.items():
-        shown = re.search(rf"{tier}: '([^']+)'", row).group(1)
-        assert shown == ("Unlimited" if limit == 0 else str(limit)), tier
+    for tier in ("free", "solo", "professional", "enterprise"):
+        assert f"uploadsPerMonth('{tier}')" in row, tier
+    assert re.search(r"'\d+'", row) is None, "a literal limit is back in the Monthly uploads row"
 
 
-def test_seat_configs_match_price_config():
-    configs = re.findall(
-        r"label: '(\w+)',\s*baseSeats: (\d+),\s*maxSeats: (\d+),\s*seatMonthly: (\d+),\s*seatAnnual: (\d+)", PRICING_TS
-    )
-    by_label = {c[0]: tuple(int(x) for x in c[1:]) for c in configs}
-    assert by_label["Professional"][1:] == (
-        MAX_SELF_SERVE_SEATS_PROFESSIONAL,
-        PROFESSIONAL_SEAT_PRICE["monthly"] // 100,
-        PROFESSIONAL_SEAT_PRICE["annual"] // 100,
-    )
-    assert by_label["Enterprise"][1:] == (
-        MAX_SELF_SERVE_SEATS_ENTERPRISE,
-        ENTERPRISE_SEAT_PRICE["monthly"] // 100,
-        ENTERPRISE_SEAT_PRICE["annual"] // 100,
-    )
+def test_seat_configs_are_derived_from_the_plan_file():
+    block = PRICING_TS[PRICING_TS.index("export const SEAT_CONFIGS") :]
+    block = block[: block.index("}))") + 3]
+    assert "PLANS.seat_price_cents" in block and "max_team_seats" in block
+    assert not re.search(r"(seatMonthly|maxSeats|baseSeats):\s*\d", block), "a literal seat figure is back"
 
 
 def test_file_limits_in_copy_match_the_upload_pipeline():
