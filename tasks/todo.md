@@ -998,6 +998,9 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
 - [x] 17B organization workflows into services (create, invite, accept, remove).
       Done: create organization (`services/organization_workflows.py`).; invite; accept; remove member. `routes/organization.py` 441 -> 283 lines. The webhook half of 17B was done in 15E step 1.
 - [ ] 17C one testing page shell (Fixed Assets and Inventory first).
+      Done: `components/shared/testing/SingleFileTestingPage.tsx`; Fixed Assets moved (old vs new page HTML compared in
+      six states — guest, unverified, idle, loading, error, success — identical).
+      Done: Inventory moved (same six-state comparison, identical).
 - [ ] 17D split the largest units (one at a time).
 
 ### Feature to build: Bulk upload (Enterprise)

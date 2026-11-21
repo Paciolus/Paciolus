@@ -25,7 +25,9 @@ function freeTools(): Set<string> {
 
 function gatedToolNames(href: string): string[] {
   const source = fs.readFileSync(path.join(SRC, 'app', ...href.split('/').filter(Boolean), 'page.tsx'), 'utf-8')
-  return [...source.matchAll(/<UpgradeGate\s+toolName="([a-z0-9_]+)"/g)].map(m => m[1]!)
+  // Sprint 892 (17C): pages on the shared testing shell pass toolName to it; the shell wraps them
+  // in <UpgradeGate toolName={toolName}> (checked below).
+  return [...source.matchAll(/<(?:UpgradeGate|SingleFileTestingPage)\s+toolName="([a-z0-9_]+)"/g)].map(m => m[1]!)
 }
 
 describe('Tool page gating', () => {
@@ -35,6 +37,11 @@ describe('Tool page gating', () => {
   it('resolves the Free set and a non-trivial paid population', () => {
     expect(free.has('trial_balance')).toBe(true)
     expect(paid.length).toBeGreaterThanOrEqual(15)
+  })
+
+  it('the shared testing shell gates on the toolName it is given', () => {
+    const shell = fs.readFileSync(path.join(SRC, 'components', 'shared', 'testing', 'SingleFileTestingPage.tsx'), 'utf-8')
+    expect(shell).toMatch(/<UpgradeGate toolName=\{toolName\}>/)
   })
 
   it.each(paid.map(entry => [entry.href, entry.id]))(

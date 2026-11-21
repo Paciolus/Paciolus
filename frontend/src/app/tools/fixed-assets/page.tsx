@@ -1,18 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { FixedAssetScoreCard, FixedAssetTestResultGrid, FixedAssetDataQualityBadge, FlaggedFixedAssetTable } from '@/components/fixedAssetTesting'
-import { GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
+import { DisclaimerBox, Citation, CitationFooter } from '@/components/shared'
 import { ProofSummaryBar, ProofPanel, extractFAProof } from '@/components/shared/proof'
-import { Button } from '@/components/ui/Button'
-import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
-import { useFileUpload } from '@/hooks/useFileUpload'
+import { SingleFileTestingPage } from '@/components/shared/testing/SingleFileTestingPage'
 import { useFixedAssetTesting } from '@/hooks/useFixedAssetTesting'
-import { useTestingExport } from '@/hooks/useTestingExport'
-import { useUploadCapabilities } from '@/hooks/useUploadCapabilities'
 import { testCountFor } from '@/content/tool-ledger'
-import { isAcceptedFileType } from '@/utils/fileFormats'
 
 /**
  * Fixed Asset Testing — Tool 10 (Sprint 116)
@@ -20,238 +13,101 @@ import { isAcceptedFileType } from '@/utils/fileFormats'
  * IAS 16 / ISA 540: PP&E assertions and accounting estimates.
  * Upload a fixed asset register for automated testing — 9-test battery
  * for fixed asset anomaly indicators across structural, statistical, and advanced tiers.
+ *
+ * Sprint 892 (17C): the page shell is shared (SingleFileTestingPage); this file holds what is
+ * specific to the tool.
  */
 export default function FixedAssetTestingPage() {
-  const upload = useUploadCapabilities()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuthSession()
-  const { status, result, error, runTests, reset } = useFixedAssetTesting()
-  useCanvasAccentSync(status)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const { exporting, handleExportMemo, handleExportCSV } = useTestingExport(
-    '/export/fixed-asset-memo', '/export/csv/fixed-assets',
-    'FixedAssetTesting_Memo.pdf', 'FixedAssetTesting_Flagged.csv',
-  )
-
-  const exportBody = result ? {
-    composite_score: result.composite_score,
-    test_results: result.test_results,
-    data_quality: result.data_quality,
-    column_detection: result.column_detection,
-    filename: selectedFile?.name.replace(/\.[^.]+$/, '') || 'fixed_asset_testing',
-  } : null
-
-  const handleFileUpload = useCallback(async (file: File) => {
-    if (!isAcceptedFileType(file)) return
-    setSelectedFile(file)
-    await runTests(file)
-  }, [runTests])
-
-  const { isDragging, fileInputRef, handleDrop, handleDragOver, handleDragLeave, handleFileSelect } = useFileUpload(handleFileUpload)
-
-  const handleNewTest = useCallback(() => {
-    reset()
-    setSelectedFile(null)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }, [reset, fileInputRef])
-
-  const isVerified = user?.is_verified !== false
-
+  const tool = useFixedAssetTesting()
   return (
-    <main id="main-content" className="min-h-screen bg-surface-page">
-      <div className="page-container">
-        {/* Hero Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-success-bg border border-theme-success-border mb-6">
-            <div className="w-2 h-2 bg-sage-500 rounded-full animate-pulse" />
-            <span className="text-theme-success-text text-sm font-sans font-medium">IAS 16 / ISA 540 PP&amp;E Analysis</span>
-          </div>
-          <h1 className="type-tool-title mb-3">
-            Fixed Asset Testing
-          </h1>
-          <p className="font-sans text-content-secondary text-lg max-w-2xl mx-auto">
+    <SingleFileTestingPage
+      toolName="fixed_asset_testing"
+      tool={tool}
+      hero={{
+        badge: <>IAS 16 / ISA 540 PP&amp;E Analysis</>,
+        title: <>Fixed Asset Testing</>,
+        subtitle: (
+          <>
             Upload a fixed asset register for automated testing &mdash; {testCountFor('fixed_asset_testing')}-test battery
             for PP&amp;E anomaly indicators per IAS 16 and ISA 540.
-          </p>
-        </div>
+          </>
+        ),
+      }}
+      guestDescription="Fixed Asset Testing requires a verified account. Sign in or create an account to analyze your fixed asset register."
+      upload={{
+        title: <>Upload Fixed Asset Register</>,
+        prompt: <>Drop your fixed asset register here or click to browse</>,
+        iconClassName: 'w-8 h-8 text-content-secondary',
+      }}
+      spinnerClassName="w-5 h-5 border-2 border-sage-500/30 border-t-sage-400 rounded-full animate-spin"
+      loadingText={name => <>Running {testCountFor('fixed_asset_testing')}-test fixed asset battery on {name}...</>}
+      exports={{
+        memoEndpoint: '/export/fixed-asset-memo',
+        csvEndpoint: '/export/csv/fixed-assets',
+        memoFilename: 'FixedAssetTesting_Memo.pdf',
+        csvFilename: 'FixedAssetTesting_Flagged.csv',
+        defaultStem: 'fixed_asset_testing',
+      }}
+      renderResult={result => (
+        <>
+          {/* Evidence Summary */}
+          <ProofSummaryBar proof={extractFAProof(result)} />
+          <ProofPanel proof={extractFAProof(result)} />
 
-        {/* Guest CTA */}
-        {!authLoading && !isAuthenticated && (
-          <GuestCTA description="Fixed Asset Testing requires a verified account. Sign in or create an account to analyze your fixed asset register." />
-        )}
+          {/* Score Card */}
+          <FixedAssetScoreCard score={result.composite_score} />
 
-        {!authLoading && isAuthenticated && !isVerified && (
-          <UnverifiedCTA />
-        )}
+          {/* Data Quality */}
+          <FixedAssetDataQualityBadge quality={result.data_quality} />
 
-        {/* Tool State Blocks */}
-        {isAuthenticated && isVerified && (
-          <UpgradeGate toolName="fixed_asset_testing">
-          <ToolStatePresence status={status}>
-            {/* Upload Zone */}
-            {status === 'idle' && (
-              <div>
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 cursor-pointer
-                    ${isDragging
-                      ? 'border-sage-500 bg-theme-success-bg'
-                      : 'border-theme bg-surface-card-secondary hover:border-theme-hover hover:bg-surface-card'
-                    }`}
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept={upload.accept}
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-oatmeal-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-content-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                  </div>
-                  <h3 className="type-tool-section mb-2">
-                    Upload Fixed Asset Register
-                  </h3>
-                  <p className="font-sans text-sm text-content-secondary mb-1">
-                    Drop your fixed asset register here or click to browse
-                  </p>
-                  <p className="font-sans text-xs text-content-tertiary">
-                    CSV, TSV, TXT, or Excel &mdash; up to {upload.sizeLabel}
-                  </p>
-                </div>
-
-                <UploadHandlingNotice className="mt-4" />
-              </div>
-            )}
-
-            {/* Loading State */}
-            {status === 'loading' && (
-              <div className="text-center py-16" aria-live="polite">
-                <div className="inline-flex items-center gap-3 px-6 py-4 theme-card">
-                  <div className="w-5 h-5 border-2 border-sage-500/30 border-t-sage-400 rounded-full animate-spin" />
-                  <span className="font-sans text-content-primary">
-                    Running {testCountFor('fixed_asset_testing')}-test fixed asset battery on {selectedFile?.name}...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {status === 'error' && (
-              <div
-                className="bg-theme-error-bg border border-theme-error-border border-l-4 border-l-clay-500 rounded-xl p-6 mb-6"
-                role="alert"
-              >
-                <h3 className="font-serif text-sm text-theme-error-text mb-1">Analysis Failed</h3>
-                <p className="font-sans text-sm text-content-secondary">{error}</p>
-                <Button variant="secondary" onClick={handleNewTest} className="mt-3">
-                  Try Again
-                </Button>
-              </div>
-            )}
-
-            {/* Results */}
-            {status === 'success' && result && (
-              <div className="space-y-6">
-                {/* Action bar */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <p className="font-sans text-sm text-content-secondary">
-                      Results for <span className="text-content-primary">{selectedFile?.name}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="primary"
-                      onClick={() => exportBody && handleExportMemo(exportBody)}
-                      disabled={exporting !== null || !result}
-                    >
-                      {exporting === 'pdf' ? 'Generating...' : 'Download Testing Memo'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => exportBody && handleExportCSV(exportBody)}
-                      disabled={exporting !== null || !result}
-                    >
-                      {exporting === 'csv' ? 'Exporting...' : 'Export Flagged CSV'}
-                    </Button>
-                    <Button variant="secondary" onClick={handleNewTest}>
-                      New Test
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Evidence Summary */}
-                <ProofSummaryBar proof={extractFAProof(result)} />
-                <ProofPanel proof={extractFAProof(result)} />
-
-                {/* Score Card */}
-                <FixedAssetScoreCard score={result.composite_score} />
-
-                {/* Data Quality */}
-                <FixedAssetDataQualityBadge quality={result.data_quality} />
-
-                {/* Test Results Grid */}
-                <div>
-                  <h2 className="type-tool-section mb-4">Test Results</h2>
-                  <FixedAssetTestResultGrid results={result.test_results} />
-                </div>
-
-                {/* Flagged Fixed Asset Table */}
-                <div>
-                  <h2 className="type-tool-section mb-4">Flagged Fixed Assets</h2>
-                  <FlaggedFixedAssetTable results={result.test_results} />
-                </div>
-
-                <DisclaimerBox>
-                  This automated fixed asset testing
-                  tool provides analytical procedures to assist professional auditors in evaluating PP&amp;E register
-                  anomaly indicators per <Citation code="IAS 16" /> and <Citation code="ISA 540" />.
-                  Results are not depreciation adequacy conclusions or impairment determinations and should be interpreted
-                  in the context of the specific engagement. They are not a substitute for professional judgment or
-                  sufficient audit evidence per <Citation code="ISA 500" />.
-                </DisclaimerBox>
-                <CitationFooter standards={['IAS 16', 'ISA 540', 'ISA 500']} />
-              </div>
-            )}
-          </ToolStatePresence>
-          </UpgradeGate>
-        )}
-
-        {/* Info cards for idle state */}
-        {status === 'idle' && isAuthenticated && isVerified && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">4 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Fully depreciated assets, missing required fields, negative values, over-depreciation
-              </p>
-            </div>
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">3 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Useful life outliers, cost z-score outliers, asset age concentration
-              </p>
-            </div>
- <div className="theme-card p-6">
-              <div className="text-2xl mb-3">2 Tests</div>
-              <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
-              <p className="font-sans text-content-secondary text-xs">
-                Duplicate asset detection, residual value anomalies
-              </p>
-            </div>
+          {/* Test Results Grid */}
+          <div>
+            <h2 className="type-tool-section mb-4">Test Results</h2>
+            <FixedAssetTestResultGrid results={result.test_results} />
           </div>
-        )}
-      </div>
-    </main>
+
+          {/* Flagged Fixed Asset Table */}
+          <div>
+            <h2 className="type-tool-section mb-4">Flagged Fixed Assets</h2>
+            <FlaggedFixedAssetTable results={result.test_results} />
+          </div>
+
+          <DisclaimerBox>
+            This automated fixed asset testing
+            tool provides analytical procedures to assist professional auditors in evaluating PP&amp;E register
+            anomaly indicators per <Citation code="IAS 16" /> and <Citation code="ISA 540" />.
+            Results are not depreciation adequacy conclusions or impairment determinations and should be interpreted
+            in the context of the specific engagement. They are not a substitute for professional judgment or
+            sufficient audit evidence per <Citation code="ISA 500" />.
+          </DisclaimerBox>
+          <CitationFooter standards={['IAS 16', 'ISA 540', 'ISA 500']} />
+        </>
+      )}
+      infoCards={
+        <>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">4 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Structural Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Fully depreciated assets, missing required fields, negative values, over-depreciation
+            </p>
+          </div>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">3 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Statistical Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Useful life outliers, cost z-score outliers, asset age concentration
+            </p>
+          </div>
+          <div className="theme-card p-6">
+            <div className="text-2xl mb-3">2 Tests</div>
+            <h3 className="font-serif text-content-primary text-sm mb-2">Advanced Tests</h3>
+            <p className="font-sans text-content-secondary text-xs">
+              Duplicate asset detection, residual value anomalies
+            </p>
+          </div>
+        </>
+      }
+    />
   )
 }
