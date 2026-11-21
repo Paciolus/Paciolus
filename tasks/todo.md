@@ -996,6 +996,7 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       Done: step 3 — the TB route validates the bytes it read for hashing (`validate_upload_contents`).
       Kept: chunk `.copy()` in both readers (callers modify chunks). 17A complete.
 - [ ] 17B organization workflows into services (create, invite, accept, remove).
+      Done: create organization (`services/organization_workflows.py`).
 - [ ] 17C one testing page shell (Fixed Assets and Inventory first).
 - [ ] 17D split the largest units (one at a time).
 

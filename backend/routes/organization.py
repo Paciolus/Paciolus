@@ -29,6 +29,7 @@ from organization_model import (
     OrganizationMember,
     OrgRole,
 )
+from services import organization_workflows
 from shared.entitlement_checks import check_seat_limit_for_org
 from shared.organization_policy import (
     apply_org_subscription_to_user,
@@ -36,7 +37,6 @@ from shared.organization_policy import (
     require_admin,
     require_owner,
     revert_user_tier_after_removal,
-    unique_slug,
 )
 from shared.organization_schemas import (
     DetailResponse,
@@ -88,30 +88,10 @@ def create_organization(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Create an organization. User becomes the owner."""
-    # Check if user already belongs to an org
-    existing = db.query(OrganizationMember).filter(OrganizationMember.user_id == user.id).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="You already belong to an organization.")
-
-    slug = unique_slug(db, body.name)
-    org = Organization(name=body.name, slug=slug, owner_user_id=user.id)
-    db.add(org)
-    db.flush()  # Get org.id
-
-    # Create owner membership
-    membership = OrganizationMember(
-        organization_id=org.id,
-        user_id=user.id,
-        role=OrgRole.OWNER,
-    )
-    db.add(membership)
-
-    # Link user to org
-    user.organization_id = org.id
-
-    db.commit()
-    db.refresh(org)
-    return org.to_dict()
+    try:
+        return organization_workflows.create_organization(db, user, body.name).to_dict()
+    except organization_workflows.OrganizationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 
 @router.get("", response_model=OrganizationWithMemberCountResponse)
