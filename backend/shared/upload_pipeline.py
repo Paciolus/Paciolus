@@ -25,6 +25,7 @@ Ten-step defense from request ingress through DataFrame materialization:
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import math
@@ -312,6 +313,18 @@ async def validate_file_size(file: UploadFile) -> bytes:
 
     file_bytes = bytes(contents)
 
+    # Sprint 890 (15E step 3): reading needs the event loop; validating does not. The checks
+    # below open ZIP entries and decompress XML, so they run in the thread pool.
+    await asyncio.to_thread(validate_upload_bytes, file_bytes, ext, filename, file.filename)
+    return file_bytes
+
+
+def validate_upload_bytes(file_bytes: bytes, ext: str, filename: str, original_filename: str | None) -> None:
+    """Synchronous content checks for an upload already read into memory (Sprint 890, 15E step 3).
+
+    Empty file, file signature against the extension, text-format sniffing, and the ZIP / XML bomb
+    scan for ZIP-based formats. Raises HTTPException exactly as ``validate_file_size`` always did.
+    """
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="The uploaded file is empty. Please select a file with data.")
 
@@ -375,7 +388,7 @@ async def validate_file_size(file: UploadFile) -> bytes:
         if not _sniff_text_format(file_bytes, ext):
             log_secure_operation(
                 "content_sniff_rejected",
-                f"File '{file.filename}' content inconsistent with declared extension {ext}",
+                f"File '{original_filename}' content inconsistent with declared extension {ext}",
             )
             raise HTTPException(
                 status_code=400,
@@ -385,8 +398,6 @@ async def validate_file_size(file: UploadFile) -> bytes:
 
     if file_bytes.startswith(_XLSX_MAGIC):
         _validate_xlsx_archive(file_bytes, filename)
-
-    return file_bytes
 
 
 # ---------------------------------------------------------------------------

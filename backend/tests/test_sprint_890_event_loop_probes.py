@@ -82,3 +82,37 @@ async def test_logo_storage_leaves_the_loop_free(db_session):
         app.dependency_overrides.pop(require_current_user, None)
     assert response.status_code == 200, response.text
     assert response.json()["logo_size_bytes"] == len(buf.getvalue())
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("bypass_csrf")
+async def test_upload_validation_leaves_the_loop_free(override_auth_verified):
+    """Step 3: the ZIP / XML bomb scan of an uploaded workbook runs in the thread pool."""
+    import io
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Account Name", "Debit", "Credit"])
+    ws.append(["Cash", 100, 0])
+    ws.append(["Common Stock", 0, 100])
+    buf = io.BytesIO()
+    wb.save(buf)
+    stand_in = blocking_stand_in(result=None)
+    with patch("shared.upload_pipeline._validate_xlsx_archive", side_effect=stand_in):
+        response = await run_probe(
+            stand_in,
+            lambda c: c.post(
+                "/audit/trial-balance",
+                files={
+                    "file": (
+                        "tb.xlsx",
+                        buf.getvalue(),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                },
+                data={"force_resubmit": "true"},
+            ),
+        )
+    assert response.status_code == 200, response.text[:300]
