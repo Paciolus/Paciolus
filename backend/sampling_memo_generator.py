@@ -566,43 +566,16 @@ def _generate_sampling_memo(
         )
 
         # ─── 2. Scope ────────────────────────────────────────────
-        story.append(Paragraph("I. Scope", styles["MemoSection"]))
-        story.append(LedgerRule(doc_width))
-
-        # Source document transparency (Sprint 6)
-        source = source_line(source_document_title, filename)
-        if source:
-            story.append(Paragraph(source, styles["MemoLeader"]))
-
-        scope_text = (
-            "This memo documents the statistical sampling procedures performed in accordance with "
-            "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
-        )
-        if period_tested:
-            scope_text += f"Period under examination: {user_text(period_tested)}. "
-
-        # Determine method display name
-        method = "N/A"
-        if design_result:
-            method = (
-                "Monetary Unit Sampling (MUS)" if design_result.get("method") == "mus" else "Simple Random Sampling"
-            )
-        elif evaluation_result:
-            method = (
-                "Monetary Unit Sampling (MUS)" if evaluation_result.get("method") == "mus" else "Simple Random Sampling"
-            )
-
-        scope_text += f"Sampling method: {method}."
-        story.append(Paragraph(scope_text, styles["MemoBody"]))
-        story.append(Spacer(1, 8))
-
-        build_scope_statement(
+        method = _sampling_method_label(design_result, evaluation_result)
+        _build_scope_section(
             story,
             styles,
             doc_width,
-            tool_domain="statistical_sampling",
-            framework=resolved_framework,
-            domain_label="statistical sampling",
+            filename=filename,
+            source_document_title=source_document_title,
+            period_tested=period_tested,
+            method=method,
+            resolved_framework=resolved_framework,
         )
 
         # ─── 3. Design Parameters ────────────────────────────────
@@ -1357,6 +1330,59 @@ def _generate_sampling_memo(
 
 # ═══════════════════════════════════════════════════════════════
 # Section Builders
+# ---------------------------------------------------------------------------
+# Sprint 892 (17D): sections moved out of _generate_sampling_memo one at a time,
+# each a builder over the same story; the final renderer is unchanged.
+
+
+def _sampling_method_label(design_result: Optional[dict[str, Any]], evaluation_result: Optional[dict[str, Any]]) -> str:
+    """The method name the memo prints: from the design result, else the evaluation, else N/A."""
+    result = design_result or evaluation_result
+    if not result:
+        return "N/A"
+    return "Monetary Unit Sampling (MUS)" if result.get("method") == "mus" else "Simple Random Sampling"
+
+
+def _build_scope_section(
+    story: list,
+    styles: dict,
+    doc_width: float,
+    *,
+    filename: str,
+    source_document_title: Optional[str],
+    period_tested: Optional[str],
+    method: str,
+    resolved_framework: ResolvedFramework,
+) -> None:
+    """Section I: scope, source document, period, method and the standard scope statement."""
+    story.append(Paragraph("I. Scope", styles["MemoSection"]))
+    story.append(LedgerRule(doc_width))
+
+    # Source document transparency (Sprint 6)
+    source = source_line(source_document_title, filename)
+    if source:
+        story.append(Paragraph(source, styles["MemoLeader"]))
+
+    scope_text = (
+        "This memo documents the statistical sampling procedures performed in accordance with "
+        "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
+    )
+    if period_tested:
+        scope_text += f"Period under examination: {user_text(period_tested)}. "
+    scope_text += f"Sampling method: {method}."
+    story.append(Paragraph(scope_text, styles["MemoBody"]))
+    story.append(Spacer(1, 8))
+
+    build_scope_statement(
+        story,
+        styles,
+        doc_width,
+        tool_domain="statistical_sampling",
+        framework=resolved_framework,
+        domain_label="statistical sampling",
+    )
+
+
 # ═══════════════════════════════════════════════════════════════
 
 

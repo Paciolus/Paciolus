@@ -1004,6 +1004,10 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       Remaining (later session): AP, Payroll, then JE (sampling as an extension slot) and Revenue (contract inputs);
       AR aging stays outside the shell (two files).
 - [ ] 17D split the largest units (one at a time).
+      Order by recent changes (commits since 2026-10-01): sampling_memo_generator (13), population_profile_memo (9),
+      payroll analysis (9), JE analysis (8), revenue analysis (7), audit/pipeline (6), ratio_engine (6).
+      Done: `sampling_memo_generator` — Section I (Scope) and the method label out of `_generate_sampling_memo`
+      (memo equivalence and output snapshots unchanged). Remaining: its sections II–Next Steps, then the next units.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
