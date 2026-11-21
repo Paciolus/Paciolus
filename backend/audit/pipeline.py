@@ -526,6 +526,7 @@ def audit_trial_balance_multi_sheet(
         parsed_column_mapping = ColumnMapping.from_dict(column_mapping)
 
     sheet_results: dict[str, dict[str, Any]] = {}
+    consolidated_classification_summary: dict[str, int] = {}
     consolidated_debits = Decimal("0")
     consolidated_credits = Decimal("0")
     consolidated_rows = 0
@@ -560,6 +561,10 @@ def audit_trial_balance_multi_sheet(
 
             sheet_balance = auditor.get_balance_result()
             sheet_abnormals = auditor.get_abnormal_balances()
+            # Sprint 890: TrialBalanceResponse requires classification_summary; the consolidated
+            # result never had one, so every multi-sheet analysis failed response validation (500).
+            for level, count in auditor.get_classification_summary().items():
+                consolidated_classification_summary[level] = consolidated_classification_summary.get(level, 0) + count
             sheet_suspense = auditor.detect_suspense_accounts()
             sheet_concentration = auditor.detect_concentration_risk()
             sheet_rounding = auditor.detect_rounding_anomalies()
@@ -716,6 +721,7 @@ def audit_trial_balance_multi_sheet(
             "sheet_column_detections": sheet_column_detections,
             "column_order_warnings": column_order_warnings,
             "has_column_order_mismatch": len(column_order_warnings) > 0,
+            "classification_summary": consolidated_classification_summary,
         }
 
         # Analytics
