@@ -78,7 +78,7 @@ def test_seat_check_locks_the_organization_row_on_postgres():
     from sqlalchemy.orm import Query
 
     from organization_model import Organization
-    from routes.organization import _lock_org_for_seat_check
+    from services.organization_workflows import _lock_org_for_seat_check
 
     captured: dict[str, Query] = {}
 
@@ -101,7 +101,7 @@ def test_both_seat_consuming_handlers_lock_before_counting(handler):
     import ast
     import inspect
 
-    import routes.organization as org_routes
+    import services.organization_workflows as org_routes  # Sprint 892 (17B): the workflows moved
 
     tree = ast.parse(inspect.getsource(org_routes))
     fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == handler)

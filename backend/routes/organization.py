@@ -9,20 +9,17 @@ Auth: require_current_user (all endpoints)
 
 import hashlib
 import logging
-import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from auth import require_current_user
 from database import get_db
 from models import User
 from organization_model import (
-    INVITE_EXPIRY_HOURS,
     InviteStatus,
     Organization,
     OrganizationInvite,
@@ -149,52 +146,10 @@ def create_invite(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Send an organization invite. Owner/admin only. Checks seat limit."""
-    org = get_user_org(db, user)
-    require_admin(db, user, org)
-
-    # Check seat limit against org subscription (not the inviter's personal subscription).
-    # Sprint 821: this handler now runs in the threadpool, so two invites can
-    # race between the seat count and the insert. Lock the organization row
-    # first so seat reservations serialize (Postgres; a no-op on SQLite).
-    _lock_org_for_seat_check(db, org.id)
-    check_seat_limit_for_org(db, org.id)
-
-    # Check for duplicate pending invite
-    existing_invite = (
-        db.query(OrganizationInvite)
-        .filter(
-            OrganizationInvite.organization_id == org.id,
-            func.lower(OrganizationInvite.invitee_email) == body.email.lower(),
-            OrganizationInvite.status == InviteStatus.PENDING,
-        )
-        .first()
-    )
-    if existing_invite:
-        raise HTTPException(status_code=409, detail="Unable to send invite. Please try again later.")
-
-    # Check if user is already a member
-    existing_user = db.query(User).filter(func.lower(User.email) == body.email.lower()).first()
-    if existing_user:
-        existing_member = db.query(OrganizationMember).filter(OrganizationMember.user_id == existing_user.id).first()
-        if existing_member and existing_member.organization_id == org.id:
-            raise HTTPException(status_code=409, detail="User is already a member of this organization.")
-
-    # Generate token
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-
-    invite = OrganizationInvite(
-        organization_id=org.id,
-        invite_token_hash=token_hash,
-        invitee_email=body.email,
-        role=OrgRole(body.role),
-        invited_by_user_id=user.id,
-        expires_at=datetime.now(UTC) + timedelta(hours=INVITE_EXPIRY_HOURS),
-    )
-    db.add(invite)
-    db.commit()
-    db.refresh(invite)
-
+    try:
+        invite, raw_token = organization_workflows.create_invite(db, user, body.email, body.role)
+    except organization_workflows.OrganizationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     result = invite.to_dict()
     result["invite_token"] = raw_token  # Return plaintext token only at creation time
     return result
