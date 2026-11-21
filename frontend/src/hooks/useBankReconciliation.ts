@@ -11,6 +11,7 @@
 import { useMemo } from 'react'
 import type { BankRecResult } from '@/types/bankRec'
 import type { UploadStatus } from '@/types/shared'
+import { checkedResponse } from '@/utils/checkedResponse'
 import { useAuditUpload } from './useAuditUpload'
 
 export interface UseBankReconciliationReturn {
@@ -49,7 +50,7 @@ export function useBankReconciliation(thresholds?: BankRecRunThresholds): UseBan
     endpoint: '/audit/bank-reconciliation',
     toolName: 'bank reconciliation',
     buildFormData: (...files: File[]) => buildBankRecFormData(files[0], files[1], { materiality, performanceMateriality }),
-    parseResult: (data: unknown) => data as BankRecResult,
+    parseResult: (data: unknown) => checkedResponse<BankRecResult>('/audit/bank-reconciliation', data),
   }), [materiality, performanceMateriality])
 
   const { run, ...rest } = useAuditUpload<BankRecResult>(options)

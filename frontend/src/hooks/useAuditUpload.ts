@@ -120,7 +120,18 @@ export function useAuditUpload<T>(options: UseAuditUploadOptions<T>): UseAuditUp
       return
     }
 
-    const parsed = options.parseResult(result.data)
+    let parsed: T
+    try {
+      parsed = options.parseResult(result.data)
+    } catch (e) {
+      // Sprint 890 (15C): a response missing required fields is an error, not a broken page.
+      const msg = `${options.toolName} returned an incomplete result. Please try again.`
+      setStatus('error')
+      setError(msg)
+      toast.error(`${options.toolName} failed`, msg)
+      if (e instanceof Error) console.error(e.message)
+      return
+    }
     setStatus('success')
     setResult(parsed)
 

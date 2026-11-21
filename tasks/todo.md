@@ -919,7 +919,7 @@ date and source beside each figure — not ASC 830 / IAS 21 translation.
 
 - [x] 15A failed saves and exports are reported; preferences ignore late responses; stable onError.
 - [x] 15B backend serves upload limits and enabled formats; frontend derives pickers, checks, labels, messages.
-- [ ] 15C typed nested TB account models; five promoted routes get response models; wire types checked.
+- [x] 15C typed nested TB account models; five promoted routes get response models; wire types checked.
       Done: `all_accounts` / `account_balances` typed (`TrialBalanceAccountResponse`, `AccountBalanceResponse`).
       Done: response models for the five promoted JSON tools (`shared/promoted_tool_response_schemas.py`).
 - [x] Found in 15D and fixed: every multi-sheet TB analysis returned 500 (no `classification_summary`).

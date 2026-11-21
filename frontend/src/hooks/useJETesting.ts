@@ -9,6 +9,7 @@
 import { useMemo } from 'react'
 import type { HolidayCalendar, JETestingResult } from '@/types/jeTesting'
 import type { UploadStatus } from '@/types/shared'
+import { checkedResponse } from '@/utils/checkedResponse'
 import { useAuditUpload } from './useAuditUpload'
 
 export interface UseJETestingReturn {
@@ -35,7 +36,7 @@ export function useJETesting(calendar?: HolidayCalendar): UseJETestingReturn {
       if (calendarJson) fd.append('holiday_calendar', calendarJson)
       return fd
     },
-    parseResult: (data: unknown) => data as JETestingResult,
+    parseResult: (data: unknown) => checkedResponse<JETestingResult>('/audit/journal-entries', data),
   }), [calendarJson])
 
   const { run, ...rest } = useAuditUpload<JETestingResult>(options)

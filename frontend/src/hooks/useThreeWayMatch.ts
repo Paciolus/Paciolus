@@ -12,6 +12,7 @@ import { useMemo } from 'react'
 import { TWM_RUN_OVERRIDE_KEYS, type ThreeWayMatchConfig } from '@/types/settings'
 import type { UploadStatus } from '@/types/shared'
 import type { ThreeWayMatchResult } from '@/types/threeWayMatch'
+import { checkedResponse } from '@/utils/checkedResponse'
 import { useAuditUpload } from './useAuditUpload'
 
 export interface UseThreeWayMatchReturn {
@@ -51,7 +52,7 @@ export function useThreeWayMatch(overrides?: TWMRunOverrides): UseThreeWayMatchR
       endpoint: '/audit/three-way-match',
       toolName: 'three-way match',
       buildFormData: (...files: File[]) => buildThreeWayMatchFormData(files[0], files[1], files[2], parsed),
-      parseResult: (data: unknown) => data as ThreeWayMatchResult,
+      parseResult: (data: unknown) => checkedResponse<ThreeWayMatchResult>('/audit/three-way-match', data),
     }
   }, [overridesKey])
 

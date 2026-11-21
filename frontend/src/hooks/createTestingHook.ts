@@ -9,6 +9,7 @@
  */
 
 import { useMemo } from 'react'
+import { checkedResponse } from '@/utils/checkedResponse'
 import { useAuditUpload, type UseAuditUploadReturn } from './useAuditUpload'
 
 interface TestingHookConfig {
@@ -30,7 +31,8 @@ export function createTestingHook<T>(config: TestingHookConfig): () => UseAuditU
         if (files[0]) fd.append('file', files[0])
         return fd
       }),
-      parseResult: (data: unknown) => data as T,
+      // Sprint 890 (15C): checked against the published schema's required keys, not cast.
+      parseResult: (data: unknown) => checkedResponse<T>(endpoint, data),
     }), [])
 
     return useAuditUpload<T>(options)
