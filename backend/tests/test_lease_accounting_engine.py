@@ -113,8 +113,10 @@ class TestClassification:
 
 class TestInitialMeasurement:
     def test_initial_liability_equals_pv_of_payments(self):
-        # 12 monthly payments of $1,000 at 6%, payments in advance
-        # PV = 1000 + 1000 * (1 - (1.005)^-11) / 0.005 = ~11,716.55
+        # 12 monthly payments of $1,000 at 6%, payments in advance.
+        # Sprint 889 (14E), worked by hand with exact decimals:
+        # PV = 1000 + 1000 * (1 - 1.005^-11) / 0.005 = 1,000 + 10,677.03 = 11,677.03
+        # (the earlier comment said ~11,716.55, which is wrong; the test accepted 11,600-12,000).
         config = LeaseConfig(
             lease_name="Test",
             payment_amount=Decimal("1000"),
@@ -123,10 +125,33 @@ class TestInitialMeasurement:
             payments_in_advance=True,
         )
         result = compute_lease_accounting(config)
-        # PV must be less than total undiscounted payments ($12,000)
-        assert result.initial_lease_liability < Decimal("12000")
-        # And at least 95% of total — short term, low discount
-        assert result.initial_lease_liability > Decimal("11600")
+        assert result.initial_lease_liability == Decimal("11677.03")
+
+    def test_two_annual_payments_in_arrears(self):
+        # Sprint 889 (14E): 100 / 1.10 + 100 / 1.21 = 90.909... + 82.644... = 173.55
+        config = LeaseConfig(
+            lease_name="Arrears",
+            payment_amount=Decimal("100"),
+            term_periods=2,
+            annual_discount_rate=Decimal("0.10"),
+            frequency="annual",
+            payments_in_advance=False,
+        )
+        result = compute_lease_accounting(config)
+        assert result.initial_lease_liability == Decimal("173.55")
+
+    def test_same_payments_in_advance_discount_one_period_less(self):
+        # 100 + 100 / 1.10 = 190.91 — timing changes the answer by 17.36
+        config = LeaseConfig(
+            lease_name="Advance",
+            payment_amount=Decimal("100"),
+            term_periods=2,
+            annual_discount_rate=Decimal("0.10"),
+            frequency="annual",
+            payments_in_advance=True,
+        )
+        result = compute_lease_accounting(config)
+        assert result.initial_lease_liability == Decimal("190.91")
 
     def test_zero_rate_pv_equals_undiscounted(self):
         config = LeaseConfig(

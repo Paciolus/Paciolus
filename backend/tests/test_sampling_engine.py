@@ -113,7 +113,7 @@ class TestMUSSampleSize:
         # interval = 50000 / 3.0 = 16666.67
         # size = ceil(1000000 / 16666.67) = 60
         assert factor == 3.00
-        assert abs(interval - 16666.67) < 1
+        assert interval == pytest.approx(16666.67, abs=0.005)
         assert size == 60
 
     def test_with_expected_misstatement(self):
@@ -311,8 +311,10 @@ class TestMUSSelection:
         items = _make_items([1000] * 100)  # 100 items, $1000 each = $100K
         interval = 10_000  # Should select ~10 items
         selected, start, _neg = select_mus_sample(items, interval, random_start=5000)
-        assert len(selected) >= 8
-        assert len(selected) <= 12
+        # Sprint 889 (14E): item k covers dollars (1,000(k-1), 1,000k]; points 5,000, 15,000, ...
+        # 95,000 fall in rows 5, 15, ..., 95 (the test accepted any 8-12 items).
+        assert [s.item.row_index for s in selected] == list(range(5, 100, 10))
+        assert [s.interval_position for s in selected] == [5000.0 + 10_000 * k for k in range(10)]
 
     def test_deterministic_with_fixed_start(self):
         """Same random start produces same selection."""
@@ -322,6 +324,11 @@ class TestMUSSelection:
         ids1 = [s.item.row_index for s in sel1]
         ids2 = [s.item.row_index for s in sel2]
         assert ids1 == ids2
+        # Sprint 889 (14E): and the selection itself, worked by hand. Items are taken largest
+        # first: 2,500 (row 5) holds points 500 and 2,500; 2,000 (row 4) reaches 4,500 and holds
+        # 4,500; 1,500 (row 3) reaches 6,000, short of 6,500; 1,000 (row 2) reaches 7,000 and holds
+        # 6,500; 500 (row 1) reaches 7,500, short of 8,500.
+        assert ids1 == [5, 4, 2]
 
     def test_no_duplicates(self):
         """Same item should not appear twice in selection."""
@@ -461,7 +468,7 @@ class TestStringerBound:
         assert result.projected_misstatement == 0.0
         assert result.incremental_allowance == 0.0
         # Basic precision = 10000 * 3.0 = 30000
-        assert abs(result.basic_precision - 30_000) < 1
+        assert result.basic_precision == pytest.approx(30_000, abs=0.005)
         assert result.upper_error_limit == result.basic_precision
         assert result.conclusion == "pass"  # 30000 < 50000
 
@@ -487,14 +494,14 @@ class TestStringerBound:
         )
         assert result.errors_found == 1
         # Projected = 0.5 * 10000 = 5000
-        assert abs(result.projected_misstatement - 5_000) < 1
+        assert result.projected_misstatement == pytest.approx(5_000, abs=0.005)
         # Sprint 805 (A-1): the rank-1 increment is the first difference of the
         # published 95% Poisson series, 4.75 - 3.00 = 1.75 — not the 1.58 that
         # was tabulated here, which is the *90%* rank-1 increment.
         # Incremental = 0.5 * 10000 * (1.75 - 1.0) = 3750
-        assert abs(result.incremental_allowance - 3_750) < 1
+        assert result.incremental_allowance == pytest.approx(3_750, abs=0.005)
         # UEL = 30000 + 5000 + 3750 = 38750
-        assert abs(result.upper_error_limit - 38_750) < 1
+        assert result.upper_error_limit == pytest.approx(38_750, abs=0.005)
         assert result.conclusion == "pass"  # 38750 < 50000
 
     def test_multiple_errors_fail(self):
@@ -555,7 +562,7 @@ class TestStringerBound:
         )
         assert result.taintings_ranked == [1.0]
         # Projected = 1.0 * 10000 = 10000
-        assert abs(result.projected_misstatement - 10_000) < 1
+        assert result.projected_misstatement == pytest.approx(10_000, abs=0.005)
 
 
 # ═══════════════════════════════════════════════════════════════

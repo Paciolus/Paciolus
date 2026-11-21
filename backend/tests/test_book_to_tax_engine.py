@@ -164,8 +164,12 @@ class TestTaxProvision:
 
     def test_effective_rate_computed_on_book_income(self):
         result = calculate_book_to_tax(_config())
-        expected = (result.tax_provision.total_tax_expense / Decimal("500000")).quantize(Decimal("0.0001"))
-        assert result.tax_provision.effective_rate == expected
+        # Sprint 889 (14E), worked by hand — not derived from the tax the code returned:
+        # current 498,000 x 21% = 104,580.00; temporary net -5,000 x 21% builds a 1,050.00 DTL,
+        # so deferred expense 1,050.00; total 105,630.00; 105,630 / 500,000 = 0.21126 -> 0.2113.
+        assert result.tax_provision.deferred_tax_expense == Decimal("1050.00")
+        assert result.tax_provision.total_tax_expense == Decimal("105630.00")
+        assert result.tax_provision.effective_rate == Decimal("0.2113")
 
     def test_state_tax_applied_on_top(self):
         cfg = _config(state_tax_rate=Decimal("0.05"))

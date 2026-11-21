@@ -869,7 +869,7 @@ allowance is computed and never presents the provision as complete. (Closes Spri
       (83,900.84) as its prior (78,412.00) — corrected.
 - [x] 14C if-guarded assertions become assertions.
 - [x] 14D frontend activity mapper + JE success case from real response shapes.
-- [ ] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
+- [x] 14E lease 173.55 / 11,677.03, systematic selection rows 5…95, cent-level book-to-tax.
 - [ ] 14F loss-year limitation in result and every output; scope note says no NOL carryforward input.
 - [ ] 14G PostgreSQL job runs `alembic upgrade head`; enum round-trip; schema parity; upgrade from existing rows.
 - [ ] 14H mapping E2E in PR CI; financial-correctness slow tests before merge; workflow check.
