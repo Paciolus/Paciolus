@@ -19,7 +19,6 @@ from database import get_db
 from models import User
 from organization_model import (
     InviteStatus,
-    Organization,
     OrganizationInvite,
     OrganizationMember,
     OrgRole,
@@ -29,7 +28,6 @@ from shared.organization_policy import (
     get_user_org,
     require_admin,
     require_owner,
-    revert_user_tier_after_removal,
 )
 from shared.organization_schemas import (
     DetailResponse,
@@ -120,17 +118,6 @@ def update_organization(
 # ---------------------------------------------------------------------------
 # Invite management
 # ---------------------------------------------------------------------------
-
-
-def _lock_org_for_seat_check(db: Session, org_id: int) -> Organization | None:
-    """Take a row lock on the organization before a seat-limit check.
-
-    The seat check counts members + pending invites, then the caller inserts.
-    Without a lock two concurrent requests both see a free seat and both
-    insert. ``SELECT ... FOR UPDATE`` holds the lock until the caller commits,
-    so a second request blocks and then counts the first one's row.
-    """
-    return db.query(Organization).filter(Organization.id == org_id).with_for_update().first()
 
 
 @router.post("/invite", response_model=OrganizationInviteCreateResponse)
@@ -289,30 +276,8 @@ def remove_member(
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Remove a member from the organization. Reverts their tier to free."""
-    org = get_user_org(db, user)
-    require_admin(db, user, org)
-
-    member = (
-        db.query(OrganizationMember)
-        .filter(
-            OrganizationMember.id == member_id,
-            OrganizationMember.organization_id == org.id,
-        )
-        .first()
-    )
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found.")
-
-    if member.role == OrgRole.OWNER:
-        raise HTTPException(status_code=400, detail="Cannot remove the organization owner.")
-
-    # Revert user tier: restore from personal subscription if one exists,
-    # otherwise default to FREE.
-    removed_user = db.query(User).filter(User.id == member.user_id).first()
-    if removed_user:
-        revert_user_tier_after_removal(db, removed_user)
-
-    db.delete(member)
-    db.commit()
-
+    try:
+        organization_workflows.remove_member(db, user, member_id)
+    except organization_workflows.OrganizationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     return {"detail": "Member removed from organization."}

@@ -995,8 +995,8 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       Done: step 2 — multi-sheet reader opens the workbook once (89.3 s -> 63.8 s, peak 33.6 MB unchanged).
       Done: step 3 — the TB route validates the bytes it read for hashing (`validate_upload_contents`).
       Kept: chunk `.copy()` in both readers (callers modify chunks). 17A complete.
-- [ ] 17B organization workflows into services (create, invite, accept, remove).
-      Done: create organization (`services/organization_workflows.py`).; invite; accept
+- [x] 17B organization workflows into services (create, invite, accept, remove).
+      Done: create organization (`services/organization_workflows.py`).; invite; accept; remove member. `routes/organization.py` 441 -> 283 lines. The webhook half of 17B was done in 15E step 1.
 - [ ] 17C one testing page shell (Fixed Assets and Inventory first).
 - [ ] 17D split the largest units (one at a time).
 
