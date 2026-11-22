@@ -762,9 +762,9 @@ def _generate_procedures(
                 area="Accrual Completeness",
                 procedure=(
                     f"Accrual-to-run-rate ratio of {ratio:.1f}% is below the {threshold:.0f}% "
-                    "minimum threshold. Request management's accrual schedule and supporting "
-                    "calculations for all identified accrual accounts. Perform cutoff testing "
-                    "around the period end date."
+                    "minimum threshold. The auditor may consider requesting management's accrual "
+                    "schedule and supporting calculations for all identified accrual accounts, and "
+                    "performing cutoff testing around the period end date."
                 ),
             )
         )
@@ -778,10 +778,10 @@ def _generate_procedures(
                 area="Missing Accruals",
                 procedure=(
                     f"{len(missing_names)} expected accrual type(s) not identified in the trial "
-                    "balance. Inquire with management regarding "
+                    "balance. The auditor may consider inquiring with management regarding "
                     + ", ".join(missing_names[:4])
                     + (f", and {len(missing_names) - 4} other categories" if len(missing_names) > 4 else "")
-                    + ". Obtain written representation regarding completeness of accrued liabilities."
+                    + ", and obtaining written representation regarding completeness of accrued liabilities."
                 ),
             )
         )
@@ -794,9 +794,9 @@ def _generate_procedures(
                 priority="Moderate",
                 area="Deferred Revenue",
                 procedure=(
-                    f"Deferred Revenue balance of ${total_deferred:,.0f} requires ASC 606 "
-                    "completeness verification. Obtain the deferred revenue rollforward. "
-                    "Confirm all balances relate to unfulfilled performance obligations "
+                    "The auditor may consider an ASC 606 completeness check of the Deferred Revenue "
+                    f"balance of ${total_deferred:,.0f}: obtaining the deferred revenue rollforward "
+                    "and checking whether all balances relate to unfulfilled performance obligations "
                     "as of the balance sheet date."
                 ),
             )
@@ -814,7 +814,10 @@ def _generate_procedures(
             SuggestedProcedure(
                 priority=f.risk,
                 area=f.area,
-                procedure=f.action_required + ". Compare to management's accrual methodology documentation.",
+                procedure=(
+                    f.action_required.removesuffix(".")
+                    + ", and comparing the balance to management's accrual methodology documentation."
+                ),
             )
         )
 
@@ -824,9 +827,9 @@ def _generate_procedures(
             priority="Moderate",
             area="General Completeness",
             procedure=(
-                "Review post-period-end disbursements for items that should have been "
-                "accrued at period end. Scan unrecorded liability search results "
-                "for omitted accruals."
+                "The auditor may consider reviewing post-period-end disbursements for items that "
+                "should have been accrued at period end, and scanning unrecorded liability search "
+                "results for omitted accruals."
             ),
         )
     )

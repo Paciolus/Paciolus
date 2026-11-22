@@ -20,187 +20,197 @@ from classification_rules import (
 
 SUGGESTED_PROCEDURES: dict[str, str] = {
     "tb_out_of_balance": (
-        "STOP — the trial balance does not reconcile. Do not proceed with any "
-        "substantive or analytical procedures until total debits equal total "
-        "credits within tolerance. Obtain a corrected TB from the client, "
-        "compare against the general ledger system of record, and identify the "
-        "journal entries or postings that produced the imbalance. Document the "
-        "reconciliation in the engagement file before the downstream testing "
-        "tools are re-run."
+        "The trial balance does not reconcile: total debits do not equal total credits within "
+        "tolerance, and every substantive and analytical result downstream rests on a balanced "
+        "trial balance. The auditor may consider obtaining a corrected TB from the client, "
+        "comparing it against the general ledger system of record, identifying the journal "
+        "entries or postings that produced the imbalance, and documenting the reconciliation in "
+        "the engagement file before the downstream testing tools are re-run."
     ),
     "suspense": (
-        "Obtain management explanation for uncleared suspense balance; confirm "
-        "the item was cleared or properly reclassified prior to the report date. "
-        "Document resolution in the engagement file."
+        "The auditor may consider obtaining management's explanation for the uncleared suspense "
+        "balance, establishing whether the item was cleared or properly reclassified prior to the "
+        "report date, and documenting the resolution in the engagement file."
     ),
     "concentration_revenue": (
-        "Apply revenue concentration procedures; obtain detail of transactions "
-        "comprising this account and assess whether concentration represents a "
-        "business risk requiring disclosure under ASC 275-10."
+        "The auditor may consider applying revenue concentration procedures, obtaining detail of "
+        "the transactions comprising this account, and assessing whether the concentration "
+        "represents a business risk requiring disclosure under ASC 275-10."
     ),
     "concentration_expense": (
-        "Obtain breakdown of transactions comprising this account; assess whether "
-        "concentration reflects a single vendor or contract that warrants "
-        "additional scrutiny."
+        "The auditor may consider obtaining a breakdown of the transactions comprising this "
+        "account and assessing whether the concentration reflects a single vendor or contract "
+        "that warrants additional scrutiny."
     ),
     "credit_balance_ar": (
-        "Investigate credit balance in the receivable account; determine whether "
-        "this represents unapplied customer payments, credit memos awaiting offset, "
-        "or a posting error. Obtain the customer subledger detail and confirm "
+        "The auditor may consider investigating the credit balance in the receivable account, "
+        "establishing whether it represents unapplied customer payments, credit memos awaiting "
+        "offset, or a posting error, and obtaining the customer subledger detail to establish the "
         "resolution timing."
     ),
     "credit_balance_asset": (
-        "Investigate credit balance in an asset account; confirm whether this "
-        "represents an overpayment, unapplied credit memo, or posting error. "
-        "Obtain supporting documentation."
+        "The auditor may consider investigating the credit balance in an asset account, "
+        "establishing whether it represents an overpayment, unapplied credit memo, or posting "
+        "error, and obtaining supporting documentation."
     ),
     "debit_balance_liability": (
-        "Investigate debit balance in a liability account; determine whether this "
-        "represents an overpayment to a vendor, a reclassification issue, or a "
-        "posting error. Obtain the vendor subledger detail and supporting documentation."
+        "The auditor may consider investigating the debit balance in a liability account, "
+        "establishing whether it represents an overpayment to a vendor, a reclassification issue, "
+        "or a posting error, and obtaining the vendor subledger detail and supporting "
+        "documentation."
     ),
     "debit_balance_revenue": (
-        "Investigate debit balance in a revenue account; assess whether this reflects "
-        "a returns and allowances contra-account, a revenue reversal, or a posting error. "
-        "Obtain detail of transactions and confirm proper presentation."
+        "The auditor may consider investigating the debit balance in a revenue account, assessing "
+        "whether it reflects a returns and allowances contra-account, a revenue reversal, or a "
+        "posting error, and obtaining detail of the transactions to check whether the "
+        "presentation is proper."
     ),
     "round_dollar_single": (
-        "Inspect supporting documentation for this round-dollar balance; confirm "
-        "the amount reflects an actual invoiced or contracted value and was not "
-        "estimated or manually entered as a placeholder."
+        "The auditor may consider inspecting supporting documentation for this round-dollar "
+        "balance and checking whether the amount reflects an actual invoiced or contracted value "
+        "and was not estimated or manually entered as a placeholder."
     ),
     "round_dollar_repeated": (
-        "Investigate the repeated round-dollar transaction pattern; determine whether "
-        "the recurring amount reflects a standing order, automated entry, or estimation "
-        "practice. Obtain supporting documentation for a sample of individual transactions "
-        "to confirm amounts are transaction-based rather than estimated."
+        "The auditor may consider investigating the repeated round-dollar transaction pattern, "
+        "establishing whether the recurring amount reflects a standing order, automated entry, or "
+        "estimation practice, and obtaining supporting documentation for a sample of individual "
+        "transactions to establish whether amounts are transaction-based rather than estimated."
     ),
     "concentration_intercompany": (
-        "Obtain intercompany agreement and confirm balance is supported; assess "
-        "whether balance has been or will be eliminated in consolidation."
+        "The auditor may consider obtaining the intercompany agreement, checking whether the "
+        "balance is supported, and assessing whether the balance has been or will be eliminated "
+        "in consolidation."
     ),
     "prepaid_credit": (
-        "Investigate credit balance in prepaid account; confirm whether the "
-        "prepaid has been fully expensed, reversed, or represents a posting error."
+        "The auditor may consider investigating the credit balance in the prepaid account and "
+        "establishing whether the prepaid has been fully expensed, reversed, or represents a "
+        "posting error."
     ),
     # Sprint 526: New detection category procedures (Fix 6)
     "related_party": (
-        "Confirm related party balance is properly disclosed under ASC 850 "
-        "(Related Party Disclosures). Determine whether the transaction was conducted "
-        "at arm's length. Obtain the related party agreement and confirm terms are "
-        "consistent with those of unrelated third parties."
+        "The auditor may consider checking whether the related party balance is properly "
+        "disclosed under ASC 850 (Related Party Disclosures), establishing whether the "
+        "transaction was conducted at arm's length, and obtaining the related party agreement to "
+        "check whether its terms are consistent with those of unrelated third parties."
     ),
     "intercompany_imbalance": (
-        "Investigate the intercompany elimination gap; obtain the intercompany "
-        "reconciliation and confirm whether a corresponding offsetting entry exists "
-        "in the counterparty's records. Assess impact on consolidated financial "
+        "The auditor may consider investigating the intercompany elimination gap, obtaining the "
+        "intercompany reconciliation and establishing whether a corresponding offsetting entry "
+        "exists in the counterparty's records, and assessing the impact on consolidated financial "
         "statement presentation."
     ),
     "equity_signal": (
-        "Evaluate the equity structure for going concern considerations. Confirm "
-        "board authorization for dividends declared against an accumulated deficit. "
-        "Assess solvency implications and consider whether additional disclosures "
-        "are required under ASC 205-40 (Going Concern)."
+        "The auditor may consider evaluating the equity structure for going concern "
+        "considerations, checking for board authorization of dividends declared against an "
+        "accumulated deficit, and assessing solvency implications and whether additional "
+        "disclosures are required under ASC 205-40 (Going Concern)."
     ),
 }
 
-DEFAULT_PROCEDURE = "Review supporting documentation and obtain management explanation."
+DEFAULT_PROCEDURE = (
+    "The auditor may consider reviewing supporting documentation and obtaining management's explanation."
+)
 
 # Escalated procedures for material-level findings
 MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
     "tb_out_of_balance": (
-        "STOP — the trial balance does not reconcile. Do not proceed with any "
-        "substantive or analytical procedures until total debits equal total "
-        "credits within tolerance. Obtain a corrected TB from the client, "
-        "compare against the general ledger system of record, and identify the "
-        "journal entries or postings that produced the imbalance. Given that "
-        "the imbalance invalidates every downstream test, escalate to the "
-        "engagement partner immediately and treat the current run as a failed "
-        "preview — do not record any conclusions against the affected figures "
-        "until a reconciled TB is obtained and re-processed."
+        "The trial balance does not reconcile: total debits do not equal total credits within "
+        "tolerance, and every substantive and analytical result downstream rests on a balanced "
+        "trial balance. The auditor may consider obtaining a corrected TB from the client, "
+        "comparing it against the general ledger system of record, and identifying the journal "
+        "entries or postings that produced the imbalance. Given that the imbalance invalidates "
+        "every downstream test, it may also consider escalating to the engagement partner "
+        "immediately and treating the current run as a failed preview, recording no conclusions "
+        "against the affected figures until a reconciled TB is obtained and re-processed."
     ),
     "suspense": (
-        "Obtain transaction-level detail for the outstanding suspense balance and "
-        "confirm each item was cleared or reclassified prior to the report date. "
-        "Given the material amount, escalate to engagement partner for further "
-        "investigation and document resolution with supporting evidence in the "
-        "engagement file."
+        "The auditor may consider obtaining transaction-level detail for the outstanding suspense "
+        "balance and checking whether each item was cleared or reclassified prior to the report "
+        "date. Given the material amount, it may also consider escalating to the engagement "
+        "partner for further investigation and documenting the resolution with supporting "
+        "evidence in the engagement file."
     ),
     "concentration_revenue": (
-        "Perform disaggregated revenue analysis for this account, including "
-        "customer-level detail and contract terms. Assess whether the concentration "
-        "represents a going concern or business continuity risk requiring disclosure "
-        "under ASC 275-10. Given the material amount, expand substantive testing "
-        "to include confirmation procedures and cutoff testing for this revenue stream."
+        "The auditor may consider performing a disaggregated revenue analysis for this account, "
+        "including customer-level detail and contract terms, and assessing whether the "
+        "concentration represents a going concern or business continuity risk requiring "
+        "disclosure under ASC 275-10. Given the material amount, it may also consider expanding "
+        "substantive testing to include confirmation procedures and cutoff testing for this "
+        "revenue stream."
     ),
     "concentration_expense": (
-        "Obtain a complete transaction listing for this account and identify the "
-        "underlying vendors or contracts driving the concentration. Given the material "
-        "amount, perform targeted vouching of the largest transactions and assess "
-        "whether the concentration indicates related-party activity or inadequate "
+        "The auditor may consider obtaining a complete transaction listing for this account and "
+        "identifying the underlying vendors or contracts driving the concentration. Given the "
+        "material amount, it may also consider targeted vouching of the largest transactions and "
+        "assessing whether the concentration indicates related-party activity or inadequate "
         "competitive bidding controls."
     ),
     "credit_balance_asset": (
-        "Investigate the credit balance in this asset account by obtaining the "
-        "transaction detail and tracing to source documents. Given the material amount, "
-        "determine whether a reclassification to liabilities is required and assess "
-        "the impact on financial statement presentation. Escalate to engagement "
-        "partner for further evaluation."
+        "The auditor may consider investigating the credit balance in this asset account by "
+        "obtaining the transaction detail and tracing it to source documents. Given the material "
+        "amount, it may also consider establishing whether a reclassification to liabilities is "
+        "required, assessing the impact on financial statement presentation, and escalating to "
+        "the engagement partner for further evaluation."
     ),
     "round_dollar": (
-        "Inspect supporting documentation for all round-dollar transactions comprising "
-        "this balance. Given the material amount, perform targeted vouching to confirm "
-        "amounts reflect actual invoiced or contracted values. Assess whether the "
-        "pattern indicates estimation rather than transaction-based recording, which "
-        "may affect the reliability of the balance for substantive testing purposes."
+        "The auditor may consider inspecting supporting documentation for all round-dollar "
+        "transactions comprising this balance. Given the material amount, it may also consider "
+        "targeted vouching to establish whether amounts reflect actual invoiced or contracted "
+        "values, and assessing whether the pattern indicates estimation rather than "
+        "transaction-based recording, which may affect the reliability of the balance for "
+        "substantive testing purposes."
     ),
     "concentration_intercompany": (
-        "Obtain the intercompany agreement and reconciliation for this balance. "
-        "Given the material amount, confirm elimination entries are correctly prepared "
-        "and the balance is supported by corresponding entries in the counterparty's "
-        "records. Assess transfer pricing documentation and regulatory compliance."
+        "The auditor may consider obtaining the intercompany agreement and reconciliation for "
+        "this balance. Given the material amount, it may also consider checking whether "
+        "elimination entries are correctly prepared and the balance is supported by corresponding "
+        "entries in the counterparty's records, and assessing transfer pricing documentation and "
+        "regulatory compliance."
     ),
     "prepaid_credit": (
-        "Investigate the credit balance in this prepaid account by obtaining the "
-        "amortization schedule and underlying contract. Given the material amount, "
-        "determine whether the prepaid has been fully consumed, improperly reversed, "
-        "or requires reclassification. Assess the impact on the period's expense "
-        "recognition and escalate to engagement partner if further investigation "
+        "The auditor may consider investigating the credit balance in this prepaid account by "
+        "obtaining the amortization schedule and underlying contract. Given the material amount, "
+        "it may also consider establishing whether the prepaid has been fully consumed, "
+        "improperly reversed, or requires reclassification, assessing the impact on the period's "
+        "expense recognition, and escalating to the engagement partner if further investigation "
         "is warranted."
     ),
     # Sprint 526: New detection category escalated procedures
     "related_party": (
-        "Perform expanded related party procedures for this material balance. "
-        "Obtain the underlying agreement and confirm arm's-length pricing. "
-        "Verify proper disclosure under ASC 850 including nature, terms, and amounts. "
-        "Given the material amount, assess whether the transaction materially affects "
-        "financial statement presentation and expand confirmation procedures."
+        "The auditor may consider expanded related party procedures for this material balance: "
+        "obtaining the underlying agreement and checking for arm's-length pricing, and checking "
+        "whether the disclosure under ASC 850 is proper, including nature, terms, and amounts. "
+        "Given the material amount, it may also consider assessing whether the transaction "
+        "materially affects financial statement presentation and expanding confirmation "
+        "procedures."
     ),
     "intercompany_imbalance": (
-        "Investigate the material intercompany elimination gap by obtaining the "
-        "full intercompany reconciliation for both counterparties. Confirm whether "
-        "elimination entries are correctly prepared for consolidation. Given the "
-        "material amount, escalate to engagement partner and assess impact on "
-        "consolidated financial statement integrity."
+        "The auditor may consider investigating the material intercompany elimination gap by "
+        "obtaining the full intercompany reconciliation for both counterparties and establishing "
+        "whether elimination entries are correctly prepared for consolidation. Given the material "
+        "amount, it may also consider escalating to the engagement partner and assessing the "
+        "impact on consolidated financial statement integrity."
     ),
     "equity_signal": (
-        "Evaluate the material equity signals for going concern implications. "
-        "Obtain board minutes authorizing dividends declared against the accumulated "
-        "deficit. Assess solvency ratios and capital adequacy. Given the material "
-        "amount, consider whether substantial doubt exists about the entity's ability "
-        "to continue as a going concern under ASC 205-40."
+        "The auditor may consider evaluating the material equity signals for going concern "
+        "implications, obtaining board minutes authorizing dividends declared against the "
+        "accumulated deficit, and assessing solvency ratios and capital adequacy. Given the "
+        "material amount, it may also consider whether substantial doubt exists about the "
+        "entity's ability to continue as a going concern under ASC 205-40."
     ),
     "debit_balance_liability": (
-        "Investigate the material debit balance in this liability account by obtaining "
-        "vendor detail and reconciliation. Given the material amount, determine whether "
-        "a reclassification to assets is required and assess the impact on financial "
-        "statement presentation. Escalate for evaluation of potential adjusting entry."
+        "The auditor may consider investigating the material debit balance in this liability "
+        "account by obtaining vendor detail and reconciliation. Given the material amount, it may "
+        "also consider establishing whether a reclassification to assets is required, assessing "
+        "the impact on financial statement presentation, and escalating for evaluation of a "
+        "potential adjusting entry."
     ),
     "debit_balance_revenue": (
-        "Investigate the material debit balance in this revenue account. Determine whether "
-        "this is a properly classified contra-revenue account or represents a reversal error. "
-        "Given the material amount, obtain supporting documentation and assess the impact "
-        "on revenue recognition and financial statement presentation."
+        "The auditor may consider investigating the material debit balance in this revenue "
+        "account and establishing whether it is a properly classified contra-revenue account or "
+        "represents a reversal error. Given the material amount, it may also consider obtaining "
+        "supporting documentation and assessing the impact on revenue recognition and financial "
+        "statement presentation."
     ),
 }
 
@@ -208,73 +218,72 @@ MATERIAL_PROCEDURE_UPGRADES: dict[str, str] = {
 # BUG-001 fix: Alternate procedures for rotation across reports
 SUGGESTED_PROCEDURES_ALT: dict[str, list[str]] = {
     "suspense": [
-        "Obtain the suspense account subledger detail and age each outstanding item. "
-        "Items older than 30 days require individual investigation and management "
-        "explanation for continued suspense classification.",
+        "The auditor may consider obtaining the suspense account subledger detail and aging each "
+        "outstanding item. Items older than 30 days may call for individual investigation and "
+        "management's explanation for continued suspense classification.",
     ],
     "concentration_revenue": [
-        "Perform disaggregated revenue analysis for this account, including "
-        "customer-level detail and period-over-period trend comparison. Assess "
+        "The auditor may consider performing a disaggregated revenue analysis for this account, "
+        "including customer-level detail and period-over-period trend comparison, and assessing "
         "whether revenue concentration is consistent with prior periods.",
     ],
     "concentration_expense": [
-        "Review vendor master file for this account and confirm the concentrated "
-        "balance relates to an authorized contract or purchase order. Assess whether "
-        "competitive bidding requirements were followed.",
+        "The auditor may consider reviewing the vendor master file for this account, checking "
+        "whether the concentrated balance relates to an authorized contract or purchase order, "
+        "and assessing whether competitive bidding requirements were followed.",
     ],
     "credit_balance_ar": [
-        "Obtain customer statement reconciliation for this receivable account. "
-        "Trace the credit balance to specific cash receipts, credit memos, or "
-        "billing adjustments and confirm proper offsetting.",
+        "The auditor may consider obtaining the customer statement reconciliation for this "
+        "receivable account, tracing the credit balance to specific cash receipts, credit memos, "
+        "or billing adjustments, and checking for proper offsetting.",
     ],
     "credit_balance_asset": [
-        "Trace the credit balance to source transactions and confirm whether "
-        "reclassification to a liability is required for proper financial "
+        "The auditor may consider tracing the credit balance to source transactions and "
+        "establishing whether reclassification to a liability is required for proper financial "
         "statement presentation.",
     ],
     "debit_balance_liability": [
-        "Confirm whether the debit balance represents an advance payment or "
-        "overpayment requiring reclassification to assets. Obtain vendor "
+        "The auditor may consider establishing whether the debit balance represents an advance "
+        "payment or overpayment requiring reclassification to assets, and obtaining vendor "
         "correspondence and reconciliation.",
     ],
     "debit_balance_revenue": [
-        "Obtain detail of the debits posted to this revenue account. Confirm "
-        "whether a separate contra-revenue account should be established and "
-        "assess impact on gross-to-net revenue presentation.",
+        "The auditor may consider obtaining detail of the debits posted to this revenue account "
+        "and assessing whether a separate contra-revenue account should be established and the "
+        "impact on gross-to-net revenue presentation.",
     ],
     "round_dollar_single": [
-        "Compare the round-dollar balance to approved accrual schedules and "
-        "standard journal entry templates to determine whether the amount "
-        "reflects a recurring accrual or an ad-hoc estimate requiring "
-        "supporting documentation.",
+        "The auditor may consider comparing the round-dollar balance to approved accrual "
+        "schedules and standard journal entry templates to establish whether the amount reflects "
+        "a recurring accrual or an ad-hoc estimate that may call for supporting documentation.",
     ],
     "round_dollar_repeated": [
-        "Select a sample of the recurring round-dollar entries and trace to "
-        "underlying contracts or invoices. Assess whether the pattern indicates "
-        "an automated accrual that may mask estimation bias.",
+        "The auditor may consider selecting a sample of the recurring round-dollar entries, "
+        "tracing them to underlying contracts or invoices, and assessing whether the pattern "
+        "indicates an automated accrual that may mask estimation bias.",
     ],
     "concentration_intercompany": [
-        "Obtain the intercompany reconciliation and confirm corresponding "
-        "entries exist in the counterparty's records. Verify elimination "
+        "The auditor may consider obtaining the intercompany reconciliation and checking whether "
+        "corresponding entries exist in the counterparty's records and whether elimination "
         "entries are prepared for consolidation.",
     ],
     "prepaid_credit": [
-        "Obtain the amortization schedule for this prepaid account and compare "
-        "to the contract term. Confirm whether the credit indicates full "
+        "The auditor may consider obtaining the amortization schedule for this prepaid account, "
+        "comparing it to the contract term, and establishing whether the credit indicates full "
         "consumption or an improper reversal.",
     ],
     "related_party": [
-        "Inspect the related party transaction register and confirm all "
-        "balances are properly disclosed. Assess whether pricing terms are "
+        "The auditor may consider inspecting the related party transaction register, checking "
+        "whether all balances are properly disclosed, and assessing whether pricing terms are "
         "consistent with arm's-length standards.",
     ],
     "intercompany_imbalance": [
-        "Request the intercompany reconciliation from both counterparties "
-        "and trace the difference to specific unrecorded or timing entries.",
+        "The auditor may consider requesting the intercompany reconciliation from both "
+        "counterparties and tracing the difference to specific unrecorded or timing entries.",
     ],
     "equity_signal": [
-        "Obtain board minutes for the period and confirm authorization for "
-        "equity transactions. Assess capital adequacy ratios and going "
+        "The auditor may consider obtaining board minutes for the period, checking for "
+        "authorization of equity transactions, and assessing capital adequacy ratios and going "
         "concern indicators under ASC 205-40.",
     ],
 }
@@ -344,9 +353,9 @@ def get_tb_suggested_procedure(anomaly: dict, *, is_material: bool = False, rota
     if proc_key is None:
         if is_material:
             return (
-                "Review supporting documentation and obtain management explanation. "
-                "Given the material amount, escalate to engagement partner for further "
-                "investigation and expanded substantive procedures."
+                "The auditor may consider reviewing supporting documentation and obtaining management's "
+                "explanation and, given the material amount, escalating to the engagement partner for "
+                "further investigation and expanded substantive procedures."
             )
         return DEFAULT_PROCEDURE
 

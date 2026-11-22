@@ -795,8 +795,9 @@ clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/
 - [ ] Regenerate `sample-reports/` and the public JE sample memo (wording changed again).
 - [x] Re-record Sprint 819 `test_engagement_export_routes_unchanged` (fails on `main` already; the 12E anomaly-summary
       changes alter its golden too). Done in Sprint 893 (H).
-- [ ] Follow-up (outside this brief): the TB diagnostic, accrual and expense engines' own suggested procedures are still
+- [x] Follow-up (outside this brief): the TB diagnostic, accrual and expense engines' own suggested procedures are still
       imperative — reword to "The auditor may consider…" and extend the `test_memo_banned_phrases.py` procedure rule.
+      Done in Sprint 893 (L); CEO review table `reports/sprint-893-procedure-wording.md`.
 - [x] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
       reword to "No exceptions flagged" form. Done in Sprint 893 (I); the phrase is now banned in memo sources.
 
@@ -1045,8 +1046,10 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       button + drawer), `extraExportFields` and `upload.iconPath`; each renders nothing when unused. A temporary test
       compared old and new HTML for AP, Payroll, Fixed Assets and Inventory in six states (24 cases, result components
       stubbed to print their props): identical; removing AP's settings key fails 6 of them. AP (step 3) and Payroll
-      (step 4) committed separately. Remaining: JE (sampling)
-      and Revenue (contract inputs); AR aging stays outside.
+      (step 4) committed separately. Stopped there: JE differs from the shell in a dozen classes (`sage-50` badge
+      and drop zone, icon colours), keeps the extension in its export filename and adds a holiday calendar and a
+      lazy Benford chart; Revenue adds contract inputs. Moving either without a visual change needs more shell
+      options than it saves, or an approved restyle onto the theme tokens. AR aging stays outside (two files).
 - [ ] G. 14G: a fresh PostgreSQL builds from the migrations — **not started, needs the CEO.** It decides the enum
       labels a migration-built database gets (production holds the member NAMES `create_all` wrote; the old chain
       creates lowercase values), and a squash must reproduce the schema at production's revision, not at this
@@ -1065,6 +1068,13 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       count is typed in again and every row the catalog lists has the catalog's href and category (counts, hrefs and
       categories all matched before the change). Still hand-written: its descriptions and references, the five rows
       the catalog does not list under those keys, the workpaper index, `tool-ledger.ts` and `toolbarConfig.ts`.
+- [x] L. Engine suggested procedures reworded (55 texts: TB diagnostic 44, accrual 5, population profile 6; the expense
+      engine has none) to "The auditor may consider …"; new `test_engine_procedures_are_suggestions` (fails on all 56
+      original texts). Memo render snapshot re-recorded: only the two `tb_diagnostic` memos, procedure wording only (one
+      footnote moved from page 6 to 7). Softest change: the out-of-balance TB's "STOP — do not proceed" is now a fact
+      plus a suggestion. Also fixed: the per-account accrual procedure printed "schedule.. Compare". Old/new table for
+      review: `reports/sprint-893-procedure-wording.md`. Left imperative (outside scope, listed there): the accrual
+      `recommended_action` map, the population-profile `risk_note`, one intercompany benchmark note, the sample generator.
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 

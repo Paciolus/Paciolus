@@ -590,9 +590,9 @@ def _generate_suggested_procedures(
                     priority="High",
                     area="Benford's Law Deviation",
                     procedure=(
-                        f"Investigate {len(deviated)} first-digit anomalies. "
-                        f"Chi-square statistic of {chi_sq:.2f} exceeds conformance threshold. "
-                        "Consider targeted journal entry testing for digits with largest deviation."
+                        f"The auditor may consider investigating the {len(deviated)} first-digit anomalies "
+                        f"(the chi-square statistic of {chi_sq:.2f} exceeds the conformance threshold) and "
+                        "targeted journal entry testing for the digits with the largest deviation."
                     ),
                 )
             )
@@ -606,8 +606,9 @@ def _generate_suggested_procedures(
                 area="Normal Balance Violations",
                 procedure=(
                     f"{len(violations)} account(s) carry balances contrary to "
-                    "their expected normal balance. Obtain management explanation and verify "
-                    "intentionality (e.g., contra accounts, reclassifications)."
+                    "their expected normal balance. The auditor may consider obtaining management's "
+                    "explanation and checking whether the balances are intentional (e.g., contra accounts, "
+                    "reclassifications)."
                 ),
             )
         )
@@ -623,7 +624,8 @@ def _generate_suggested_procedures(
                 procedure=(
                     f"Gini coefficient of {gini:.4f} indicates {gini_interp} concentration. "
                     f"Top account ({top_name}) represents {top_pct:.1f}% of population. "
-                    "Apply substantive procedures to accounts exceeding 10% of total population value."
+                    "The auditor may consider applying substantive procedures to accounts exceeding 10% "
+                    "of total population value."
                 ),
             )
         )
@@ -637,8 +639,8 @@ def _generate_suggested_procedures(
                 area="Dominant Accounts",
                 procedure=(
                     f"{len(dominant)} account(s) exceed 10% of total population value. "
-                    "Perform detailed testing on each dominant account, including independent "
-                    "substantive analytical procedures per AS 2305."
+                    "The auditor may consider detailed testing on each dominant account, including "
+                    "independent substantive analytical procedures per AS 2305."
                 ),
             )
         )
@@ -652,7 +654,8 @@ def _generate_suggested_procedures(
                 area="Zero-Balance Accounts",
                 procedure=(
                     f"{len(zeros)} zero-balance account(s) identified. "
-                    "Confirm whether accounts should be closed or retained for ongoing activity."
+                    "The auditor may consider establishing whether the accounts should be closed or "
+                    "retained for ongoing activity."
                 ),
             )
         )
@@ -666,7 +669,7 @@ def _generate_suggested_procedures(
                 area="Near-Zero Accounts",
                 procedure=(
                     f"{len(near_zeros)} near-zero account(s) (balance ≤ ${NEAR_ZERO_THRESHOLD:,.0f}) identified. "
-                    "Evaluate whether these represent stale or orphaned accounts."
+                    "The auditor may consider evaluating whether these represent stale or orphaned accounts."
                 ),
             )
         )

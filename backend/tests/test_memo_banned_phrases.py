@@ -202,6 +202,88 @@ def test_suggested_procedures_are_suggestions():
     assert not bad, "\n".join(bad)
 
 
+# Sprint 893: the engines' own procedures follow the same rule. A text may open
+# with a plain statement of fact ("The trial balance does not balance.") before
+# the suggestion; it may not instruct the auditor.
+_ENGINE_COMMANDS = re.compile(
+    r"(?:^|[.;] )(?:Obtain|Verify|Investigate|Request|Confirm|Inspect|Review|Evaluate|Determine|Document"
+    r"|Perform|Apply|Trace|Inquire|Scan|Select|Escalate|Assess|Compare|Consider|Do not|STOP)\b"
+)
+
+
+def _engine_procedure_texts() -> list[tuple[str, str]]:
+    """Every suggested-procedure text the TB diagnostic, accrual and population engines can emit."""
+    from decimal import Decimal
+
+    from accrual_completeness_engine import (
+        AccrualAccount,
+        ExpectedAccrualCheck,
+        ReasonablenessResult,
+        _generate_findings,
+        _generate_procedures,
+    )
+    from population_profile_engine import (
+        DominantAccountFlag,
+        ExceptionFlags,
+        NormalBalanceViolation,
+        TopAccount,
+        ZeroBalanceAccount,
+        _generate_suggested_procedures,
+    )
+    from shared import tb_diagnostic_constants as tb
+
+    texts: list[tuple[str, str]] = []
+    texts += [(f"tb/SUGGESTED_PROCEDURES/{k}", v) for k, v in tb.SUGGESTED_PROCEDURES.items()]
+    texts += [(f"tb/MATERIAL_PROCEDURE_UPGRADES/{k}", v) for k, v in tb.MATERIAL_PROCEDURE_UPGRADES.items()]
+    texts += [(f"tb/SUGGESTED_PROCEDURES_ALT/{k}", v) for k, vs in tb.SUGGESTED_PROCEDURES_ALT.items() for v in vs]
+    texts.append(("tb/DEFAULT_PROCEDURE", tb.DEFAULT_PROCEDURE))
+    texts.append(("tb/material default", tb.get_tb_suggested_procedure({"anomaly_type": "?"}, is_material=True)))
+
+    # Every branch of the accrual generator, fed by the real findings generator.
+    variances = [
+        ReasonablenessResult(name, 1000.0, 12000.0, "prior", 1, 800.0, 200.0, pct, status)
+        for name, pct, status in (
+            ("Accrued Wages", 0.25, "Moderate Variance"),
+            ("Accrued Rent", 0.9, "Significant Variance"),
+        )
+    ]
+    missing = [ExpectedAccrualCheck(f"Accrual {i}", False, None, "High") for i in range(6)]
+    deferred = [AccrualAccount("Deferred Revenue", Decimal("5000"), "deferred revenue")]
+    findings = _generate_findings(False, 20.0, 50.0, variances, missing, deferred)
+    for p in _generate_procedures(findings, False, 20.0, 50.0, missing, deferred):
+        texts.append((f"accrual/{p.area}", p.procedure))
+
+    # Every branch of the population-profile generator.
+    flags = ExceptionFlags(
+        normal_balance_violations=[NormalBalanceViolation("1", "Cash", "Asset", "Debit", "Credit", -5.0)],
+        zero_balance_accounts=[ZeroBalanceAccount("2", "Old", "Asset", 0.0, True)],
+        near_zero_accounts=[ZeroBalanceAccount("3", "Tiny", "Asset", 1.0, False)],
+        dominant_accounts=[DominantAccountFlag("Cash", "1", 900.0, 90.0, "")],
+    )
+    benford = {
+        "passed_prechecks": True,
+        "conformity_level": "nonconforming",
+        "most_deviated_digits": [1, 9],
+        "chi_squared": 30.0,
+    }
+    top = [TopAccount(1, "Cash", "Asset", 900.0, 900.0, 90.0)]
+    for p in _generate_suggested_procedures(0.8, "high", top, flags, benford):
+        texts.append((f"population/{p.area}", p.procedure))
+    return texts
+
+
+def test_engine_procedures_are_suggestions():
+    """Sprint 893: the TB diagnostic, accrual and population procedures suggest; they do not instruct."""
+    texts = _engine_procedure_texts()
+    assert len(texts) >= 50, len(texts)
+    bad = []
+    for key, text in texts:
+        opens = text.startswith("The auditor may consider ") or ". The auditor may consider " in text
+        if not opens or re.search(r"\bmust\b", text) or _ENGINE_COMMANDS.search(text) or ".." in text:
+            bad.append(f"{key}: {text[:90]}")
+    assert not bad, "\n".join(bad)
+
+
 def test_banned_list_catches_known_bad_wording():
     """The patterns must actually fire, or the gate passes vacuously."""
     for bad in [
