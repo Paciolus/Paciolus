@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useToast } from '@/contexts/ToastContext'
 import { MatchSummaryCards, BankRecMatchTable, ReconciliationBridge, SplitSearchNotice, BankRecTestsPanel } from '@/components/bankRec'
 import { BankRecRunSettings, BankRecThresholdsApplied, validateBankRecThresholds, type BankRecThresholdInputs } from '@/components/bankRec/BankRecRunSettings'
 import { FileDropZone, GuestCTA, UnverifiedCTA, UploadHandlingNotice, DisclaimerBox, ToolStatePresence, UpgradeGate, Citation, CitationFooter } from '@/components/shared'
@@ -10,8 +11,9 @@ import { ProofSummaryBar, ProofPanel, extractBankRecProof } from '@/components/s
 import { useBankReconciliation } from '@/hooks/useBankReconciliation'
 import { useCanvasAccentSync } from '@/hooks/useCanvasAccentSync'
 import { bankRecExportBody, type BankColumnDetectionData } from '@/types/bankRec'
+import { deliverDownload } from '@/utils/deliverDownload'
 import { withLinkedEngagement } from '@/utils/linkedEngagement'
-import { apiDownload, downloadBlob } from '@/utils'
+import { apiDownload } from '@/utils'
 
 /**
  * Bank Statement Reconciliation — Full Tool (Sprint 78)
@@ -64,6 +66,8 @@ function ColumnDetectionWarning({ label, detection }: {
 export default function BankRecPage() {
   const { user, isAuthenticated, isLoading: authLoading, token } = useAuthSession()
   const engagementId = useOptionalEngagementContext()?.engagementId ?? null
+  // Sprint 893: a failed export says so instead of resetting the button silently.
+  const toast = useToast()
   // Sprint 839: optional per-run materiality / performance materiality.
   const [thresholdInputs, setThresholdInputs] = useState<BankRecThresholdInputs>({ materiality: '', performanceMateriality: '' })
   const validated = useMemo(() => validateBankRecThresholds(thresholdInputs), [thresholdInputs])
@@ -93,7 +97,7 @@ export default function BankRecPage() {
     if (!result || !token) return
     setExporting(true)
     try {
-      const { blob, filename, ok } = await apiDownload(
+      const { blob, filename, ok, error } = await apiDownload(
         '/export/csv/bank-rec',
         token,
         {
@@ -101,15 +105,13 @@ export default function BankRecPage() {
           body: bankRecExportBody(result, bankFile?.name.replace(/\.[^.]+$/, '') || 'bank_reconciliation', true),
         },
       )
-      if (ok && blob) {
-        downloadBlob(blob, filename || 'BankRec_Export.csv')
-      }
+      deliverDownload({ ok, blob, filename, error }, 'BankRec_Export.csv', 'CSV export', toast)
     } catch {
-      // Silent failure — user sees button reset
+      toast.error('Export failed', 'Unable to generate CSV export. Please try again.')
     } finally {
       setExporting(false)
     }
-  }, [result, token, bankFile])
+  }, [result, token, bankFile, toast])
 
   const handleExportMemo = useCallback(async () => {
     if (!result || !token) return
@@ -126,15 +128,13 @@ export default function BankRecPage() {
           ),
         },
       )
-      if (memoResult.ok && memoResult.blob) {
-        downloadBlob(memoResult.blob, memoResult.filename || 'BankRec_Memo.pdf')
-      }
+      deliverDownload(memoResult, 'BankRec_Memo.pdf', 'PDF memo', toast)
     } catch {
-      // Silent failure — user sees button reset
+      toast.error('Export failed', 'Unable to generate PDF memo. Please try again.')
     } finally {
       setExportingMemo(false)
     }
-  }, [result, token, bankFile, engagementId])
+  }, [result, token, bankFile, engagementId, toast])
 
   return (
     <main id="main-content" className="min-h-screen bg-surface-page">

@@ -13,6 +13,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
+import { useToast } from '@/contexts/ToastContext';
 import type {
   Engagement,
   EngagementCreateInput,
@@ -23,7 +24,8 @@ import type {
   MaterialityCascade,
   ConvergenceResponse,
 } from '@/types/engagement';
-import { apiGet, apiPost, apiPut, apiDelete, apiDownload, downloadBlob, isAuthError } from '@/utils';
+import { deliverDownload } from '@/utils/deliverDownload';
+import { apiGet, apiPost, apiPut, apiDelete, apiDownload, isAuthError } from '@/utils';
 
 interface UseEngagementOptions {
   /** Auto-fetch engagements on mount (default: true) */
@@ -54,6 +56,7 @@ export interface UseEngagementReturn {
 export function useEngagement(options: UseEngagementOptions = {}): UseEngagementReturn {
   const { autoFetch = true, pageSize = 50 } = options;
   const { token, isAuthenticated } = useAuthSession();
+  const toast = useToast();
 
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -291,10 +294,9 @@ export function useEngagement(options: UseEngagementOptions = {}): UseEngagement
       { method: 'POST' },
     );
 
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || `convergence_index_${id}.csv`);
-    }
-  }, [isAuthenticated, token]);
+    // Sprint 893: a failed download says so.
+    deliverDownload(result, `convergence_index_${id}.csv`, 'convergence CSV', toast);
+  }, [isAuthenticated, token, toast]);
 
   const refresh = useCallback(async () => {
     await fetchEngagements(undefined, undefined, page);

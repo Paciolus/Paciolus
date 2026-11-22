@@ -7,9 +7,11 @@
 
 import { useCallback } from 'react'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useToast } from '@/contexts/ToastContext'
 import type { AuditResult } from '@/types/diagnostic'
 import type { PreFlightReport } from '@/types/preflight'
-import { apiDownload, downloadBlob } from '@/utils/apiClient'
+import { apiDownload } from '@/utils/apiClient'
+import { deliverDownload } from '@/utils/deliverDownload'
 import { withLinkedEngagement } from '@/utils/linkedEngagement'
 
 interface UseTrialBalanceExportsInput {
@@ -38,6 +40,8 @@ export function useTrialBalanceExports({
 }: UseTrialBalanceExportsInput): UseTrialBalanceExportsReturn {
   // Sprint 886 (OUT-18): memos resolve the client's reporting framework from it.
   const engagementId = useOptionalEngagementContext()?.engagementId ?? null
+  // Sprint 893: a failed export says so (apiDownload resolves ok: false; it does not throw).
+  const toast = useToast()
 
   const handlePreflightExportPDF = useCallback(async () => {
     if (!preflightReport || !token) return
@@ -45,10 +49,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: withLinkedEngagement({ ...preflightReport, filename: selectedFile?.name || 'preflight_report' }, engagementId),
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'PreFlight_Memo.pdf')
-    }
-  }, [preflightReport, token, selectedFile, engagementId])
+    deliverDownload(result, 'PreFlight_Memo.pdf', 'PDF memo', toast)
+  }, [preflightReport, token, selectedFile, engagementId, toast])
 
   const handlePreflightExportCSV = useCallback(async () => {
     if (!preflightReport || !token) return
@@ -56,10 +58,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: { issues: preflightReport.issues, filename: selectedFile?.name || 'preflight_issues' },
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'PreFlight_Issues.csv')
-    }
-  }, [preflightReport, token, selectedFile])
+    deliverDownload(result, 'PreFlight_Issues.csv', 'CSV export', toast)
+  }, [preflightReport, token, selectedFile, toast])
 
   const handlePopulationProfileExportPDF = useCallback(async () => {
     if (!auditResult?.population_profile || !token) return
@@ -67,10 +67,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: withLinkedEngagement({ ...auditResult.population_profile, filename: selectedFile?.name || 'population_profile' }, engagementId),
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'PopProfile_Memo.pdf')
-    }
-  }, [auditResult?.population_profile, token, selectedFile, engagementId])
+    deliverDownload(result, 'PopProfile_Memo.pdf', 'PDF memo', toast)
+  }, [auditResult?.population_profile, token, selectedFile, engagementId, toast])
 
   const handlePopulationProfileExportCSV = useCallback(async () => {
     if (!auditResult?.population_profile || !token) return
@@ -78,10 +76,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: { ...auditResult.population_profile, filename: selectedFile?.name || 'population_profile' },
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'PopProfile.csv')
-    }
-  }, [auditResult?.population_profile, token, selectedFile])
+    deliverDownload(result, 'PopProfile.csv', 'CSV export', toast)
+  }, [auditResult?.population_profile, token, selectedFile, toast])
 
   const handleExpenseCategoryExportPDF = useCallback(async () => {
     if (!auditResult?.expense_category_analytics || !token) return
@@ -89,10 +85,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: withLinkedEngagement({ ...auditResult.expense_category_analytics, filename: selectedFile?.name || 'expense_category' }, engagementId),
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'ExpenseCategory_Memo.pdf')
-    }
-  }, [auditResult?.expense_category_analytics, token, selectedFile, engagementId])
+    deliverDownload(result, 'ExpenseCategory_Memo.pdf', 'PDF memo', toast)
+  }, [auditResult?.expense_category_analytics, token, selectedFile, engagementId, toast])
 
   const handleExpenseCategoryExportCSV = useCallback(async () => {
     if (!auditResult?.expense_category_analytics || !token) return
@@ -100,10 +94,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: { ...auditResult.expense_category_analytics, filename: selectedFile?.name || 'expense_category' },
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'ExpenseCategory.csv')
-    }
-  }, [auditResult?.expense_category_analytics, token, selectedFile])
+    deliverDownload(result, 'ExpenseCategory.csv', 'CSV export', toast)
+  }, [auditResult?.expense_category_analytics, token, selectedFile, toast])
 
   const handleAccrualCompletenessExportPDF = useCallback(async () => {
     if (!auditResult?.accrual_completeness || !token) return
@@ -111,10 +103,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: withLinkedEngagement({ ...auditResult.accrual_completeness, filename: selectedFile?.name || 'accrual_completeness' }, engagementId),
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'AccrualCompleteness_Memo.pdf')
-    }
-  }, [auditResult?.accrual_completeness, token, selectedFile, engagementId])
+    deliverDownload(result, 'AccrualCompleteness_Memo.pdf', 'PDF memo', toast)
+  }, [auditResult?.accrual_completeness, token, selectedFile, engagementId, toast])
 
   const handleAccrualCompletenessExportCSV = useCallback(async () => {
     if (!auditResult?.accrual_completeness || !token) return
@@ -122,10 +112,8 @@ export function useTrialBalanceExports({
       method: 'POST',
       body: { ...auditResult.accrual_completeness, filename: selectedFile?.name || 'accrual_completeness' },
     })
-    if (result.ok && result.blob) {
-      downloadBlob(result.blob, result.filename || 'AccrualCompleteness.csv')
-    }
-  }, [auditResult?.accrual_completeness, token, selectedFile])
+    deliverDownload(result, 'AccrualCompleteness.csv', 'CSV export', toast)
+  }, [auditResult?.accrual_completeness, token, selectedFile, toast])
 
   return {
     handlePreflightExportPDF,

@@ -1035,7 +1035,12 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 - [x] D. Account erasure deletes the firm logo from S3 (after shared reports, before Stripe; each key cleared and
       committed once its object is gone). If S3 cannot be reached (or `S3_BUCKET_NAME` is unset while a logo row
       exists) the account is kept and the error says so, as for shared reports. Two tests; both fail without it.
-- [ ] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern.
+- [x] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern. Silent on failure, now
+      an error toast via `utils/deliverDownload`: the eight trial-balance exports, bank-rec CSV and memo, the
+      workspace expectations and SUM schedule PDFs, the convergence CSV, the multi-period memo. Clearing currency rates
+      now sets an error. Already handled (no change): depreciation, loan amortization, JSON-analysis CSVs, heatmap,
+      flux, report button, FS preview, account export, admin CSV, multi-period CSV, and every `apiPut` / `apiPatch` /
+      `apiDelete` caller (all check `ok` and set an error).
 - [ ] F. 17C: AP and Payroll pages onto the shared testing page shell.
 - [ ] G. 14G: a fresh PostgreSQL builds from the migrations (no change to stored enum labels).
 

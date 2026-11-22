@@ -10,9 +10,11 @@
 
 import { useCallback, useState } from 'react'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
+import { useToast } from '@/contexts/ToastContext'
 import { type MovementSummaryResponse } from '@/hooks'
+import { deliverDownload } from '@/utils/deliverDownload'
 import { withLinkedEngagement } from '@/utils/linkedEngagement'
-import { apiDownload, downloadBlob } from '@/utils'
+import { apiDownload } from '@/utils'
 
 export interface MemoMetadata {
   clientName: string
@@ -33,6 +35,7 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
   const [exporting, setExporting] = useState(false)
   // Sprint 886 (OUT-18): the memo resolves the client's reporting framework from it.
   const engagementId = useOptionalEngagementContext()?.engagementId ?? null
+  const toast = useToast()
 
   const exportMemo = useCallback(
     async (comparison: MovementSummaryResponse, metadata: MemoMetadata) => {
@@ -71,18 +74,15 @@ export function useMultiPeriodMemoExport(token: string | null): UseMultiPeriodMe
           }, engagementId),
         })
 
-        if (result.ok && result.blob) {
-          downloadBlob(result.blob, result.filename || 'MultiPeriod_Memo.pdf')
-        }
+        // Sprint 893: a failed export says so (the toast pipe the old comment waited for exists).
+        deliverDownload(result, 'MultiPeriod_Memo.pdf', 'PDF memo', toast)
       } catch {
-        // Silent failure — caller's button state resets via the finally block,
-        // and the user can retry. Surfacing transport errors here would
-        // require a toast pipe; defer until a downstream sprint introduces one.
+        toast.error('Export failed', 'Unable to generate PDF memo. Please try again.')
       } finally {
         setExporting(false)
       }
     },
-    [token, engagementId],
+    [token, engagementId, toast],
   )
 
   return { exporting, exportMemo }

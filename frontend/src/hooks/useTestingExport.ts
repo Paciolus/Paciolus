@@ -11,6 +11,7 @@ import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useSonification } from '@/hooks/useSonification'
+import { exportFailureMessage } from '@/utils/deliverDownload'
 import { withLinkedEngagement } from '@/utils/linkedEngagement'
 import { apiDownload, downloadBlob } from '@/utils'
 
@@ -25,12 +26,6 @@ export interface UseTestingExportReturn {
   lastExportSuccess: ExportType
   handleExportMemo: (body: unknown) => Promise<void>
   handleExportCSV: (body: unknown) => Promise<void>
-}
-
-/** Message for an export that came back without a file (Sprint 890). */
-function exportFailureMessage(ok: boolean, error: string | undefined, what: string): string {
-  if (!ok) return error || `Unable to generate ${what}. Please try again.`
-  return `The server returned no file for the ${what}. Please try again.`
 }
 
 export function useTestingExport(

@@ -135,6 +135,8 @@ export function useCurrencyRates(): UseCurrencyRatesReturn {
       setError('')
       return true
     }
+    // Sprint 893: say why the rates are still there.
+    setError(response.error || 'Failed to clear rates')
     return false
   }, [token])
 

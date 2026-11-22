@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuthSession } from '@/contexts/AuthSessionContext';
+import { useToast } from '@/contexts/ToastContext';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import {
   ToolStatusGrid,
@@ -29,9 +30,10 @@ import { useFollowUpItems } from '@/hooks/useFollowUpItems';
 import { useUncorrectedMisstatements } from '@/hooks/useUncorrectedMisstatements';
 import { MARKETING_AUDIT_TOOL_COUNT } from '@/content/tool-catalog.generated'
 import type { Engagement, ToolRun, MaterialityCascade, WorkpaperIndex as WorkpaperIndexType, ConvergenceResponse } from '@/types/engagement';
+import { deliverDownload } from '@/utils/deliverDownload';
 import { formatCurrency } from '@/utils/formatting';
 import { completedMarketedToolCount } from '@/utils/toolCoverage'
-import { apiDownload, downloadBlob , apiGet } from '@/utils';
+import { apiDownload, apiGet } from '@/utils';
 import { fadeUp } from '@/lib/motion';
 
 const DISCLAIMER_TEXT =
@@ -46,6 +48,8 @@ export default function WorkspaceDetailPage() {
   const clientId = Number(params.clientId);
 
   const { user, token } = useAuthSession();
+  // Sprint 893: a failed PDF download says so.
+  const toast = useToast();
   const {
     clients,
     getToolRuns,
@@ -330,14 +334,12 @@ export default function WorkspaceDetailPage() {
             onArchive={archiveExpectation}
             onDownload={async () => {
               if (!token) return;
-              const { blob, filename, ok } = await apiDownload(
+              const res = await apiDownload(
                 `/engagements/${engagementId}/export/analytical-expectations`,
                 token,
                 { method: 'POST' },
               );
-              if (ok && blob) {
-                downloadBlob(blob, filename ?? 'analytical_expectations.pdf');
-              }
+              deliverDownload(res, 'analytical_expectations.pdf', 'expectations PDF', toast);
             }}
           />
         )}
@@ -352,14 +354,12 @@ export default function WorkspaceDetailPage() {
             onArchive={archiveMisstatement}
             onDownload={async () => {
               if (!token) return;
-              const { blob, filename, ok } = await apiDownload(
+              const res = await apiDownload(
                 `/engagements/${engagementId}/export/sum-schedule`,
                 token,
                 { method: 'POST' },
               );
-              if (ok && blob) {
-                downloadBlob(blob, filename ?? 'sum_schedule.pdf');
-              }
+              deliverDownload(res, 'sum_schedule.pdf', 'SUM schedule PDF', toast);
             }}
           />
         )}
