@@ -98,6 +98,8 @@
 >       order: 888 published claims match the code · 889 tests that can fail · 890 frontend/API/background edges ·
 >       891 one catalog, one plan file, docs, dead code · 892 behaviour-neutral refactors. The CEO's briefs supersede
 >       the freeze for this work. Merge after 883–887.
+> - [ ] **Sprint 893** (2026-11-21) — fixes for the defects and open items Sprints 888–892 found. Local branch
+>       `sprint-893-defect-fixes`, stacked on 892.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -1015,6 +1017,19 @@ snapshots, the PDF contract and memo equivalence, plus the suites for the code i
 new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437 passed, 2 xfailed, 1 failed (Sprint
 819 export golden, already failing on `main`); `next build` passes. Stopped here (the brief allows partial):
 17C AP / Payroll / JE / Revenue and 17D's remaining sections and units are listed above.
+
+### Sprint 893: Fixes for what Sprints 888–892 found
+**Status:** IN PROGRESS (2026-11-21) — local branch `sprint-893-defect-fixes`, stacked on Sprint 892. CEO 2026-11-21:
+"make any fixes you can at this time, including pending items on the todo". One commit per item.
+- [x] A. `invoice.paid` recovery restores the plan tier (owner and org members' cached tiers). The Sprint 888 strict
+      xfail is now a plain test; a second test covers recovery by `invoice.paid` alone with an org member. Both fail
+      without the fix.
+- [ ] B. Falling revenue labelled "Increase" (Sprint 889 14B xfail).
+- [ ] C. Preview cache: release unused entries after 10 minutes without waiting for the next preview.
+- [ ] D. Account erasure deletes the firm logo from S3.
+- [ ] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern.
+- [ ] F. 17C: AP and Payroll pages onto the shared testing page shell.
+- [ ] G. 14G: a fresh PostgreSQL builds from the migrations (no change to stored enum labels).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

@@ -553,6 +553,21 @@ def handle_invoice_payment_failed(db: Session, event_data: dict) -> None:
         handle_payment_failed(db, sub, stripe_invoice_id=stripe_invoice_id)
 
 
+def _restore_plan_tier(db: Session, sub: Subscription, event: str) -> None:
+    """Give the subscription owner their plan tier back, and their org members' cached tiers."""
+    from billing.subscription_manager import _refresh_org_member_tiers
+
+    user = db.query(User).filter(User.id == sub.user_id).first()
+    if user is None or not sub.tier:
+        return
+    try:
+        user.tier = UserTier(sub.tier)
+    except ValueError:
+        logger.warning("%s: unknown tier '%s' for user %d", event, sub.tier, sub.user_id)
+        return
+    _refresh_org_member_tiers(db, sub.user_id, user.tier)
+
+
 def handle_invoice_paid(db: Session, event_data: dict) -> None:
     """Handle invoice.paid — successful payment (renewal or recovery)."""
     customer_id = event_data.get("customer")
@@ -562,6 +577,10 @@ def handle_invoice_paid(db: Session, event_data: dict) -> None:
     sub = db.query(Subscription).filter(Subscription.stripe_customer_id == customer_id).first()
     if sub and sub.status == SubscriptionStatus.PAST_DUE:
         sub.status = SubscriptionStatus.ACTIVE
+        # Sprint 893: invoice.payment_failed set user.tier to FREE, so recovery gives the plan
+        # back here. Stripe's customer.subscription.updated for the same recovery is often
+        # skipped as stale (this write bumps updated_at), so it cannot be relied on.
+        _restore_plan_tier(db, sub, "invoice.paid")
         db.flush()
         logger.info("invoice.paid: user %d recovered to active", sub.user_id)
 

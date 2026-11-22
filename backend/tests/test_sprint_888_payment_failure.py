@@ -100,15 +100,8 @@ class TestFirstFailedPaymentPausesPaidFeatures:
         assert user.tier == UserTier.SOLO
         assert get_effective_entitlements(user, db_session).uploads_per_month == 100
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "Sprint 888 finding for the CEO: invoice.paid sets the subscription ACTIVE but leaves "
-            "user.tier on Free, and bumps updated_at, so Stripe's customer.subscription.updated for "
-            "the same recovery (created in the same second or earlier) is skipped as stale. "
-            "The subscriber is charged and stays on Free."
-        ),
-    )
+    # Sprint 888 found this failing (invoice.paid left user.tier on Free and made the matching
+    # subscription.updated look stale); Sprint 893 fixed it, so it is a plain test now.
     @patch("email_service.send_dunning_recovered")
     @patch("email_service.send_dunning_first_failure")
     def test_access_returns_when_invoice_paid_arrives_first(self, _fail, _ok, db_session, solo_subscriber):
@@ -127,6 +120,64 @@ class TestFirstFailedPaymentPausesPaidFeatures:
 
         db_session.refresh(user)
         assert user.tier == UserTier.SOLO
+
+    @patch("email_service.send_dunning_recovered")
+    @patch("email_service.send_dunning_first_failure")
+    def test_invoice_paid_alone_restores_owner_and_member_tiers(self, _fail, _ok, db_session):
+        """Sprint 893: recovery by invoice.paid alone puts the owner and an org member back on the plan."""
+        from organization_model import Organization, OrganizationMember, OrgRole
+
+        owner = User(
+            email="owner893@test.com",
+            name="Owner",
+            hashed_password="x",
+            tier=UserTier.PROFESSIONAL,
+            is_active=True,
+            is_verified=True,
+        )
+        member = User(
+            email="member893@test.com",
+            name="Member",
+            hashed_password="x",
+            tier=UserTier.PROFESSIONAL,
+            is_active=True,
+            is_verified=True,
+        )
+        db_session.add_all([owner, member])
+        db_session.flush()
+        org = Organization(name="Firm 893", slug="firm-893", owner_user_id=owner.id)
+        db_session.add(org)
+        db_session.flush()
+        db_session.add_all(
+            [
+                OrganizationMember(organization_id=org.id, user_id=owner.id, role=OrgRole.OWNER),
+                OrganizationMember(organization_id=org.id, user_id=member.id, role=OrgRole.MEMBER),
+            ]
+        )
+        db_session.add(
+            Subscription(
+                user_id=owner.id,
+                tier="professional",
+                status=SubscriptionStatus.ACTIVE,
+                billing_interval=BillingInterval.MONTHLY,
+                stripe_customer_id="cus_893",
+                stripe_subscription_id="sub_893",
+                seat_count=1,
+                additional_seats=0,
+            )
+        )
+        db_session.flush()
+
+        process_webhook_event(db_session, "invoice.payment_failed", {"id": "in_893", "customer": "cus_893"})
+        db_session.refresh(owner)
+        db_session.refresh(member)
+        assert (owner.tier, member.tier) == (UserTier.FREE, UserTier.FREE)
+
+        process_webhook_event(db_session, "invoice.paid", {"id": "in_893", "customer": "cus_893"})
+        db_session.refresh(owner)
+        db_session.refresh(member)
+        assert owner.tier == UserTier.PROFESSIONAL
+        assert member.tier == UserTier.PROFESSIONAL
 
     @patch("email_service.send_dunning_suspended")
     @patch("email_service.send_dunning_final_notice")
