@@ -1020,7 +1020,7 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 17C AP / Payroll / JE / Revenue and 17D's remaining sections and units are listed above.
 
 ### Sprint 893: Fixes for what Sprints 888–892 found
-**Status:** IN PROGRESS (2026-11-21) — local branch `sprint-893-defect-fixes`, stacked on Sprint 892. CEO 2026-11-21:
+**Status:** IN REVIEW (2026-11-21) — local branch `sprint-893-defect-fixes`, stacked on Sprint 892; G waits on the CEO. CEO 2026-11-21:
 "make any fixes you can at this time, including pending items on the todo". One commit per item.
 - [x] A. `invoice.paid` recovery restores the plan tier (owner and org members' cached tiers). The Sprint 888 strict
       xfail is now a plain test; a second test covers recovery by `invoice.paid` alone with an org member. Both fail
@@ -1075,6 +1075,10 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       plus a suggestion. Also fixed: the per-account accrual procedure printed "schedule.. Compare". Old/new table for
       review: `reports/sprint-893-procedure-wording.md`. Left imperative (outside scope, listed there): the accrual
       `recommended_action` map, the population-profile `risk_note`, one intercompany benchmark note, the sample generator.
+**Review (2026-11-21).** Commits: `e820787b` A · `8df978a0` B · `2dedbc79` C · `98930dd3` D · `877039b9` E ·
+`c61e6a3f` + `ecc28a85` F · `34d2ebd4` H · `debab250` I · `422f9ed9` J · `a4c3f5f4` K · `ede24624` L · (record commit).
+Full run at the end: backend `-m "not slow"` 11,448 passed, 0 failed, 0 xfailed (both Sprint 888/889 xfails fixed, the
+Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `next build` passes.
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
