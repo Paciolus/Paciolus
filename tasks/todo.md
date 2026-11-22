@@ -849,8 +849,8 @@ Verification: backend `-m "not slow"` 11,335 passed, 1 xfailed (the recovery def
 - [ ] Firm logos stay in S3 after account erasure (`erase_account` deletes the row, not the object).
 - [ ] Confirm on Render: `S3_BUCKET_NAME` set (logos), `FORMAT_ODS_ENABLED` unset/false (copy now omits ODS), no
       `RATE_LIMIT_{STARTER,TEAM,ORGANIZATION}_*` variables (now ignored).
-- [ ] Seven stale `.docx` exports under `docs/` still carry "Zero-Storage" (USER_GUIDE.docx, ARCHITECTURE.docx, …):
-      delete or regenerate.
+- [x] Seven stale `.docx` exports under `docs/` still carry "Zero-Storage" (USER_GUIDE.docx, ARCHITECTURE.docx, …):
+      delete or regenerate. Deleted in Sprint 893 (J), as Sprint 845 did for the compliance exports.
 - [ ] Until `counsel-redline-863` merges, Privacy/Terms on this branch still say "up to 48 hours" and list bulk upload.
 
 ### Sprint 889: Tests that fail when a number or a rule is wrong
@@ -1058,6 +1058,9 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       `application/zip`; this venv has 1.0.0, CI installs the newest), so the test records it as CI sees it.
 - [x] I. Bank-rec memo: "No items requiring further investigation were identified." → "No exceptions flagged: the
       reconciliation tests flagged no items."; `test_memo_banned_phrases.py` bans the old phrase (fails on the old text).
+- [x] J. Seven stale `.docx` exports deleted (all last changed 2026-02-04, five "Zero-Storage" claims each; none
+      linked). Five have a `.md` source; `FEATURE_ROADMAP.docx` and `API_REFERENCE.docx` (API v0.16.0, replaced by
+      `API_REFERENCE_GENERATED.md`) had none and stay in git history. Sprint 845 did the same for the compliance set.
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
