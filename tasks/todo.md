@@ -1028,7 +1028,10 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       for credit-normal accounts (revenue, liabilities, equity except contra). The xfail is a plain test; a liability /
       expense case is added. Sprint 819 `route_form_exports` re-recorded: only the revenue row's label and the two
       counts changed. Left as is: the movement CSV prints raw (debit-positive) change % beside the label.
-- [ ] C. Preview cache: release unused entries after 10 minutes without waiting for the next preview.
+- [x] C. Preview cache: release unused entries after 10 minutes without waiting for the next preview. A daemon
+      sweeper in `shared/preflight_cache.py` (started on first `put`) runs every 30 s; an entry cannot be read after
+      10 minutes and is released within 10.5. The published "up to 10 minutes, then released" wording now holds
+      (to the sweep interval). Test fails with the sweeper disabled.
 - [ ] D. Account erasure deletes the firm logo from S3.
 - [ ] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern.
 - [ ] F. 17C: AP and Payroll pages onto the shared testing page shell.

@@ -4,6 +4,12 @@ Preflight cache — short-lived in-memory store for file bytes parsed during pre
 Eliminates double upload+parse for the PDF preview → audit and workbook inspect → audit flows.
 Keyed by UUID tokens with a 10-minute TTL and 100-entry LRU cap.
 
+Sprint 893: expired entries used to be dropped only on the next ``put`` or a lookup of the
+same token, so an unused file could stay in memory past 10 minutes until the next preview
+or a restart. A daemon sweeper thread (started with the first ``put``) now releases expired
+entries every ``SWEEP_SECONDS``: an entry cannot be read after ``TTL_SECONDS`` and its bytes
+are released within ``TTL_SECONDS + SWEEP_SECONDS``.
+
 NOTE: In-memory only — suitable for single-process deployments. Should migrate to Redis
 or a shared cache if the backend scales to multiple workers/processes.
 """
@@ -16,6 +22,7 @@ from typing import Any
 
 MAX_ENTRIES = 100
 TTL_SECONDS = 600  # 10 minutes
+SWEEP_SECONDS = 30
 
 
 @dataclass
@@ -28,11 +35,19 @@ class PreflightEntry:
 
 
 class PreflightCache:
-    def __init__(self, max_entries: int = MAX_ENTRIES, ttl_seconds: int = TTL_SECONDS):
+    def __init__(
+        self,
+        max_entries: int = MAX_ENTRIES,
+        ttl_seconds: float = TTL_SECONDS,
+        sweep_seconds: float = SWEEP_SECONDS,
+    ):
         self._store: dict[str, PreflightEntry] = {}
         self._lock = threading.Lock()
         self._max_entries = max_entries
         self._ttl = ttl_seconds
+        self._sweep_seconds = sweep_seconds
+        self._sweeper: threading.Thread | None = None
+        self._stop = threading.Event()
 
     def put(
         self,
@@ -55,6 +70,7 @@ class PreflightCache:
             metadata=metadata or {},
         )
 
+        self._ensure_sweeper()
         with self._lock:
             self._evict_expired()
             # LRU eviction if at capacity
@@ -101,12 +117,46 @@ class PreflightCache:
         with self._lock:
             self._store.pop(token, None)
 
-    def _evict_expired(self) -> None:
+    def evict_expired(self) -> int:
+        """Remove all expired entries now. Returns how many were removed."""
+        with self._lock:
+            return self._evict_expired()
+
+    def _evict_expired(self) -> int:
         """Remove all expired entries. Must be called under lock."""
         now = time.monotonic()
         expired = [k for k, v in self._store.items() if now - v.created_at > self._ttl]
         for k in expired:
             del self._store[k]
+        return len(expired)
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._store)
+
+    # -- sweeper ---------------------------------------------------------------
+
+    def _ensure_sweeper(self) -> None:
+        if self._sweeper is not None and self._sweeper.is_alive():
+            return
+        with self._lock:
+            if self._sweeper is not None and self._sweeper.is_alive():
+                return
+            self._stop.clear()
+            self._sweeper = threading.Thread(target=self._sweep_loop, name="preflight-cache-sweeper", daemon=True)
+            self._sweeper.start()
+
+    def _sweep_loop(self) -> None:
+        while not self._stop.wait(self._sweep_seconds):
+            self.evict_expired()
+
+    def stop_sweeper(self) -> None:
+        """Stop the sweeper thread (tests, shutdown). The next ``put`` starts it again."""
+        self._stop.set()
+        sweeper = self._sweeper
+        if sweeper is not None:
+            sweeper.join(timeout=5)
+        self._sweeper = None
 
 
 # Module-level singleton
