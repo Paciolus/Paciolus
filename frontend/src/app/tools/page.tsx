@@ -19,6 +19,7 @@ import { motion } from 'framer-motion'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { Reveal } from '@/components/ui/Reveal'
 import { useUserPreferences } from '@/hooks'
+import { testCountFor } from '@/content/tool-ledger'
 import { fadeUp, staggerContainerTight } from '@/lib/motion'
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -36,6 +37,8 @@ interface ToolDef {
 }
 
 /* ─── Tool Definitions ──────────────────────────────────────────────── */
+// Sprint 893 (16A): test counts come from the tool ledger; hrefs and categories are checked
+// against the generated catalog (__tests__/ToolsPageCatalog.test.ts).
 
 const TOOLS: ToolDef[] = [
   // Core Analysis
@@ -44,13 +47,13 @@ const TOOLS: ToolDef[] = [
   { key: 'bank_reconciliation', label: 'Bank Reconciliation', href: '/tools/bank-rec', description: 'Match bank statement entries against book records to identify reconciling items and discrepancies.', reference: 'Bank-to-book matching', category: 'Core Analysis' },
   { key: 'three_way_match', label: 'Three-Way Match', href: '/tools/three-way-match', description: 'Match purchase orders, receiving reports, and vendor invoices to detect procurement anomalies.', reference: 'ISA 240 · ISA 500', category: 'Core Analysis' },
   // Testing Suite
-  { key: 'journal_entry_testing', label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', description: "Upload a General Ledger extract for automated testing — Benford's Law, structural validation, and statistical anomaly detection.", reference: 'ISA 240 · AS 2401', category: 'Testing Suite', testCount: 19 },
-  { key: 'ap_testing', label: 'AP Payment Testing', href: '/tools/ap-testing', description: 'Test AP payment registers for duplicate payments, vendor anomalies, and patterns associated with fraud schemes.', reference: 'ISA 240 · ISA 500', category: 'Testing Suite', testCount: 14 },
-  { key: 'revenue_testing', label: 'Revenue Testing', href: '/tools/revenue-testing', description: 'Analyze revenue GL extracts for recognition anomalies per ISA 240, ASC 606, and IFRS 15 contract standards.', reference: 'ISA 240 / ASC 606 / IFRS 15', category: 'Testing Suite', testCount: 18 },
-  { key: 'ar_aging', label: 'AR Aging', href: '/tools/ar-aging', description: 'Analyze accounts receivable aging schedules for collectibility risks, concentration, and unusual patterns.', reference: 'ISA 540', category: 'Testing Suite', testCount: 12 },
-  { key: 'payroll_testing', label: 'Payroll Testing', href: '/tools/payroll-testing', description: 'Test payroll registers for ghost-employee indicators, rate anomalies, overtime spikes, and segregation issues.', reference: 'ISA 240 · ISA 500', category: 'Testing Suite', testCount: 13 },
-  { key: 'fixed_asset_testing', label: 'Fixed Assets', href: '/tools/fixed-assets', description: 'Test fixed asset registers for depreciation accuracy, impairment indicators, disposals, and lease indicators.', reference: 'ISA 500 / IAS 16 / ASC 360', category: 'Testing Suite', testCount: 11 },
-  { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Analyze inventory records for valuation anomalies, obsolescence indicators, and cutoff issues.', reference: 'IAS 2 / ASC 330', category: 'Testing Suite', testCount: 10 },
+  { key: 'journal_entry_testing', label: 'Journal Entry Testing', href: '/tools/journal-entry-testing', description: "Upload a General Ledger extract for automated testing — Benford's Law, structural validation, and statistical anomaly detection.", reference: 'ISA 240 · AS 2401', category: 'Testing Suite', testCount: testCountFor('journal_entry_testing') },
+  { key: 'ap_testing', label: 'AP Payment Testing', href: '/tools/ap-testing', description: 'Test AP payment registers for duplicate payments, vendor anomalies, and patterns associated with fraud schemes.', reference: 'ISA 240 · ISA 500', category: 'Testing Suite', testCount: testCountFor('ap_testing') },
+  { key: 'revenue_testing', label: 'Revenue Testing', href: '/tools/revenue-testing', description: 'Analyze revenue GL extracts for recognition anomalies per ISA 240, ASC 606, and IFRS 15 contract standards.', reference: 'ISA 240 / ASC 606 / IFRS 15', category: 'Testing Suite', testCount: testCountFor('revenue_testing') },
+  { key: 'ar_aging', label: 'AR Aging', href: '/tools/ar-aging', description: 'Analyze accounts receivable aging schedules for collectibility risks, concentration, and unusual patterns.', reference: 'ISA 540', category: 'Testing Suite', testCount: testCountFor('ar_aging') },
+  { key: 'payroll_testing', label: 'Payroll Testing', href: '/tools/payroll-testing', description: 'Test payroll registers for ghost-employee indicators, rate anomalies, overtime spikes, and segregation issues.', reference: 'ISA 240 · ISA 500', category: 'Testing Suite', testCount: testCountFor('payroll_testing') },
+  { key: 'fixed_asset_testing', label: 'Fixed Assets', href: '/tools/fixed-assets', description: 'Test fixed asset registers for depreciation accuracy, impairment indicators, disposals, and lease indicators.', reference: 'ISA 500 / IAS 16 / ASC 360', category: 'Testing Suite', testCount: testCountFor('fixed_asset_testing') },
+  { key: 'inventory_testing', label: 'Inventory Testing', href: '/tools/inventory-testing', description: 'Analyze inventory records for valuation anomalies, obsolescence indicators, and cutoff issues.', reference: 'IAS 2 / ASC 330', category: 'Testing Suite', testCount: testCountFor('inventory_testing') },
   // Advanced
   { key: 'statistical_sampling', label: 'Statistical Sampling', href: '/tools/statistical-sampling', description: 'Design and evaluate audit samples using ISA 530 methodology — monetary unit sampling and simple random sampling.', reference: 'ISA 530 · AS 2315', category: 'Advanced' },
   { key: 'composite_risk', label: 'Composite Risk Scoring', href: '/tools/composite-risk', description: 'Record auditor-assessed inherent/control/fraud risk per account/assertion; combine with a Paciolus 4×4 convention, with optional diagnostic integration.', reference: 'ISA 315 (Revised 2019) / ISA 330', category: 'Advanced' },

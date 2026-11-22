@@ -1061,6 +1061,10 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 - [x] J. Seven stale `.docx` exports deleted (all last changed 2026-02-04, five "Zero-Storage" claims each; none
       linked). Five have a `.md` source; `FEATURE_ROADMAP.docx` and `API_REFERENCE.docx` (API v0.16.0, replaced by
       `API_REFERENCE_GENERATED.md`) had none and stay in git history. Sprint 845 did the same for the compliance set.
+- [x] K. 16A follow-up: `app/tools/page.tsx` test counts come from the ledger (`testCountFor`); a new test checks no
+      count is typed in again and every row the catalog lists has the catalog's href and category (counts, hrefs and
+      categories all matched before the change). Still hand-written: its descriptions and references, the five rows
+      the catalog does not list under those keys, the workpaper index, `tool-ledger.ts` and `toolbarConfig.ts`.
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
