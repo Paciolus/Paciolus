@@ -1044,7 +1044,8 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 - [x] F. 17C: AP and Payroll pages onto the shared testing page shell. The shell gains `settingsToolKey` (settings
       button + drawer), `extraExportFields` and `upload.iconPath`; each renders nothing when unused. A temporary test
       compared old and new HTML for AP, Payroll, Fixed Assets and Inventory in six states (24 cases, result components
-      stubbed to print their props): identical; removing AP's settings key fails 6 of them. Remaining: JE (sampling)
+      stubbed to print their props): identical; removing AP's settings key fails 6 of them. AP (step 3) and Payroll
+      (step 4) committed separately. Remaining: JE (sampling)
       and Revenue (contract inputs); AR aging stays outside.
 - [ ] G. 14G: a fresh PostgreSQL builds from the migrations — **not started, needs the CEO.** It decides the enum
       labels a migration-built database gets (production holds the member NAMES `create_all` wrote; the old chain
