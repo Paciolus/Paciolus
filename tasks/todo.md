@@ -793,8 +793,8 @@ clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/
 - [ ] On deploy: migration `c3e7a1f9d524` (`tool_runs.flag_count`) runs; runs recorded before it show "Results
       unavailable" — confirm the live deploy SHA and the migration head.
 - [ ] Regenerate `sample-reports/` and the public JE sample memo (wording changed again).
-- [ ] Re-record Sprint 819 `test_engagement_export_routes_unchanged` (fails on `main` already; the 12E anomaly-summary
-      changes alter its golden too).
+- [x] Re-record Sprint 819 `test_engagement_export_routes_unchanged` (fails on `main` already; the 12E anomaly-summary
+      changes alter its golden too). Done in Sprint 893 (H).
 - [ ] Follow-up (outside this brief): the TB diagnostic, accrual and expense engines' own suggested procedures are still
       imperative — reword to "The auditor may consider…" and extend the `test_memo_banned_phrases.py` procedure rule.
 - [ ] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
@@ -1042,7 +1042,17 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       flux, report button, FS preview, account export, admin CSV, multi-period CSV, and every `apiPut` / `apiPatch` /
       `apiDelete` caller (all check `ok` and set an error).
 - [ ] F. 17C: AP and Payroll pages onto the shared testing page shell.
-- [ ] G. 14G: a fresh PostgreSQL builds from the migrations (no change to stored enum labels).
+- [ ] G. 14G: a fresh PostgreSQL builds from the migrations — **not started, needs the CEO.** It decides the enum
+      labels a migration-built database gets (production holds the member NAMES `create_all` wrote; the old chain
+      creates lowercase values), and a squash must reproduce the schema at production's revision, not at this
+      stack's tip (886's `c3e7a1f9d524` has not deployed). Recommended: a baseline revision that reuses production's
+      head id and creates that schema with production's labels, old files moved to `versions/_archive/`, then the
+      PostgreSQL job (upgrade head, enum round trip, model parity). Nothing changes for production.
+- [x] H. Sprint 819 `test_engagement_export_routes_unchanged` re-recorded: the diff is the 886/887 anomaly-summary
+      wording only. The package route's `content_encoding` depends on the Starlette version (1.10+ does not gzip
+      `application/zip`; this venv has 1.0.0, CI installs the newest), so the test records it as CI sees it.
+- Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
+  859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

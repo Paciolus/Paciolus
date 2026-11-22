@@ -97,6 +97,11 @@ def _capture(response: httpx.Response) -> dict[str, Any]:
         "cache_control": headers.get("cache-control"),
         "content_encoding": headers.get("content-encoding"),
     }
+    if ctype.startswith("application/zip"):
+        # Sprint 893: Starlette 1.10+ does not gzip application/zip and older releases do;
+        # fastapi's range allows both, so a fresh install (CI) and an older venv differ.
+        # Recorded as CI sees it, so the snapshot pins our output, not the Starlette version.
+        out["content_encoding"] = None
     if ctype.startswith("application/json"):
         body_json = response.json()
         if isinstance(body_json, dict):
