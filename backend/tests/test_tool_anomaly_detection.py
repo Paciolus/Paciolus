@@ -462,20 +462,30 @@ class TestMultiPeriodHandWorkedCases:
         new = _movement(r, "6700")
         assert (new["movement_type"], new["prior_balance"], new["current_balance"]) == ("new_account", 0.0, 18395.50)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "Sprint 889 finding for the CEO: movement_type is classed on the debit-positive net, so revenue "
-            "that falls from 100 to 40 is labelled 'increase' (badge and 'Increases' count) beside a "
-            "display change of -60%."
-        ),
-    )
+    # Sprint 889 found this failing (labelled on the debit-positive net); fixed in Sprint 893.
     def test_revenue_that_falls_is_labelled_a_decrease(self):
         prior = [{"account": "Consulting Revenue", "type": "Revenue", "debit": 0, "credit": 100}]
         current = [{"account": "Consulting Revenue", "type": "Revenue", "debit": 0, "credit": 40}]
-        m = _movement(compare_trial_balances(prior, current).to_dict(), "Consulting Revenue")
+        r = compare_trial_balances(prior, current).to_dict()
+        m = _movement(r, "Consulting Revenue")
         assert m["display_change_percent"] == pytest.approx(-60.0)
         assert m["movement_type"] == "decrease"
+        assert (r["movements_by_type"]["decrease"], r["movements_by_type"]["increase"]) == (1, 0)
+
+    def test_liability_that_grows_is_an_increase_and_expense_is_unchanged(self):
+        prior = [
+            {"account": "Accounts Payable", "type": "Liability", "debit": 0, "credit": 100},
+            {"account": "Rent Expense", "type": "Expense", "debit": 100, "credit": 0},
+        ]
+        current = [
+            {"account": "Accounts Payable", "type": "Liability", "debit": 0, "credit": 250},
+            {"account": "Rent Expense", "type": "Expense", "debit": 40, "credit": 0},
+        ]
+        r = compare_trial_balances(prior, current).to_dict()
+        ap = _movement(r, "Accounts Payable")
+        assert (ap["movement_type"], ap["display_change_percent"]) == ("increase", pytest.approx(150.0))
+        rent = _movement(r, "Rent Expense")
+        assert (rent["movement_type"], rent["display_change_percent"]) == ("decrease", pytest.approx(-60.0))
 
     def test_budget_variance_uses_the_budget(self):
         from multi_period_comparison import compare_three_periods

@@ -1024,7 +1024,10 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 - [x] A. `invoice.paid` recovery restores the plan tier (owner and org members' cached tiers). The Sprint 888 strict
       xfail is now a plain test; a second test covers recovery by `invoice.paid` alone with an org member. Both fail
       without the fix.
-- [ ] B. Falling revenue labelled "Increase" (Sprint 889 14B xfail).
+- [x] B. Falling revenue labelled "Increase" (Sprint 889 14B xfail). Increase / decrease now follow the display basis
+      for credit-normal accounts (revenue, liabilities, equity except contra). The xfail is a plain test; a liability /
+      expense case is added. Sprint 819 `route_form_exports` re-recorded: only the revenue row's label and the two
+      counts changed. Left as is: the movement CSV prints raw (debit-positive) change % beside the label.
 - [ ] C. Preview cache: release unused entries after 10 minutes without waiting for the next preview.
 - [ ] D. Account erasure deletes the firm logo from S3.
 - [ ] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern.

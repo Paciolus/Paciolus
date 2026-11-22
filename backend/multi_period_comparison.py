@@ -726,6 +726,13 @@ def compare_trial_balances(
             lead_sheet_category=ls_category,
             is_dormant=is_dormant,
         )
+        # Sprint 893: increase / decrease follow the display basis. The net balance is
+        # debit-positive, so revenue falling from 100 to 40 credit is +60 raw and was
+        # labelled "increase" beside a display change of -60%. For credit-normal
+        # accounts (the same rule the display_* fields use) the label flips.
+        if movement._is_credit_normal and movement_type in (MovementType.INCREASE, MovementType.DECREASE):
+            movement_type = MovementType.DECREASE if movement_type == MovementType.INCREASE else MovementType.INCREASE
+            movement.movement_type = movement_type
 
         all_movements.append(movement)
 
