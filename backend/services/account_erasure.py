@@ -34,7 +34,8 @@ WHAT IS REFUSED (``ErasureBlocked``)
   client): deleting them would delete a colleague's records, and the columns
   are NOT NULL so they cannot be anonymised. Handled by privacy@ by hand.
 
-Order matters: R2 share objects are removed (each share row with it, durably)
+Order matters: R2 share objects are removed (each share row with it, durably),
+then the firm logo in S3 (Sprint 893: the row used to go and the object stay),
 and then Stripe is cancelled, **before** any other row is deleted. A provider
 failure therefore leaves the account in place, and the error says exactly what
 was already removed. A late Stripe webhook for the erased account is ignored by
@@ -222,6 +223,54 @@ def _delete_share_objects(db: Session, user_id: int, org_ids: list[int]) -> int:
     return removed
 
 
+def _delete_logo_objects(db: Session, org_ids: list[int], shares_removed: int) -> int:
+    """Remove the firm logos of the orgs being erased from S3. Returns the count.
+
+    Sprint 893: erasure deleted the ``firm_branding`` row and left the logo object
+    in the bucket. Like shared reports, each logo's key is cleared (and committed)
+    as soon as its object is gone; if S3 cannot be reached the account is kept and
+    the error says what was already removed.
+    """
+    if not org_ids:
+        return 0
+    from shared.storage_client import delete_key
+
+    branding = _t("firm_branding")
+    removed = 0
+    rows = db.execute(
+        select(branding.c.id, branding.c.logo_s3_key).where(
+            branding.c.organization_id.in_(org_ids), branding.c.logo_s3_key.is_not(None)
+        )
+    )
+    for row_id, key in list(rows):
+        try:
+            ok = delete_key(key)
+        except Exception as exc:  # boto errors: treat as a provider failure
+            logger.warning("Erasure: logo delete failed: %s", type(exc).__name__)
+            ok = False
+        if not ok:
+            done = shares_removed + removed
+            parts = []
+            if shares_removed:
+                parts.append(f"{shares_removed} shared link(s)")
+            if removed:
+                parts.append(f"{removed} logo(s)")
+            already = f" {' and '.join(parts)} were removed first." if done else ""
+            raise ErasureProviderError(
+                f"We could not remove your firm logo from storage.{already} Your account and other data were "
+                "not deleted; please try again.",
+                "ERASURE_PARTIAL_CLEANUP" if done else "ERASURE_PROVIDER_FAILED",
+            )
+        db.execute(
+            update(branding)
+            .where(branding.c.id == row_id)
+            .values(logo_s3_key=None, logo_content_type=None, logo_size_bytes=None)
+        )
+        db.commit()
+        removed += 1
+    return removed
+
+
 def erase_account(db: Session, user: Any) -> dict[str, int]:
     """Physically delete ``user`` and everything they own. Returns row counts.
 
@@ -240,13 +289,21 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
     # Stripe last, so a storage failure never leaves a cancelled subscription
     # on an account that still exists.
     shares_removed = _delete_share_objects(db, user_id, owned_orgs)
+    logos_removed = _delete_logo_objects(db, owned_orgs, shares_removed)
     try:
         _cancel_stripe(db, user_id)
     except ErasureProviderError as exc:
-        if shares_removed:
+        if shares_removed or logos_removed:
+            what = " and ".join(
+                p
+                for p in (
+                    f"{shares_removed} shared link(s)" if shares_removed else "",
+                    "firm logo" if logos_removed else "",
+                )
+                if p
+            )
             raise ErasureProviderError(
-                f"{exc} Your {shares_removed} shared link(s) were removed; your subscription and account were "
-                "not changed. Please try again.",
+                f"{exc} Your {what} were removed; your subscription and account were not changed. Please try again.",
                 "ERASURE_PARTIAL_CLEANUP",
             ) from exc
         raise ErasureProviderError(f"{exc} Nothing was deleted; please try again.") from exc

@@ -1032,7 +1032,9 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
       sweeper in `shared/preflight_cache.py` (started on first `put`) runs every 30 s; an entry cannot be read after
       10 minutes and is released within 10.5. The published "up to 10 minutes, then released" wording now holds
       (to the sweep interval). Test fails with the sweeper disabled.
-- [ ] D. Account erasure deletes the firm logo from S3.
+- [x] D. Account erasure deletes the firm logo from S3 (after shared reports, before Stripe; each key cleared and
+      committed once its object is gone). If S3 cannot be reached (or `S3_BUCKET_NAME` is unset while a logo row
+      exists) the account is kept and the error says so, as for shared reports. Two tests; both fail without it.
 - [ ] E. 15A: audit the other `apiPut` / `apiDownload` callers for the `ok: false` pattern.
 - [ ] F. 17C: AP and Payroll pages onto the shared testing page shell.
 - [ ] G. 14G: a fresh PostgreSQL builds from the migrations (no change to stored enum labels).

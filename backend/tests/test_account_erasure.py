@@ -179,6 +179,46 @@ class TestRefusals:
         assert _count(db_session, "organizations", id=org_id) == 0
 
 
+class TestLogoObjects:
+    """Sprint 893: erasure removes the firm logo object from S3, not only the row."""
+
+    def _org_with_logo(self, db_session, make_user, email):
+        from firm_branding_model import FirmBranding
+        from organization_model import Organization, OrganizationMember, OrgRole
+
+        owner = make_user(email=email)
+        org = Organization(name="Logo Firm", slug=f"logo-{owner.id}", owner_user_id=owner.id)
+        db_session.add(org)
+        db_session.flush()
+        db_session.add(OrganizationMember(organization_id=org.id, user_id=owner.id, role=OrgRole.OWNER))
+        db_session.add(FirmBranding(organization_id=org.id, logo_s3_key=f"branding/{org.id}/logo"))
+        owner.organization_id = org.id
+        db_session.commit()
+        return owner, org.id
+
+    def test_logo_object_is_deleted(self, db_session, make_user, monkeypatch):
+        from shared import storage_client
+
+        owner, org_id = self._org_with_logo(db_session, make_user, "logo_owner@example.com")
+        deleted = []
+        monkeypatch.setattr(storage_client, "delete_key", lambda key: deleted.append(key) or True)
+        erase_account(db_session, owner)
+        assert deleted == [f"branding/{org_id}/logo"]
+        assert _count(db_session, "firm_branding", organization_id=org_id) == 0
+
+    def test_storage_failure_keeps_the_account(self, db_session, make_user, monkeypatch):
+        from shared import storage_client
+
+        owner, org_id = self._org_with_logo(db_session, make_user, "logo_fail@example.com")
+        owner_id = owner.id
+        monkeypatch.setattr(storage_client, "delete_key", lambda key: False)
+        with pytest.raises(ErasureProviderError, match="firm logo") as exc:
+            erase_account(db_session, owner)
+        assert exc.value.code == "ERASURE_PROVIDER_FAILED"
+        assert _count(db_session, "users", id=owner_id) == 1
+        assert _count(db_session, "firm_branding", organization_id=org_id) == 1
+
+
 class TestExport:
     def test_export_contains_the_data_and_no_secrets(self, db_session, populated):
         data = export_account(db_session, populated["user"])
