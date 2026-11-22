@@ -61,6 +61,8 @@ BANNED: list[tuple[str, str]] = [
     (r"\bclean\b", "a verdict; say 'no exceptions flagged'"),
     (r"\b(?:not )?passed\b", "a verdict; say what was or was not met"),
     (r"\bverified\b", "a verdict; say what was compared"),
+    # Sprint 893: whether anything needs investigating is the auditor's call.
+    (r"\bno items requiring (?:further )?investigation\b", "a conclusion; say 'no exceptions flagged'"),
     ("®", "the registered-trademark sign asserts a registration we have not confirmed"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]

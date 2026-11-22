@@ -603,9 +603,10 @@ def _build_key_findings(
         story.append(Spacer(1, 4))
 
     if finding_num == 0:
+        # Sprint 893: say what the tests flagged, not whether investigation is needed (the auditor decides).
         story.append(
             Paragraph(
-                "No items requiring further investigation were identified.",
+                "No exceptions flagged: the reconciliation tests flagged no items.",
                 styles["MemoBody"],
             )
         )

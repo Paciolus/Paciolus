@@ -797,8 +797,8 @@ clean on changed files; `next build` compiled every route (`ƒ`; `/icon.png`, `/
       changes alter its golden too). Done in Sprint 893 (H).
 - [ ] Follow-up (outside this brief): the TB diagnostic, accrual and expense engines' own suggested procedures are still
       imperative — reword to "The auditor may consider…" and extend the `test_memo_banned_phrases.py` procedure rule.
-- [ ] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
-      reword to "No exceptions flagged" form.
+- [x] Follow-up: the bank-rec memo's "No items requiring further investigation were identified." states a conclusion —
+      reword to "No exceptions flagged" form. Done in Sprint 893 (I); the phrase is now banned in memo sources.
 
 ### Sprint 888: What we publish about plans, billing and data handling matches the code
 **Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-888-published-claims`, stacked on Sprint 887;
@@ -1051,6 +1051,8 @@ new page HTML in six states. Full run at the end: backend `-m "not slow"` 11,437
 - [x] H. Sprint 819 `test_engagement_export_routes_unchanged` re-recorded: the diff is the 886/887 anomaly-summary
       wording only. The package route's `content_encoding` depends on the Starlette version (1.10+ does not gzip
       `application/zip`; this venv has 1.0.0, CI installs the newest), so the test records it as CI sees it.
+- [x] I. Bank-rec memo: "No items requiring further investigation were identified." → "No exceptions flagged: the
+      reconciliation tests flagged no items."; `test_memo_banned_phrases.py` bans the old phrase (fails on the old text).
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
