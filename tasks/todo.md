@@ -79,53 +79,31 @@
 >   completes, whichever first. Exempt: security defects, launch blockers, and any defect a CPA hits in a Sprint 781
 >   session. Tracked risk: `slowapi==0.1.10` is unmaintained and sits on the rate-limit path (see Sprint 870).
 >
+> **Merged 2026-11-24 (integration branch `integration-2026-11-24`, one linear chain, CEO: "do the merges and the
+> PRs").** Sprints 853 (#331), 859 (#320), 867 + 882 (#318, ported to exact amounts), 869 (#322), 870 part A (#317),
+> 871 (#319), 872 (session boundaries), 895 (TB re-run dedup, filed as 872, #323), 873 (#325), 874 (#327, CEO approved the CSRF change
+> 2026-11-24), 875 (#328), 876 (#329), 877 (#330), 878–881, 883–894, and the credentials runbook (#321). Each sprint's
+> section below keeps its record. Integration fixes, one commit each: one Alembic head (production upgrades
+> `b9d3f6a2c418` → `c3e7a1f9d524` → `c853a1f0e2d4` … → `d881b3c5e7f9`, nine migrations), Sprint 892's organization
+> service carries 853/872/880's member and invitation rules, 878's JE sampling gate runs in worker-thread sessions
+> (Sprint 890), 879's in-memory XLSX writer under 885's `save_workbook`, 880's signed shares in 885's tests, the
+> "A/An" flag-unit article, goldens and OpenAPI snapshot re-recorded.
+>
 > **P0 before 2026-12-15 — in order**
-> - [ ] **Sprint 872** — session and sign-in boundaries (cross-account cache, CSRF owner binding, unverified invite
->       acceptance, impersonation token storage, error shape). Security; code complete, local branch, not pushed.
-> - [ ] **Sprint 878** — plan features and upload allowances enforced on the server (workspace, CSV exports,
->       preview-token format bypass, upload ledger, JE sampling). Security; code complete on a local branch, stacked on #331.
-> - [ ] **Sprint 879** — what we log, save and cache matches the published data statement (log values, saved
->       balances in expectations, activity summary schema, preview cache lifetime, XLSX temp files). Security; code complete,
->       local branch stacked on 878, not pushed.
-> - [ ] **Sprint 880** — shared export links: file deleted within an hour of the link ending, no untracked files after a
->       failed create, only Paciolus-generated files can be shared. Security; code complete, local branch stacked on 879, not pushed.
-> - [ ] **Sprint 881** — billing: included seats from the plan, inactive firms back to one seat, no second subscription,
->       one trial and one use per promo code per account, seat limits from config; three billing tests made real.
->       Security; in progress, local branch stacked on 880.
-> - [ ] **Sprint 870** — rate limits never fire in production (#274). Security; do first.
-> - [ ] **Sprint 874 (new, 2026-11-16)** — every reload signs production users out: the CSRF rule on `/auth/refresh`
->       cannot be satisfied after a reload. CEO decision (reverses the 2026-04-20 rule); PR ready. Fix this before 868.
-> - [ ] **Sprint 868 / Phase 4.3** — `api.paciolus.com` (first-party API): sessions currently die every 15 minutes in
->       browsers that don't send the cross-site refresh cookie; it is also the Stripe webhook target. **Re-scope after
->       874:** most of the observed sign-outs are 874's, not the third-party cookie's.
-> - [ ] **Sprint 867** — balance sheet shows "OUT OF BALANCE" for a balanced, pre-closing trial balance.
-> - [ ] **Sprint 883** — preflight, TB analysis and the testing tools read amounts and totals rows differently, so one
->       file can balance in one place and not another (review ST-01, ST-02; ST-09 mapping 500s). Local branch.
-> - [ ] **Sprint 884** — rounding, precision loss and totals that disagree with their detail (review TQ-12, TQ-13,
->       OUT-04/05/06/19/23). Local branch, stacked on Sprint 883 — merge 883 first, then push both. Follow-ups are
->       listed under the sprint.
-> - [ ] **Sprint 885** — exported CSV/Excel/PDF files: formula injection, PDF restyling, non-ASCII download names,
->       fonts and page fit (review OUT-01/02/24–28/33/34). Local branch, stacked on Sprint 884.
-> - [ ] **Sprint 886** (in review) — exported documents match the screen: dropped fields, uncomputed scores, wrong scales,
->       materiality origin, reporting framework (review OUT-09–12/14–16/18). Local branch, stacked on Sprint 885.
-> - [ ] **Sprint 887** (in review) — generated wording: no audit conclusions, no contradiction of the results, correct
->       citations (review OUT-07/08/13/17/20/21/22/29/30/31/32 + expense-category table). Local branch, stacked on 886.
-> - [ ] **Sprints 888–892** (CEO briefs 13–17, 2026-11-20) — one local branch each, stacked on Sprint 887 in this
->       order: 888 published claims match the code · 889 tests that can fail · 890 frontend/API/background edges ·
->       891 one catalog, one plan file, docs, dead code · 892 behaviour-neutral refactors. The CEO's briefs supersede
->       the freeze for this work. Merge after 883–887.
-> - [ ] **Sprint 893** (2026-11-21) — fixes for the defects and open items Sprints 888–892 found. Local branch
->       `sprint-893-defect-fixes`, stacked on 892.
-> - [ ] **Sprint 882** — cash flow statement invents a financing flow from unclosed income and shows depreciation as
->       investing cash (TQ-02, TQ-03). Stacked on Sprint 867's PR #318.
-> - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
+> - [ ] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
+>       Then: sign in, reload twice, idle 20 minutes, act — still signed in (Sprint 874's check).
+> - [ ] **Sprint 870 part B** — read the part-A rate-limit key probe on production, fix the cause, verify 429s, close #274.
+> - [ ] **Sprint 868 / Phase 4.3** — re-scope after 874 is live: what is left is browsers that block the third-party
+>       refresh cookie (Safari). `api.paciolus.com` is also the Stripe webhook target.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
->       Blocked on 4.3 and 871.
+>       Blocked on 4.3 (Sprint 871 is merged).
 > - [ ] **Sprint 863** — Privacy/Terms redline (`counsel-redline-863`) merges only after counsel signs off.
+> - [ ] **Sprint 893 G** — a fresh PostgreSQL builds from the migrations: needs the CEO's enum-label decision.
 >
 > **Then (C)**
-> - [ ] Sprint 869 (JE calibration) · Sprint 859 (pooler-aware TLS check) · Dependabot batch (open: #297–#306, #311).
+> - [ ] Sprint 869 JE calibration decision ("unusual account combinations" minimum — PR #322 note) · Dependabot batch
+>       (#297–#305, #324, #332: rebase onto the new `main`). Sprint 859 merged 2026-11-24.
 > - [x] **Next.js upgrade** (Sprint 894 B, 16.4.6) — `next build` compiles but exits 1 on alternate runs with Next's `SecurityFatalError`
 >       ("your version of Next.js is affected by a known security vulnerability"). Security; seen in Sprint 884.
 > - [x] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` §6 (names, scope, where created, expiry —
@@ -150,7 +128,9 @@
 > - [ ] Confirm the four `R2_EXPORTS_*` env vars on Render (sharing now refuses rather than falling back to the database).
 > - [ ] Refund policy · registered address / agent / EU-rep + DPO decisions · Stripe Billing Portal: no plan switching to
 >       Professional/Enterprise (Sprint 858 note) · H12: verify or relabel the ISA 315 "Appendix 1 matrix" citation.
-> - [x] Sprint 853 (firm-owned client data) — CEO decided 2026-11-16; in progress (see Sprint 853).
+> - [x] Sprint 853 (firm-owned client data) — CEO decided 2026-11-16; merged 2026-11-24.
+> - [ ] Sprint 876 PR note: completed and archived engagements stay writable after the completion gate passes once.
+>       Recommendation: an `_ensure_mutable` guard with an explicit reopen transition.
 > - [ ] Sprint 884 follow-up: should the TB response carry the currency conversion it computes (today it is dropped)?
 > - [ ] Sprint 887: review the PR-T12/PR-T13 drafts and `reports/sprint-887-wording.md`; decide where `57c79d91` lives
 >       and whether the anomaly summary gets a download button. Engineering follow-ups are listed under the sprint.
@@ -633,7 +613,9 @@ enforced: no suspension on open, no restore/cancel on close, no `DISPUTE_*` bill
 
 **Commit SHA:** TBD.
 
-### Sprint 872: Re-running a trial balance with new settings answered "duplicate"
+### Sprint 895: Re-running a trial balance with new settings answered "duplicate"
+**Numbering:** filed as Sprint 872 (PR #323, commit messages say 872); renumbered 2026-11-24 because 872 is the
+session-boundaries sprint.
 **Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge. **Priority:** P1 (a CPA hits it on
 the first threshold change; carried from Sprint 856's browser pass). **Agents:** Executor (lead), Critic.
 **Found:** Sprint 856's open item "re-uploading the same TB within 5 min shows the raw API text `re-submit with
@@ -1703,7 +1685,7 @@ Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `ne
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
 
 ### Sprint 894: Todo bookkeeping, Next.js security upgrade, exact amounts in response schemas
-**Status:** IN PROGRESS (2026-11-24) — local branch `sprint-894-next-and-amounts`, stacked on Sprint 893.
+**Status:** COMPLETE (2026-11-24) — merged with the 2026-11-24 integration chain.
 **Agents:** Executor (lead), Guardian (Next.js advisory), Critic (amount sweep).
 - [x] A. Checkboxes Sprint 893 already closed but left open under 888, 889, 890 and 892 ticked, with where each was done.
 - [x] B. Next.js 16.4.3 → 16.4.6 (in range): clears the advisories that make `next build` exit on Next's
@@ -1721,6 +1703,11 @@ Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `ne
       the old schemas). mypy unchanged (289, baseline 1,011).
       Full backend run (`-m "not slow"`): 11,510 passed, 2 failed — two sampling tests compared the model's attribute
       (now a Decimal) with a float; updated to compare exactly. The JSON they check is unchanged.
+
+**Review (2026-11-24).** Commits: `59f9b679` A · `f67e5d97` B · `0c8375d1` C · `9604ce44` C test follow-up.
+Verification: backend `-m "not slow"` on the 894 tip 11,510 passed, 2 failed (the two sampling attribute tests, fixed
+in `9604ce44`); `next build` twice, both exit 0; mypy 289 (baseline 1,011). The full chain was verified again after
+integration (see the START HERE block).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

@@ -325,3 +325,14 @@
   PR because its secrets are unset and the step is skipped (filed in `tasks/todo.md`).
 - **2026-11-16 — On Windows, `--basetemp` must point inside an existing directory**; a missing parent turned 203
   `tmp_path` tests into setup errors that looked like failures.
+- **2026-11-24 — Two long-lived local stacks off the same `main` diverge in ways a text merge cannot see** (integration
+  of 853/872–882 with 883–894). Five classes of conflict needed real porting, not hunk-picking: a refactor that moved
+  code (892's organization service) silently dropped the other stack's rules unless re-applied there; a float→Decimal
+  conversion (884) meant every float the other stack added would raise `TypeError` at runtime; two stacks fixed the same
+  defect differently (893 C vs 879 DH-07 preview cache); both added Alembic migrations on production's head (two heads);
+  and binary goldens and generated files cannot be merged at all. Rule: before stacking a second long branch, push the
+  first; when two must meet, replay one onto the other, run each conflicted sprint's own tests at the conflict, then
+  re-record goldens and regenerate generated files once at the end, reviewing the text diff for unexplained changes.
+- **2026-11-24 — `ExactMoney` is stricter than `float`: it rejects `inf`/`NaN`** (Sprint 894 C). Moving a ratio or
+  percentage field to it would turn a division by zero into a 500. Only currency amounts move; and Python-side readers
+  of a converted response attribute now get a `Decimal` (two sampling tests compared it with a float).
