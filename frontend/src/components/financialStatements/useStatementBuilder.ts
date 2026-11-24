@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { LeadSheetGrouping, LeadSheetSummary } from '@/types/leadSheet'
+import type { LeadSheetAccount, LeadSheetGrouping, LeadSheetSummary } from '@/types/leadSheet'
 import type {
   StatementLineItem,
   CashFlowLineItem,
@@ -12,6 +12,34 @@ import type {
 function getBalance(summaries: LeadSheetSummary[], letter: string): number {
   const summary = summaries.find(s => s.lead_sheet === letter)
   return summary?.net_balance ?? 0
+}
+
+/** Sprint 867: label of the balance-sheet equity line for a pre-closing TB's period result. */
+export const UNCLOSED_EARNINGS_LABEL = 'Current-Period Earnings (Not Yet Closed)'
+
+const BALANCE_TOLERANCE = 0.01
+
+/**
+ * Current-period earnings still open on the TB, i.e. not yet closed into equity.
+ *
+ * Mirrors the backend's shared rule (`ratio_engine.unclosed_earnings_adjustment`),
+ * which the ratios, the Key Metrics disclosure and the exported statements use:
+ * none when income-statement balances net to zero; none when the equity accounts
+ * already balance the sheet without them (earnings already closed); otherwise the
+ * period's net income. On a TB whose debits equal its credits, assets less
+ * liabilities less the equity accounts equals open net income exactly, so a
+ * balanced pre-closing TB balances once this line is added.
+ */
+export function unclosedEarnings(
+  totalAssets: number,
+  totalLiabilities: number,
+  equityAccounts: number,
+  netIncome: number,
+): number {
+  if (netIncome === 0) return 0
+  const gapWithoutEarnings = totalAssets - totalLiabilities - equityAccounts
+  if (Math.abs(gapWithoutEarnings) < BALANCE_TOLERANCE) return 0
+  return netIncome
 }
 
 function buildStatements(grouping: LeadSheetGrouping): {
@@ -73,8 +101,16 @@ function buildStatements(grouping: LeadSheetGrouping): {
   const totalLiabilities = totalCurrentLiabilities + totalNoncurrentLiabilities
   balanceSheet.push({ label: 'Total Liabilities', amount: totalLiabilities, indentLevel: 0, isSubtotal: true, isTotal: false, leadSheetRef: '' })
 
-  const equity = -bal('K')
-  balanceSheet.push({ label: "Stockholders' Equity", amount: equity, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: 'K' })
+  const equityAccounts = -bal('K')
+  balanceSheet.push({ label: "Stockholders' Equity", amount: equityAccounts, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: 'K' })
+
+  // Sprint 867: the period's result, when revenue and expenses are still open.
+  const openNetIncome = -bal('L') - bal('M') - bal('N') - bal('O')
+  const unclosed = unclosedEarnings(totalAssets, totalLiabilities, equityAccounts, openNetIncome)
+  if (Math.abs(unclosed) >= BALANCE_TOLERANCE) {
+    balanceSheet.push({ label: UNCLOSED_EARNINGS_LABEL, amount: unclosed, indentLevel: 1, isSubtotal: false, isTotal: false, leadSheetRef: '' })
+  }
+  const equity = equityAccounts + unclosed
 
   const totalLE = totalLiabilities + equity
   balanceSheet.push({ label: 'TOTAL LIABILITIES & EQUITY', amount: totalLE, indentLevel: 0, isSubtotal: false, isTotal: true, leadSheetRef: '' })
@@ -114,6 +150,7 @@ function buildStatements(grouping: LeadSheetGrouping): {
       totalAssets,
       totalLiabilities,
       totalEquity: equity,
+      unclosedEarnings: unclosed,
       isBalanced,
       balanceDifference,
       totalRevenue: revenue,
@@ -126,10 +163,68 @@ function buildStatements(grouping: LeadSheetGrouping): {
 
 const CHANGE_THRESHOLD = 0.005
 
+// Sprint 882 (TQ-03): mirrors backend `DEPRECIATION_KEYWORDS` /
+// `DEPRECIATION_SCAN_ORDER` / `_extract_depreciation`, so the page's cash flow
+// adds back the same depreciation the PDF/Excel export does.
+const DEPRECIATION_KEYWORDS = [
+  'depreciation', 'amortization', 'deprec', 'amort', 'depr exp',
+  'accum deprec', 'accumulated depreciation', 'depreciation expense', 'amortization expense',
+]
+const DEPRECIATION_SCAN_ORDER: string[][] = [['N', 'O'], ['E', 'F']]
+// Accumulated depreciation / amortization accounts sit on the asset lead sheets.
+const ACCUMULATED_MARKER = 'accum'
+
+const accountNet = (a: LeadSheetAccount) => (a.debit ?? 0) - (a.credit ?? 0)
+
+/** Period depreciation and amortization expense (positive), 0 if none is identifiable. */
+function extractDepreciation(grouping: LeadSheetGrouping): number {
+  for (const letters of DEPRECIATION_SCAN_ORDER) {
+    let total = 0
+    for (const summary of grouping.summaries) {
+      if (!letters.includes(summary.lead_sheet)) continue
+      for (const acct of summary.accounts) {
+        const name = (acct.account ?? '').toLowerCase()
+        // Accumulated balances are contra-assets, not period expense.
+        if (!name || name.includes(ACCUMULATED_MARKER)) continue
+        if (DEPRECIATION_KEYWORDS.some(k => name.includes(k))) total += Math.abs(accountNet(acct))
+      }
+    }
+    if (total > 0) return total
+  }
+  return 0
+}
+
+/** A lead sheet's net balance split into gross cost and accumulated (debit-positive) parts. */
+function grossAndAccumulated(grouping: LeadSheetGrouping | null | undefined, letter: string): [number, number] {
+  const summary = grouping?.summaries.find(s => s.lead_sheet === letter)
+  if (!summary) return [0, 0]
+  if (summary.accounts.length === 0) return [summary.net_balance, 0]
+  let gross = 0
+  let accumulated = 0
+  for (const acct of summary.accounts) {
+    if ((acct.account ?? '').toLowerCase().includes(ACCUMULATED_MARKER)) accumulated += accountNet(acct)
+    else gross += accountNet(acct)
+  }
+  // The summary is the authority on the total; any difference stays with gross cost.
+  gross += summary.net_balance - (gross + accumulated)
+  return [gross, accumulated]
+}
+
+export const PURCHASES_OF_PPE_LABEL = 'Purchases of Property, Plant & Equipment'
+export const PPE_NOT_SEPARABLE_LABEL =
+  'Net Change in Property, Plant & Equipment (Purchases and Disposals Not Separable)'
+const PPE_NOT_SEPARABLE_NOTE =
+  'Purchases and disposals of property, plant and equipment cannot be told apart ' +
+  'from the trial balance alone: gross cost fell, or accumulated depreciation moved ' +
+  "by other than the period's depreciation. The investing line is the change in " +
+  'property, plant and equipment not explained by depreciation; any gain or loss ' +
+  'on disposal remains in net income under operating activities.'
+
 function buildCashFlowStatement(
   currentGrouping: LeadSheetGrouping,
   priorGrouping: LeadSheetGrouping | null | undefined,
   netIncome: number,
+  totalEquity: number,
 ): CashFlowStatement {
   const s = currentGrouping.summaries
   const bal = (letter: string) => getBalance(s, letter)
@@ -145,7 +240,12 @@ function buildCashFlowStatement(
   const operatingItems: CashFlowLineItem[] = [
     { label: 'Net Income', amount: netIncome, source: 'computed', indentLevel: 1 },
   ]
-  notes.push('Depreciation add-back available in PDF/Excel export only')
+  const depreciation = extractDepreciation(currentGrouping)
+  if (depreciation > 0) {
+    operatingItems.push({ label: 'Depreciation & Amortization', amount: depreciation, source: 'E/N', indentLevel: 1 })
+  } else {
+    notes.push('Depreciation not separately identified in trial balance')
+  }
 
   if (hasPrior) {
     const deltaB = change('B')
@@ -167,9 +267,29 @@ function buildCashFlowStatement(
   // Investing
   const investingItems: CashFlowLineItem[] = []
   if (hasPrior) {
-    const deltaE = change('E')
-    if (Math.abs(deltaE) > CHANGE_THRESHOLD) investingItems.push({ label: 'Capital Expenditures (PPE)', amount: -deltaE, source: 'E', indentLevel: 1 })
-    const deltaF = change('F')
+    // Sprint 882 (TQ-03): investing cash from *gross* fixed assets. Lead sheet E
+    // carries accumulated depreciation, so -ΔE made a fall in net PPE caused only
+    // by depreciation into an investing inflow. Same rule as the backend
+    // `_build_investing_items`.
+    const [grossE, accumE] = grossAndAccumulated(currentGrouping, 'E')
+    const [priorGrossE, priorAccumE] = grossAndAccumulated(priorGrouping, 'E')
+    const [grossF, accumF] = grossAndAccumulated(currentGrouping, 'F')
+    const [priorGrossF, priorAccumF] = grossAndAccumulated(priorGrouping, 'F')
+
+    const grossPpeChange = grossE - priorGrossE
+    // Credit-positive: how much accumulated depreciation/amortization grew.
+    const accumulatedIncrease = -((accumE + accumF) - (priorAccumE + priorAccumF))
+    const unexplained = accumulatedIncrease - depreciation
+
+    if (grossPpeChange >= -CHANGE_THRESHOLD && Math.abs(unexplained) < 0.01) {
+      if (Math.abs(grossPpeChange) > CHANGE_THRESHOLD) investingItems.push({ label: PURCHASES_OF_PPE_LABEL, amount: -grossPpeChange, source: 'E', indentLevel: 1 })
+    } else {
+      const netMovement = -grossPpeChange + unexplained
+      if (Math.abs(netMovement) > CHANGE_THRESHOLD) investingItems.push({ label: PPE_NOT_SEPARABLE_LABEL, amount: netMovement, source: 'E', indentLevel: 1 })
+      notes.push(PPE_NOT_SEPARABLE_NOTE)
+    }
+
+    const deltaF = grossF - priorGrossF
     if (Math.abs(deltaF) > CHANGE_THRESHOLD) investingItems.push({ label: 'Change in Other Non-Current Assets', amount: -deltaF, source: 'F', indentLevel: 1 })
   }
   const investingSubtotal = investingItems.reduce((sum, i) => sum + i.amount, 0)
@@ -181,9 +301,13 @@ function buildCashFlowStatement(
     if (Math.abs(deltaI) > CHANGE_THRESHOLD) financingItems.push({ label: 'Change in Long-Term Debt', amount: -deltaI, source: 'I', indentLevel: 1 })
     const deltaJ = change('J')
     if (Math.abs(deltaJ) > CHANGE_THRESHOLD) financingItems.push({ label: 'Change in Other Long-Term Liabilities', amount: -deltaJ, source: 'J', indentLevel: 1 })
-    const deltaK = change('K')
-    const equityChangeDisplayed = -deltaK
-    const financingEquityChange = equityChangeDisplayed - netIncome
+    // Sprint 882 (TQ-02): owner transactions = change in total equity as the
+    // balance sheets present it (each side including its own unclosed earnings)
+    // less net income. Using the equity accounts (K) alone invented a
+    // distribution of exactly net income on every pre-closing TB, because those
+    // earnings never moved through K.
+    const priorTotalEquity = priorGrouping ? buildStatements(priorGrouping).totals.totalEquity : 0
+    const financingEquityChange = (totalEquity - priorTotalEquity) - netIncome
     if (Math.abs(financingEquityChange) > CHANGE_THRESHOLD) financingItems.push({ label: 'Equity Changes (excl. Retained Earnings)', amount: financingEquityChange, source: 'K', indentLevel: 1 })
   }
   const financingSubtotal = financingItems.reduce((sum, i) => sum + i.amount, 0)
@@ -327,8 +451,8 @@ export function useStatementBuilder(
   )
 
   const cashFlow = useMemo(
-    () => buildCashFlowStatement(leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome),
-    [leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome]
+    () => buildCashFlowStatement(leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome, totals.totalEquity),
+    [leadSheetGrouping, priorLeadSheetGrouping, totals.netIncome, totals.totalEquity]
   )
 
   const mappingTrace = useMemo(

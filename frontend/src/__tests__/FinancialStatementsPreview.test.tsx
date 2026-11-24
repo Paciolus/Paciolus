@@ -222,6 +222,35 @@ describe('FinancialStatementsPreview — unclassified accounts (D-7)', () => {
     })
   })
 
+  describe('Sprint 867: a balanced pre-closing trial balance', () => {
+    it('shows BALANCED and says the period result sits in equity', () => {
+      // Cash 100,000 Dr; Common Stock 104,699.50 Cr; Revenue 10,000 Cr; Opex 14,699.50 Dr.
+      // Debits = credits = 114,699.50; net loss 4,699.50 still on the income accounts.
+      const g: LeadSheetGrouping = {
+        summaries: [
+          summary('A', 100_000, [account('Cash - Operating', 100_000, 0, 'A')]),
+          summary('K', -104_699.5, [account('Common Stock', 0, 104_699.5, 'K')]),
+          summary('L', -10_000, [account('Revenue', 0, 10_000, 'L')]),
+          summary('N', 14_699.5, [account('Operating Expenses', 14_699.5, 0, 'N')]),
+        ],
+        unclassified_count: 0,
+        unclassified_accounts: [],
+        total_accounts: 4,
+      }
+      renderExpanded(g)
+
+      expect(screen.getAllByText('BALANCED').length).toBeGreaterThan(0)
+      expect(screen.queryByText('OUT OF BALANCE')).not.toBeInTheDocument()
+      expect(screen.getByTestId('unclosed-earnings-note')).toHaveTextContent(/carry open balances.*net loss of \$4,699\.50/i)
+      expect(screen.getByText('Current-Period Earnings (Not Yet Closed)')).toBeInTheDocument()
+    })
+
+    it('says nothing about unclosed earnings when the books are closed', () => {
+      renderExpanded(grouping([]))
+      expect(screen.queryByTestId('unclosed-earnings-note')).not.toBeInTheDocument()
+    })
+  })
+
   describe('the contract the API actually sends', () => {
     it('falls back to the lead sheet Z summary when the explicit list is absent', () => {
       // An older cached payload has no `unclassified_accounts`. Naming the

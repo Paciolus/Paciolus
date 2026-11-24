@@ -112,6 +112,8 @@
 >       the freeze for this work. Merge after 883–887.
 > - [ ] **Sprint 893** (2026-11-21) — fixes for the defects and open items Sprints 888–892 found. Local branch
 >       `sprint-893-defect-fixes`, stacked on 892.
+> - [ ] **Sprint 882** — cash flow statement invents a financing flow from unclosed income and shows depreciation as
+>       investing cash (TQ-02, TQ-03). Stacked on Sprint 867's PR #318.
 > - [ ] **Sprint 871** — Stripe dispute webhooks never find the customer (#273). Gates Sprint 447.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
 > - [ ] **Phase 4.1 / Sprint 447** — Stripe live at Pricing v3, Solo only; one real-money checkout verified, then refunded.
@@ -617,7 +619,9 @@ shorten backup retention.** DPA left unchanged pending that decision.
 **Commit SHA:** TBD (redline merges only after sign-off).
 
 ### Sprint 867: Balance sheet out of balance for a balanced, pre-closing trial balance
-**Status:** PENDING. **Priority:** P0 (before launch — auditors upload pre-closing TBs). **Owner:** C.
+**Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge; then re-test on production with the
+2026-11-15 TB. **Priority:** P0 (before launch — auditors upload pre-closing TBs). **Owner:** C.
+**Agents:** Accounting Expert (presentation), Executor, Critic.
 Reproduced 2026-11-15 on production with a balanced synthetic TB (debits = credits = $1,253,800.25): Financial
 Statements shows "OUT OF BALANCE by -$4,699.50" and blames "a mapping or sign issue". -$4,699.50 is the period's net
 income, which the balance sheet leaves out of equity; the Key Metrics panel on the same page already says "Equity
@@ -1538,6 +1542,75 @@ page does not list it and `POST /upload/bulk` answers 501 "Bulk upload is not av
 - [ ] Mount and test the batch frontend (`BatchUploadContext`, `BatchUploadPanel`), one limit (backend 5 files;
       `types/batch.ts` says 10).
 - [ ] Then: Terms and pricing list it again; remove the 501.
+- [x] Backend builder: equity gets a "Current-Period Earnings (Not Yet Closed)" line when income-statement balances
+      are still open, using the shared rule `ratio_engine.unclosed_earnings_adjustment` (same rule as the ratios and
+      the Key Metrics disclosure); `total_equity` / `prior_total_equity` include it; balance check and note follow.
+      The PDF D/E ratio does not double count (the shared rule returns 0 once equity balances the sheet).
+- [x] Frontend `useStatementBuilder` mirrors the rule (the page builds its own statements); preview note.
+- [x] Excel + PDF render the line from `statements.balance_sheet` (tests extract both).
+- [x] Tests: `test_sprint_867_preclosing_equity.py` (12) + 4 hook + 2 preview. Six of the backend tests fail on the
+      old builder. Two frontend tests that encoded the old contract (an imbalance on a TB with open income) now use a
+      post-closing fixture. `route_export_pipeline` snapshot re-recorded: its only change is `$-0.00` → `$0.00` on
+      TOTAL LIABILITIES & EQUITY (−0.0 + 0.0).
+- [x] **Accounting-expert review** (independent, given the code): presentation and label fine; two fixes taken —
+      (1) the SOCE plugged −NI into retained earnings' other movement on exactly these TBs, so its ending equity
+      disagreed with the balance sheet → unclosed earnings now go into retained earnings' ending (and an unclosed
+      prior period's into its beginning); (2) the note said accounts "have not been closed", which the code infers
+      rather than knows → now "carry open balances", with net income / net loss by sign and one 0.01 tolerance.
+      Rejected: changing the rule for a TB unbalanced by exactly −NI — the TB debit/credit check
+      (`audit/ingestion.py:58`) reports that independently.
+- [x] **Found on the way (pre-existing, Sprint 638):** the SOCE read accounts as `name` / `net_balance`, but every
+      real grouping (`lead_sheet_grouping_to_dict`, and so every export payload) carries `account` / `debit` /
+      `credit`. Every exported SOCE silently dropped all equity accounts. Fixed via `_account_name_and_net` (the
+      depreciation and interest readers already accepted both); a test through the real serializer fails on the old
+      reader (`KeyError: 'common_stock'`).
+- [x] **Review TQ-01 follow-up (2026-11-18, branch `sprint-882-statement-cash-flow`, stacked on #318):** the
+      read-only review at `ef5e567` filed this as TQ-01 (Critical). #318's fix holds against the review's fixed worked
+      examples (profit: NI 100, equity 600, L+E 900, balanced; loss: NI −100, equity 400). Added
+      `test_statement_worked_examples.py` + `statementWorkedExamples.test.ts` (same examples both sides; PDF text,
+      Excel cells, and statement equity = `RatioEngine.equity`). Corrected two fixtures that called an unbalanced TB
+      balanced: `sample_lead_sheet_grouping` (debits 230,000 vs credits 285,000 → K −20,000) and `makeFullGrouping`
+      (255,000 vs 270,000 → K −80,000).
+
+### Sprint 882: Cash flow statement — unclosed income and depreciation (TQ-02, TQ-03)
+**Status:** IN REVIEW — code complete 2026-11-18 on local branch `sprint-882-statement-cash-flow`, stacked on Sprint
+867's PR #318; not pushed. Merge after #318. **Priority:** P0 (Critical findings; every pre-closing TB with a prior period is affected).
+**Source:** read-only review at `ef5e567` (TQ-02, TQ-03). **Agents:** Executor, Critic, Accounting Expert.
+Both builders (`financial_statement_builder.py`, `useStatementBuilder.ts`) fixed together; the same worked examples
+run in `test_statement_worked_examples.py` and `statementWorkedExamples.test.ts`.
+- [x] **TQ-02:** financing used `Δ(equity accounts) − net income`; on an unclosed TB the earnings never moved through
+      the equity accounts, so the subtraction invented a distribution. Example: opening cash 100 / equity 100, sell
+      services for 50 cash → expect operating 50, investing 0, financing 0, ending cash 150, reconciled. **Fixed:**
+      financing equity = Δ(total equity as the balance sheets present it, each side with its own unclosed
+      earnings) − net income, in both builders. Reproduced first: the old code showed financing −50 and a 50
+      reconciliation difference. Extra cases: a prior year-end pre-closing TB whose earnings were later closed
+      (financing 0), and a real 20 distribution (still financing −20). Summed-section expectations replaced with
+      fixed figures (`test_operating_subtotal`, `test_net_change_calculation`, the frontend net-change test) and a
+      reconciliation assertion added. `test_full_cash_flow_reconciled` is fixed with TQ-03: its fixture adds back
+      depreciation with no fixed asset to depreciate, so it can only reconcile once PPE is modelled.
+- [x] **TQ-03:** accumulated depreciation maps to lead sheet E and investing was `−ΔE` labelled "Capital
+      Expenditures (PPE)", so depreciation became an investing inflow. Example: depreciation 10 and nothing else →
+      add-back 10, operating 0, investing 0, ending cash 100, reconciled; plus a 20 cash purchase → investing −20,
+      ending cash 80. Base investing on gross PPE; where purchases and disposals cannot be told apart, say so.
+      **Fixed** (reproduced first: "Capital Expenditures (PPE) +10" and a 10 reconciliation difference): investing
+      uses gross cost (accounts whose name contains "accum" are excluded from E and F). If gross PPE did not fall
+      and accumulated depreciation/amortization rose by exactly the identified charge, the gross increase is
+      "Purchases of Property, Plant & Equipment"; otherwise the line is "Net Change in Property, Plant & Equipment
+      (Purchases and Disposals Not Separable)" — the movement not explained by depreciation — with a note.
+      The page's builder now adds back depreciation too (it had none: "available in PDF/Excel export only").
+      `test_full_cash_flow_reconciled` fixture rebuilt as a balanced TB (equipment, accumulated depreciation, a
+      25K distribution) and asserts every section, the net change and reconciliation with fixed figures.
+      **Known limit:** when no depreciation expense account is recognised by name, accumulated depreciation that
+      moved is no longer pushed into investing, so that statement shows a reconciliation difference (with the
+      existing "Depreciation not separately identified" note) instead of reconciling with a wrong line.
+
+**Verification (2026-11-18):** backend full suite 10,663 passed; 1 failure
+(`test_sprint819_route_snapshots.py::test_engagement_export_routes_unchanged`, `content_encoding` null → gzip) fails
+identically on `main` `ef5e5676` and on #318's tip — pre-existing, not this sprint; 1 error
+(`test_xss_in_register_email_rejected`) passes in isolation (order-dependent flake). Frontend: build passes (all
+routes `ƒ`), Jest gate passes on every commit, `tsc` and eslint clean. Hook-applied `ruff format` reformatted
+`test_cash_flow_statement.py` in the TQ-02 commit (the file had never been formatted).
+**Commits:** `683a5635` (Sprint 867 follow-up, TQ-01 worked examples + fixtures), `74c66d37` (TQ-02), `ccd0b96d` (TQ-03).
 
 ### Sprint 868: Sessions die every 15 minutes when the refresh cookie is not sent
 **Status:** PENDING. **Priority:** P0 (before launch). **Owner:** C + CEO (DNS).

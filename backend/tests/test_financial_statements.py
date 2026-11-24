@@ -20,15 +20,19 @@ from financial_statement_builder import (
 @pytest.fixture
 def sample_lead_sheet_grouping():
     """
-    Balanced lead sheet grouping fixture.
+    Balanced, pre-closing lead sheet grouping fixture.
 
     Assets: A=$50K, B=$30K, E=$45K, F=$5K → Total Assets = $130K
     Liabilities: G=-$25K, I=-$30K → Total Liabilities = $55K
-    Equity: K=-$75K → Total Equity = $75K
-    Total L+E = $130K (balanced)
+    Equity accounts: K=-$20K (the period's result is still on L-O)
 
     Revenue: L=-$150K, COGS: M=$60K, OpEx: N=$40K, Other: O=-$5K
     Net Income = $150K - $60K - $40K + $5K = $55K
+
+    Debits 230K = credits 230K. Total Equity = $20K + $55K unclosed = $75K,
+    Total L+E = $130K (balanced). Sprint 882 (TQ-01): this fixture used to
+    carry K=-$75K, i.e. debits 230K against credits 285K, and still asserted
+    a balanced statement.
     """
     return {
         "summaries": [
@@ -97,8 +101,8 @@ def sample_lead_sheet_grouping():
                 "name": "Stockholders' Equity",
                 "category": "Equity",
                 "total_debit": 0.0,
-                "total_credit": 75000.0,
-                "net_balance": -75000.0,
+                "total_credit": 20000.0,
+                "net_balance": -20000.0,
                 "account_count": 2,
                 "accounts": [],
             },
@@ -144,7 +148,7 @@ def sample_lead_sheet_grouping():
             },
         ],
         "total_debits": 230000.0,
-        "total_credits": 285000.0,
+        "total_credits": 230000.0,
         "unclassified_count": 0,
     }
 
@@ -257,12 +261,15 @@ class TestFinancialStatementBuilder:
         assert bs_items["I"].amount == 30000.0  # Flipped from -30000
 
     def test_balance_sheet_equity(self, sample_lead_sheet_grouping):
-        """K sign-flipped."""
+        """K sign-flipped; the unclosed $55K net income is its own equity line."""
         builder = FinancialStatementBuilder(sample_lead_sheet_grouping)
         result = builder.build()
 
         bs_items = {item.lead_sheet_ref: item for item in result.balance_sheet if item.lead_sheet_ref}
-        assert bs_items["K"].amount == 75000.0  # Flipped from -75000
+        assert bs_items["K"].amount == 20000.0  # Flipped from -20000
+        [earnings] = [i for i in result.balance_sheet if i.label == "Current-Period Earnings (Not Yet Closed)"]
+        assert earnings.amount == 55000.0
+        assert result.total_equity == 75000.0
 
     def test_balance_sheet_total_assets(self, sample_lead_sheet_grouping):
         """Total assets = current + non-current."""

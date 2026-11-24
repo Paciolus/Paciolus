@@ -291,3 +291,11 @@
   `call_next` (they share the ASGI scope's state), which is how the export token is bound to the signed-in user without
   touching 49 export routes. Tests that override `require_verified_user` with a lambda skip that line, so anything that
   depends on it must be tested with real Bearer auth (`create_access_token`), overriding only `get_db`.
+
+- **2026-11-18 — Sprint 882 (TQ-01/02/03): a test fixture must itself be a valid trial balance, and expectations are
+  worked by hand.** Three statement fixtures had debits ≠ credits (230K vs 285K, 255K vs 270K, 110K vs 150K) yet asserted
+  "balanced" or were silently exempt from reconciliation; several tests computed their expected net change by summing
+  the builder's own sections. All of that hid an invented financing flow and depreciation booked as investing cash.
+  Rule: build statement fixtures from (account, debit, credit) rows with a debits = credits assertion, and state every
+  expected figure as a literal derived from the example's bookkeeping. Also: check open PRs for the sprint before
+  starting — TQ-01 was already fixed in PR #318, and this work was stacked on it instead of duplicated.

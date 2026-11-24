@@ -14,8 +14,10 @@ Data Flow:
 Cash Flow (Indirect Method):
     Requires current + prior lead sheet groupings to compute working capital changes.
     - Operating: Net Income + Depreciation add-back + Working Capital changes
-    - Investing: Change in PPE (E) + Other Non-Current Assets (F)
-    - Financing: Change in Debt (I, J) + Change in Equity (K excl. retained earnings)
+    - Investing: Change in gross PPE (E) + Other Non-Current Assets (F), at cost —
+      accumulated depreciation/amortization excluded (Sprint 882, TQ-03)
+    - Financing: Change in Debt (I, J) + change in total equity less net income
+      (Sprint 882, TQ-02)
 
 Sign Conventions:
     Lead sheet net_balance = total_debit - total_credit
@@ -28,6 +30,7 @@ Sign Conventions:
     - Other (O): mixed → flip sign (credits = income, debits = expense)
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
@@ -266,6 +269,10 @@ class EquityActivity:
     dividends: Decimal = ZERO
 
 
+# Sprint 867: the balance-sheet equity line for a pre-closing TB's period result.
+UNCLOSED_EARNINGS_LABEL = "Current-Period Earnings (Not Yet Closed)"
+
+
 @dataclass
 class FinancialStatements:
     """Complete financial statements built from lead sheet groupings."""
@@ -428,6 +435,28 @@ class FinancialStatementBuilder:
         """Get prior period net_balance for a lead sheet letter, 0 if missing."""
         return self._prior_balance_map.get(letter, ZERO)
 
+    def _unclosed_earnings(self, balance: "Callable[[str], Decimal]") -> Decimal:
+        """Current-period earnings still open on the TB, i.e. not yet in equity.
+
+        Sprint 867: a pre-closing TB carries the period's revenue and expenses
+        on lead sheets L-O, so the equity accounts on K exclude the period's
+        result and a balanced TB showed "OUT OF BALANCE" by exactly its net
+        income. A balance sheet presents equity including the period's result,
+        so the statement adds it as its own equity line. Which TBs count as
+        "unclosed" is the shared rule the ratios and the Key Metrics
+        disclosure already use (``ratio_engine.unclosed_earnings_adjustment``):
+        none when income-statement balances are zero, none when equity already
+        balances the sheet without them (earnings already closed), otherwise
+        the period's net income.
+        """
+        from ratio_engine import unclosed_earnings_adjustment
+
+        assets = sum((balance(ls) for ls in ["A", "B", "C", "D", "E", "F"]), ZERO)
+        liabilities = sum((-balance(ls) for ls in ["G", "H", "I", "J"]), ZERO)
+        equity_accounts = -balance("K")
+        net_income = -balance("L") - balance("M") - balance("N") - balance("O")
+        return unclosed_earnings_adjustment(assets, liabilities, equity_accounts, net_income)
+
     def build(self) -> FinancialStatements:
         """Build complete financial statements."""
         balance_sheet = self._build_balance_sheet()
@@ -444,8 +473,11 @@ class FinancialStatementBuilder:
         noncurrent_liabilities = sum((-self._get_lead_sheet_balance(ls) for ls in ["I", "J"]), ZERO)
         total_liabilities = current_liabilities + noncurrent_liabilities
 
-        # Equity: K, negative net_balance → flip sign
-        total_equity = -self._get_lead_sheet_balance("K")
+        # Equity: K, negative net_balance → flip sign, plus current-period
+        # earnings not yet closed to retained earnings (Sprint 867).
+        equity_accounts = -self._get_lead_sheet_balance("K")
+        unclosed_earnings = self._unclosed_earnings(self._get_lead_sheet_balance)
+        total_equity = equity_accounts + unclosed_earnings
 
         # Balance check
         balance_difference = total_assets - (total_liabilities + total_equity)
@@ -480,7 +512,7 @@ class FinancialStatementBuilder:
             prior_cl = sum((-self._get_prior_balance(ls) for ls in ["G", "H"]), ZERO)
             prior_ncl = sum((-self._get_prior_balance(ls) for ls in ["I", "J"]), ZERO)
             prior_total_liabilities = prior_cl + prior_ncl
-            prior_total_equity = -self._get_prior_balance("K")
+            prior_total_equity = -self._get_prior_balance("K") + self._unclosed_earnings(self._get_prior_balance)
             prior_total_revenue = -self._get_prior_balance("L")
             prior_cogs = self._get_prior_balance("M")
             prior_gross_profit = prior_total_revenue - prior_cogs
@@ -490,25 +522,38 @@ class FinancialStatementBuilder:
             prior_net_income = prior_operating_income + prior_other
 
         # Cash Flow Statement (Sprint 83)
-        cash_flow = self._build_cash_flow_statement(net_income)
+        # Sprint 882 (TQ-02): the equity movement is between the two balance
+        # sheets' total equity, each including its own unclosed earnings.
+        equity_change = (total_equity - prior_total_equity) if has_prior else ZERO
+        cash_flow = self._build_cash_flow_statement(net_income, equity_change)
 
         # Statement of Changes in Equity (Sprint 638)
-        soce = self._build_soce(net_income, total_equity, prior_total_equity)
+        # Sprint 867: on a pre-closing TB the period's result is part of
+        # retained earnings' ending balance, so the rollforward reconciles and
+        # its ending equity equals the balance sheet's.
+        prior_unclosed = self._unclosed_earnings(self._get_prior_balance) if has_prior else ZERO
+        soce = self._build_soce(
+            net_income,
+            total_equity,
+            prior_total_equity,
+            unclosed_earnings=unclosed_earnings,
+            prior_unclosed_earnings=prior_unclosed,
+        )
 
         # Sprint 535 P2-3: Detect pre-closing TB imbalance
         # In a pre-closing TB, balance_difference ≈ net_income because
         # revenue/expense accounts haven't been closed to retained earnings.
-        is_pre_closing = False
+        # Sprint 867: the period's result is now presented in equity, so a
+        # pre-closing TB balances; the note says what was added and why.
+        is_pre_closing = abs(unclosed_earnings) > 0.01
         pre_closing_note = ""
-        if not is_balanced and abs(net_income) > BALANCE_TOLERANCE:
-            if abs(balance_difference - net_income) < BALANCE_TOLERANCE:
-                is_pre_closing = True
-                pre_closing_note = (
-                    "This trial balance appears to be pre-closing: the balance sheet "
-                    "difference equals net income. Revenue and expense accounts have "
-                    "not yet been closed to retained earnings. After closing entries, "
-                    "Total Assets should equal Total Liabilities & Equity."
-                )
+        if is_pre_closing:
+            result_word = "net loss" if unclosed_earnings < 0 else "net income"
+            pre_closing_note = (
+                "Revenue and expense accounts carry open balances on this trial balance, so "
+                f"Equity includes the period's {result_word} of ${abs(unclosed_earnings):,.2f}, "
+                "calculated from lead sheets L-O, as a separate line."
+            )
 
         statements = FinancialStatements(
             balance_sheet=balance_sheet,
@@ -749,10 +794,23 @@ class FinancialStatementBuilder:
             )
         )
 
-        total_le = total_liabilities + equity
+        # Sprint 867: current-period earnings not yet closed (see _unclosed_earnings).
+        unclosed = self._unclosed_earnings(self._get_lead_sheet_balance)
+        prior_unclosed = self._unclosed_earnings(self._get_prior_balance) if has_prior else ZERO
+        if abs(unclosed) > 0.01 or abs(prior_unclosed) > 0.01:
+            lines.append(
+                StatementLineItem(
+                    UNCLOSED_EARNINGS_LABEL,
+                    unclosed,
+                    indent_level=1,
+                    prior_amount=prior_unclosed if has_prior else None,
+                )
+            )
+
+        total_le = total_liabilities + equity + unclosed
         prior_tle = None
         if has_prior:
-            prior_tle = (prior_tl or ZERO) + (-self._get_prior_balance("K"))
+            prior_tle = (prior_tl or ZERO) + (-self._get_prior_balance("K")) + prior_unclosed
         lines.append(
             StatementLineItem(
                 "TOTAL LIABILITIES & EQUITY", total_le, indent_level=0, is_total=True, prior_amount=prior_tle
@@ -1143,44 +1201,133 @@ class FinancialStatementBuilder:
 
         return items
 
-    def _build_investing_items(self, has_prior: bool) -> list[CashFlowLineItem]:
+    # Sprint 882 (TQ-03): accumulated depreciation / amortization accounts sit on
+    # the asset lead sheets (E: "accumulated depreciation"; F: "amortization").
+    # Same marker _extract_depreciation uses to skip them.
+    ACCUMULATED_MARKER = "accum"
+
+    @staticmethod
+    def _account_net(acct: dict) -> Decimal:
+        """Debit-positive net balance of one serialized account (exact, Sprint 884)."""
+        if acct.get("net_balance") is not None:
+            return safe_decimal(acct.get("net_balance"))
+        return safe_decimal(acct.get("debit")) - safe_decimal(acct.get("credit"))
+
+    def _gross_and_accumulated(self, grouping: Optional[dict], letter: str) -> tuple[Decimal, Decimal]:
+        """Split a lead sheet's net balance into (gross cost, accumulated) parts.
+
+        Accumulated is returned debit-positive (so normally negative). A summary
+        without per-account detail is all gross — nothing can be split out.
+        """
+        if not grouping:
+            return ZERO, ZERO
+        for summary in grouping.get("summaries", []):
+            if summary.get("lead_sheet") != letter:
+                continue
+            accounts = [a for a in summary.get("accounts", []) or [] if isinstance(a, dict)]
+            if not accounts:
+                return safe_decimal(summary.get("net_balance")), ZERO
+            gross = ZERO
+            accumulated = ZERO
+            for acct in accounts:
+                name = str(acct.get("account") or acct.get("name") or "").lower()
+                if self.ACCUMULATED_MARKER in name:
+                    accumulated += self._account_net(acct)
+                else:
+                    gross += self._account_net(acct)
+            # Keep the summary as the authority on the total; any rounding
+            # difference stays with gross cost.
+            gross += safe_decimal(summary.get("net_balance")) - (gross + accumulated)
+            return gross, accumulated
+        return ZERO, ZERO
+
+    def _build_investing_items(self, has_prior: bool, notes: Optional[list[str]] = None) -> list[CashFlowLineItem]:
         """Build investing activity line items.
 
-        Changes in non-current assets: PPE (E) and Other Non-Current (F).
+        Sprint 882 (TQ-03): investing cash is based on movements in *gross*
+        fixed assets. Lead sheet E carries accumulated depreciation, so the old
+        ``-ΔE`` turned a fall in net PPE caused only by depreciation into a cash
+        inflow labelled "Capital Expenditures (PPE)" — on top of the operating
+        add-back for the same depreciation.
+
+        - Gross PPE rose (or held) and accumulated depreciation/amortization rose
+          by exactly the period's identified charge: the gross increase is
+          purchases, shown as "Purchases of Property, Plant & Equipment".
+        - Otherwise (gross PPE fell, or accumulated depreciation moved by other
+          than the charge — a disposal relieves it): purchases and disposals
+          cannot be told apart from the trial balance alone. The line shows the
+          movement not explained by depreciation, under a label that says so,
+          with a note — never a capital-expenditure figure.
         """
         items: list[CashFlowLineItem] = []
+        if not has_prior:
+            return items
 
-        if has_prior:
-            # Change in PPE (E): asset increase = cash outflow (capital expenditure)
-            delta_e = self._compute_balance_change("E")
-            if abs(delta_e) > MONETARY_NEAR_ZERO:
+        gross_e, accum_e = self._gross_and_accumulated(self.grouping, "E")
+        prior_gross_e, prior_accum_e = self._gross_and_accumulated(self.prior_grouping, "E")
+        gross_f, accum_f = self._gross_and_accumulated(self.grouping, "F")
+        prior_gross_f, prior_accum_f = self._gross_and_accumulated(self.prior_grouping, "F")
+
+        gross_ppe_change = gross_e - prior_gross_e
+        # Credit-positive: how much accumulated depreciation/amortization grew.
+        accumulated_increase = -((accum_e + accum_f) - (prior_accum_e + prior_accum_f))
+        depreciation = self._extract_depreciation()
+        unexplained = accumulated_increase - depreciation
+
+        separable = gross_ppe_change >= -0.005 and abs(unexplained) < 0.01
+        if separable:
+            if abs(gross_ppe_change) > 0.005:
                 items.append(
                     CashFlowLineItem(
-                        "Capital Expenditures (PPE)",
-                        -delta_e,  # Asset increase = cash outflow
+                        "Purchases of Property, Plant & Equipment",
+                        -gross_ppe_change,  # Gross asset increase = cash outflow
                         source="E",
                         indent_level=1,
                     )
                 )
-
-            # Change in Other Non-Current Assets (F)
-            delta_f = self._compute_balance_change("F")
-            if abs(delta_f) > MONETARY_NEAR_ZERO:
+        else:
+            net_movement = -gross_ppe_change + unexplained
+            if abs(net_movement) > 0.005:
                 items.append(
                     CashFlowLineItem(
-                        "Change in Other Non-Current Assets",
-                        -delta_f,
-                        source="F",
+                        "Net Change in Property, Plant & Equipment (Purchases and Disposals Not Separable)",
+                        net_movement,
+                        source="E",
                         indent_level=1,
                     )
                 )
+            if notes is not None:
+                notes.append(
+                    "Purchases and disposals of property, plant and equipment cannot be told apart "
+                    "from the trial balance alone: gross cost fell, or accumulated depreciation moved "
+                    "by other than the period's depreciation. The investing line is the change in "
+                    "property, plant and equipment not explained by depreciation; any gain or loss "
+                    "on disposal remains in net income under operating activities."
+                )
+
+        # Change in Other Non-Current Assets (F), at cost — accumulated
+        # amortization is excluded for the same reason as above.
+        delta_f = gross_f - prior_gross_f
+        if abs(delta_f) > 0.005:
+            items.append(
+                CashFlowLineItem(
+                    "Change in Other Non-Current Assets",
+                    -delta_f,
+                    source="F",
+                    indent_level=1,
+                )
+            )
 
         return items
 
-    def _build_financing_items(self, net_income: Decimal, has_prior: bool) -> list[CashFlowLineItem]:
+    def _build_financing_items(
+        self, net_income: Decimal, has_prior: bool, equity_change: Decimal = ZERO
+    ) -> list[CashFlowLineItem]:
         """Build financing activity line items.
 
         Changes in long-term debt (I, J) and equity excluding retained earnings (K).
+        ``equity_change`` is current less prior total equity as the balance
+        sheets present it, i.e. each including its own unclosed earnings.
         """
         items: list[CashFlowLineItem] = []
 
@@ -1210,14 +1357,17 @@ class FinancialStatementBuilder:
                     )
                 )
 
-            # Change in Equity (K), excluding retained earnings change
-            # Retained earnings change ≈ net_income, so equity change from
-            # financing = total equity change - net income
-            delta_k = self._compute_balance_change("K")
-            # K has negative net_balance; change in displayed equity = -delta_k
-            equity_change_displayed = -delta_k
-            financing_equity_change = equity_change_displayed - net_income
-            if abs(financing_equity_change) > MONETARY_NEAR_ZERO:
+            # Change in equity excluding the period's result: owner
+            # contributions less distributions/dividends.
+            # Sprint 882 (TQ-02): this used the change in the equity accounts
+            # (K) less net income. On a pre-closing TB the period's earnings are
+            # still on L-O and never moved through K, so subtracting them
+            # invented a distribution of exactly net income. Both ends now use
+            # total equity including unclosed earnings (the balance sheet's
+            # figure), so the earnings are in equity on both sides of the
+            # subtraction whether or not the books were closed.
+            financing_equity_change = equity_change - net_income
+            if abs(financing_equity_change) > 0.005:
                 items.append(
                     CashFlowLineItem(
                         "Equity Changes (excl. Retained Earnings)",
@@ -1272,6 +1422,24 @@ class FinancialStatementBuilder:
                 return component_type, label, True
         return "retained_earnings", "Retained Earnings (unmapped)", False
 
+    @staticmethod
+    def _account_name_and_net(acct: dict) -> tuple[str, Decimal]:
+        """Name and debit-positive net balance of one lead-sheet account.
+
+        Sprint 867: serialized groupings (``lead_sheet_grouping_to_dict``, i.e.
+        every real upload and every export payload) key accounts as
+        ``account`` / ``debit`` / ``credit`` with no ``net_balance``. The SOCE
+        read only ``name`` / ``net_balance`` — the shape its unit fixtures used
+        — so on real data it skipped every equity account. Accept both, as
+        the depreciation and interest-expense readers already do.
+        """
+        name = str(acct.get("account") or acct.get("name") or "").strip()
+        if "net_balance" in acct and acct.get("net_balance") is not None:
+            net = quantize_monetary(acct.get("net_balance"))
+        else:
+            net = quantize_monetary(safe_decimal(acct.get("debit")) - safe_decimal(acct.get("credit")))
+        return name, net
+
     def _collect_equity_accounts(self) -> list[dict]:
         """Return the K-lead-sheet account dicts from the current period."""
         for summary in self.grouping.get("summaries", []):
@@ -1294,6 +1462,8 @@ class FinancialStatementBuilder:
         net_income: Decimal,
         total_equity: Decimal,
         prior_total_equity: Decimal,
+        unclosed_earnings: Decimal = ZERO,
+        prior_unclosed_earnings: Decimal = ZERO,
     ) -> StatementOfChangesInEquity:
         """Build the Statement of Changes in Equity rollforward.
 
@@ -1317,8 +1487,8 @@ class FinancialStatementBuilder:
         # Build prior-balance lookup by account name (case-insensitive).
         prior_by_name: dict[str, Decimal] = {}
         for acct in prior_accounts:
-            name = str(acct.get("name", "")).strip().lower()
-            prior_by_name[name] = quantize_monetary(acct.get("net_balance"))
+            prior_name, prior_net = self._account_name_and_net(acct)
+            prior_by_name[prior_name.lower()] = prior_net
 
         # Equity accounts are credit-normal — flip sign so positive values
         # display as equity.
@@ -1331,13 +1501,13 @@ class FinancialStatementBuilder:
             activity_by_name[(act.account or "").strip().lower()] = act
 
         for acct in current_accounts:
-            name = str(acct.get("name", "")).strip()
+            name, account_net = self._account_name_and_net(acct)
             if not name:
                 continue
             component_type, label, is_explicit = self._classify_equity_account(name)
             if not is_explicit:
                 unmapped.append(name)
-            ending = -quantize_monetary(acct.get("net_balance"))  # flip sign
+            ending = -account_net  # flip sign
             beginning = -prior_by_name.get(name.lower(), ZERO)
             act = activity_by_name.get(name.lower())
             # Callers may still hand in float activity amounts; read them exactly.
@@ -1376,6 +1546,23 @@ class FinancialStatementBuilder:
                 ),
             )
             re.net_income_allocation += net_income
+
+        # Sprint 867: earnings not yet closed belong to retained earnings —
+        # this period's in its ending balance, an unclosed prior period's in
+        # its beginning balance — or the rollforward would plug them into
+        # other_movement and disagree with the balance sheet.
+        if abs(unclosed_earnings) > 0.01 or abs(prior_unclosed_earnings) > 0.01:
+            re = components.setdefault(
+                "retained_earnings",
+                EquityComponent(
+                    component_type="retained_earnings",
+                    label="Retained Earnings",
+                    beginning_balance=ZERO,
+                    ending_balance=ZERO,
+                ),
+            )
+            re.ending_balance += unclosed_earnings
+            re.beginning_balance += prior_unclosed_earnings
 
         # OCI movement — if an AOCI component exists, the movement is
         # beginning → ending less explicit contributions / distributions.
@@ -1425,7 +1612,7 @@ class FinancialStatementBuilder:
             unmapped_accounts=unmapped,
         )
 
-    def _build_cash_flow_statement(self, net_income: Decimal) -> CashFlowStatement:
+    def _build_cash_flow_statement(self, net_income: Decimal, equity_change: Decimal = ZERO) -> CashFlowStatement:
         """
         Build Cash Flow Statement using indirect method (ASC 230 / IAS 7).
 
@@ -1446,7 +1633,7 @@ class FinancialStatementBuilder:
             subtotal=operating_subtotal,
         )
 
-        investing_items = self._build_investing_items(has_prior)
+        investing_items = self._build_investing_items(has_prior, notes)
         investing_subtotal = sum((item.amount for item in investing_items), ZERO)
         investing = CashFlowSection(
             label="Cash Flows from Investing Activities",
@@ -1454,7 +1641,7 @@ class FinancialStatementBuilder:
             subtotal=investing_subtotal,
         )
 
-        financing_items = self._build_financing_items(net_income, has_prior)
+        financing_items = self._build_financing_items(net_income, has_prior, equity_change)
         financing_subtotal = sum((item.amount for item in financing_items), ZERO)
         financing = CashFlowSection(
             label="Cash Flows from Financing Activities",

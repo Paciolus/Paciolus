@@ -327,92 +327,65 @@ def prior_grouping():
     }
 
 
+def _summary(letter, accounts):
+    """Summary in the serialized shape: accounts carry account/debit/credit."""
+    debit = sum(a["debit"] for a in accounts)
+    credit = sum(a["credit"] for a in accounts)
+    return {
+        "lead_sheet": letter,
+        "name": letter,
+        "category": "",
+        "total_debit": debit,
+        "total_credit": credit,
+        "net_balance": debit - credit,
+        "account_count": len(accounts),
+        "accounts": accounts,
+    }
+
+
+def _acct(name, debit=0.0, credit=0.0):
+    return {"account": name, "debit": debit, "credit": credit}
+
+
 @pytest.fixture
 def grouping_with_depreciation():
-    """Lead sheet grouping with depreciation account in OpEx (N)."""
-    return {
-        "summaries": [
-            {
-                "lead_sheet": "A",
-                "name": "Cash",
-                "category": "Current Assets",
-                "total_debit": 50000.0,
-                "total_credit": 0.0,
-                "net_balance": 50000.0,
-                "account_count": 1,
-                "accounts": [],
-            },
-            {
-                "lead_sheet": "K",
-                "name": "Equity",
-                "category": "Equity",
-                "total_debit": 0.0,
-                "total_credit": 50000.0,
-                "net_balance": -50000.0,
-                "account_count": 1,
-                "accounts": [],
-            },
-            {
-                "lead_sheet": "L",
-                "name": "Revenue",
-                "category": "Revenue",
-                "total_debit": 0.0,
-                "total_credit": 100000.0,
-                "net_balance": -100000.0,
-                "account_count": 1,
-                "accounts": [],
-            },
-            {
-                "lead_sheet": "N",
-                "name": "OpEx",
-                "category": "Operating Expenses",
-                "total_debit": 60000.0,
-                "total_credit": 0.0,
-                "net_balance": 60000.0,
-                "account_count": 3,
-                "accounts": [
-                    {"name": "Salaries Expense", "net_balance": 30000.0},
-                    {"name": "Depreciation Expense", "net_balance": 15000.0},
-                    {"name": "Rent Expense", "net_balance": 15000.0},
-                ],
-            },
-        ],
-        "total_debits": 110000.0,
-        "total_credits": 150000.0,
-        "unclassified_count": 0,
-    }
+    """Current period: a balanced, pre-closing TB with depreciation in OpEx (N).
+
+    Cash 65K Dr; Equipment 60K Dr; Accumulated Depreciation 25K Cr;
+    Owner's Capital 85K Cr; Owner Distributions 25K Dr; Revenue 100K Cr;
+    Salaries 30K, Depreciation Expense 15K, Rent 15K Dr.
+    Debits 210K = credits 210K. Net income 40K (not yet closed).
+
+    Sprint 882 (TQ-02/TQ-03): this fixture used to add back 15K of
+    depreciation with no fixed asset to depreciate (debits 110K vs credits
+    150K), so the statement it fed could never reconcile.
+    """
+    summaries = [
+        _summary("A", [_acct("Cash", debit=65000.0)]),
+        _summary("E", [_acct("Equipment", debit=60000.0), _acct("Accumulated Depreciation", credit=25000.0)]),
+        _summary("K", [_acct("Owner's Capital", credit=85000.0), _acct("Owner Distributions", debit=25000.0)]),
+        _summary("L", [_acct("Revenue", credit=100000.0)]),
+        _summary(
+            "N",
+            [
+                _acct("Salaries Expense", debit=30000.0),
+                _acct("Depreciation Expense", debit=15000.0),
+                _acct("Rent Expense", debit=15000.0),
+            ],
+        ),
+    ]
+    return {"summaries": summaries, "total_debits": 210000.0, "total_credits": 210000.0, "unclassified_count": 0}
 
 
 @pytest.fixture
 def prior_grouping_with_depreciation():
-    """Prior period matching grouping_with_depreciation."""
-    return {
-        "summaries": [
-            {
-                "lead_sheet": "A",
-                "name": "Cash",
-                "category": "Current Assets",
-                "total_debit": 35000.0,
-                "total_credit": 0.0,
-                "net_balance": 35000.0,
-                "account_count": 1,
-                "accounts": [],
-            },
-            {
-                "lead_sheet": "K",
-                "name": "Equity",
-                "category": "Equity",
-                "total_debit": 0.0,
-                "total_credit": 35000.0,
-                "net_balance": -35000.0,
-                "account_count": 1,
-                "accounts": [],
-            },
-        ],
-        "total_debits": 35000.0,
-        "total_credits": 35000.0,
-        "unclassified_count": 0,
-    }
+    """Prior period (closed): Cash 35K; Equipment 60K; Accumulated Depreciation 10K; Owner's Capital 85K."""
+    summaries = [
+        _summary("A", [_acct("Cash", debit=35000.0)]),
+        _summary("E", [_acct("Equipment", debit=60000.0), _acct("Accumulated Depreciation", credit=10000.0)]),
+        _summary("K", [_acct("Owner's Capital", credit=85000.0)]),
+    ]
+    return {"summaries": summaries, "total_debits": 95000.0, "total_credits": 95000.0, "unclassified_count": 0}
 
 
 # =============================================================================
@@ -503,10 +476,11 @@ class TestCashFlowWithPriorPeriod:
         assert ap_item.amount == 5000.0
 
     def test_investing_ppe_change(self, current_grouping, prior_grouping):
-        """PPE increase (50K-40K=10K) → -10K investing outflow."""
+        """PPE increase (50K-40K=10K), no depreciation or disposal → -10K purchases."""
         builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
-        ppe_item = next(i for i in cf.investing.items if "PPE" in i.label)
+        ppe_item = next(i for i in cf.investing.items if i.source == "E")
+        assert ppe_item.label == "Purchases of Property, Plant & Equipment"
         assert ppe_item.amount == -10000.0
 
 
@@ -533,11 +507,10 @@ class TestOperatingSection:
         assert any("Depreciation not separately identified" in n for n in cf.notes)
 
     def test_operating_subtotal(self, current_grouping, prior_grouping):
-        """Operating subtotal is sum of all items."""
+        """Operating = NI 80K - AR 5K - inventory 5K - prepaid 2K + AP 5K + accrued 2K = 75K."""
         builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
-        expected = sum(i.amount for i in cf.operating.items)
-        assert abs(cf.operating.subtotal - expected) < 0.01
+        assert cf.operating.subtotal == 75000.0
 
     def test_accrued_liabilities_change(self, current_grouping, prior_grouping):
         """Accrued liabilities increase (-10K - (-8K) = -2K) → +2K inflow."""
@@ -635,11 +608,20 @@ class TestReconciliation:
         assert cf.ending_cash == 60000.0
 
     def test_net_change_calculation(self, current_grouping, prior_grouping):
-        """Net change = operating + investing + financing."""
+        """Operating 75K, investing -12K, financing -53K (debt +5K, equity -58K): net +10K."""
         builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
         cf = builder.build().cash_flow_statement
-        expected = cf.operating.subtotal + cf.investing.subtotal + cf.financing.subtotal
-        assert abs(cf.net_change - expected) < 0.01
+        assert cf.operating.subtotal == 75000.0
+        assert cf.investing.subtotal == -12000.0
+        assert cf.financing.subtotal == -53000.0
+        assert cf.net_change == 10000.0
+
+    def test_statement_reconciles_to_the_cash_movement(self, current_grouping, prior_grouping):
+        """Cash 50K -> 60K: the +10K net change reconciles exactly."""
+        builder = FinancialStatementBuilder(current_grouping, prior_lead_sheet_grouping=prior_grouping)
+        cf = builder.build().cash_flow_statement
+        assert cf.reconciliation_difference == 0.0
+        assert cf.is_reconciled is True
 
 
 # =============================================================================
@@ -894,7 +876,7 @@ class TestCashFlowWithDepreciationAndPrior:
     """End-to-end test with depreciation + prior period."""
 
     def test_full_cash_flow_reconciled(self, grouping_with_depreciation, prior_grouping_with_depreciation):
-        """Cash flow with depreciation and prior period produces reconciled statement."""
+        """Depreciation, a distribution and a prior period: every figure fixed, and it reconciles."""
         builder = FinancialStatementBuilder(
             grouping_with_depreciation,
             prior_lead_sheet_grouping=prior_grouping_with_depreciation,
@@ -905,22 +887,31 @@ class TestCashFlowWithDepreciationAndPrior:
         # Net income = 100K - 60K = 40K
         assert result.net_income == 40000.0
 
-        # Operating: 40K net income + 15K depreciation = 55K
-        # No WC changes (B, C, D, G, H all zero in both periods)
-        assert cf.operating.items[0].amount == 40000.0  # Net income
-        assert cf.operating.items[1].amount == 15000.0  # Depreciation add-back
+        # Operating: 40K net income + 15K depreciation add-back = 55K
+        assert [(i.label, i.amount) for i in cf.operating.items] == [
+            ("Net Income", 40000.0),
+            ("Depreciation & Amortization", 15000.0),
+        ]
+        assert cf.operating.subtotal == 55000.0
 
-        # Financing: Equity K changed from -35K to -50K
-        # Displayed equity: 50K - 35K = 15K change
-        # Retained earnings change ≈ net income = 40K
-        # Financing equity = 15K - 40K = -25K
-        equity_items = [i for i in cf.financing.items if "Equity" in i.label]
-        assert len(equity_items) == 1
-        assert equity_items[0].amount == -25000.0
+        # Investing: gross equipment unchanged at 60K; accumulated depreciation
+        # rose by exactly the 15K charge, so no cash moved.
+        assert cf.investing.items == []
+        assert cf.investing.subtotal == 0.0
 
-        # Cash: beginning=35K, ending=50K, net change = 15K
+        # Financing: equity 85K -> 85K - 25K distributions + 40K unclosed = 100K;
+        # change 15K less net income 40K = the 25K distribution.
+        assert [(i.label, i.amount) for i in cf.financing.items] == [
+            ("Equity Changes (excl. Retained Earnings)", -25000.0)
+        ]
+        assert cf.financing.subtotal == -25000.0
+
+        # Cash: 35K -> 65K, net change 30K
+        assert cf.net_change == 30000.0
         assert cf.beginning_cash == 35000.0
-        assert cf.ending_cash == 50000.0
+        assert cf.ending_cash == 65000.0
+        assert cf.reconciliation_difference == 0.0
+        assert cf.is_reconciled is True
 
     def test_depreciation_not_in_notes(self, grouping_with_depreciation, prior_grouping_with_depreciation):
         """No depreciation note when successfully detected."""

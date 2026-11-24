@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { useStatementBuilder } from '@/components/financialStatements/useStatementBuilder'
+import { useStatementBuilder, UNCLOSED_EARNINGS_LABEL } from '@/components/financialStatements/useStatementBuilder'
 import type { LeadSheetGrouping, LeadSheetSummary, LeadSheetAccount } from '@/types/leadSheet'
 
 // ---------------------------------------------------------------------------
@@ -54,7 +54,11 @@ function makeSummary(
 // Helper: build a full LeadSheetGrouping with all 15 letters (A-O)
 // ---------------------------------------------------------------------------
 function makeFullGrouping(overrides?: Partial<Record<string, number>>): LeadSheetGrouping {
-  // Default balanced trial balance (natural sign convention):
+  // Default balanced, pre-closing trial balance (natural sign convention):
+  //   debits 255,000 = credits 255,000. Net income of 15,000 is still on L-O,
+  //   so the equity accounts (K) hold 80,000 and total equity is 95,000.
+  //   (Sprint 882, TQ-01: K used to be -95,000 — credits 270,000 against
+  //   debits 255,000 — and the tests still called it balanced.)
   //   Assets (A-F): positive net_balance (debit balances)
   //   Liabilities (G-J), Equity (K): negative net_balance (credit balances)
   //   Revenue (L): negative net_balance (credit balance)
@@ -71,7 +75,7 @@ function makeFullGrouping(overrides?: Partial<Record<string, number>>): LeadShee
     H: { name: 'Other Current Liabilities', balance: -10000, category: 'liability' },
     I: { name: 'Long-term Debt', balance: -30000, category: 'liability' },
     J: { name: 'Other Long-term Liabilities', balance: -5000, category: 'liability' },
-    K: { name: "Stockholders' Equity", balance: -95000, category: 'equity' },
+    K: { name: "Stockholders' Equity", balance: -80000, category: 'equity' },
     L: { name: 'Revenue', balance: -100000, category: 'revenue' },
     M: { name: 'Cost of Goods Sold', balance: 60000, category: 'expense' },
     N: { name: 'Operating Expenses', balance: 30000, category: 'expense' },
@@ -90,6 +94,9 @@ function makeFullGrouping(overrides?: Partial<Record<string, number>>): LeadShee
     total_accounts: summaries.reduce((s, su) => s + su.account_count, 0),
   }
 }
+
+// Closed books: income accounts zeroed and the 15,000 closed into equity (K = 95,000).
+const POST_CLOSING = { K: -95000, L: 0, M: 0, N: 0, O: 0 }
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -246,9 +253,10 @@ describe('useStatementBuilder', () => {
       const { result } = renderHook(() => useStatementBuilder(grouping))
       const bs = result.current.balanceSheet
 
-      // K has net_balance = -95000, displayed as -bal('K') = 95000
+      // K has net_balance = -80000, displayed as -bal('K') = 80000
       const equity = bs.find(i => i.leadSheetRef === 'K')
-      expect(equity?.amount).toBe(95000)
+      expect(equity?.amount).toBe(80000)
+      expect(result.current.totals.totalEquity).toBe(95000) // + 15,000 unclosed earnings
     })
 
     it('calculates subtotals correctly', () => {
@@ -277,7 +285,7 @@ describe('useStatementBuilder', () => {
       expect(totalLiabilities?.amount).toBe(70000)
 
       const totalLE = bs.find(i => i.label === 'TOTAL LIABILITIES & EQUITY')
-      expect(totalLE?.amount).toBe(70000 + 95000) // 165000
+      expect(totalLE?.amount).toBe(70000 + 80000 + 15000) // 165000, incl. unclosed earnings
     })
 
     it('uses indentLevel 0 for section headers and 1 for line items', () => {
@@ -382,7 +390,7 @@ describe('useStatementBuilder', () => {
       expect(totals.totalAssets).toBe(165000)
       // Liabilities: G(25k) + H(10k) + I(30k) + J(5k) = 70k
       expect(totals.totalLiabilities).toBe(70000)
-      // Equity: K = 95k
+      // Equity: K (80k) + unclosed current-period earnings (15k) = 95k
       expect(totals.totalEquity).toBe(95000)
     })
 
@@ -403,7 +411,7 @@ describe('useStatementBuilder', () => {
   // ========================================================================
   describe('balance check', () => {
     it('isBalanced is true when assets equal liabilities plus equity', () => {
-      // Default grouping: assets = 165k, liabilities + equity = 70k + 95k = 165k
+      // Default grouping: assets = 165k, liabilities + equity = 70k + (80k + 15k unclosed) = 165k
       const grouping = makeFullGrouping()
       const { result } = renderHook(() => useStatementBuilder(grouping))
 
@@ -422,9 +430,13 @@ describe('useStatementBuilder', () => {
     // ====================================================================
     // 6. isBalanced = false when they don't match
     // ====================================================================
+    // Sprint 867: these two use a post-closing TB (POST_CLOSING). With
+    // revenue and expenses still open, a gap is first explained by the period's
+    // unclosed earnings — see the 'pre-closing trial balance' block below.
+
     it('isBalanced is false when there is a meaningful difference', () => {
       // Increase assets by $1000 without offsetting
-      const grouping = makeFullGrouping({ A: 51000 })
+      const grouping = makeFullGrouping({ ...POST_CLOSING, A: 51000 })
       const { result } = renderHook(() => useStatementBuilder(grouping))
 
       expect(result.current.totals.isBalanced).toBe(false)
@@ -433,11 +445,62 @@ describe('useStatementBuilder', () => {
 
     it('balanceDifference is negative when L&E exceeds assets', () => {
       // Decrease assets
-      const grouping = makeFullGrouping({ A: 49000 })
+      const grouping = makeFullGrouping({ ...POST_CLOSING, A: 49000 })
       const { result } = renderHook(() => useStatementBuilder(grouping))
 
       expect(result.current.totals.isBalanced).toBe(false)
       expect(result.current.totals.balanceDifference).toBe(-1000)
+    })
+  })
+
+  // ========================================================================
+  // Sprint 867: pre-closing trial balance
+  // ========================================================================
+  describe('pre-closing trial balance', () => {
+    // Default fixture with equity at its pre-closing amount: the period's
+    // 15,000 net income (revenue 100k + other 5k - COGS 60k - opex 30k) is still
+    // on the income accounts, so K is 95,000 - 15,000 = 80,000 and debits equal credits.
+    it('a balanced pre-closing TB balances, with the earnings shown in equity', () => {
+      const grouping = makeFullGrouping()
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+      const { totals, balanceSheet } = result.current
+
+      expect(totals.netIncome).toBe(15000)
+      expect(totals.unclosedEarnings).toBe(15000)
+      expect(totals.totalEquity).toBe(95000)
+      expect(totals.isBalanced).toBe(true)
+      expect(totals.balanceDifference).toBe(0)
+      const line = balanceSheet.find(item => item.label === UNCLOSED_EARNINGS_LABEL)
+      expect(line?.amount).toBe(15000)
+      expect(line?.leadSheetRef).toBe('')
+      const total = (label: string) => balanceSheet.find(item => item.label === label)?.amount
+      expect(total('TOTAL LIABILITIES & EQUITY')).toBe(total('TOTAL ASSETS'))
+    })
+
+    it('a pre-closing loss balances too', () => {
+      // Opex 50k instead of 30k: net loss of 5,000; equity accounts 100,000.
+      const grouping = makeFullGrouping({ N: 50000, K: -100000 })
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(-5000)
+      expect(result.current.totals.isBalanced).toBe(true)
+    })
+
+    it('closed books get no earnings line', () => {
+      const grouping = makeFullGrouping(POST_CLOSING)
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(0)
+      expect(result.current.balanceSheet.some(item => item.label === UNCLOSED_EARNINGS_LABEL)).toBe(false)
+    })
+
+    it('a genuine difference beyond the open earnings is still reported', () => {
+      const grouping = makeFullGrouping({ K: -80000, A: 51000 })
+      const { result } = renderHook(() => useStatementBuilder(grouping))
+
+      expect(result.current.totals.unclosedEarnings).toBe(15000)
+      expect(result.current.totals.isBalanced).toBe(false)
+      expect(result.current.totals.balanceDifference).toBe(1000)
     })
   })
 
@@ -458,7 +521,7 @@ describe('useStatementBuilder', () => {
         H: -8000,
         I: -28000,
         J: -4000,
-        K: -80000, // lower equity in prior (will include retained earnings change)
+        K: -65000, // lower equity in prior (will include retained earnings change)
       })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
@@ -508,9 +571,9 @@ describe('useStatementBuilder', () => {
       const { result } = renderHook(() => useStatementBuilder(current, prior))
       const invItems = result.current.cashFlow.investing.items
 
-      const capex = invItems.find(i => i.label === 'Capital Expenditures (PPE)')
-      // change('E') = 40000 - 35000 = 5000; displayed as -5000
-      expect(capex?.amount).toBe(-5000)
+      const purchases = invItems.find(i => i.label === 'Purchases of Property, Plant & Equipment')
+      // Gross PPE 35000 -> 40000, no depreciation or disposal: purchases of 5000
+      expect(purchases?.amount).toBe(-5000)
 
       const otherAssets = invItems.find(i => i.label === 'Change in Other Non-Current Assets')
       expect(otherAssets?.amount).toBe(-3000)
@@ -521,7 +584,7 @@ describe('useStatementBuilder', () => {
       const prior = makeFullGrouping({
         I: -28000, // Long-term debt increased by 2000 (more negative)
         J: -4000,  // Other LT liabilities increased by 1000
-        K: -80000, // Equity changed (from -80k to -95k)
+        K: -65000, // Equity changed (from -65k to -80k)
       })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
@@ -536,15 +599,14 @@ describe('useStatementBuilder', () => {
     })
 
     it('excludes retained earnings from equity financing change', () => {
-      // The hook subtracts netIncome from the equity change to isolate
-      // equity changes excluding retained earnings
+      // Financing equity = change in total equity (each side including its own
+      // unclosed earnings) - net income (Sprint 882, TQ-02).
       const current = makeFullGrouping()
-      // Prior equity = -80000; current equity = -95000
-      // deltaK = -95000 - (-80000) = -15000
-      // equityChangeDisplayed = -deltaK = 15000
-      // financingEquityChange = 15000 - netIncome(15000) = 0
+      // Current total equity = K 80,000 + unclosed 15,000 = 95,000.
+      // Prior: K 65,000 + its own open 15,000 = 80,000.
+      // financingEquityChange = (95,000 - 80,000) - 15,000 = 0
       // So equity financing line should NOT appear (it's 0)
-      const prior = makeFullGrouping({ K: -80000 })
+      const prior = makeFullGrouping({ K: -65000 })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
       const finItems = result.current.cashFlow.financing.items
@@ -555,11 +617,9 @@ describe('useStatementBuilder', () => {
 
     it('shows equity financing change when there are non-retained-earnings equity changes', () => {
       const current = makeFullGrouping()
-      // Prior equity = -70000; current equity = -95000
-      // deltaK = -95000 - (-70000) = -25000
-      // equityChangeDisplayed = -(-25000) = 25000
-      // financingEquityChange = 25000 - 15000(netIncome) = 10000
-      const prior = makeFullGrouping({ K: -70000 })
+      // Current total equity 95,000; prior K 55,000 + its open 15,000 = 70,000.
+      // financingEquityChange = (95,000 - 70,000) - 15,000 = 10,000
+      const prior = makeFullGrouping({ K: -55000 })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
       const finItems = result.current.cashFlow.financing.items
@@ -569,7 +629,7 @@ describe('useStatementBuilder', () => {
       expect(equityChange?.amount).toBe(10000)
     })
 
-    it('calculates netChange as sum of all section subtotals', () => {
+    it('calculates netChange from the three sections (fixed figures)', () => {
       const current = makeFullGrouping()
       const prior = makeFullGrouping({
         A: 40000,
@@ -577,15 +637,21 @@ describe('useStatementBuilder', () => {
         E: 35000,
         G: -22000,
         I: -28000,
-        K: -80000,
+        K: -65000,
       })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
       const { cashFlow } = result.current
 
-      expect(cashFlow.netChange).toBe(
-        cashFlow.operating.subtotal + cashFlow.investing.subtotal + cashFlow.financing.subtotal
-      )
+      // Operating: NI 15,000 - AR 5,000 + AP 3,000 = 13,000
+      // Investing: PPE 35,000 -> 40,000 = -5,000
+      // Financing: debt +2,000; equity (95,000 - 80,000) - 15,000 = 0 -> 2,000
+      expect(cashFlow.operating.subtotal).toBe(13000)
+      expect(cashFlow.investing.subtotal).toBe(-5000)
+      expect(cashFlow.financing.subtotal).toBe(2000)
+      expect(cashFlow.netChange).toBe(10000)
+      expect(cashFlow.endingCash - cashFlow.beginningCash).toBe(10000)
+      expect(cashFlow.isReconciled).toBe(true)
     })
 
     it('sets beginningCash and endingCash correctly', () => {
@@ -606,9 +672,9 @@ describe('useStatementBuilder', () => {
       const prior = makeFullGrouping({
         A: 40000,  // Cash was 40k, now 50k
         B: 40000,  // AR was 40k, now 30k (collected 10k)
-        // K stays same = -95000; net income = 15000
-        // With same K, deltaK = 0, equityChangeDisplayed = 0
-        // financingEquityChange = 0 - 15000 = -15000
+        // K stays at 80,000 and the prior TB carries its own open 15,000, so
+        // total equity is 95,000 at both dates:
+        // financingEquityChange = (95,000 - 95,000) - 15,000 = -15,000
       })
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
@@ -623,13 +689,14 @@ describe('useStatementBuilder', () => {
       expect(cashFlow.reconciliationDifference).toBe(0)
     })
 
-    it('always includes depreciation note', () => {
+    it('notes when depreciation is not separately identified (same note as the export)', () => {
       const current = makeFullGrouping()
       const prior = makeFullGrouping()
 
       const { result } = renderHook(() => useStatementBuilder(current, prior))
 
-      expect(result.current.cashFlow.notes).toContain(
+      expect(result.current.cashFlow.notes).toContain('Depreciation not separately identified in trial balance')
+      expect(result.current.cashFlow.notes).not.toContain(
         'Depreciation add-back available in PDF/Excel export only'
       )
     })
