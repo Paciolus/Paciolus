@@ -67,6 +67,8 @@ BANNED: list[tuple[str, str]] = [
     # Sprint 869: JE testing counts GL lines, not journal entries; a 204-entry,
     # 408-line file printed "Total Journal Entries Tested 408".
     (r"total journal entries tested", "the JE count is GL lines (Sprint 869)"),
+    # Integration 2026-11-24: memo_base wrote "An {unit}" for every unit — "An payment".
+    (r"\ban (?:payment|GL line|item counted)\b", "article must match the unit ('A payment')"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]
 
@@ -302,6 +304,7 @@ def test_banned_list_catches_known_bad_wording():
         "Material exceptions (3 findings)",
         "To further substantiate the finding, ",
         "Total Journal Entries Tested .... 408",
+        "An payment flagged by more than one test is counted once",
     ]:
         assert _hits(bad), bad
     for fine in ["LLC pass-through status", "UEL > TM", "Summary of Results", "no misstatement is found"]:

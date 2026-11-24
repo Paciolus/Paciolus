@@ -635,7 +635,8 @@ def build_results_summary_section(
     )
     story.append(
         Paragraph(
-            f"An {flag_unit} flagged by more than one test is counted once in the flagged total and once per "
+            f"{'An' if flag_unit[:1].lower() in 'aeiou' else 'A'} {flag_unit} flagged by more than one test is "
+            "counted once in the flagged total and once per "
             "flag in the severity counts and in the CSV export (one row per flag).",
             styles["MemoBodySmall"],
         )
