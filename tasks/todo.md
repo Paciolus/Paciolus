@@ -843,11 +843,13 @@ Verification: backend `-m "not slow"` 11,335 passed, 1 xfailed (the recovery def
 (pre-commit gate) and `next build` (second run; first exits on Next's `SecurityFatalError` advisory gate).
 
 **Open — CEO** (detail in the session summary)
-- [ ] Recovery defect above: approve the `invoice.paid` fix.
-- [ ] Preview cache: unused entries are evicted lazily (next preview or restart), so "held for up to 10 minutes, then
+- [x] Recovery defect above: approve the `invoice.paid` fix. Fixed in Sprint 893 (A).
+- [x] Preview cache: unused entries are evicted lazily (next preview or restart), so "held for up to 10 minutes, then
       released" is not strictly true. Fix the code (a one-minute sweep) or reword to "can be reused for up to 10 minutes".
+      Fixed in Sprint 893 (C): a 30-second sweeper.
 - [ ] Terms and DPA promise deletion within 30 days of termination; no job does it (erasure is manual or self-serve).
-- [ ] Firm logos stay in S3 after account erasure (`erase_account` deletes the row, not the object).
+- [x] Firm logos stay in S3 after account erasure (`erase_account` deletes the row, not the object). Fixed in
+      Sprint 893 (D).
 - [ ] Confirm on Render: `S3_BUCKET_NAME` set (logos), `FORMAT_ODS_ENABLED` unset/false (copy now omits ODS), no
       `RATE_LIMIT_{STARTER,TEAM,ORGANIZATION}_*` variables (now ignored).
 - [x] Seven stale `.docx` exports under `docs/` still carry "Zero-Storage" (USER_GUIDE.docx, ARCHITECTURE.docx, …):
@@ -907,8 +909,10 @@ pre-commit gate on every commit.
 
 **Open — CEO**
 - [ ] 14G go-ahead: rebuild the migration chain (squashed baseline from the models) so a fresh PostgreSQL can be built.
-- [ ] 14B finding: should falling revenue be labelled "decrease" (movement_type on the display basis)?
-- [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load (Sprint 868).
+- [x] 14B finding: should falling revenue be labelled "decrease" (movement_type on the display basis)? Yes —
+      fixed in Sprint 893 (B).
+- [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load. Cause found by
+      Sprint 874 (#327): `/auth/refresh` needs a CSRF token the page loses on reload — re-run after it deploys.
 
 ### Sprint 890: The edges between frontend, API and background work
 **Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-890-edges`, stacked on Sprint 889.
@@ -942,7 +946,8 @@ commit; `next build` passes (second run, Next's advisory gate). mypy: no errors 
 
 **Open — CEO**
 - [ ] 15D: multi-sheet files are not converted (only the single-sheet engine captures currencies). Wanted?
-- [ ] 15A: other callers of `apiPut`/`apiDownload` (19 files) were not audited for the `ok: false` pattern.
+- [x] 15A: other callers of `apiPut`/`apiDownload` (19 files) were not audited for the `ok: false` pattern. Done
+      in Sprint 893 (E).
 - [ ] 15C: engine strings are not uniformly formatted (M-3 `"0"`, intercompany copies input decimals).
 
 ### Sprint 891: One tool catalog, one plan file, accurate instructions, dead code removed
@@ -1004,8 +1009,10 @@ unchanged (snapshot, PDF contract and memo equivalence tests run per step).
       Done: `components/shared/testing/SingleFileTestingPage.tsx`; Fixed Assets moved (old vs new page HTML compared in
       six states — guest, unverified, idle, loading, error, success — identical).
       Done: Inventory moved (same six-state comparison, identical).
-      Remaining (later session): AP, Payroll, then JE (sampling as an extension slot) and Revenue (contract inputs);
-      AR aging stays outside the shell (two files).
+      Done in Sprint 893 (F): AP and Payroll moved (same comparison, identical).
+      Remaining: JE and Revenue. Each differs from the shell visually (see Sprint 893 F), so moving either needs
+      more shell options than it saves, or an approved restyle onto the theme tokens. AR aging stays outside the
+      shell (two files).
 - [ ] 17D split the largest units (one at a time).
       Order by recent changes (commits since 2026-10-01): sampling_memo_generator (13), population_profile_memo (9),
       payroll analysis (9), JE analysis (8), revenue analysis (7), audit/pipeline (6), ratio_engine (6).
@@ -1081,6 +1088,15 @@ Full run at the end: backend `-m "not slow"` 11,448 passed, 0 failed, 0 xfailed 
 Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `next build` passes.
 - Already done elsewhere, waiting on the CEO's merge (not redone here): 867 (#318, also inside 882), 871 (#319),
   859 (#320), 869 (#322), 870 part A (#317), 853 (#331).
+
+### Sprint 894: Todo bookkeeping, Next.js security upgrade, exact amounts in response schemas
+**Status:** IN PROGRESS (2026-11-24) — local branch `sprint-894-next-and-amounts`, stacked on Sprint 893.
+**Agents:** Executor (lead), Guardian (Next.js advisory), Critic (amount sweep).
+- [x] A. Checkboxes Sprint 893 already closed but left open under 888, 889, 890 and 892 ticked, with where each was done.
+- [ ] B. Next.js 16.4.3 → 16.4.6 (in range): clears the advisories that make `next build` exit on Next's
+      `SecurityFatalError` on alternate runs (884 follow-up and "Then (C)").
+- [ ] C. Remaining `float` monetary fields in `shared/*response_schemas.py` move to exact amounts (884 follow-up);
+      finding `details` stay floats by design (Sprint 829).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms
