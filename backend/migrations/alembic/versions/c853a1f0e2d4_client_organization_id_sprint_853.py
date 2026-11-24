@@ -1,7 +1,7 @@
 """Sprint 853: clients.organization_id — firm records belong to the firm.
 
 Revision ID: c853a1f0e2d4
-Revises: b9d3f6a2c418
+Revises: c3e7a1f9d524
 Create Date: 2026-11-16
 
 WHY
@@ -33,7 +33,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c853a1f0e2d4"
-down_revision: str | Sequence[str] | None = "b9d3f6a2c418"
+down_revision: str | Sequence[str] | None = "c3e7a1f9d524"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
