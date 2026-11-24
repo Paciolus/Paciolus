@@ -2838,7 +2838,7 @@
             "type": "number"
           },
           "total_deferred_revenue": {
-            "default": 0.0,
+            "default": "0",
             "title": "Total Deferred Revenue",
             "type": "number"
           }
@@ -4103,6 +4103,50 @@
       },
       "AnalyticalExpectationResponse": {
         "properties": {
+          "actual_captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Captured At"
+          },
+          "actual_captured_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Captured By"
+          },
+          "actual_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Source"
+          },
+          "actual_source_tool_run_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Source Tool Run Id"
+          },
           "corroboration_basis_text": {
             "title": "Corroboration Basis Text",
             "type": "string"
@@ -8093,6 +8137,78 @@
         "title": "CancelRequest",
         "type": "object"
       },
+      "CaptureActualsRequest": {
+        "description": "Sprint 879b (DH-04): save proposed actuals — one, or every one from a run.",
+        "properties": {
+          "capture_tokens": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Capture Tokens",
+            "type": "array"
+          }
+        },
+        "required": [
+          "capture_tokens"
+        ],
+        "title": "CaptureActualsRequest",
+        "type": "object"
+      },
+      "CaptureActualsResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/CaptureActualsResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "CaptureActualsResponse",
+        "type": "object"
+      },
+      "CaptureActualsResult": {
+        "properties": {
+          "expectation_id": {
+            "title": "Expectation Id",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_found",
+                  "already_captured"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "captured",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expectation_id",
+          "status"
+        ],
+        "title": "CaptureActualsResult",
+        "type": "object"
+      },
       "CashFlowApDeferralCandidateResponse": {
         "additionalProperties": false,
         "description": "One dict from ``_ap_deferral_candidates``.",
@@ -11058,7 +11174,7 @@
         "description": "Deferred Revenue analysis metrics.",
         "properties": {
           "deferred_balance": {
-            "default": 0.0,
+            "default": "0",
             "title": "Deferred Balance",
             "type": "number"
           },
@@ -12685,45 +12801,6 @@
           }
         },
         "title": "ExpectationEntry",
-        "type": "object"
-      },
-      "ExpectationEvaluationResponse": {
-        "description": "Sprint 728c: per-evaluation record returned alongside tool output.\n\nSurfaces ISA 520 analytical expectations that were auto-evaluated\nagainst the tool's output (matched by target_type + target_label).",
-        "properties": {
-          "actual": {
-            "title": "Actual",
-            "type": "number"
-          },
-          "expectation_id": {
-            "title": "Expectation Id",
-            "type": "integer"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "target_label": {
-            "title": "Target Label",
-            "type": "string"
-          },
-          "target_type": {
-            "title": "Target Type",
-            "type": "string"
-          },
-          "variance": {
-            "title": "Variance",
-            "type": "number"
-          }
-        },
-        "required": [
-          "expectation_id",
-          "target_type",
-          "target_label",
-          "actual",
-          "variance",
-          "status"
-        ],
-        "title": "ExpectationEvaluationResponse",
         "type": "object"
       },
       "ExpectationTargetType": {
@@ -14382,16 +14459,16 @@
       "FluxAnalysisResponse": {
         "description": "Complete flux analysis response: flux + recon.",
         "properties": {
-          "expectations_evaluated": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
-            },
-            "title": "Expectations Evaluated",
-            "type": "array"
-          },
           "flux": {
             "$ref": "#/components/schemas/FluxDataResponse"
+          },
+          "proposed_actuals": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProposedActualResponse"
+            },
+            "title": "Proposed Actuals",
+            "type": "array"
           },
           "recon": {
             "$ref": "#/components/schemas/ReconDataResponse"
@@ -16408,15 +16485,6 @@
             "title": "Client Name",
             "type": "string"
           },
-          "expectations_evaluated": {
-            "default": [],
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Expectations Evaluated",
-            "type": "array"
-          },
           "industry": {
             "title": "Industry",
             "type": "string"
@@ -16428,6 +16496,15 @@
           "industry_type": {
             "title": "Industry Type",
             "type": "string"
+          },
+          "proposed_actuals": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Proposed Actuals",
+            "type": "array"
           },
           "ratios": {
             "additionalProperties": true,
@@ -19485,14 +19562,6 @@
             "title": "Duplicate Account Warnings",
             "type": "array"
           },
-          "expectations_evaluated": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
-            },
-            "title": "Expectations Evaluated",
-            "type": "array"
-          },
           "framework_note": {
             "anyOf": [
               {
@@ -19543,6 +19612,14 @@
           "prior_total_debits": {
             "title": "Prior Total Debits",
             "type": "number"
+          },
+          "proposed_actuals": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProposedActualResponse"
+            },
+            "title": "Proposed Actuals",
+            "type": "array"
           },
           "significant_movements": {
             "items": {
@@ -23071,7 +23148,7 @@
             "type": "number"
           },
           "tolerance": {
-            "default": 0.01,
+            "default": "0.01",
             "title": "Tolerance",
             "type": "number"
           },
@@ -23124,7 +23201,7 @@
             "type": "boolean"
           },
           "cogs_total": {
-            "default": 0.0,
+            "default": "0",
             "title": "Cogs Total",
             "type": "number"
           },
@@ -23153,7 +23230,7 @@
             "type": "integer"
           },
           "revenue_total": {
-            "default": 0.0,
+            "default": "0",
             "title": "Revenue Total",
             "type": "number"
           },
@@ -23655,6 +23732,50 @@
           "contribution"
         ],
         "title": "PreFlightScoreComponentResponse",
+        "type": "object"
+      },
+      "ProposedActualResponse": {
+        "description": "Sprint 879b (DH-04): an actual proposed for an open ISA 520 expectation.\n\nMatched by target_type + target_label against the tool's output. Nothing\nis saved; the auditor captures it with ``capture_token``\n(``POST /engagements/{id}/analytical-expectations/capture-actuals``).",
+        "properties": {
+          "actual": {
+            "title": "Actual",
+            "type": "number"
+          },
+          "capture_token": {
+            "title": "Capture Token",
+            "type": "string"
+          },
+          "expectation_id": {
+            "title": "Expectation Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_label": {
+            "title": "Target Label",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          },
+          "variance": {
+            "title": "Variance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectation_id",
+          "target_type",
+          "target_label",
+          "actual",
+          "variance",
+          "status",
+          "capture_token"
+        ],
+        "title": "ProposedActualResponse",
         "type": "object"
       },
       "PurchaseOrderResponse": {
@@ -26737,17 +26858,17 @@
             "type": "number"
           },
           "total_overstatement": {
-            "default": 0.0,
+            "default": "0",
             "title": "Total Overstatement",
             "type": "number"
           },
           "total_understatement": {
-            "default": 0.0,
+            "default": "0",
             "title": "Total Understatement",
             "type": "number"
           },
           "understatement_basic_precision": {
-            "default": 0.0,
+            "default": "0",
             "title": "Understatement Basic Precision",
             "type": "number"
           },
@@ -26757,12 +26878,12 @@
             "type": "integer"
           },
           "understatement_incremental_allowance": {
-            "default": 0.0,
+            "default": "0",
             "title": "Understatement Incremental Allowance",
             "type": "number"
           },
           "understatement_projected_misstatement": {
-            "default": 0.0,
+            "default": "0",
             "title": "Understatement Projected Misstatement",
             "type": "number"
           },
@@ -26775,7 +26896,7 @@
             "type": "array"
           },
           "understatement_upper_error_limit": {
-            "default": 0.0,
+            "default": "0",
             "title": "Understatement Upper Error Limit",
             "type": "number"
           },
@@ -29236,14 +29357,6 @@
             "title": "Duplicate Account Warnings",
             "type": "array"
           },
-          "expectations_evaluated": {
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/ExpectationEvaluationResponse"
-            },
-            "title": "Expectations Evaluated",
-            "type": "array"
-          },
           "framework_note": {
             "anyOf": [
               {
@@ -29294,6 +29407,14 @@
           "prior_total_debits": {
             "title": "Prior Total Debits",
             "type": "number"
+          },
+          "proposed_actuals": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProposedActualResponse"
+            },
+            "title": "Proposed Actuals",
+            "type": "array"
           },
           "significant_movements": {
             "items": {
@@ -29418,6 +29539,71 @@
           "created_at"
         ],
         "title": "ToolActivityResponse",
+        "type": "object"
+      },
+      "ToolLogRequest": {
+        "additionalProperties": false,
+        "description": "Sprint 879c (DH-05): a typed JSON body — no values in the query string.",
+        "properties": {
+          "engagement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Id"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "record_count": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Count"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tool_name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Tool Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_name"
+        ],
+        "title": "ToolLogRequest",
         "type": "object"
       },
       "ToolRunResponse": {
@@ -32215,87 +32401,18 @@
     },
     "/activity/tool-log": {
       "post": {
-        "description": "Log a tool execution to the unified activity feed.",
+        "description": "Log a tool execution to the unified activity feed.\n\nSprint 879c: the summary must be an approved aggregate for the tool\n(``shared.activity_summary``) — the same validator the internal recorder uses.",
         "operationId": "log_tool_activity_activity_tool_log_post",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "tool_name",
-            "required": true,
-            "schema": {
-              "maxLength": 50,
-              "minLength": 1,
-              "title": "Tool Name",
-              "type": "string"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolLogRequest"
+              }
             }
           },
-          {
-            "in": "query",
-            "name": "filename",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 500,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Filename"
-            }
-          },
-          {
-            "in": "query",
-            "name": "record_count",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Record Count"
-            }
-          },
-          {
-            "in": "query",
-            "name": "summary",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 2000,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Summary"
-            }
-          },
-          {
-            "in": "query",
-            "name": "engagement_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Engagement Id"
-            }
-          }
-        ],
+          "required": true
+        },
         "responses": {
           "201": {
             "content": {
@@ -34477,7 +34594,7 @@
     },
     "/audit/journal-entries/sample": {
       "post": {
-        "description": "Run stratified random sampling on a General Ledger extract.",
+        "description": "Run stratified random sampling on a General Ledger extract.\n\nSprint 878 (review AZ-06): part of the journal-entry tool, so it carries\nthe same tool gate, and a run uses one upload of the allowance (CEO\ndecision) - checked here, consumed on success. Database work runs in a\nworker thread with its own session (Sprint 890, 15E).",
         "operationId": "sample_journal_entries_audit_journal_entries_sample_post",
         "requestBody": {
           "content": {
@@ -34524,7 +34641,7 @@
     },
     "/audit/journal-entries/sample/preview": {
       "post": {
-        "description": "Preview stratum counts without running sampling.",
+        "description": "Preview stratum counts without running sampling.\n\nSprint 878 (review AZ-06): tool-gated like the run; uses no upload (CEO decision).",
         "operationId": "preview_sampling_audit_journal_entries_sample_preview_post",
         "requestBody": {
           "content": {
@@ -36572,7 +36689,7 @@
     },
     "/billing/webhook": {
       "post": {
-        "description": "Stripe webhook endpoint. No auth — uses Stripe signature verification.\n\nCSRF-exempt (added to CSRF_EXEMPT_PATHS in security_middleware.py).",
+        "description": "Stripe webhook endpoint. No auth — uses Stripe signature verification.\n\nCSRF-exempt (added to CSRF_EXEMPT_PATHS in security_middleware.py).\n\nSprint 890 (15E): only the body is read on the event loop. Signature verification,\nde-duplication, the handler (which may call Stripe) and the commit run in\n``billing.webhook_service.handle_stripe_webhook`` through the thread pool, with a session it\nopens and closes itself.",
         "operationId": "stripe_webhook_billing_webhook_post",
         "responses": {
           "200": {
@@ -36689,7 +36806,7 @@
         ]
       },
       "post": {
-        "description": "Upload a logo image. Enterprise only. Max 500KB, PNG/JPG.",
+        "description": "Upload a logo image. Enterprise only. Max 500KB, PNG/JPG.\n\nSprint 890 (15E step 2): only the cheap checks and the read happen on the event loop;\n``store_logo`` validates, uploads and saves in the thread pool.",
         "operationId": "upload_logo_branding_logo_post",
         "requestBody": {
           "content": {
@@ -38438,6 +38555,64 @@
           }
         ],
         "summary": "Create Expectation",
+        "tags": [
+          "analytical_expectations"
+        ]
+      }
+    },
+    "/engagements/{engagement_id}/analytical-expectations/capture-actuals": {
+      "post": {
+        "description": "Save proposed actuals into the workpaper (Sprint 879b, review DH-04).\n\nAn analysis run only proposes actuals. This is the explicit action that\nsaves them — one token for one account, or every token from a run. Every\ntoken is verified before anything is saved; an expectation that already\nhas an actual is skipped, not overwritten.",
+        "operationId": "capture_actuals_engagements__engagement_id__analytical_expectations_capture_actuals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engagement_id",
+            "required": true,
+            "schema": {
+              "title": "Engagement Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureActualsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureActualsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Capture Actuals",
         "tags": [
           "analytical_expectations"
         ]
@@ -43302,7 +43477,7 @@
     },
     "/organization/invite/accept/{token}": {
       "post": {
-        "description": "Accept an organization invite. Links the current user to the org.",
+        "description": "Accept an organization invite. Links the current user to the org.\n\nSprint 872 (AZ-11): the account must be verified, and its address — which\nonly changes once a new address is verified (``pending_email`` holds an\nunverified change) — must match the invitation. Registration issues a\nsession before verification, so without this anyone holding a leaked\ninvitation could register the invited address and join the firm.",
         "operationId": "accept_invite_organization_invite_accept__token__post",
         "parameters": [
           {
