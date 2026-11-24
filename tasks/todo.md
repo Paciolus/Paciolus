@@ -1719,6 +1719,8 @@ Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `ne
       `ExpectationEvaluationResponse`, three-way-match `MatchVarianceResponse`). Note: `ExactMoney` refuses `inf`/`NaN`
       where `float` let them through, so no ratio-like field was moved. Test: `TestSprint894AmountFields` (63 fail on
       the old schemas). mypy unchanged (289, baseline 1,011).
+      Full backend run (`-m "not slow"`): 11,510 passed, 2 failed — two sampling tests compared the model's attribute
+      (now a Decimal) with a float; updated to compare exactly. The JSON they check is unchanged.
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

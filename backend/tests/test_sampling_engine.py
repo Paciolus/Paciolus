@@ -1027,7 +1027,7 @@ class TestSprint825Methodology:
         rows = [(10_000, 9_000), (10_000, 11_000)] + [(10_000, 10_000)] * 8
         payload = _run_evaluation(self._csv(rows), "s.csv", "random", 0.95, 315_000, 0, 1_000_000, 10, None, None)
         resp = SamplingEvaluationResponse(**payload)
-        assert resp.upper_error_limit == pytest.approx(319_486.83, abs=0.01)
-        assert resp.understatement_upper_error_limit == pytest.approx(319_486.83, abs=0.01)
+        assert float(resp.upper_error_limit) == pytest.approx(319_486.83, abs=0.01)  # Sprint 894: exact Decimal
+        assert float(resp.understatement_upper_error_limit) == pytest.approx(319_486.83, abs=0.01)
         assert resp.understatement_errors_found == 1
         assert resp.conclusion == "fail"

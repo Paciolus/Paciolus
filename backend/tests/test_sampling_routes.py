@@ -6,6 +6,7 @@ Validates route registration, response models, and memo generator.
 """
 
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 from tests.helpers.route_inventory import all_routes
@@ -121,7 +122,7 @@ class TestResponseModels:
         assert resp.method == "mus"
         assert resp.confidence_level == 0.95
         assert resp.population_size == 1000
-        assert resp.sampling_interval == 16666.67
+        assert resp.sampling_interval == Decimal("16666.67")  # Sprint 894: exact amounts
 
     def test_design_response_random_method(self):
         resp = SamplingDesignResponse(
