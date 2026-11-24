@@ -108,7 +108,7 @@
 >
 > **Then (C)**
 > - [ ] Sprint 869 (JE calibration) · Sprint 859 (pooler-aware TLS check) · Dependabot batch (open: #297–#306, #311).
-> - [ ] **Next.js upgrade** — `next build` compiles but exits 1 on alternate runs with Next's `SecurityFatalError`
+> - [x] **Next.js upgrade** (Sprint 894 B, 16.4.6) — `next build` compiles but exits 1 on alternate runs with Next's `SecurityFatalError`
 >       ("your version of Next.js is affected by a known security vulnerability"). Security; seen in Sprint 884.
 > - [ ] Runbook: credentials inventory in `docs/runbooks/backup-restore.md` (names, scope, where created, expiry —
 >       never values) + one yearly **Nov 1** rotation/sign-off day shared with Sprint 860 + an alarm for GitHub
@@ -361,7 +361,7 @@ detail is computed from the detail as displayed.
 - [ ] **Remaining `float` monetary response fields.** Sprint 884 moved `MonetaryDecimal` and the payroll / FA /
       inventory / 3WM entry fields to exact numbers; other routes' response schemas still declare amounts as `float`
       (and finding `details` stay floats by design, Sprint 829). Sweep `shared/*response_schemas.py` for amount fields.
-- [ ] **Next.js upgrade** (see "Then (C)" above).
+- [x] **Next.js upgrade** (see "Then (C)" above). Sprint 894 B.
 - [x] **9F / OUT-23 — revenue memo counts a transaction once.** "High-Risk Entries (HIGH severity)" now sums the
       HIGH tests' flagged entries once per source `row_number` (`_sum_flagged_amounts_once`); an entry with no row
       number (0 is the aggregate-finding sentinel) counts as its own item. Reproduced first: one transaction flagged
@@ -1093,8 +1093,10 @@ Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `ne
 **Status:** IN PROGRESS (2026-11-24) — local branch `sprint-894-next-and-amounts`, stacked on Sprint 893.
 **Agents:** Executor (lead), Guardian (Next.js advisory), Critic (amount sweep).
 - [x] A. Checkboxes Sprint 893 already closed but left open under 888, 889, 890 and 892 ticked, with where each was done.
-- [ ] B. Next.js 16.4.3 → 16.4.6 (in range): clears the advisories that make `next build` exit on Next's
-      `SecurityFatalError` on alternate runs (884 follow-up and "Then (C)").
+- [x] B. Next.js 16.4.3 → 16.4.6 (in range): clears the advisories that make `next build` exit on Next's
+      `SecurityFatalError` on alternate runs (884 follow-up and "Then (C)"). Lockfile: only `next` and its `@next/*`
+      binaries changed. `npm audit`: `next` gone; the 26 moderates left are Jest's `glob`/`minimatch` chain (needs a
+      Jest major, already on `main`). `next build` run twice back to back: both exit 0, pages `ƒ` as before.
 - [ ] C. Remaining `float` monetary fields in `shared/*response_schemas.py` move to exact amounts (884 follow-up);
       finding `details` stay floats by design (Sprint 829).
 
