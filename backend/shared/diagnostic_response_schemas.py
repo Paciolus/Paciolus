@@ -10,6 +10,7 @@ Typed Pydantic models replacing response_model=dict for:
 - Adjusting Entries
 """
 
+from decimal import Decimal
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -122,9 +123,9 @@ class CategoryVarianceResponse(BaseModel):
 
     category_key: str
     category_name: str
-    current_value: float
-    prior_value: float
-    dollar_variance: float
+    current_value: MonetaryDecimal
+    prior_value: MonetaryDecimal
+    dollar_variance: MonetaryDecimal
     percent_variance: Optional[float] = None
     is_significant: bool
     direction: Literal["increase", "decrease", "unchanged"]
@@ -183,9 +184,9 @@ class AccountMovementResponse(BaseModel):
 
     account_name: str
     account_type: str
-    prior_balance: float
-    current_balance: float
-    change_amount: float
+    prior_balance: MonetaryDecimal
+    current_balance: MonetaryDecimal
+    change_amount: MonetaryDecimal
     change_percent: Optional[float] = None
     movement_type: Literal[
         "new_account",
@@ -208,9 +209,9 @@ class LeadSheetMovementSummaryResponse(BaseModel):
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
-    prior_total: float
-    current_total: float
-    net_change: float
+    prior_total: MonetaryDecimal
+    current_total: MonetaryDecimal
+    net_change: MonetaryDecimal
     change_percent: Optional[float] = None
     account_count: int
     movements: list[AccountMovementResponse]
@@ -230,10 +231,10 @@ class MovementSummaryResponse(BaseModel):
     new_accounts: list[str]
     closed_accounts: list[str]
     dormant_accounts: list[str]
-    prior_total_debits: float
-    prior_total_credits: float
-    current_total_debits: float
-    current_total_credits: float
+    prior_total_debits: MonetaryDecimal
+    prior_total_credits: MonetaryDecimal
+    current_total_debits: MonetaryDecimal
+    current_total_credits: MonetaryDecimal
     framework_note: Optional[str] = None
     expectations_evaluated: list[ExpectationEvaluationResponse] = []
     # Sprint 763: bank-rec materiality emission pattern; for multi-period,
@@ -254,8 +255,8 @@ class BudgetVarianceResponse(BaseModel):
     ``commentary_prompt`` is populated for MATERIAL variances.
     """
 
-    budget_balance: float
-    variance_amount: float
+    budget_balance: MonetaryDecimal
+    variance_amount: MonetaryDecimal
     variance_percent: Optional[float] = None
     variance_significance: Literal["material", "significant", "minor"]
     variance_direction: Literal["favorable", "unfavorable", "on_budget", "neutral"] = "neutral"
@@ -268,12 +269,12 @@ class ThreeWayLeadSheetSummaryResponse(BaseModel):
     lead_sheet: str
     lead_sheet_name: str
     lead_sheet_category: str
-    prior_total: float
-    current_total: float
-    net_change: float
+    prior_total: MonetaryDecimal
+    current_total: MonetaryDecimal
+    net_change: MonetaryDecimal
     change_percent: Optional[float] = None
-    budget_total: Optional[float] = None
-    budget_variance: Optional[float] = None
+    budget_total: Optional[MonetaryDecimal] = None
+    budget_variance: Optional[MonetaryDecimal] = None
     budget_variance_percent: Optional[float] = None
     account_count: int
     movements: list[dict[str, Any]] = []
@@ -294,12 +295,12 @@ class ThreeWayMovementSummaryResponse(BaseModel):
     new_accounts: list[str]
     closed_accounts: list[str]
     dormant_accounts: list[str]
-    prior_total_debits: float
-    prior_total_credits: float
-    current_total_debits: float
-    current_total_credits: float
-    budget_total_debits: float
-    budget_total_credits: float
+    prior_total_debits: MonetaryDecimal
+    prior_total_credits: MonetaryDecimal
+    current_total_debits: MonetaryDecimal
+    current_total_credits: MonetaryDecimal
+    budget_total_debits: MonetaryDecimal
+    budget_total_credits: MonetaryDecimal
     budget_variances_by_significance: dict[str, int]
     accounts_over_budget: int
     accounts_under_budget: int
@@ -323,8 +324,8 @@ class AdjustmentLineResponse(BaseModel):
     """Individual line item in an adjusting entry."""
 
     account_name: str
-    debit: float
-    credit: float
+    debit: MonetaryDecimal
+    credit: MonetaryDecimal
     description: Optional[str] = None
 
 
@@ -344,10 +345,10 @@ class AdjustingEntryResponse(BaseModel):
     ]
     status: Literal["proposed", "approved", "rejected", "posted"]
     lines: list[AdjustmentLineResponse]
-    total_debits: float
-    total_credits: float
+    total_debits: MonetaryDecimal
+    total_credits: MonetaryDecimal
     is_balanced: bool
-    entry_total: float
+    entry_total: MonetaryDecimal
     account_count: int
     prepared_by: Optional[str] = None
     reviewed_by: Optional[str] = None
@@ -363,27 +364,27 @@ class AdjustedAccountBalanceResponse(BaseModel):
     """Account with unadjusted and adjusted balances."""
 
     account_name: str
-    unadjusted_debit: float
-    unadjusted_credit: float
-    unadjusted_balance: float
-    adjustment_debit: float
-    adjustment_credit: float
-    net_adjustment: float
-    adjusted_debit: float
-    adjusted_credit: float
-    adjusted_balance: float
+    unadjusted_debit: MonetaryDecimal
+    unadjusted_credit: MonetaryDecimal
+    unadjusted_balance: MonetaryDecimal
+    adjustment_debit: MonetaryDecimal
+    adjustment_credit: MonetaryDecimal
+    net_adjustment: MonetaryDecimal
+    adjusted_debit: MonetaryDecimal
+    adjusted_credit: MonetaryDecimal
+    adjusted_balance: MonetaryDecimal
     has_adjustment: bool
 
 
 class AdjustedTBTotalsResponse(BaseModel):
     """Aggregate totals for adjusted trial balance."""
 
-    unadjusted_debits: float
-    unadjusted_credits: float
-    adjustment_debits: float
-    adjustment_credits: float
-    adjusted_debits: float
-    adjusted_credits: float
+    unadjusted_debits: MonetaryDecimal
+    unadjusted_credits: MonetaryDecimal
+    adjustment_debits: MonetaryDecimal
+    adjustment_credits: MonetaryDecimal
+    adjusted_debits: MonetaryDecimal
+    adjusted_credits: MonetaryDecimal
 
 
 class AdjustedTrialBalanceResponse(BaseModel):
@@ -411,7 +412,7 @@ class BucketBreakdownResponse(BaseModel):
     lower: float
     upper: Optional[float] = None
     count: int
-    sum_abs: float
+    sum_abs: MonetaryDecimal
     percent_count: float
 
 
@@ -421,8 +422,8 @@ class TopAccountResponse(BaseModel):
     rank: int
     account: str
     category: str
-    net_balance: float
-    abs_balance: float
+    net_balance: MonetaryDecimal
+    abs_balance: MonetaryDecimal
     percent_of_total: float
     account_number: Optional[str] = None
 
@@ -433,7 +434,7 @@ class SectionDensityResponse(BaseModel):
     section_label: str
     section_letters: list[str]
     account_count: int
-    section_balance: float
+    section_balance: MonetaryDecimal
     balance_per_account: float
     is_sparse: bool
 
@@ -442,12 +443,12 @@ class PopulationProfileResponse(BaseModel):
     """Complete TB population profile statistics."""
 
     account_count: int
-    total_abs_balance: float
+    total_abs_balance: MonetaryDecimal
     mean_abs_balance: float
     median_abs_balance: float
     std_dev_abs_balance: float
-    min_abs_balance: float
-    max_abs_balance: float
+    min_abs_balance: MonetaryDecimal
+    max_abs_balance: MonetaryDecimal
     p25: float
     p75: float
     gini_coefficient: float
@@ -476,11 +477,11 @@ class ExpenseCategoryItemResponse(BaseModel):
 
     label: str
     key: str
-    amount: float
+    amount: MonetaryDecimal
     pct_of_revenue: Optional[float] = None
-    prior_amount: Optional[float] = None
+    prior_amount: Optional[MonetaryDecimal] = None
     prior_pct_of_revenue: Optional[float] = None
-    dollar_change: Optional[float] = None
+    dollar_change: Optional[MonetaryDecimal] = None
     exceeds_threshold: bool = False
     benchmark_pct: Optional[float] = None
     # Sprint 887: % change and its band (Change ≥ 20% and over materiality / ≥ 10% or over / below both).
@@ -493,18 +494,18 @@ class ExpenseChangeThresholdsResponse(BaseModel):
 
     pct_both: float
     pct_either: float
-    materiality: float
+    materiality: MonetaryDecimal
 
 
 class ExpenseCategoryReportResponse(BaseModel):
     """Complete expense category analytical procedures response."""
 
     categories: list[ExpenseCategoryItemResponse]
-    total_expenses: float
-    total_revenue: float
+    total_expenses: MonetaryDecimal
+    total_revenue: MonetaryDecimal
     revenue_available: bool
     prior_available: bool
-    materiality_threshold: float
+    materiality_threshold: MonetaryDecimal
     category_count: int
     change_thresholds: Optional[ExpenseChangeThresholdsResponse] = None
 
@@ -518,7 +519,7 @@ class AccrualAccountResponse(BaseModel):
     """One identified accrual account."""
 
     account_name: str
-    balance: float
+    balance: MonetaryDecimal
     matched_keyword: str
     classification: str = "Accrued Liability"
 
@@ -527,12 +528,12 @@ class ReasonablenessResultResponse(BaseModel):
     """Per-account reasonableness test result."""
 
     account_name: str
-    recorded_balance: float
+    recorded_balance: MonetaryDecimal
     annual_driver: Optional[float] = None
     driver_source: str = ""
     months_to_accrue: int = 1
-    expected_balance: Optional[float] = None
-    variance: Optional[float] = None
+    expected_balance: Optional[MonetaryDecimal] = None
+    variance: Optional[MonetaryDecimal] = None
     variance_pct: Optional[float] = None
     status: str = ""
 
@@ -540,8 +541,8 @@ class ReasonablenessResultResponse(BaseModel):
 class DeferredRevenueAnalysisResponse(BaseModel):
     """Deferred Revenue analysis metrics."""
 
-    deferred_balance: float = 0.0
-    total_revenue: Optional[float] = None
+    deferred_balance: MonetaryDecimal = Decimal("0")
+    total_revenue: Optional[MonetaryDecimal] = None
     deferred_pct_of_revenue: Optional[float] = None
 
 
@@ -567,7 +568,7 @@ class ExpectedAccrualCheckResponse(BaseModel):
 
     expected_name: str
     detected: bool
-    balance: Optional[float] = None
+    balance: Optional[MonetaryDecimal] = None
     risk_if_absent: str = ""
     basis: str = ""
     recommended_action: str = ""
@@ -577,18 +578,18 @@ class AccrualCompletenessReportResponse(BaseModel):
     """Complete accrual completeness estimator response."""
 
     accrual_accounts: list[AccrualAccountResponse]
-    total_accrued_balance: float
+    total_accrued_balance: MonetaryDecimal
     accrual_account_count: int
     deferred_revenue_accounts: list[AccrualAccountResponse] = []
-    total_deferred_revenue: float = 0.0
-    monthly_run_rate: Optional[float] = None
+    total_deferred_revenue: MonetaryDecimal = Decimal("0")
+    monthly_run_rate: Optional[MonetaryDecimal] = None
     accrual_to_run_rate_pct: Optional[float] = None
     threshold_pct: float
     # Sprint 887 (OUT-08): "default" or "entered" — where the threshold came from.
     threshold_source: Optional[Literal["default", "entered"]] = None
     meets_threshold: bool = False
     below_threshold: bool = False
-    prior_operating_expenses: Optional[float] = None
+    prior_operating_expenses: Optional[MonetaryDecimal] = None
     prior_available: bool
     narrative: str
     reasonableness_results: list[ReasonablenessResultResponse] = []
@@ -647,7 +648,7 @@ class AbnormalBalanceResponse(BaseModel):
     suspense_keywords: Optional[list[str]] = None
     has_concentration_risk: Optional[bool] = None
     concentration_percent: Optional[float] = None
-    category_total: Optional[float] = None
+    category_total: Optional[MonetaryDecimal] = None
     has_rounding_anomaly: Optional[bool] = None
     rounding_pattern: Optional[str] = None
     rounding_divisor: Optional[int] = None
@@ -766,7 +767,7 @@ class SheetResultResponse(BaseModel):
 class MaterialityBasisResponse(BaseModel):
     """The threshold the analysis used: its amount, purpose and origin (Sprint 886, OUT-16)."""
 
-    amount: float
+    amount: MonetaryDecimal
     purpose: Literal["overall_materiality", "performance_materiality", "test_threshold"]
     origin: Literal["software_default", "firm_setting", "engagement", "entered", "none"]
 
@@ -836,7 +837,7 @@ class TrialBalanceResponse(BaseModel):
 
     # Anomaly data
     abnormal_balances: list[AbnormalBalanceResponse]
-    materiality_threshold: float
+    materiality_threshold: MonetaryDecimal
     material_count: int
     immaterial_count: int
     informational_count: int = 0
@@ -950,11 +951,11 @@ class PreFlightMixedSignResponse(BaseModel):
 class PreFlightBalanceCheckResponse(BaseModel):
     """TB debit/credit balance verification result."""
 
-    total_debits: float
-    total_credits: float
-    difference: float
+    total_debits: MonetaryDecimal
+    total_credits: MonetaryDecimal
+    difference: MonetaryDecimal
     balanced: bool
-    tolerance: float = 0.01
+    tolerance: MonetaryDecimal = Decimal("0.01")
 
 
 class PreFlightScoreComponentResponse(BaseModel):
@@ -976,8 +977,8 @@ class PreFlightCategoryCompletenessResponse(BaseModel):
     expense_count: int
     unknown_count: int
     missing_categories: list[str] = []
-    revenue_total: float = 0.0
-    cogs_total: float = 0.0
+    revenue_total: MonetaryDecimal = Decimal("0")
+    cogs_total: MonetaryDecimal = Decimal("0")
     cogs_gap: bool = False
 
 

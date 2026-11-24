@@ -20,6 +20,7 @@ import re
 import zipfile
 from datetime import date
 from decimal import Decimal
+from typing import Optional
 
 import httpx
 import pytest
@@ -314,3 +315,113 @@ class TestToolSerializers:
         model_name, field = model_path.split(".")
         model = getattr(schemas, model_name)
         assert model.model_fields[field].annotation is not float, f"{model_path} is still a float"
+
+
+# ───────────── Sprint 894 C: the remaining amount fields in response schemas ─────────────
+
+_SPRINT_894_AMOUNT_FIELDS = {
+    "shared.diagnostic_response_schemas": {
+        "CategoryVarianceResponse": ["current_value", "prior_value", "dollar_variance"],
+        "AccountMovementResponse": ["prior_balance", "current_balance", "change_amount"],
+        "LeadSheetMovementSummaryResponse": ["prior_total", "current_total", "net_change"],
+        "MovementSummaryResponse": [
+            "prior_total_debits",
+            "prior_total_credits",
+            "current_total_debits",
+            "current_total_credits",
+        ],
+        "BudgetVarianceResponse": ["budget_balance", "variance_amount"],
+        "ThreeWayLeadSheetSummaryResponse": [
+            "prior_total",
+            "current_total",
+            "net_change",
+            "budget_total",
+            "budget_variance",
+        ],
+        "AdjustmentLineResponse": ["debit", "credit"],
+        "AdjustingEntryResponse": ["total_debits", "total_credits", "entry_total"],
+        "AdjustedAccountBalanceResponse": ["unadjusted_balance", "net_adjustment", "adjusted_balance"],
+        "AdjustedTBTotalsResponse": ["unadjusted_debits", "adjusted_credits"],
+        "PopulationProfileResponse": ["total_abs_balance", "min_abs_balance", "max_abs_balance"],
+        "ExpenseCategoryReportResponse": ["total_expenses", "total_revenue", "materiality_threshold"],
+        "AccrualCompletenessReportResponse": ["total_accrued_balance", "monthly_run_rate"],
+        "MaterialityBasisResponse": ["amount"],
+        "TrialBalanceResponse": ["materiality_threshold"],
+        "PreFlightBalanceCheckResponse": ["total_debits", "total_credits", "difference"],
+    },
+    "shared.testing_response_schemas": {
+        "JournalEntryResponse": ["debit", "credit"],
+        "APPaymentResponse": ["amount"],
+        "TransactionResponse": ["amount"],
+        "ReconciliationSummaryResponse": ["reconciling_difference", "total_bank", "total_ledger"],
+        "AREntryResponse": ["amount"],
+        "ARSummaryResponse": ["total_ar_balance", "total_allowance", "total_revenue", "subledger_total"],
+        "RevenueEntryResponse": ["amount"],
+        "SamplingDesignResponse": ["tolerable_misstatement", "population_value", "sampling_interval"],
+        "SamplingEvaluationResponse": [
+            "projected_misstatement",
+            "upper_error_limit",
+            "understatement_upper_error_limit",
+        ],
+    },
+}
+
+
+def _sprint_894_fields():
+    import importlib
+
+    for module_name, classes in _SPRINT_894_AMOUNT_FIELDS.items():
+        module = importlib.import_module(module_name)
+        for class_name, fields in classes.items():
+            for field in fields:
+                yield pytest.param(getattr(module, class_name), field, id=f"{class_name}.{field}")
+
+
+class TestSprint894AmountFields:
+    """Amount fields still declared ``float`` after Sprint 884 now carry exact digits."""
+
+    @pytest.mark.parametrize(("model", "field"), list(_sprint_894_fields()))
+    def test_amount_field_is_exact(self, model, field):
+        annotation = model.model_fields[field].annotation
+        assert annotation is not float and annotation != Optional[float], f"{model.__name__}.{field} is a float"
+
+    def test_a_movement_amount_above_2_53_cents_keeps_its_cents(self):
+        from shared.diagnostic_response_schemas import AccountMovementResponse
+        from shared.exact_json import restore_exact_numbers
+
+        movement = AccountMovementResponse(
+            account_name="Cash",
+            account_type="asset",
+            prior_balance=Decimal("0"),
+            current_balance=Decimal(BIG),
+            change_amount=Decimal(BIG),
+            movement_type="new_account",
+            significance="material",
+            lead_sheet="A",
+            lead_sheet_name="Cash",
+            lead_sheet_category="Current Assets",
+            is_dormant=False,
+        )
+        body = _loads(restore_exact_numbers(movement.model_dump_json().encode()).decode())
+        assert body["current_balance"] == Decimal(BIG)
+        assert body["change_amount"] == Decimal(BIG)
+
+    def test_everyday_float_amounts_are_unchanged(self):
+        from shared.testing_response_schemas import ReconciliationSummaryResponse
+
+        summary = ReconciliationSummaryResponse(
+            matched_count=1,
+            matched_amount=0.1 + 0.2,
+            bank_only_count=0,
+            bank_only_amount=0.0,
+            ledger_only_count=0,
+            ledger_only_amount=1234.56,
+            reconciling_difference=-1234.56,
+            total_bank=0.1 + 0.2,
+            total_ledger=1234.86,
+            matches=[],
+        )
+        dumped = json.loads(summary.model_dump_json())
+        assert dumped["total_bank"] == 0.1 + 0.2
+        assert dumped["reconciling_difference"] == -1234.56
+        assert summary.model_dump()["total_ledger"] == 1234.86

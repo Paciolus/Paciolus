@@ -358,7 +358,7 @@ detail is computed from the detail as displayed.
       $9,860,237.81 = 144.1%). Decide the denominator (engine total revenue, gross vs net) and send it in the result.
 - [ ] **Browser display above ~70 trillion.** The API sends exact digits, but a JavaScript number shows amounts above
       ~2^46 one cent off. Only if that range matters: send monetary fields as strings and format them in the frontend.
-- [ ] **Remaining `float` monetary response fields.** Sprint 884 moved `MonetaryDecimal` and the payroll / FA /
+- [x] **Remaining `float` monetary response fields.** (Sprint 894 C.) Sprint 884 moved `MonetaryDecimal` and the payroll / FA /
       inventory / 3WM entry fields to exact numbers; other routes' response schemas still declare amounts as `float`
       (and finding `details` stay floats by design, Sprint 829). Sweep `shared/*response_schemas.py` for amount fields.
 - [x] **Next.js upgrade** (see "Then (C)" above). Sprint 894 B.
@@ -1097,8 +1097,15 @@ Sprint 819 golden re-recorded); frontend Jest 2,170 via the pre-commit gate; `ne
       `SecurityFatalError` on alternate runs (884 follow-up and "Then (C)"). Lockfile: only `next` and its `@next/*`
       binaries changed. `npm audit`: `next` gone; the 26 moderates left are Jest's `glob`/`minimatch` chain (needs a
       Jest major, already on `main`). `next build` run twice back to back: both exit 0, pages `ƒ` as before.
-- [ ] C. Remaining `float` monetary fields in `shared/*response_schemas.py` move to exact amounts (884 follow-up);
-      finding `details` stay floats by design (Sprint 829).
+- [x] C. Remaining `float` monetary fields in `shared/*response_schemas.py` move to exact amounts (884 follow-up);
+      finding `details` stay floats by design (Sprint 829). 122 fields (80 diagnostic, 42 testing): balances, totals,
+      debits/credits, adjustments, variances in currency, sampling misstatements and limits. A float the engine sends
+      goes out unchanged (same JSON); a Decimal now keeps its cents above 2^53. Left as `float` on purpose: ratios,
+      percentages, scores, confidences, quantities, hours, statistics (mean, median, std dev, Gini), bucket bounds,
+      and three mixed fields that can hold a count or a quantity (`DiagnosticVarianceResponse`, ISA 520
+      `ExpectationEvaluationResponse`, three-way-match `MatchVarianceResponse`). Note: `ExactMoney` refuses `inf`/`NaN`
+      where `float` let them through, so no ratio-like field was moved. Test: `TestSprint894AmountFields` (63 fail on
+      the old schemas). mypy unchanged (289, baseline 1,011).
 
 ### Feature to build: Bulk upload (Enterprise)
 **Status:** PLANNED — CEO decision 2026-11-20 (brief 13B): we will build it. Until it performs real analysis the Terms

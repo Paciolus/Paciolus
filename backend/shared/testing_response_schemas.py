@@ -14,6 +14,7 @@ Typed Pydantic models replacing response_model=dict for:
 - Inventory Testing
 """
 
+from decimal import Decimal
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -91,8 +92,8 @@ class JournalEntryResponse(BaseModel):
     posting_date: Optional[str] = None
     account: str
     description: Optional[str] = None
-    debit: Optional[float] = None
-    credit: Optional[float] = None
+    debit: Optional[ExactMoney] = None
+    credit: Optional[ExactMoney] = None
     posted_by: Optional[str] = None
     source: Optional[str] = None
     reference: Optional[str] = None
@@ -225,7 +226,7 @@ class APPaymentResponse(BaseModel):
     payment_date: Optional[str] = None
     vendor_name: str
     vendor_id: Optional[str] = None
-    amount: float
+    amount: ExactMoney
     check_number: Optional[str] = None
     description: Optional[str] = None
     gl_account: Optional[str] = None
@@ -335,7 +336,7 @@ class TransactionResponse(BaseModel):
 
     date: Optional[str] = None
     description: str
-    amount: float
+    amount: ExactMoney
     reference: Optional[str] = None
     row_number: int
 
@@ -360,14 +361,14 @@ class ReconciliationSummaryResponse(BaseModel):
     """Reconciliation summary with match statistics."""
 
     matched_count: int
-    matched_amount: float
+    matched_amount: ExactMoney
     bank_only_count: int
-    bank_only_amount: float
+    bank_only_amount: ExactMoney
     ledger_only_count: int
-    ledger_only_amount: float
-    reconciling_difference: float
-    total_bank: float
-    total_ledger: float
+    ledger_only_amount: ExactMoney
+    reconciling_difference: ExactMoney
+    total_bank: ExactMoney
+    total_ledger: ExactMoney
     matches: list[ReconciliationMatchResponse]
 
 
@@ -416,7 +417,7 @@ class SuggestedJournalEntryResponse(BaseModel):
     ]
     debit_account: str
     credit_account: str
-    amount: float
+    amount: ExactMoney
     description: str
     confidence: float
 
@@ -674,7 +675,7 @@ class AREntryResponse(BaseModel):
     customer_name: Optional[str] = None
     invoice_number: Optional[str] = None
     date: Optional[str] = None
-    amount: float
+    amount: ExactMoney
     aging_days: Optional[int] = None
     row_number: int
     entry_source: Literal["tb", "subledger", "reconciliation", "analysis"]
@@ -770,17 +771,17 @@ class ARSLColumnDetectionResponse(BaseModel):
 class ARSummaryResponse(BaseModel):
     """AR aging summary — 6 required + 6 conditional fields."""
 
-    total_ar_balance: float
+    total_ar_balance: ExactMoney
     ar_account_count: int
-    total_allowance: float
+    total_allowance: ExactMoney
     allowance_account_count: int
-    total_revenue: float
+    total_revenue: ExactMoney
     has_subledger: bool
     # Conditional fields (present only when data allows calculation)
     dso: Optional[float] = None
     allowance_ratio: Optional[float] = None
     subledger_entry_count: Optional[int] = None
-    subledger_total: Optional[float] = None
+    subledger_total: Optional[ExactMoney] = None
     aging_distribution: Optional[dict[str, float]] = None
     unique_customers: Optional[int] = None
 
@@ -961,7 +962,7 @@ class RevenueEntryResponse(BaseModel):
     """Individual parsed revenue GL entry."""
 
     date: Optional[str] = None
-    amount: float
+    amount: ExactMoney
     account_name: Optional[str] = None
     account_number: Optional[str] = None
     description: Optional[str] = None
@@ -1227,7 +1228,7 @@ class SamplingSelectedItemResponse(BaseModel):
     row_index: int
     item_id: str
     description: str
-    recorded_amount: float
+    recorded_amount: ExactMoney
     stratum: Literal["high_value", "remainder"]
     selection_method: Literal["high_value_100pct", "mus_interval", "random"]
     interval_position: Optional[float] = None
@@ -1239,7 +1240,7 @@ class SamplingStratumSummaryResponse(BaseModel):
     stratum: str
     threshold: str
     count: int
-    total_value: float
+    total_value: ExactMoney
     sample_size: int
 
 
@@ -1249,15 +1250,15 @@ class SamplingDesignResponse(BaseModel):
     method: Literal["mus", "random"]
     confidence_level: float
     confidence_factor: float
-    tolerable_misstatement: float
-    expected_misstatement: float
+    tolerable_misstatement: ExactMoney
+    expected_misstatement: ExactMoney
     population_size: int
-    population_value: float
-    sampling_interval: Optional[float] = None
+    population_value: ExactMoney
+    sampling_interval: Optional[ExactMoney] = None
     calculated_sample_size: int
     actual_sample_size: int
     high_value_count: int
-    high_value_total: float
+    high_value_total: ExactMoney
     remainder_count: int
     remainder_sample_size: int
     selected_items: list[SamplingSelectedItemResponse]
@@ -1270,9 +1271,9 @@ class SamplingErrorResponse(BaseModel):
 
     row_index: int
     item_id: str
-    recorded_amount: float
-    audited_amount: float
-    misstatement: float
+    recorded_amount: ExactMoney
+    audited_amount: ExactMoney
+    misstatement: ExactMoney
     tainting: float
 
 
@@ -1281,32 +1282,32 @@ class SamplingEvaluationResponse(BaseModel):
 
     method: Literal["mus", "random"]
     confidence_level: float
-    tolerable_misstatement: float
-    expected_misstatement: float
-    population_value: float
+    tolerable_misstatement: ExactMoney
+    expected_misstatement: ExactMoney
+    population_value: ExactMoney
     sample_size: int
-    sample_value: float
+    sample_value: ExactMoney
     errors_found: int
-    total_misstatement: float
+    total_misstatement: ExactMoney
     # Sprint 825 (S6): these four, and taintings_ranked, are the OVERSTATEMENT
     # evaluation. Overstatements and understatements are bounded separately and
     # never netted (AICPA Audit Sampling Guide); the understatement side is in
     # the understatement_* fields below. `conclusion` is "fail" if either
     # side's upper limit exceeds tolerable misstatement.
-    projected_misstatement: float
-    basic_precision: float
-    incremental_allowance: float
-    upper_error_limit: float
+    projected_misstatement: ExactMoney
+    basic_precision: ExactMoney
+    incremental_allowance: ExactMoney
+    upper_error_limit: ExactMoney
     conclusion: Literal["pass", "fail"]
     conclusion_detail: str
     errors: list[SamplingErrorResponse]
     taintings_ranked: list[float]
     overstatement_errors_found: int = 0
     understatement_errors_found: int = 0
-    total_overstatement: float = 0.0
-    total_understatement: float = 0.0
-    understatement_projected_misstatement: float = 0.0
-    understatement_basic_precision: float = 0.0
-    understatement_incremental_allowance: float = 0.0
-    understatement_upper_error_limit: float = 0.0
+    total_overstatement: ExactMoney = Decimal("0")
+    total_understatement: ExactMoney = Decimal("0")
+    understatement_projected_misstatement: ExactMoney = Decimal("0")
+    understatement_basic_precision: ExactMoney = Decimal("0")
+    understatement_incremental_allowance: ExactMoney = Decimal("0")
+    understatement_upper_error_limit: ExactMoney = Decimal("0")
     understatement_taintings_ranked: list[float] = []
