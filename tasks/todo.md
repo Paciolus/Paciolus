@@ -92,7 +92,8 @@
 > **P0 before 2026-12-15 — in order**
 > - [ ] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
 >       Then: sign in, reload twice, idle 20 minutes, act — still signed in (Sprint 874's check).
-> - [ ] **Sprint 870 part B** — read the part-A rate-limit key probe on production, fix the cause, verify 429s, close #274.
+> - [x] **Sprint 870 part B** — FIXED ON PRODUCTION 2026-11-25: `TRUSTED_PROXY_IPS` set on Render (Render internal +
+>       Cloudflare ranges); a 75-request burst now returns 60 × 200 then 429. Guard + tests in PR (branch `sprint-870-trusted-proxies`).
 > - [ ] **Sprint 868 / Phase 4.3** — re-scope after 874 is live: what is left is browsers that block the third-party
 >       refresh cookie (Safari). `api.paciolus.com` is also the Stripe webhook target.
 > - [ ] **Sprint 860** — annual tax tables, fetcher, invariant tests; CEO signs off the 2026 W-2 and 1099 tables.
@@ -545,7 +546,8 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       episode's rows are re-read by primary key after that commit.
 
 ### Sprint 870: Rate limits never fire in production (#274)
-**Status:** IN PROGRESS (2026-11-16) — part A (probe) in a PR awaiting CEO merge; part B (fix) waits on its log
+**Status:** COMPLETE on production 2026-11-25 (config); guard + regression tests in PR. Part A merged 2026-11-24 (#333).
+Was: part A (probe) in a PR awaiting CEO merge; part B (fix) waited on its log
 output. Filed 2026-11-14 as "Sprint 861" in PR #312; renumbered 2026-11-15 because 861 was used for the
 website claims sprint on `main`. **Priority:** P0 security (freeze-exempt). **Source:** issue #274 (2026-10-27).
 **Agents:** Guardian (lead), Executor, Critic.
@@ -577,15 +579,29 @@ they share the key function and storage.
 - [x] Part A probe + health count, with tests (`test_rate_limit_key_probe.py`, 10; watched 2 fail when public
       addresses were logged raw). Caught on the way: Python treats TEST-NET `203.0.113.0/24` as `is_private`, so the
       raw/hashed split is `is_global`, not `is_private`.
-- [ ] **CEO:** merge part A; confirm deploy SHA; then the burst + log read above (Claude can do the read).
-- [ ] **Diagnose on production first, don't guess.** Hypotheses from #274, in order:
+- [x] **CEO:** merge part A; confirm deploy SHA; then the burst + log read above (Claude can do the read). Merged in #333,
+      live at `209e5039` 2026-11-25.
+- [x] **Diagnose on production first, don't guess.** **Result (2026-11-25): hypothesis (1).** A 75-request burst got
+      75 × 200. Probe: every request came from a Render internal proxy (`10.x`, at least 7 rotating addresses),
+      `peer_trusted=False`, `trusted_proxies=0`, so `key = peer`: one client in ~7 buckets of ~11 requests, under 60.
+      `X-Forwarded-For = [client, edge]`; the client hash matched the burst machine's address, and all 9 logged edge
+      hashes matched an address in Cloudflare's published IPv4 ranges (1,524,736 hashed). Chain: client → Cloudflare →
+      Render proxy → app. Hypotheses (2) and (3) not needed. Hypotheses from #274, in order:
       (1) rate-limit **key**: `security_middleware.get_client_ip` trusts `X-Forwarded-For` only from `TRUSTED_PROXY_IPS`;
       behind Cloudflare + Render the peer may differ per request, so every request gets its own bucket;
       (2) **Redis counters** on Render Key Value `paciolus-ratelimit` not written/read — inspect `LIMITS:` keys + TTLs during a burst;
       (3) gunicorn's 4 workers silently falling back to per-worker memory.
-- [ ] Fix the cause; keep the Sprint 774 `degrade` storage-failure policy intact.
-- [ ] Regression test for the identified cause (e.g. proxied requests from one client share a bucket).
-- [ ] **Verify on production:** a burst on an undecorated public route returns 429 after 60, and Render logs show the 429s. Close #274.
+- [x] Fix the cause; keep the Sprint 774 `degrade` storage-failure policy intact. **Config, not code:** Sprint 851's
+      right-to-left read is correct once both hops are trusted. `TRUSTED_PROXY_IPS` = `10.0.0.0/8` + Cloudflare v4/v6
+      ranges (23 entries, value in `docs/ops/ENVIRONMENT_VARIABLES.md`), set on Render 2026-11-25 03:10 UTC. Verified
+      locally first against the observed header shape and a spoofed `X-Forwarded-For`. Guard: `/health/ready`
+      reports `degraded` with `client_key_unreliable` when production has no trusted proxies.
+- [x] Regression test for the identified cause: `test_sprint870_proxy_chain.py` (rotating peers and edges → one key;
+      spoof ignored; the empty value reproduces seven keys; readiness guard).
+- [x] **Verify on production:** a burst on an undecorated public route returns 429 after 60, and Render logs show the 429s. Close #274.
+      2026-11-25 03:12 UTC: 60 × 200 then 15 × 429; Render request log shows the 429s; probe shows `peer_trusted=True`,
+      `key=public:<client hash>`. Every limit (login, reset, share passcodes, uploads) uses this key, so all are live again.
+- [ ] Yearly (Nov 1): re-check Cloudflare's published ranges against the documented value.
 
 **Commit SHA:** TBD.
 

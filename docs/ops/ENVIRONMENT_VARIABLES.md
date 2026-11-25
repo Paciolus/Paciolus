@@ -102,7 +102,20 @@ These are non-sensitive configuration values. They can live in a repo-tracked
 |---|---|---|
 | `JWT_EXPIRATION_MINUTES` | `30` | JWT access token expiration time in minutes |
 | `REFRESH_TOKEN_EXPIRATION_DAYS` | `7` | Refresh token expiration time in days |
-| `TRUSTED_PROXY_IPS` | *(empty)* | Comma-separated list of trusted reverse proxy IPs for X-Forwarded-For |
+| `TRUSTED_PROXY_IPS` | *(empty)* | Comma-separated list of trusted reverse proxy IPs / CIDRs for X-Forwarded-For. **Production must set it** (see below); empty in production makes `/health/ready` report `degraded` (`client_key_unreliable`). |
+
+**Production value (Sprint 870, set 2026-11-25).** Requests reach the app as client → Cloudflare edge → Render
+internal proxy (`10.x`, rotating). Trust Render's internal range plus Cloudflare's published ranges
+(<https://www.cloudflare.com/ips-v4>, <https://www.cloudflare.com/ips-v6>, read 2026-11-25), so the
+right-to-left `X-Forwarded-For` read (Sprint 851) lands on the client:
+
+```
+10.0.0.0/8,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32
+```
+
+Unset, the key was the rotating proxy, one client spread over ~7 buckets, and no limit fired from 2026-10-01 to
+2026-11-25 (#274). Re-check Cloudflare's lists on the yearly Nov 1 day (`docs/runbooks/backup-restore.md` §6): a
+new Cloudflare range missing here makes that edge the key, which is shared by many clients.
 
 ### Database Connection Pool
 
