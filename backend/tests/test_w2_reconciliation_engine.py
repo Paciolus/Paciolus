@@ -405,12 +405,13 @@ class TestSprint811StatutoryYearKeying:
         over-limit findings this tool produces are wrong in a direction the
         practitioner cannot see if they are computed from the wrong year.
         """
+        # Sprint 860 added 2026; 2027 has no table.
         with pytest.raises(StatutoryLimitsUnavailableError) as excinfo:
-            W2ReconciliationConfig(tax_year=2026, employees=[])
+            W2ReconciliationConfig(tax_year=2027, employees=[])
 
         message = str(excinfo.value)
-        assert "2026" in message
-        assert "2025" in message  # names what *is* available
+        assert "2027" in message
+        assert "2025, 2026" in message  # names what *is* available
         assert "statutory_limits" in message  # names the way forward
 
     def test_the_refusal_is_an_input_error_so_the_routes_return_400(self):
@@ -456,9 +457,9 @@ class TestSprint811StatutoryYearKeying:
         """
         with pytest.raises(StatutoryLimitsUnavailableError):
             W2ReconciliationConfig(
-                tax_year=2026,
+                tax_year=2027,
                 employees=[],
-                ss_wage_base=Decimal("184500"),
+                ss_wage_base=Decimal("190000"),
             )
 
     def test_an_override_wins_over_a_tabulated_year(self):
@@ -488,14 +489,21 @@ class TestSprint811StatutoryYearKeying:
         assert limits.hsa_family == Decimal("8550")
         assert limits.limit_simple_ira == Decimal("16500")
 
-    def test_no_table_claims_to_be_2026_until_sprint_793b(self):
+    def test_the_2026_row_comes_from_the_sprint_860_table_with_its_sources(self):
         """
-        Guards against someone adding a 2026 row with unconfirmed figures, which
-        would recreate the defect: a number that reads as authoritative because
-        it sits in an authoritative-looking table. When 793b lands with
-        practitioner-confirmed figures, delete this test in the same commit.
+        Sprint 811 kept 2026 out until the figures could be confirmed. Sprint 860
+        added them from the IRS sources, each with the sentence it was read from,
+        and the routes refuse the year until a practitioner signs it off.
         """
-        assert 2026 not in STATUTORY_LIMITS_BY_YEAR
+        from tax_tables import TABLES
+
+        limits = statutory_limits_for_year(2026)
+        figures = TABLES[2026].w2
+        assert figures is not None
+        assert limits.ss_wage_base == figures.ss_wage_base.value == Decimal("184500")
+        assert limits.limit_401k_elective == Decimal("24500")
+        assert limits.hsa_family == Decimal("8750")
+        assert all(f.excerpt for f in figures.figures().values())
 
     def test_every_tabulated_year_carries_provenance(self):
         for year, limits in STATUTORY_LIMITS_BY_YEAR.items():

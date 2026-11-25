@@ -220,6 +220,20 @@ def _clear_analytics_caches():
     _trend_cache.clear()
 
 
+@pytest.fixture(autouse=True)
+def _tax_tables_in_grace(monkeypatch):
+    """Sprint 860: pin the tax gate's clock to the last day unsigned tables run.
+
+    Otherwise every W-2 / 1099 route test would start failing on 2026-12-16 while
+    a table awaits sign-off. The real-date check is the season test in
+    ``test_sprint860_tax_tables.py``. A test that needs another date patches
+    ``tax_figures_status._today`` itself (its patch wins).
+    """
+    import tax_figures_status as tfs
+
+    monkeypatch.setattr(tfs, "_today", lambda: tfs.UNSIGNED_GRACE_UNTIL)
+
+
 # ---------------------------------------------------------------------------
 # CSRF token fixture (Sprint 200, refactored Sprint 245)
 # ---------------------------------------------------------------------------

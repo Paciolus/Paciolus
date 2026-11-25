@@ -36,7 +36,7 @@ from shared.promoted_tool_response_schemas import Form1099Response
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
-from tax_figures_status import FORM_1099_TAX_FIGURES_BANNER, enforce_tax_figures_confirmed
+from tax_figures_status import FORM_1099_TAX_FIGURES_BANNER, enforce_tax_year_signed_off
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def prepare_1099_candidates(
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
     # shared/testing_route.py::run_json_tool.
-    enforce_tax_figures_confirmed("form_1099")  # Sprint 856: council hard date
+    enforce_tax_year_signed_off("form_1099", payload.tax_year)  # Sprint 860: per-year sign-off
     result = run_json_tool(
         db=db,
         current_user=current_user,
@@ -157,7 +157,7 @@ def export_1099_csv(
     db: Session = Depends(get_db),
 ) -> Response:
     # Sprint 689e: gate promoted tool (export mirrors analyze-route gating).
-    enforce_tax_figures_confirmed("form_1099")  # Sprint 856: council hard date
+    enforce_tax_year_signed_off("form_1099", payload.tax_year)  # Sprint 860: per-year sign-off
     enforce_tool_access(current_user, "form_1099", db)
 
     try:

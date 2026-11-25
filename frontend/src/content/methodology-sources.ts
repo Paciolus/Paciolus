@@ -1607,7 +1607,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
     rules: [
       {
         test: 'Statutory limits by tax year',
-        rule: 'Limits are applied for the tax year you select. Only tax year 2025 is tabulated; for any other year you must supply the figures, and the run is refused rather than using another year\'s limits.',
+        rule: 'Limits are applied for the tax year you select. Tax years 2025 and 2026 are tabulated from the IRS and SSA figures, and each runs only once a practitioner signs that year off; for any other year you must supply the figures, and the run is refused rather than using another year\'s limits.',
         kind: 'convention',
         sources: [],
         configurable: false,
@@ -1615,7 +1615,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
       },
       {
         test: 'Social Security wage base',
-        rule: 'Box 3 Social Security wages must not exceed the annual wage base ($176,100 for 2025). Payroll wages above the base are flagged HIGH when the draft is not capped.',
+        rule: 'Box 3 Social Security wages must not exceed the annual wage base ($176,100 for 2025, $184,500 for 2026). Payroll wages above the base are flagged HIGH when the draft is not capped.',
         kind: 'requirement',
         sources: ['IRC §3121', 'Form W-2'],
         configurable: false,
@@ -1646,7 +1646,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
       },
       {
         test: '401(k) elective deferral limit',
-        rule: 'Deferrals above the 2025 limit of $23,500, plus a $7,500 catch-up from age 50 or $11,250 at ages 60 to 63, are flagged HIGH. Age must be supplied for catch-up to apply.',
+        rule: 'Deferrals above the year\'s limit ($23,500 for 2025, $24,500 for 2026), plus the age-50 catch-up ($7,500; $8,000 for 2026) or the ages 60 to 63 catch-up ($11,250 both years), are flagged HIGH. Age must be supplied for catch-up to apply.',
         kind: 'requirement',
         sources: ['IRC §402(g)', 'IRC §414(v)'],
         configurable: false,
@@ -1654,14 +1654,14 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
       },
       {
         test: 'SIMPLE IRA deferral limit',
-        rule: 'SIMPLE deferrals above the 2025 limit of $16,500 are flagged HIGH. The age-50 and age-60-to-63 SIMPLE catch-up limits are optional inputs; when they are not supplied the catch-up check is reported as not run rather than assumed.',
+        rule: 'SIMPLE deferrals above the year\'s limit ($16,500 for 2025, $17,000 for 2026) are flagged HIGH. The age-50 and age-60-to-63 SIMPLE catch-up limits are optional inputs; when they are not supplied the catch-up check is reported as not run rather than assumed.',
         kind: 'requirement',
         sources: ['IRC §414(v)'],
         configurable: false,
       },
       {
         test: 'HSA contribution limit',
-        rule: 'HSA contributions above the 2025 limit for the employee\'s coverage ($4,300 self-only, $8,550 family) are flagged HIGH. The age-55 catch-up is an optional input; when it is not supplied the catch-up check is reported as not run.',
+        rule: 'HSA contributions above the year\'s limit for the employee\'s coverage ($4,300 self-only and $8,550 family for 2025; $4,400 and $8,750 for 2026) are flagged HIGH. The age-55 catch-up is an optional input; when it is not supplied the catch-up check is reported as not run.',
         kind: 'requirement',
         sources: ['IRC §223(b)(3)'],
         configurable: false,
@@ -1687,7 +1687,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'requirement',
         sources: ['IRC §6041', 'IRC §6041A'],
         configurable: false,
-        note: 'The 2026 figure reflects 2025 legislation as reported by secondary sources; confirm against the IRS instructions for the year. From 2027 the threshold is inflation-indexed and Paciolus applies the 2026 figure with a notice to confirm (an indexed threshold cannot be lower, so no required filing is missed).',
+        note: 'The 2026 figure reflects 2025 legislation, as stated in the IRS Instructions for Forms 1099-MISC and 1099-NEC. From 2027 the threshold may be inflation-indexed; a year is offered once its figures are added and signed off.',
       },
       {
         test: '1099-MISC rents, medical, other income',

@@ -31,7 +31,10 @@ from decimal import Decimal
 from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parent.parent
-_EXCLUDED_DIRS = {"tests", "venv", ".venv", "migrations", "alembic", "__pycache__", "scripts"}
+# Sprint 860: ``tax_tables/`` holds one module per tax year — the module *is* the
+# year key (``ty2026.py`` → 2026), checked by
+# ``test_each_tax_table_module_is_keyed_by_its_year`` below.
+_EXCLUDED_DIRS = {"tests", "venv", ".venv", "migrations", "alembic", "__pycache__", "scripts", "tax_tables"}
 _YEAR_RANGE = range(1990, 2101)
 
 # (module relative path, enclosing top-level name, literal value) -> reason.
@@ -199,11 +202,39 @@ def test_tax_modules_are_discovered():
 
 
 def test_both_statutory_engines_select_figures_through_a_year_keyed_table():
-    tables = {}
-    for path in _tax_modules():
-        tables[path.name] = bare_statutory_literals(path.read_text(encoding="utf-8"))[1]
-    assert "STATUTORY_LIMITS_BY_YEAR" in tables["w2_reconciliation_engine.py"]
-    assert "THRESHOLDS_BY_TABLE_YEAR" in tables["form_1099_engine.py"]
+    """Sprint 860: the engines build their tables from ``tax_tables.TABLES``,
+    a dict literal keyed by tax year."""
+    registry = (BACKEND / "tax_tables" / "__init__.py").read_text(encoding="utf-8")
+    assert "TABLES" in bare_statutory_literals(registry)[1]
+    for engine, table in (
+        ("w2_reconciliation_engine.py", "STATUTORY_LIMITS_BY_YEAR"),
+        ("form_1099_engine.py", "THRESHOLDS_BY_TABLE_YEAR"),
+    ):
+        source = (BACKEND / engine).read_text(encoding="utf-8")
+        assert "from tax_tables import TABLES as TAX_TABLES" in source, engine
+        assert f"{table}: dict[int," in source, engine
+
+
+def test_each_tax_table_module_is_keyed_by_its_year():
+    import tax_tables
+
+    modules = sorted((BACKEND / "tax_tables").glob("ty*.py"))
+    assert modules
+    years = []
+    for path in modules:
+        year = int(path.stem.removeprefix("ty"))
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        declared = [
+            node.value.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "TAX_YEAR" for t in node.targets)
+            and isinstance(node.value, ast.Constant)
+        ]
+        assert declared == [year], f"{path.name} must declare TAX_YEAR = {year}"
+        assert tax_tables.TABLES[year].tax_year == year
+        years.append(year)
+    assert sorted(tax_tables.TABLES) == years, "every ty<year>.py is listed in tax_tables.TABLES, and nothing else"
 
 
 def test_no_tax_module_holds_a_bare_statutory_constant():

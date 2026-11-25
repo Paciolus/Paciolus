@@ -1827,7 +1827,9 @@ CEO decision (recommendation below). **Priority:** P2. **Owner:** C.
 Full history: [`archive/open-sprint-history-2026-11.md`](archive/open-sprint-history-2026-11.md) (Sprint 856).
 
 ### Sprint 860: Annual tax tables — fetched, tested, signed off once a year
-**Status:** PENDING — scheduled 2026-11-14, target merge by 2026-11-21. **Priority:** P1 (launch gate — the W-2 and
+**Status:** IN PROGRESS (2026-11-24) — tables, gate, invariants, early warning, 2026 figures and runbook in PR
+(branch `sprint-860-tax-tables`), **not merged: the CEO signs off the 2026 figures first**. Fetcher next.
+Scheduled 2026-11-14, target merge by 2026-11-21. **Priority:** P1 (launch gate — the W-2 and
 1099 tools must not go dark on launch day). **Source:** CEO directive 2026-11-14; supersedes council Q6 and the
 remainder of Sprint 793b. **Complexity:** 6/10 (2–3 days; the fetcher is the fiddly part). **Agents:** Executor
 (build), Accounting Expert (figure map + invariants), Guardian (fail-closed gate), Critic (fetcher brittleness).
@@ -1838,7 +1840,7 @@ disables both tools after 2026-12-15 unless a practitioner confirms — a one-of
 no process behind it.
 
 **Design (CEO-approved 2026-11-14).**
-- [ ] **One table file per tax year** (`backend/tax_tables/<year>.py`): every figure with its citation and source URL,
+- [x] **One table file per tax year** (`backend/tax_tables/ty<year>.py` — a module name cannot start with a digit): every figure with its citation and source URL,
       plus a sign-off record (`signed_off_by`, `signed_off_on`, `sources_final: bool`). The W-2 and 1099 engines read
       from these files; the hard-coded `STATUTORY_LIMITS_BY_YEAR` / `THRESHOLDS_BY_TABLE_YEAR` blocks go away. 2025
       moves over unchanged.
@@ -1847,20 +1849,44 @@ no process behind it.
       extracts each figure with the sentence it came from; opens a PR proposing the next year's table (value, prior
       year, source excerpt, URL). Fails loudly and names the document when a figure can't be read cleanly — never
       guesses. Draft IRS instructions are marked `draft`, so `sources_final` stays false until the final version.
-- [ ] **Invariant tests** — the reviewer skims, the tests do the math: SS max tax = wage base × rate; age 60–63
+- [x] **Invariant tests** — the reviewer skims, the tests do the math: SS max tax = wage base × rate; age 60–63
       catch-ups = max(statutory floor, 150% of the regular catch-up); indexed limits never fall year over year;
       any move over ~10% is flagged; every figure has a citation; every table in use has a sign-off.
-- [ ] **Per-year gate replaces the 2026-12-15 disable**: a tool refuses a tax year whose table is missing or unsigned,
+- [x] **Per-year gate replaces the 2026-12-15 disable**: a tool refuses a tax year whose table is missing or unsigned,
       with an explicit code the frontend maps to "unavailable until this year's figures are signed off" (also closes
       the #308 Codex finding: `TAX_FIGURES_UNCONFIRMED` fell through to "Something went wrong" in
       `frontend/src/utils/transport.ts`). Cover the analysis and export error flows. Banners name the signed-off years.
-- [ ] **Early warning**: CI warns from Nov 1 when next year's table is missing or unsigned; fails from Jan 1.
-- [ ] **First run**: build the **2026** W-2 table and confirm the 2026 1099 table (incl. MISC box 10 attorney
+- [x] **Early warning**: CI warns from Nov 1 when next year's table is missing or unsigned; fails from Jan 1.
+- [x] **First run**: build the **2026** W-2 table and confirm the 2026 1099 table (incl. MISC box 10 attorney
       proceeds, now `needs_confirmation`) from primary sources. **CEO signs off before 2026-12-15.**
-- [ ] Runbook `docs/runbooks/annual-tax-tables.md`: the yearly calendar (SSA mid-Oct, IRS limits ~Nov, HSA ~May,
+- [x] Runbook `docs/runbooks/annual-tax-tables.md`: the yearly calendar (SSA mid-Oct, IRS limits ~Nov, HSA ~May,
       1099 instructions late in year), and the ~15-minute CEO sign-off steps.
 
 **Out of scope:** Book-to-Tax, Depreciation and Loan apply no year-indexed figures (verified in Sprint 856).
+
+**What was built (2026-11-24):**
+- `backend/tax_tables/` — `ty2025.py` (moved unchanged; no excerpts, it was carried over, not re-read) and `ty2026.py`
+  (every figure read from an IRS page, with URL and the quoted sentence). The engines build
+  `STATUTORY_LIMITS_BY_YEAR` / `THRESHOLDS_BY_TABLE_YEAR` from `tax_tables.TABLES`.
+- 2026 W-2: wage base $184,500 (IRS Tax Topic 751; ssa.gov refused automated reads), 401(k) $24,500, catch-up
+  $8,000, ages 60–63 $11,250, SIMPLE $17,000 / $4,000 / $5,250 (Notice 2025-67), HSA $4,400 / $8,750
+  (Rev. Proc. 2025-19), HSA 55+ $1,000 (Pub. 969). 2026 1099: $2,000 NEC and MISC 1/3/6, royalties $10, **box 10
+  attorney gross proceeds stays $600** (the IRS instructions list it under "At least $600" — `needs_confirmation`
+  cleared), INT $10.
+- Gate: unsigned tables run behind the banner through 2026-12-15 (the council date), then `403
+  TAX_YEAR_NOT_SIGNED_OFF`; 1099 after the latest table `400 TAX_YEAR_NOT_AVAILABLE` (it used to reuse 2026 with a
+  notice). A W-2 request that supplies all eleven figures is not gated. `/supported-years` lists only runnable years.
+  Frontend maps both codes, including on CSV export (the download path used to show "Access denied").
+- Banners name the tabulated and signed-off years; a sign-off changes them (test pins frontend = backend).
+- Design correction: "age 60–63 catch-ups = max(floor, 150% of the regular catch-up)" is wrong for 2026 — the IRS
+  figure stays $11,250 while the regular catch-up rose to $8,000. The statute uses the **2025** regular catch-up,
+  then indexes. The test checks `>= max(floor, 150% × 2025 figure)`.
+- Moves over 10% must be acknowledged with a reason: SIMPLE age-50 catch-up (+14%) and the four $600 → $2,000.
+- `tests/conftest.py` pins the gate clock to the grace date, so route tests do not start failing on 2026-12-16;
+  the real-date check is `test_this_seasons_tables_are_ready` (warns now: 2026 unsigned).
+- [ ] **CEO:** check the 2026 figures against the quoted sources (PR body lists them), record the sign-off in
+      `ty2026.py` (and `ty2025.py` if 2025 is still run), update `tax-figures.ts`, then merge. Before 2026-12-15.
+- [ ] Fetcher + weekly workflow (next commit on this branch).
 
 **Commit SHA:** TBD.
 

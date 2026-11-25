@@ -5,7 +5,7 @@ interface TaxFiguresBannerProps {
 
 /**
  * TaxFiguresBanner — non-dismissible notice that a tool's built-in statutory
- * figures await practitioner confirmation (Sprint 856 / 793b).
+ * figures and which tax years a practitioner has signed off (Sprint 856; per-year sign-off since Sprint 860).
  *
  * Pass the tool's text from `@/content/tax-figures`. Deliberately has no close
  * control: the same line is printed in the tool's export.

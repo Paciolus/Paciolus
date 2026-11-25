@@ -457,7 +457,7 @@ class TestSprint837ThresholdsByYear:
         assert payee.form_type == "1099-MISC"
         assert "box 1" in payee.reason
 
-    def test_2026_attorney_gross_proceeds_keep_600_and_are_marked_for_confirmation(self):
+    def test_2026_attorney_gross_proceeds_keep_600_per_the_irs_instructions(self):
         result = prepare_1099s(
             Form1099Config(
                 tax_year=2026,
@@ -469,7 +469,9 @@ class TestSprint837ThresholdsByYear:
         assert candidate.box_amounts[0].box == 10
         box10 = next(i for i in result.thresholds.items if i.form_type == FormType.MISC and i.box == 10)
         assert box10.amount == Decimal("600")
-        assert box10.needs_confirmation is True
+        # Sprint 860: the IRS instructions list box 10 under "At least $600".
+        assert box10.needs_confirmation is False
+        assert "Instructions for Forms 1099-MISC and 1099-NEC" in box10.basis
 
     def test_result_carries_thresholds_and_basis(self):
         d = prepare_1099s(Form1099Config(tax_year=2026, vendors=[_vendor()], payments=[])).to_dict()
