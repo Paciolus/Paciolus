@@ -402,6 +402,8 @@ class _FakeRequest:
         self.cookies = cookies or {}
         # Sprint 872: error responses read the request ID from the scope.
         self.scope: dict = {"type": "http", "headers": [], "state": {}}
+        # Sprint 872 + 874: a validated refresh/logout token binds its user here.
+        self.state = SimpleNamespace()
 
 
 class TestCSRFOriginPolicy:

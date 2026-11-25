@@ -39,6 +39,9 @@ completed-engagement writability; Sprint 781 demand validation.
 
 See the 2026-11-24 entry in `tasks/todo.md` (START HERE) for the chain's backend, frontend, mypy and build results.
 
+**Backend tests:** 11,954 run on PR #333's first CI pass (Python 3.12, 2026-11-24); its ten failures were
+integration mismatches between the merged branches, fixed in the next commit.
+
 ## Environment notes
 
 - The backend suite takes ~13–20 min locally; run it on the chain tip before merging (CI only runs on PRs into

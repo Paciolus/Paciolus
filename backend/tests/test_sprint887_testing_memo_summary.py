@@ -51,7 +51,7 @@ def _generators():
     from revenue_testing_memo_generator import generate_revenue_testing_memo
 
     return {
-        "je": (generate_je_testing_memo, "entries"),
+        "je": (generate_je_testing_memo, "GL lines"),  # Sprint 869: JE counts GL lines
         "ap": (generate_ap_testing_memo, "payments"),
         "payroll": (generate_payroll_testing_memo, "entries"),
         "revenue": (generate_revenue_testing_memo, "entries"),
@@ -134,7 +134,7 @@ def test_other_tiers_state_counts_not_directions(tier: str, score: float):
     generate, _ = _generators()["je"]
     text = _pdf_text(generate(_result(tier, score, flagged=20, high=5, medium=10, low=5), filename="t"))
     summary = _summary(text)
-    assert tier.upper() in summary and "1 of 2 tests executed flagged 20 distinct entries" in summary
+    assert tier.upper() in summary and "1 of 2 tests executed flagged 20 distinct GL lines" in summary
     for phrase in OLD_TIER_TEXT:
         assert phrase not in text, phrase
 

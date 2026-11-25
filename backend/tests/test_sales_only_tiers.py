@@ -28,6 +28,7 @@ from database import get_db
 from main import app
 from models import User, UserTier
 from subscription_model import Subscription, SubscriptionStatus
+from tests.helpers.fake_stripe import FakeStripe
 
 
 @pytest.fixture
@@ -56,9 +57,16 @@ def overrides(db_session, user):
 
 @pytest.fixture
 def stripe_mocks():
-    """Stub every Stripe touchpoint the orchestrator reaches."""
+    """Stub every Stripe touchpoint the orchestrator reaches.
+
+    Sprint 881 added checkout admission (existing subscriptions, open sessions),
+    which reads Stripe through ``billing.stripe_client.get_stripe``: an empty
+    ``FakeStripe`` answers "nothing open" without a key.
+    """
+    fake = FakeStripe(price_intervals={})
     with (
         patch("billing.stripe_client.is_stripe_enabled", return_value=True),
+        patch("billing.stripe_client.get_stripe", return_value=fake),
         patch("billing.price_config.get_stripe_price_id", side_effect=lambda t, i: f"price_{t}_{i}"),
         patch("billing.checkout.create_or_get_stripe_customer", return_value="cus_test") as customer,
         patch(

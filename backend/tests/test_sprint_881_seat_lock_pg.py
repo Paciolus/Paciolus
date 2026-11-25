@@ -12,7 +12,7 @@ followed by a 0.5 s pause, so without the row lock both requests count one free 
 and both insert. With the lock the second waits for the first to commit and then
 counts its invitation. Expected: exactly one 200, one 403, one pending invitation.
 
-Checked by hand: with ``routes.organization._lock_org_for_seat_check`` patched to a
+Checked by hand: with ``services.organization_workflows._lock_org_for_seat_check`` patched to a
 no-op this test fails (two 200s, two pending invitations) — see Sprint 881 in
 tasks/todo.md.
 
@@ -87,7 +87,7 @@ def two_seat_firm(db_engine):
 async def test_two_simultaneous_invites_for_the_last_seat(two_seat_firm):
     import asyncio
 
-    import routes.organization as org_routes
+    import services.organization_workflows as org_routes  # Sprint 892 moved the workflow here
     from auth import require_current_user
     from database import get_db
     from main import app
