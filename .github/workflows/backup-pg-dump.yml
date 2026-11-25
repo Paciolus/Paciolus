@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: read
+  issues: write  # Sprint 897 (O-8): the failure step files a dr-failure issue
 
 concurrency:
   group: backup-pg-dump
@@ -71,3 +72,33 @@ jobs:
           DRY_RUN_RETENTION: ${{ inputs.dry_run_retention && '--dry-run-retention' || '' }}
         # Exit code: 0 PASS, 1 FAIL, 2 UNVERIFIED (missing secret) — all non-zero fail the job.
         run: python scripts/pg_backup.py backup --pg-dump-mode docker --workdir "$RUNNER_TEMP/pgdump" $DRY_RUN_RETENTION
+
+      # Sprint 897 (O-8): a failed daily backup used to alert nobody until the
+      # Monday integrity check — up to six days without a backup unnoticed. A
+      # failure now opens a `dr-failure` issue (GitHub emails the repo owner),
+      # or comments on the one already open, as the weekly check does.
+      - name: Open or update the dr-failure issue
+        if: failure()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # pin: v9.0.0
+        with:
+          script: |
+            const title = '[DR FAIL] Daily pg_dump backup failed';
+            const ts = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+            const body = `**The daily backup failed — no new backup was stored.**\n**Timestamp:** ${ts}\n\n` +
+              `Open the run log for the reason (an UNVERIFIED line names a missing secret).\n\n` +
+              `**Runbook:** \`docs/runbooks/backup-restore.md\`\n` +
+              `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            // One open issue: a week of failures comments on it instead of filing seven.
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', labels: 'dr-failure', per_page: 100,
+            });
+            const existing = open.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['dr-failure'],
+              });
+            }

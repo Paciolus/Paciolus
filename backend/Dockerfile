@@ -25,7 +25,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install to isolated prefix — avoids copying pip/setuptools/wheel to production (~20MB savings)
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt gunicorn==21.2.0 \
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
     && cp /install/bin/alembic /install/bin/alembic 2>/dev/null || true
 
 # -----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ EXPOSE 8000
 
 # Health check — Python-native probe (no external tool dependency)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')" || exit 1
 
 # Production command: run Alembic migrations (once, before workers) then start Gunicorn.
 # Alembic runs exactly once per deploy — eliminates multi-worker migration races.
@@ -95,7 +95,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # taken the `upgrade head` branch.
 #
 # Tuning parameters (all configurable via environment variables):
-#   WEB_CONCURRENCY:          Worker count. Default 4. Formula: (2 * CPU cores) + 1
+#   WEB_CONCURRENCY:          Worker count. Default 2 (Sprint 897, O-2): Render Standard is
+#                             2 GB / 1 CPU shared by ALL workers, and one 100 MB upload parse
+#                             can take several hundred MB. 4 workers could OOM the container.
 #   GUNICORN_TIMEOUT:         Worker timeout for large file processing. Default 120s
 #   GUNICORN_GRACEFUL_TIMEOUT: Time to finish in-flight requests on shutdown. Default 30s
 #   GUNICORN_KEEP_ALIVE:      Keep-alive for reverse proxy compatibility. Default 5s
@@ -113,7 +115,7 @@ print('Running: alembic upgrade head'); \
 sys.exit(subprocess.call(['alembic', 'upgrade', 'head']))\" && \
      gunicorn main:app \
      --bind 0.0.0.0:8000 \
-     --workers ${WEB_CONCURRENCY:-4} \
+     --workers ${WEB_CONCURRENCY:-2} \
      --worker-class uvicorn.workers.UvicornWorker \
      --timeout ${GUNICORN_TIMEOUT:-120} \
      --graceful-timeout ${GUNICORN_GRACEFUL_TIMEOUT:-30} \

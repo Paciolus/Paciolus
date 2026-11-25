@@ -48,8 +48,11 @@
 #   npm-audit-advisory    — Informational counterpart to the blocking gate.
 #   merge-revert-guard    — Advisory by design.
 #   e2e-smoke             — Playwright; advisory by design (flake tolerance).
+#   docker-image-boot     — SHOULD BE REQUIRED once it has run green on a few
+#                           PRs (Sprint 897, O-6): builds the production image
+#                           and boots it to /health/live.
 #
-# The four marked SHOULD BE REQUIRED need one `gh api` call against branch
+# The five marked SHOULD BE REQUIRED need one `gh api` call against branch
 # protection, which is a repository-settings change rather than a code change.
 # Until it is made, this manifest is the honest description.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -437,6 +440,52 @@ jobs:
 
       - name: Run Jest
         run: npx jest --ci --forceExit --coverage
+
+  # ── Docker image boot (Sprint 897, O-6) ─────────────────────
+  # CI used to test the code but never the image Render runs, so a broken
+  # startup (a missing package, a bad CMD, a migration that cannot run) was
+  # found only in production — the Sprint 768 pattern, where Render quietly
+  # kept the old image serving for 5.5 months. This builds backend/Dockerfile
+  # and boots it exactly as Render does (migrations, then Gunicorn) against a
+  # throwaway SQLite file, then waits for /health/live.
+  # Development mode on purpose: production mode needs real secrets and a
+  # PostgreSQL that the migration chain cannot yet build fresh (Sprint 893 G).
+  docker-image-boot:
+    name: Backend Docker Image Boots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+
+      - name: Build the backend image
+        run: docker build -t paciolus-backend:ci backend
+
+      - name: Gunicorn is installed from requirements.txt
+        run: docker run --rm --entrypoint gunicorn paciolus-backend:ci --version
+
+      - name: Boot the image and wait for /health/live
+        run: |
+          docker run -d --name paciolus-ci -p 8000:8000             -e API_HOST=0.0.0.0             -e API_PORT=8000             -e CORS_ORIGINS=http://localhost:3000             -e ENV_MODE=development             -e DATABASE_URL=sqlite:////app/data/ci.db             paciolus-backend:ci
+          for i in $(seq 1 60); do
+            if [ "$(docker inspect -f '{{.State.Running}}' paciolus-ci)" != "true" ]; then
+              echo "::error::The container exited during startup"
+              docker logs paciolus-ci
+              exit 1
+            fi
+            if curl -fsS http://localhost:8000/health/live; then
+              echo
+              echo "Booted after ~$((i * 3))s"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::/health/live did not answer within 180s"
+          docker logs paciolus-ci
+          exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs paciolus-ci 2>&1 | tail -100 || true
 
   # ── Backend Lint ─────────────────────────────────────────────
   backend-lint:

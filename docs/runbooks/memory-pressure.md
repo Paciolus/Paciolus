@@ -26,7 +26,7 @@ pressure is visible before OOM-kill.
 
 | Env var | Default | Notes |
 |---|---|---|
-| `MEMO_RSS_WARN_MB` | `1500` | Threshold (MB) above which a Sentry warning fires. Render Standard exposes 2 GB / worker; the default keeps ~500 MB headroom. Set lower in staging to flush leaks; set higher only with a documented justification. |
+| `MEMO_RSS_WARN_MB` | `600` | Threshold (MB, per process) above which a Sentry warning fires. Render Standard is 2 GB for the whole container, shared by all workers (`WEB_CONCURRENCY`, default 2 since Sprint 897), so each worker has about 1 GB. Set lower in staging to flush leaks; set higher only with a documented justification. |
 
 There is **no** Render-side recycle config in this repo (Render is managed
 via the dashboard). Operational `maxRequestsPerWorker` / `gunicorn.max_requests`
@@ -41,7 +41,7 @@ Every memo export emits two structured lines plus optional warning:
 ```
 INFO  memo.memory.before  label=Revenue Testing memo  rss_mb=412.3
 INFO  memo.memory.after   label=Revenue Testing memo  rss_mb=489.7  delta_mb=+77.4  elapsed_ms=1820
-WARN  memo.memory.threshold_breach label=Revenue Testing memo rss_mb=1612.0 threshold_mb=1500
+WARN  memo.memory.threshold_breach label=Revenue Testing memo rss_mb=1612.0 threshold_mb=600
 ```
 
 In Loki (Grafana Cloud), the saved query for memo memory pressure is:
@@ -70,7 +70,7 @@ fine) for offline reproduction.
 ### 4b. Repeated warnings on the same worker
 Indicates either (a) `gc.collect()` was removed / regressed, or (b) a real
 leak in a generator's ReportLab construction (e.g., un-closed StoryBuilder).
-Action: deploy a build with `MEMO_RSS_WARN_MB=600` to staging and run the
+Action: deploy a build with `MEMO_RSS_WARN_MB=400` to staging and run the
 nightly slow test against the suspect generator:
 
 ```bash
@@ -83,7 +83,7 @@ is in a memo not covered by the slow test — expand coverage to that memo.
 ### 4c. Worker OOM-kill (Render dashboard, exit code 137)
 The probe didn't catch it in time — RSS climbed past the threshold faster than
 a single export's window. Action sequence:
-1. **Immediate:** lower `MEMO_RSS_WARN_MB` to `1200` (more headroom for the
+1. **Immediate:** lower `WEB_CONCURRENCY` (fewer workers, more memory each) and `UPLOAD_PARSE_CONCURRENCY` to `1`, lower `MEMO_RSS_WARN_MB` (earlier warning for the
    per-export burst) and confirm Render's worker recycle is set to ≤200.
 2. **Short-term:** look for a single tenant who hit ≥3 memo exports in <60s
    in admin dashboard / structured logs. Their memo input is likely the

@@ -49,6 +49,7 @@ from shared.file_formats import (
     detect_format,
     get_active_extensions_display,
 )
+from shared.parse_concurrency import limit_parse_concurrency
 
 logger = logging.getLogger(__name__)
 
@@ -739,6 +740,7 @@ def _validate_and_convert_df(
 # ---------------------------------------------------------------------------
 
 
+@limit_parse_concurrency  # Sprint 897 (O-2): bounded concurrent parses per process
 def parse_uploaded_file_by_format(
     file_bytes: bytes,
     filename: str,

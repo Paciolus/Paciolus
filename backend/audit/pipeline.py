@@ -34,8 +34,10 @@ from security_utils import (
     read_excel_multi_sheet_chunked,
 )
 from shared.monetary import BALANCE_TOLERANCE, quantize_monetary
+from shared.parse_concurrency import limit_parse_concurrency
 
 
+@limit_parse_concurrency  # Sprint 897 (O-2): bounded concurrent parses per process
 def audit_trial_balance_streaming(
     file_bytes: bytes,
     filename: str,
@@ -509,6 +511,7 @@ def audit_trial_balance_streaming(
         log_secure_operation("streaming_audit_cleanup", "Memory cleared")
 
 
+@limit_parse_concurrency  # Sprint 897 (O-2)
 def audit_trial_balance_multi_sheet(
     file_bytes: bytes,
     filename: str,

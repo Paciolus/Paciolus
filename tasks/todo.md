@@ -386,17 +386,37 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       episode's rows are re-read by primary key after that commit.
 
 ### Sprint 897: Launch operations (council 2026-11-25, Scout)
-**Status:** IN PROGRESS (2026-11-25) — repo-side items (O-1, O-2, O-4, O-6, O-7, O-8, O-9); O-3/O-5 need the CEO. **Priority:** P1 (launch readiness; freeze-exempt). **Source:** `reports/council-audit-2026-11-25.md`
-O-1…O-9 — reported, re-check each first.
-- [ ] O-1: Render health check path `/health/live` (not `/ready`: a Redis blip must not restart-loop); consider 2 instances.
-- [ ] O-2: memory — 4 workers in a 2 GB / 1 CPU container. `WEB_CONCURRENCY` 2–3, `MEMO_RSS_WARN_MB` ~600, a per-worker
-      parse semaphore; load-test two parallel 100 MB uploads.
+**Status:** COMPLETE pending merge (2026-11-25) — repo-side items done on branch `sprint-897-launch-ops`; O-3/O-5 need
+the CEO. **Priority:** P1 (launch readiness; freeze-exempt). **Source:** `reports/council-audit-2026-11-25.md`
+O-1…O-9 — reported, re-checked in the code first.
+**CEO on Render after merge:** (1) Settings → Health Checks → path `/health/live`; (2) if `WEB_CONCURRENCY` is set
+in the service env, set it to `2` (the image default is now 2, was 4); (3) after the deploy, confirm the live deploy SHA =
+`main` and the Dockerfile's gunicorn line is gone from the build log (it now comes from `requirements.txt`).
+- [x] O-1: no `render.yaml` in the repo — the path is a dashboard setting (CEO step above). Image `HEALTHCHECK` now probes
+      `/health/live`; `DEPLOYMENT_ARCHITECTURE.md` §5.2 corrected (said `/health`). A second instance: CEO cost call.
+- [x] O-2: `WEB_CONCURRENCY` default 4 → 2 (Dockerfile, env doc). `MEMO_RSS_WARN_MB` default 1500 → 600 — the old
+      rationale assumed 2 GB *per worker*; it is 2 GB per container. New `shared/parse_concurrency.py`: a per-process
+      parse limit (`UPLOAD_PARSE_CONCURRENCY`, default 2; wait `UPLOAD_PARSE_WAIT_SECONDS`, default 60, then 503 +
+      `Retry-After`), re-entrant per thread, on `parse_uploaded_file_by_format` and both TB pipeline entry points.
+      Tests: `test_parse_concurrency.py`. **Follow-up (not done):** load-test two parallel 100 MB uploads on Render.
 - [ ] O-3: external monitor on `/health/ready` with a body match on `"status":"healthy"` (CEO: account); Sentry 5xx alert.
-- [ ] O-7: gunicorn into `requirements.txt` (23.x) and the `docker` ecosystem in Dependabot.
-- [ ] O-4: Sprint 877's Redis retry in `bulk_job_store` and `ip_failure_tracker`.
+- [x] O-7: `gunicorn==23.0.0` in `requirements.txt` (exact pin, runtime surface; `sys_platform != "win32"` marker),
+      removed from the Dockerfile's ad-hoc install (was 21.2.0, CVE-2024-1135 / CVE-2024-6827). Dependabot `docker`
+      ecosystem on `/backend` (Python minor/major ignored).
+- [x] O-4: `bulk_job_store` and `ip_failure_tracker` retry a failed Redis probe every 30 s (Sprint 877's pattern) instead
+      of pinning the worker to memory for life. Tests: `test_redis_probe_retry.py`.
 - [ ] O-5 (CEO: cost): Key Value with persistence + `noeviction`, or impersonation revocations in Postgres.
-- [ ] O-6: CI job that builds the image and boots it to `/health/live`.
-- [ ] O-8 / O-9 (P3): daily-backup failure alert; expand/contract rule + CI grep for destructive migrations.
+- [x] O-6: CI job `docker-image-boot` builds `backend/Dockerfile`, checks gunicorn, boots the image (migrations +
+      Gunicorn, development mode, SQLite in `/app/data`) and waits for `/health/live`. Advisory in the gate manifest
+      ("SHOULD BE REQUIRED" once green on a few PRs). Production mode is not booted: it needs real secrets and a fresh
+      PostgreSQL the chain cannot build yet (Sprint 893 G). Not run locally (no Docker on this machine) — first run is the PR.
+- [x] O-8: `backup-pg-dump.yml` opens a `dr-failure` issue (or comments on the open one) when the daily backup fails.
+- [x] O-9: expand/contract rule in `docs/runbooks/database-migrations.md` + CONTRIBUTING; guard
+      `scripts/check_destructive_migrations.py` (AST over `upgrade()`; marker `# expand-contract: contract step — <why>`;
+      five pre-rule migrations frozen in `GRANDFATHERED`), enforced by `test_destructive_migration_guard.py` in the
+      required `backend-tests` job.
+
+**Commit SHA:** TBD.
 
 ### Sprint 898: Sampling and ratio methodology (council 2026-11-25, Accounting Expert)
 **Status:** IN PROGRESS (2026-11-25) — A-F1, A-F2, A-F4, A-F7 merged #339 (`594dcd6d`, `185dc13c`); review fix: the memo
