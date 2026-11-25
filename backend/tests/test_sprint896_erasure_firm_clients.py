@@ -137,3 +137,18 @@ def test_every_user_foreign_key_is_handled_by_erasure():
                     continue
                 missing.append(f"{table.name}.{column.name}")
     assert not missing, f"columns referencing users.id that erasure does not clear or delete: {missing}"
+
+
+def test_export_still_includes_the_members_work_on_firm_clients(db_session, firm, make_client, make_engagement):
+    """PR #338 review: erasure keeps firm clients, but the member's data download must still include their work."""
+    from services.account_erasure import export_account
+
+    firm_client = make_client(user=firm["member"], name="Firm Client")
+    firm_client.organization_id = firm["org"].id
+    engagement = make_engagement(client=firm_client)
+    db_session.commit()
+
+    data = export_account(db_session, firm["member"])
+    text = repr(data)
+    assert "Firm Client" in text
+    assert str(engagement.id) in text
