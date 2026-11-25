@@ -196,6 +196,11 @@ export const SAFE_CODE_MESSAGES: Record<string, string> = {
     'We could not reach our payment or storage provider. Nothing was deleted; please try again.',
   ERASURE_PARTIAL_CLEANUP:
     'Some of your shared report links were already removed. Your account and other data were not deleted; please try again.',
+  // Sprint 860: the tax tools refuse a year whose built-in figures are missing or not signed off.
+  TAX_YEAR_NOT_SIGNED_OFF:
+    'This tax year is unavailable until a practitioner signs off its built-in figures. The banner above lists the signed-off years.',
+  TAX_YEAR_NOT_AVAILABLE:
+    'This tax year is not available yet: its figures are added once the IRS publishes them and a practitioner signs them off.',
 };
 
 /** Mapped text for a coded error `detail`, or null when the code is unknown. */

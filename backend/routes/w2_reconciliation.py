@@ -27,9 +27,8 @@ from shared.promoted_tool_response_schemas import W2ReconciliationResponse
 from shared.rate_limits import RATE_LIMIT_AUDIT, limiter
 from shared.request_decimal import parse_request_decimal as _to_decimal
 from shared.testing_route import enforce_tool_access, run_json_tool
-from tax_figures_status import W2_TAX_FIGURES_BANNER, enforce_tax_figures_confirmed
+from tax_figures_status import W2_TAX_FIGURES_BANNER, enforce_tax_year_signed_off, runnable_years
 from w2_reconciliation_engine import (
-    STATUTORY_LIMITS_BY_YEAR,
     EmployeePayroll,
     EmployeeW2Draft,
     Form941Quarter,
@@ -242,12 +241,28 @@ def get_supported_tax_years() -> W2SupportedYearsResponse:
     the page reads them here instead of hard-coding them.
     """
     return W2SupportedYearsResponse(
-        tax_years=sorted(STATUTORY_LIMITS_BY_YEAR),
+        # Sprint 860: only the years a run can use today (signed off, or awaiting
+        # sign-off within the grace period).
+        tax_years=runnable_years("w2_reconciliation"),
         note=(
-            "Each year's wage base and contribution limits are built in only after the figures are "
-            "confirmed. Other years are refused rather than reconciled with another year's limits."
+            "Each year's wage base and contribution limits are built in from the IRS and SSA figures and "
+            "need a practitioner's sign-off. Other years are refused rather than reconciled with another "
+            "year's limits."
         ),
     )
+
+
+def _enforce_figures_signed_off(payload: W2ReconciliationRequest) -> None:
+    """Sprint 860: gate a run that applies built-in figures on that year's sign-off.
+
+    A request that supplies all eleven required figures consults no table
+    (the engine's full override), so the caller's own figures are not gated.
+    """
+    supplied = payload.statutory_limits.model_dump() if payload.statutory_limits is not None else {}
+    required = [attr for attr, _ in W2ReconciliationConfig._STATUTORY_FIELDS]
+    if all(supplied.get(attr) is not None for attr in required):
+        return
+    enforce_tax_year_signed_off("w2_reconciliation", payload.tax_year)
 
 
 @router.post("/audit/w2-reconciliation", response_model=W2ReconciliationResponse)
@@ -262,7 +277,7 @@ def run_reconciliation(
     # Sprint 787b: run recorded on the engagement workpaper trail (success
     # synchronously, before the response). Sprint 819: the sequence lives in
     # shared/testing_route.py::run_json_tool.
-    enforce_tax_figures_confirmed("w2_reconciliation")  # Sprint 856: council hard date
+    _enforce_figures_signed_off(payload)  # Sprint 860: per-year sign-off
     result = run_json_tool(
         db=db,
         current_user=current_user,
@@ -286,7 +301,7 @@ def export_reconciliation_csv(
     db: Session = Depends(get_db),
 ) -> Response:
     # Sprint 689d: gate promoted tool (export mirrors analyze-route gating).
-    enforce_tax_figures_confirmed("w2_reconciliation")  # Sprint 856: council hard date
+    _enforce_figures_signed_off(payload)  # Sprint 860: per-year sign-off
     enforce_tool_access(current_user, "w2_reconciliation", db)
 
     try:

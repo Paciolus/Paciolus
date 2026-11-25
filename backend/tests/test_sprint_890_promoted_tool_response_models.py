@@ -411,10 +411,10 @@ class TestW2Model:
 
 @pytest.fixture
 def _tax_figures_in_force(monkeypatch):
-    """Pin the clock on the Sprint 856 confirmation deadline (the last day the gate is open)."""
+    """Pin the clock on the last day unsigned tax tables run (Sprint 860 grace date)."""
     import tax_figures_status as tfs
 
-    monkeypatch.setattr(tfs, "_today", lambda: tfs.PRACTITIONER_CONFIRMATION_DEADLINE)
+    monkeypatch.setattr(tfs, "_today", lambda: tfs.UNSIGNED_GRACE_UNTIL)
 
 
 ROUTE_CASES = [

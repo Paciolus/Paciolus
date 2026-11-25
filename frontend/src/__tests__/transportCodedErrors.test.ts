@@ -52,3 +52,34 @@ describe('performFetch with a coded error body', () => {
     expect(result.error).not.toContain('internal detail')
   })
 })
+
+describe('apiDownload with a coded error body (Sprint 860)', () => {
+  const realFetch = global.fetch
+  afterEach(() => {
+    global.fetch = realFetch
+  })
+
+  function respond(status: number, body: unknown) {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status,
+      headers: { get: () => 'application/json' },
+      json: async () => body,
+    }) as unknown as typeof fetch
+  }
+
+  it('maps the tax-year refusal instead of "Access denied"', async () => {
+    const { apiDownload } = await import('@/utils/downloadAdapter')
+    respond(403, { detail: { code: 'TAX_YEAR_NOT_SIGNED_OFF', message: 'raw backend text' } })
+    const result = await apiDownload('/audit/w2-reconciliation/export.csv', null, { method: 'POST', body: {} })
+    expect(result.ok).toBe(false)
+    expect(result.error).toBe(SAFE_CODE_MESSAGES.TAX_YEAR_NOT_SIGNED_OFF)
+  })
+
+  it('keeps the status message for an uncoded error', async () => {
+    const { apiDownload } = await import('@/utils/downloadAdapter')
+    respond(403, { detail: 'Forbidden' })
+    const result = await apiDownload('/x', null, { method: 'POST', body: {} })
+    expect(result.error).toBe('Access denied')
+  })
+})

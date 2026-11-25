@@ -24,9 +24,11 @@ resolved per run by ``statutory_limits_for_year()``, which **refuses** a year it
 has no table for rather than substituting another year's figures. See the
 comment on that table for why (Sprint 811, finding A-7).
 
-Currently tabulated: **tax year 2025 only**. A 2026 engagement must supply the
-figures via the per-request ``statutory_limits`` override (Sprint 793a) until the
-2026 table lands with practitioner-confirmed values (Sprint 793b).
+Tabulated (Sprint 860, one file per year in ``backend/tax_tables``): tax years
+2025 and 2026. Any other year must supply the figures via the per-request
+``statutory_limits`` override (Sprint 793a). A built-in year whose figures no
+practitioner has signed off is refused by the routes after 2026-12-15
+(``tax_figures_status.enforce_tax_year_signed_off``).
 
 Catch-up limits (Sprint 826, W1/W2 — CEO decision "option C") are optional:
 the HSA age-55 catch-up and the SIMPLE IRA age 50+ / 60-63 catch-ups run only
@@ -43,6 +45,9 @@ from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
 from typing import Any, ClassVar
+
+from tax_tables import TABLES as TAX_TABLES
+from tax_tables import Figure, W2Figures
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0")
@@ -82,10 +87,10 @@ class StatutoryLimitsUnavailableError(W2ReconciliationInputError):
 # rather than falling back. Sprint 793a's per-request overrides are the
 # documented escape hatch and are unchanged.
 #
-# What this sprint deliberately does not change: the 2026 figures. Those need a
-# practitioner, and they stay with Sprint 793b. Adding an unconfirmed 2026 row
-# here would recreate exactly the defect being fixed — a figure that reads as
-# authoritative because it is sitting in an authoritative-looking table.
+# Sprint 811 deliberately left out the 2026 figures: an unconfirmed row would
+# read as authoritative. Sprint 860 added them from the IRS sources, each with
+# the sentence it was read from, behind a per-year practitioner sign-off: an
+# unsigned year is refused after 2026-12-15 (`tax_figures_status`).
 #
 # ---------------------------------------------------------------------------
 # Sprint 793b practitioner confirmation list — every statutory figure below.
@@ -125,7 +130,9 @@ class StatutoryLimitsUnavailableError(W2ReconciliationInputError):
 #   employees, or that elect them with a higher employer contribution. A SIMPLE
 #   plan using them is checked against the standard figures above.
 #
-#   Tax year 2026: no row. See `test_no_table_claims_to_be_2026_until_sprint_793b`.
+#   Tax year 2026: Sprint 860, read from IRS sources (backend/tax_tables/ty2026.py).
+#   The figures themselves now live in backend/tax_tables/; this list is kept as
+#   the authorities' index.
 # ---------------------------------------------------------------------------
 
 
@@ -159,46 +166,39 @@ class StatutoryLimits:
     catchup_source: str | None = None
 
 
+def _limits_from_table(tax_year: int, figures: W2Figures) -> StatutoryLimits:
+    """Build one year's limits from its Sprint 860 table (``backend/tax_tables``)."""
+
+    def optional(figure: Figure | None) -> Decimal | None:
+        return figure.value if figure is not None else None
+
+    return StatutoryLimits(
+        tax_year=tax_year,
+        ss_wage_base=figures.ss_wage_base.value,
+        ss_rate=figures.ss_rate.value,
+        medicare_rate=figures.medicare_rate.value,
+        additional_medicare_rate=figures.additional_medicare_rate.value,
+        additional_medicare_threshold=figures.additional_medicare_threshold.value,
+        hsa_self_only=figures.hsa_self_only.value,
+        hsa_family=figures.hsa_family.value,
+        limit_401k_elective=figures.limit_401k_elective.value,
+        limit_401k_catchup_50=figures.limit_401k_catchup_50.value,
+        limit_401k_catchup_60_63=figures.limit_401k_catchup_60_63.value,
+        limit_simple_ira=figures.limit_simple_ira.value,
+        hsa_catchup_55=optional(figures.hsa_catchup_55),
+        limit_simple_catchup_50=optional(figures.limit_simple_catchup_50),
+        limit_simple_catchup_60_63=optional(figures.limit_simple_catchup_60_63),
+        catchup_source=figures.catchup_source,
+        source=figures.source,
+        verified_by=figures.verified_by,
+    )
+
+
+# Sprint 860: the figures live in one file per tax year (``backend/tax_tables``),
+# each with its citation, source URL and the sentence it was read from. A year
+# the tables do not hold is still refused by ``statutory_limits_for_year()``.
 STATUTORY_LIMITS_BY_YEAR: dict[int, StatutoryLimits] = {
-    2025: StatutoryLimits(
-        tax_year=2025,
-        ss_wage_base=Decimal("176100"),
-        ss_rate=Decimal("0.062"),
-        medicare_rate=Decimal("0.0145"),
-        additional_medicare_rate=Decimal("0.009"),
-        additional_medicare_threshold=Decimal("200000"),
-        hsa_self_only=Decimal("4300"),
-        hsa_family=Decimal("8550"),
-        limit_401k_elective=Decimal("23500"),
-        limit_401k_catchup_50=Decimal("7500"),
-        limit_401k_catchup_60_63=Decimal("11250"),
-        limit_simple_ira=Decimal("16500"),
-        # Sprint 826 (W2). IRC §223(b)(3)(B): an HSA holder who has attained
-        # age 55 before the close of the taxable year may contribute an
-        # additional $1,000. A fixed statutory amount — not inflation-indexed
-        # (it is not among the §223(g) adjusted amounts), unchanged since 2009.
-        hsa_catchup_55=Decimal("1000"),
-        # Sprint 826 (W1). IRC §414(v)(2)(B)(ii) SIMPLE catch-up, as adjusted
-        # for 2025 by IRS Notice 2024-80 (News Release IR-2024-285): $3,500.
-        limit_simple_catchup_50=Decimal("3500"),
-        # Sprint 826 (W1). IRC §414(v)(2)(E)(ii), added by SECURE 2.0 Act §109
-        # (taxable years beginning after 2024): the greater of $5,000 or 150% of
-        # the regular SIMPLE catch-up — $5,250 for 2025 per IRS Notice 2024-80.
-        limit_simple_catchup_60_63=Decimal("5250"),
-        catchup_source=(
-            "IRC §223(b)(3)(B) (HSA age-55 catch-up, $1,000, statutory); "
-            "IRC §414(v) and IRS Notice 2024-80 (SIMPLE catch-up $3,500; age 60-63 $5,250)"
-        ),
-        source="IRS Notice 2024-80 (retirement limits); SSA 2025 wage base; Rev. Proc. 2024-25 (HSA)",
-        verified_by=(
-            "These are the figures that shipped under a '2026' heading. The 2026-10-22 "
-            "full-spectrum review identified them as the 2025 set, which is how they are "
-            "now labelled. Not independently re-verified against the notices — Sprint 793b "
-            "owns practitioner confirmation of both 2025 and 2026. The three catch-up "
-            "figures (Sprint 826) restate IRC §223(b)(3)(B) and IRS Notice 2024-80 and are "
-            "on the same 793b confirmation list."
-        ),
-    ),
+    year: _limits_from_table(year, table.w2) for year, table in TAX_TABLES.items() if table.w2 is not None
 }
 
 # The year whose limits the engine uses when a caller does not say. Kept

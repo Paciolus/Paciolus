@@ -19,7 +19,7 @@ Reporting thresholds are keyed by tax year (Sprint 837); see
   * Tax year 2026: 1099-NEC and 1099-MISC boxes 1/3/6 $2,000 (One Big
     Beautiful Bill Act, 2025, for payments made after December 31, 2025);
     royalties and 1099-INT stay $10; box 10 attorney gross proceeds stays
-    $600 pending confirmation.
+    $600 (IRS Instructions for Forms 1099-MISC and 1099-NEC, Sprint 860).
   * Tax years 2027+: the inflation-indexed figure is not tabulated; the 2026
     figures are applied with a notice (an indexed threshold can only be
     at least $2,000, so applying $2,000 cannot miss a required filing).
@@ -39,6 +39,8 @@ from enum import Enum
 from typing import Any
 
 from shared.parsing_helpers import parse_date
+from tax_tables import TABLES as TAX_TABLES
+from tax_tables import ThresholdFigure
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0")
@@ -148,41 +150,18 @@ LEGACY_GENERAL_THRESHOLD = Decimal("600")
 # the 1099-NEC and 1099-MISC reporting threshold from $600 to $2,000 for
 # payments made after December 31, 2025, indexed for inflation from 2027.
 # Royalties ($10, IRC §6050N) and interest ($10, IRC §6049) are not affected.
-# Attorney gross proceeds (1099-MISC box 10) are reported under IRC §6045(f);
-# whether that threshold changed is uncertain, so $600 is kept: the
-# conservative choice, because a lower threshold flags more candidates.
+# Sprint 860 confirmed the $2,000 figure in the IRS instructions themselves.
+# Attorney gross proceeds (1099-MISC box 10, IRC §6045(f)) stay at $600: the
+# IRS Instructions for Forms 1099-MISC and 1099-NEC list them under "At least
+# $600" (read 2026-11-24, Sprint 860).
 #
-# ---------------------------------------------------------------------------
-# Sprint 793b practitioner confirmation list: every threshold below.
-# Paciolus is not an authority; these restate the authorities' figures, and each
-# needs a practitioner's sign-off against the IRS Instructions for Forms
-# 1099-MISC, 1099-NEC and 1099-INT for the year before 793b closes.
-#
-#   Tax years through 2025 (table year 2025)
-#   - 1099-NEC box 1 $600 ................ IRC §6041A(a)
-#   - 1099-MISC box 1 rents $600 ......... IRC §6041(a)
-#   - 1099-MISC box 2 royalties $10 ...... IRC §6050N
-#   - 1099-MISC box 3 other income $600 .. IRC §6041(a)
-#   - 1099-MISC box 6 medical $600 ....... IRC §6041(a)
-#   - 1099-MISC box 10 attorney gross
-#     proceeds $600 ...................... IRC §6045(f)
-#   - 1099-INT box 1 $10 ................. IRC §6049
-#
-#   Tax year 2026 (table year 2026; also applied to 2027+ with a notice)
-#   - 1099-NEC box 1 $2,000 .............. IRC §6041A as amended by the One Big
-#                                          Beautiful Bill Act (2025). Secondary
-#                                          sources only; not yet checked against
-#                                          the statute text or IRS instructions
-#   - 1099-MISC boxes 1, 3, 6 $2,000 ..... IRC §6041 as amended by the One Big
-#                                          Beautiful Bill Act (2025), as above
-#   - 1099-MISC box 2 royalties $10 ...... IRC §6050N (reported unchanged)
-#   - 1099-MISC box 10 $600 [CONFIRM] .... IRC §6045(f). Whether OBBBA changed
-#                                          it is uncertain; $600 kept as the
-#                                          conservative figure
-#   - 1099-INT box 1 $10 ................. IRC §6049 (reported unchanged)
-#
-#   Tax years 2027+: inflation-indexed figure not tabulated. Add a row when the
-#   IRS publishes it; until then the 2026 row is applied with a notice.
+# Sprint 860: the thresholds, with their citations, source URLs and the
+# sentences they were read from, live in one file per tax year in
+# ``backend/tax_tables`` (``ty2025.py`` also serves every earlier year). Each
+# year needs a practitioner sign-off; the routes refuse an unsigned year after
+# 2026-12-15 and refuse a year after the latest table
+# (``tax_figures_status.enforce_tax_year_signed_off``). This engine still
+# applies the latest table to a later year with a notice, for direct callers.
 # ---------------------------------------------------------------------------
 
 
@@ -208,43 +187,25 @@ class ThresholdItem:
         }
 
 
-_PRE_2026_ITEMS: tuple[ThresholdItem, ...] = (
-    ThresholdItem(FormType.NEC, 1, "Nonemployee compensation", Decimal("600"), "IRC §6041A(a)"),
-    ThresholdItem(FormType.MISC, 1, "Rents", Decimal("600"), "IRC §6041(a)"),
-    ThresholdItem(FormType.MISC, 2, "Royalties", Decimal("10"), "IRC §6050N"),
-    ThresholdItem(FormType.MISC, 3, "Other income", Decimal("600"), "IRC §6041(a)"),
-    ThresholdItem(FormType.MISC, 6, "Medical and health care payments", Decimal("600"), "IRC §6041(a)"),
-    ThresholdItem(FormType.MISC, 10, "Gross proceeds paid to an attorney", Decimal("600"), "IRC §6045(f)"),
-    ThresholdItem(FormType.INT, 1, "Interest income", Decimal("10"), "IRC §6049"),
-)
+def _items_from_table(figures: tuple[ThresholdFigure, ...]) -> tuple[ThresholdItem, ...]:
+    """Build one year's thresholds from its Sprint 860 table (``backend/tax_tables``)."""
+    return tuple(
+        ThresholdItem(
+            FormType(f.form),
+            f.box,
+            f.description,
+            f.amount.value,
+            f.amount.citation,
+            needs_confirmation=f.needs_confirmation,
+        )
+        for f in figures
+    )
 
-_OBBBA_BASIS = (
-    "One Big Beautiful Bill Act (2025): $2,000 for payments made after December 31, 2025, "
-    "as reported by secondary sources"
-)
-
-_2026_ITEMS: tuple[ThresholdItem, ...] = (
-    ThresholdItem(FormType.NEC, 1, "Nonemployee compensation", Decimal("2000"), f"IRC §6041A; {_OBBBA_BASIS}"),
-    ThresholdItem(FormType.MISC, 1, "Rents", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
-    ThresholdItem(FormType.MISC, 2, "Royalties", Decimal("10"), "IRC §6050N (reported unchanged)"),
-    ThresholdItem(FormType.MISC, 3, "Other income", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
-    ThresholdItem(FormType.MISC, 6, "Medical and health care payments", Decimal("2000"), f"IRC §6041; {_OBBBA_BASIS}"),
-    ThresholdItem(
-        FormType.MISC,
-        10,
-        "Gross proceeds paid to an attorney",
-        Decimal("600"),
-        "IRC §6045(f). Whether the 2025 change applies to this box is not confirmed; "
-        "$600 is applied as the conservative figure (a lower threshold flags more candidates)",
-        needs_confirmation=True,
-    ),
-    ThresholdItem(FormType.INT, 1, "Interest income", Decimal("10"), "IRC §6049 (reported unchanged)"),
-)
 
 # Keyed by table year. A tax year uses the latest table year not after it.
+# Sprint 860: the figures live in one file per tax year (``backend/tax_tables``).
 THRESHOLDS_BY_TABLE_YEAR: dict[int, tuple[ThresholdItem, ...]] = {
-    2025: _PRE_2026_ITEMS,
-    2026: _2026_ITEMS,
+    year: _items_from_table(table.form_1099) for year, table in TAX_TABLES.items() if table.form_1099 is not None
 }
 LATEST_TABULATED_YEAR = max(THRESHOLDS_BY_TABLE_YEAR)
 
@@ -299,10 +260,9 @@ def thresholds_for_year(tax_year: int) -> ThresholdSchedule:
     if tax_year == 2026:
         notices.append(
             "For payments made after December 31, 2025, the 1099-NEC and 1099-MISC (rents, other income, "
-            "medical) reporting threshold is $2,000 under the One Big Beautiful Bill Act (2025), as reported "
-            "by secondary sources. Royalties and 1099-INT remain $10. Attorney gross proceeds (1099-MISC "
-            "box 10) are tested at $600 pending confirmation. Confirm against the IRS Instructions for "
-            "Forms 1099-MISC and 1099-NEC for 2026."
+            "medical) reporting threshold is $2,000 under the One Big Beautiful Bill Act (2025), per the IRS "
+            "Instructions for Forms 1099-MISC and 1099-NEC. Royalties and 1099-INT remain $10, and attorney "
+            "gross proceeds (1099-MISC box 10) remain $600."
         )
     if tax_year > LATEST_TABULATED_YEAR:
         notices.append(

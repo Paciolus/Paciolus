@@ -12,6 +12,7 @@ import {
   isRetryableError,
   parseApiError,
   getStatusMessage,
+  codedErrorMessage,
   buildUrl,
   BASE_RETRY_DELAY,
   IDEMPOTENT_METHODS,
@@ -71,7 +72,18 @@ export async function apiDownload(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        lastError = getStatusMessage(response.status);
+        // Sprint 860: a coded refusal (e.g. TAX_YEAR_NOT_SIGNED_OFF) keeps its
+        // mapped message; anything else stays the generic status text.
+        let coded: string | null = null;
+        try {
+          const body: unknown = await response.json();
+          coded = body && typeof body === 'object' && 'detail' in body
+            ? codedErrorMessage((body as { detail: unknown }).detail)
+            : null;
+        } catch {
+          coded = null;
+        }
+        lastError = coded ?? getStatusMessage(response.status);
 
         if (!isRetryableError(response.status)) {
           return { error: lastError, ok: false };
