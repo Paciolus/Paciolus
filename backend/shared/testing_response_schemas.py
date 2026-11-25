@@ -1264,6 +1264,9 @@ class SamplingDesignResponse(BaseModel):
     selected_items: list[SamplingSelectedItemResponse]
     random_start: Optional[float] = None
     strata_summary: list[SamplingStratumSummaryResponse] = []
+    # Sprint 898 (A-F1): credit balances MUS could not select (count and value).
+    mus_negative_excluded_count: int = 0
+    mus_negative_excluded_value: ExactMoney = Decimal("0")
 
 
 class SamplingErrorResponse(BaseModel):

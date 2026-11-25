@@ -104,6 +104,8 @@ def _run_design(
         "selected_items": selected_items,
         "random_start": result.random_start,
         "strata_summary": result.strata_summary,
+        "mus_negative_excluded_count": result.mus_negative_excluded_count,
+        "mus_negative_excluded_value": result.mus_negative_excluded_value,
     }
 
 

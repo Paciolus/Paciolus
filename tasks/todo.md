@@ -590,14 +590,21 @@ O-1…O-9 — reported, re-check each first.
 - [ ] O-8 / O-9 (P3): daily-backup failure alert; expand/contract rule + CI grep for destructive migrations.
 
 ### Sprint 898: Sampling and ratio methodology (council 2026-11-25, Accounting Expert)
-**Status:** PENDING. **Priority:** P1/P2 (defects in CPA-facing output; freeze-exempt as defects). **Source:** council
-report A-F1…A-F10. Verified: A-F1, A-F2, A-F7.
-- [ ] A-F1: MUS credit balances — return the excluded count/value, print them in memo and CSV, and either take them out
-      of the population value or require a separate stratum.
-- [ ] A-F7: remove the 97% Poisson row, or compute it exactly and label it computed (not the AICPA guide).
-- [ ] A-F3 / A-F4 / A-F6: correct the ISA 530 / ISA 320 paragraph citations (check the IAASB text); reword the factor
-      method to Sprint 805's; "designed with reference to ISA 530 / AS 2315", not "in accordance with".
-- [ ] A-F2 / A-F8 / A-F9 / A-F10: negative-equity covenant breach; going-concern double count and single-period "recurring";
+**Status:** IN PROGRESS (2026-11-25) — A-F1, A-F2, A-F4, A-F7 in PR (branch `sprint-898-sampling-methodology`).
+**Priority:** P1/P2 (defects in CPA-facing output; freeze-exempt as defects). **Source:** council
+report A-F1…A-F10. Verified: A-F1, A-F2, A-F4, A-F7.
+- [x] A-F1: MUS credit balances — `mus_negative_excluded_count` / `_value` on the design result and API response; the
+      design memo gains "Credit Balances Not Covered by the Selection" (count, value, why, what the practitioner decides).
+      Population value and interval unchanged (still include them — the conservative direction).
+- [ ] A-F1 follow-up (CEO/practitioner): take credits out of the population value, or a separate understatement stratum?
+- [x] A-F7: the 3% row is now the exact Poisson upper limit rounded up to cents (8.51 at three overstatements, was 8.39),
+      labelled "Computed (not from the AICPA guide)". The same computation reproduces the guide's 5% and 10% rows exactly
+      (tested), which is the check on the method.
+- [x] A-F4: memo now states the method the engine uses (EF by risk of incorrect acceptance; n = BV x RF / (TM - EM x EF)).
+- [ ] A-F3 / A-F6: correct the ISA 530 / ISA 320 paragraph citations (check the IAASB text first — the council cited from
+      memory); "designed with reference to ISA 530 / AS 2315", not "in accordance with".
+- [x] A-F2: zero or negative equity with liabilities now breaches a debt-to-equity covenant (was never flagged).
+- [ ] A-F8 / A-F9 / A-F10: going-concern double count and single-period "recurring";
       ROE narrative on negative equity; SOCE `oci` word boundary.
 - [ ] A-F5 (CEO decision): is an uploaded TB always 12 months? If not, a period-length input and "not annualized" labels.
 

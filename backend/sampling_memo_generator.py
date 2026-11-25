@@ -723,10 +723,26 @@ def _generate_sampling_memo(
                 story.append(Paragraph(em_text, styles["MemoBody"]))
                 story.append(
                     Paragraph(
-                        "The expansion factor used to derive the MUS sample size from this "
-                        "expected misstatement is drawn from the AICPA Audit Sampling Guide, "
-                        "Table A-1, with linear interpolation between the guide's published "
-                        "expected-to-tolerable ratio buckets.",
+                        "The expansion factor depends only on the risk of incorrect acceptance "
+                        "(AICPA Audit Sampling Guide) and scales the expected misstatement in "
+                        "the sample-size formula: n = BV x RF / (TM - EM x EF).",
+                        styles["MemoBody"],
+                    )
+                )
+                story.append(Spacer(1, 8))
+
+            # ─── Sprint 898 (A-F1): credit balances outside the MUS selection ───
+            neg_count = design_result.get("mus_negative_excluded_count", 0) or 0
+            if neg_count:
+                neg_value = float(design_result.get("mus_negative_excluded_value", 0) or 0)
+                story.append(Paragraph("<b>Credit Balances Not Covered by the Selection</b>", styles["MemoBody"]))
+                story.append(
+                    Paragraph(
+                        f"{neg_count:,} item{'s' if neg_count != 1 else ''} with credit balances totalling "
+                        f"${neg_value:,.2f} could not be selected: monetary unit sampling selects in proportion "
+                        "to debit value. They are included in the population value above, but no sample item "
+                        "represents them. The practitioner determines how to test them, for example as a "
+                        "separate stratum for understatement.",
                         styles["MemoBody"],
                     )
                 )
