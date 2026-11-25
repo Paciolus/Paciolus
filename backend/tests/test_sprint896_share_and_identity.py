@@ -34,10 +34,17 @@ def test_only_the_public_download_path_is_exempt(path, exempt):
 
 
 @pytest.mark.anyio
-async def test_passcode_post_reaches_the_route_without_a_csrf_token(db_session):
-    """No bypass_csrf: the middleware lets the anonymous POST through; the route answers 404."""
+async def test_passcode_post_reaches_the_route_without_a_csrf_token(db_session, monkeypatch):
+    """The middleware lets the anonymous POST through; the route answers 404.
+
+    ``bypass_csrf`` is session-scoped (it stays on once any earlier test used it),
+    so force the validator to reject: only the exemption can let this through.
+    """
+    import security_middleware
     from database import get_db
     from main import app
+
+    monkeypatch.setattr(security_middleware, "validate_csrf_token", lambda *_a, **_k: False)
 
     app.dependency_overrides[get_db] = lambda: db_session
     try:
@@ -53,9 +60,12 @@ async def test_passcode_post_reaches_the_route_without_a_csrf_token(db_session):
 
 
 @pytest.mark.anyio
-async def test_other_share_mutations_still_need_csrf(db_session):
+async def test_other_share_mutations_still_need_csrf(db_session, monkeypatch):
+    import security_middleware
     from database import get_db
     from main import app
+
+    monkeypatch.setattr(security_middleware, "validate_csrf_token", lambda *_a, **_k: False)
 
     app.dependency_overrides[get_db] = lambda: db_session
     try:
