@@ -346,3 +346,13 @@
 - **2026-11-25 — GitHub will not rebase-merge a PR of more than 100 commits.** With linear history required and `main`
   an ancestor of the tested tip, fast-forward `main` to that exact SHA (the PR then shows merged); never squash a
   chain whose sprint records cite commit SHAs.
+- **2026-11-25 — A session-scoped test bypass makes later tests prove nothing** (Sprint 896). `bypass_csrf` replaces the
+  CSRF validator for the rest of the session once any test uses it, so a test asserting "CSRF still applies" passed or
+  failed by test order (401 in CI, 403 locally). A test about a security check must set the check's state itself.
+- **2026-11-25 — A field is not delivered until every layer declares it** (Sprint 898, PR #339 review). The engine,
+  response schema and memo generator carried the MUS credit disclosure, but the export input schema did not declare it
+  (`model_dump()` dropped it) and the page did not forward it — the exported memo never showed it. Test through the
+  route's input model, not the generator alone.
+- **2026-11-25 — Turning a control on exposes everything that depended on it being off** (Sprints 870 → 896). Making
+  rate limits fire immediately made two latent bugs real: browsers keyed as anonymous (cookie auth never read) and the
+  Stripe webhook's 10/minute. After enabling a dormant control, audit everything it now touches the same day.

@@ -91,8 +91,11 @@
 > "A/An" flag-unit article, goldens and OpenAPI snapshot re-recorded.
 >
 > **P0 before 2026-12-15 — in order**
-> - [ ] **Sprint 896** — council 2026-11-25 urgent fixes (passcode shares, signed-in rate-limit identity, webhook limit,
->       member erasure) in PR (branch `sprint-896-council-urgent`). Full council report: `reports/council-audit-2026-11-25.md`.
+> - [x] **Sprint 896** — council 2026-11-25 urgent fixes (passcode shares, signed-in rate-limit identity, webhook limit,
+>       member erasure) — merged #338, live `38516b0c` 2026-11-25 (anonymous passcode POST verified on production).
+>       Full council report: `reports/council-audit-2026-11-25.md`. Then: Sprints 897 (ops), 898 (methodology, part merged
+>       #339), 899 (checkout/claims/a11y).
+> - [ ] **Sprint 860** — PR #336 awaits the CEO's sign-off of the 2026 W-2 and 1099 figures (before 2026-12-15).
 > - [x] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
 >       2026-11-25 03:08 UTC: PR #333 landed as a fast-forward of `main` to `209e5039` (GitHub refuses rebase-merge past
 >       100 commits); deploy `dep-dc35275g…` live; all nine migrations logged (853 backfill: 0 clients moved); body `healthy`.
@@ -551,7 +554,8 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       episode's rows are re-read by primary key after that commit.
 
 ### Sprint 896: Council 2026-11-25 — the urgent fixes
-**Status:** IN REVIEW (2026-11-25) — branch `sprint-896-council-urgent`. **Priority:** P0/P1 security and data loss
+**Status:** COMPLETE (2026-11-25) — merged #338 (`3b0bf414`…`38516b0c`), live. Review fix: the account export keeps its
+own scope (a member's firm-client work stays in their download). **Priority:** P0/P1 security and data loss
 (freeze-exempt). **Source:** `reports/council-audit-2026-11-25.md` (G-01, G-02, G-03, C-01, C-02, C-03), each verified
 in the code before fixing. **Agents:** Guardian, Critic, Executor.
 - [x] **G-01 (P0) — passcode-protected share links could not be downloaded.** The GET answers a passcode share with
@@ -590,7 +594,8 @@ O-1…O-9 — reported, re-check each first.
 - [ ] O-8 / O-9 (P3): daily-backup failure alert; expand/contract rule + CI grep for destructive migrations.
 
 ### Sprint 898: Sampling and ratio methodology (council 2026-11-25, Accounting Expert)
-**Status:** IN PROGRESS (2026-11-25) — A-F1, A-F2, A-F4, A-F7 in PR (branch `sprint-898-sampling-methodology`).
+**Status:** IN PROGRESS (2026-11-25) — A-F1, A-F2, A-F4, A-F7 merged #339 (`594dcd6d`, `185dc13c`); review fix: the memo
+export schema and page now carry the disclosure fields.
 **Priority:** P1/P2 (defects in CPA-facing output; freeze-exempt as defects). **Source:** council
 report A-F1…A-F10. Verified: A-F1, A-F2, A-F4, A-F7.
 - [x] A-F1: MUS credit balances — `mus_negative_excluded_count` / `_value` on the design result and API response; the
