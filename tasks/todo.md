@@ -1844,7 +1844,7 @@ no process behind it.
       plus a sign-off record (`signed_off_by`, `signed_off_on`, `sources_final: bool`). The W-2 and 1099 engines read
       from these files; the hard-coded `STATUTORY_LIMITS_BY_YEAR` / `THRESHOLDS_BY_TABLE_YEAR` blocks go away. 2025
       moves over unchanged.
-- [ ] **Fetcher** (`scripts/tax_tables/fetch.py` + weekly scheduled workflow, Oct–Jan): reads SSA's wage-base
+- [x] **Fetcher** (`scripts/fetch_tax_tables.py` + `.github/workflows/tax-tables-fetch.yml`, weekly Oct–Jan): reads SSA's wage-base
       announcement, the IRS retirement-limits notice, the HSA Rev. Proc. and the 1099-NEC/MISC/INT instructions;
       extracts each figure with the sentence it came from; opens a PR proposing the next year's table (value, prior
       year, source excerpt, URL). Fails loudly and names the document when a figure can't be read cleanly — never
@@ -1886,7 +1886,12 @@ no process behind it.
   the real-date check is `test_this_seasons_tables_are_ready` (warns now: 2026 unsigned).
 - [ ] **CEO:** check the 2026 figures against the quoted sources (PR body lists them), record the sign-off in
       `ty2026.py` (and `ty2025.py` if 2025 is still run), update `tax-figures.ts`, then merge. Before 2026-12-15.
-- [ ] Fetcher + weekly workflow (next commit on this branch).
+- [x] Fetcher + weekly workflow. **Deviation:** it posts to an issue "Tax tables <year>" instead of opening a PR —
+      a generated table file would put figures nobody has read into code; the issue carries each figure, its
+      sentence, the prior year and what it could not read, and a person writes `ty<year>.py`. Notice and HSA
+      Rev. Proc. URLs change yearly: `workflow_dispatch` inputs or `KNOWN_SOURCES`; until supplied the report says
+      "source not configured" and the job fails. Run live on 2026-11-24: all 21 figures read, every one equal to
+      `ty2026.py` (exit 0) — an independent check of the agent-read figures. `test_sprint860_fetcher.py` (9, offline).
 
 **Commit SHA:** TBD.
 

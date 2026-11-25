@@ -1,0 +1,90 @@
+# Annual tax tables — fetch (Sprint 860)
+#
+# Weekly from October to January, reads the next tax year's statutory figures
+# from the IRS sources (scripts/fetch_tax_tables.py) and posts what it read —
+# each figure with the sentence it came from, the prior year's value, and any
+# figure it could not read — to an issue "Tax tables <year>". It proposes; it
+# never edits backend/tax_tables/: a person copies the figures into
+# ty<year>.py and a practitioner signs off (docs/runbooks/annual-tax-tables.md).
+#
+# The retirement-limits notice and the HSA revenue procedure get a new number
+# every year, so their URLs come from the run's inputs (or KNOWN_SOURCES in
+# the script). Until they are supplied, the report says "source not configured"
+# for those figures — loudly, by design.
+#
+# Like every scheduled workflow here, GitHub disables it after ~60 idle days;
+# the Nov 1 checklist (backup-restore.md §6) covers that.
+
+name: Tax tables fetch
+
+on:
+  schedule:
+    - cron: "17 14 * 10-12,1 1"  # Mondays, Oct–Jan
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Tax year (default: next year in Oct–Dec, this year in Jan)"
+        required: false
+      notice_url:
+        description: "IRS retirement-limits notice PDF for the year"
+        required: false
+      hsa_url:
+        description: "HSA revenue procedure PDF for the year"
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # pin: v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # pin: v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install pypdf
+        run: pip install "pypdf>=6.21.2"
+      - name: Read the figures
+        id: fetch
+        env:
+          INPUT_YEAR: ${{ inputs.year }}
+          NOTICE_URL: ${{ inputs.notice_url }}
+          HSA_URL: ${{ inputs.hsa_url }}
+        run: |
+          if [ -n "$INPUT_YEAR" ]; then year="$INPUT_YEAR"
+          elif [ "$(date -u +%m)" = "01" ]; then year="$(date -u +%Y)"
+          else year="$(( $(date -u +%Y) + 1 ))"; fi
+          echo "year=$year" >> "$GITHUB_OUTPUT"
+          args=(--year "$year" --report report.md)
+          [ -n "$NOTICE_URL" ] && args+=(--notice-url "$NOTICE_URL")
+          [ -n "$HSA_URL" ] && args+=(--hsa-url "$HSA_URL")
+          set +e
+          python scripts/fetch_tax_tables.py "${args[@]}"
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+      - name: Post to the year's issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          YEAR: ${{ steps.fetch.outputs.year }}
+          EXIT: ${{ steps.fetch.outputs.exit }}
+        run: |
+          title="Tax tables $YEAR"
+          {
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} (exit $EXIT: 0 all read and matching, 1 some not read, 2 differs from ty${YEAR}.py)"
+            echo
+            cat report.md
+          } > body.md
+          number=$(gh issue list --state open --search "\"$title\" in:title" --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" | head -n1)
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file body.md
+          else
+            gh issue create --title "$title" --body-file body.md
+          fi
+      - name: Fail when a figure could not be read
+        if: steps.fetch.outputs.exit == '1'
+        run: |
+          echo "::warning::Some figures could not be read — see the issue. Supply notice_url / hsa_url once published."
+          exit 1
