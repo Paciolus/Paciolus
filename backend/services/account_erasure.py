@@ -150,6 +150,15 @@ def _owned_scope(db: Session, user_id: int) -> dict[str, list[int]]:
     return {"clients": client_ids, "engagements": engagement_ids, "items": item_ids, "subscriptions": sub_ids}
 
 
+def _export_scope(db: Session, user_id: int) -> dict[str, list[int]]:
+    """What the data export covers: every client the user created (personal or firm) and its engagements."""
+    import_all_models()
+    client_ids = _ids(db, "clients", "user_id", [user_id])
+    engagement_ids = _ids(db, "engagements", "client_id", client_ids)
+    item_ids = _ids(db, "follow_up_items", "engagement_id", engagement_ids)
+    return {"clients": client_ids, "engagements": engagement_ids, "items": item_ids}
+
+
 def check_erasable(db: Session, user: Any) -> None:
     """Raise ``ErasureBlocked`` if this account cannot be erased self-service."""
     import_all_models()
@@ -447,7 +456,10 @@ def export_account(db: Session, user: Any) -> dict[str, Any]:
     """Everything Paciolus stores about ``user``, as JSON-safe dicts (GDPR Art. 15/20)."""
     import_all_models()
     user_id = int(user.id)
-    scope = _owned_scope(db, user_id)
+    # PR #338 review: the export covers every client the user created, firm
+    # clients included — narrower erasure scope (Sprint 896) must not drop the
+    # member's own work from their data download.
+    scope = _export_scope(db, user_id)
     e_ids = scope["engagements"] or [-1]
     data: dict[str, Any] = {
         "exported_at": datetime.now(UTC).isoformat(),
