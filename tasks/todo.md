@@ -419,8 +419,9 @@ in the service env, set it to `2` (the image default is now 2, was 4); (3) after
 **Commit SHA:** TBD.
 
 ### Sprint 898: Sampling and ratio methodology (council 2026-11-25, Accounting Expert)
-**Status:** IN PROGRESS (2026-11-25) — A-F1, A-F2, A-F4, A-F7 merged #339 (`594dcd6d`, `185dc13c`); review fix: the memo
-export schema and page now carry the disclosure fields.
+**Status:** COMPLETE (2026-11-25) except the two CEO decisions (A-F1 follow-up, A-F5) — A-F1, A-F2, A-F4, A-F7 merged
+#339 (`594dcd6d`, `185dc13c`); review fix: the memo export schema and page now carry the disclosure fields. A-F3, A-F6,
+A-F8, A-F9, A-F10 on branch `sprint-898-methodology-rest`.
 **Priority:** P1/P2 (defects in CPA-facing output; freeze-exempt as defects). **Source:** council
 report A-F1…A-F10. Verified: A-F1, A-F2, A-F4, A-F7.
 - [x] A-F1: MUS credit balances — `mus_negative_excluded_count` / `_value` on the design result and API response; the
@@ -431,11 +432,25 @@ report A-F1…A-F10. Verified: A-F1, A-F2, A-F4, A-F7.
       labelled "Computed (not from the AICPA guide)". The same computation reproduces the guide's 5% and 10% rows exactly
       (tested), which is the check on the method.
 - [x] A-F4: memo now states the method the engine uses (EF by risk of incorrect acceptance; n = BV x RF / (TM - EM x EF)).
-- [ ] A-F3 / A-F6: correct the ISA 530 / ISA 320 paragraph citations (check the IAASB text first — the council cited from
-      memory); "designed with reference to ISA 530 / AS 2315", not "in accordance with".
+- [x] A-F3 / A-F6: citations corrected in `sampling_memo_generator.py`. ISA 530's requirements run to paragraph 15
+      (14 = projecting misstatements, 15 = evaluating results), so every "ISA 530.17" and the evaluation "ISA 530.14"
+      became "ISA 530.15". "Per ISA 320.11" over a performance-materiality definition became ISA 530's own definition of
+      tolerable misstatement, linked to performance materiality (ISA 320) **without paragraph numbers** — the IAASB text
+      was not available to check 5(i) vs the council's 5(l), and the standing rule is to drop what we cannot prove. "ISA
+      530.A4" (expected misstatement) likewise became "ISA 530 application material". Both "in accordance with" sentences
+      now say "designed with reference to ISA 530 and PCAOB AS 2315" (no other memo used the phrase). Guards:
+      `test_memo_banned_phrases.py` bans "in accordance with ISA/PCAOB/AS/AU-C", ISA 530 paragraphs 16+, "ISA 320.11"
+      and "ISA 530.A4"; memo render snapshot re-recorded (sampling design + evaluation only).
 - [x] A-F2: zero or negative equity with liabilities now breaches a debt-to-equity covenant (was never flagged).
-- [ ] A-F8 / A-F9 / A-F10: going-concern double count and single-period "recurring";
-      ROE narrative on negative equity; SOCE `oci` word boundary.
+- [x] A-F8: negative equity is counted once — when Net Liability Position fires, High Leverage still reports
+      "not meaningful" but is not triggered ("Counted once, under Net Liability Position"); `test_distressed_company`
+      now expects 3 triggered, not 4. A current-period loss is named **"Net Loss"** (still triggered, medium) unless the
+      prior period also lost, when it is "Recurring Losses" (high). Chosen over not flagging a single-period loss at all:
+      the loss is still an ISA 570 condition worth showing, only the word "recurring" was unsupported.
+- [x] A-F9: ROE with negative equity (ending, or the average denominator) now says "Not meaningful: net income / net
+      loss / break-even on negative equity" instead of "Negative ROE - equity generating losses" for a profitable entity.
+- [x] A-F10: SOCE abbreviations `apic` / `aoci` / `oci` match whole words only; "Associates' Capital" and "Social…"
+      no longer land in AOCI. Tests: `tests/test_sprint_898_methodology_rest.py`.
 - [ ] A-F5 (CEO decision): is an uploaded TB always 12 months? If not, a period-length input and "not annualized" labels.
 
 ### Sprint 899: Checkout, claims and accessibility (council 2026-11-25, Designer + Compliance)

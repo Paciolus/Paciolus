@@ -158,7 +158,7 @@ _NEXT_STEPS_AR: list[dict[str, str]] = [
             "Sampling Evaluation module (SSM Evaluation tab) to compute the Upper "
             "Error Limit (UEL) using the Stringer bound method and obtain a "
             "evaluation result (UEL ≤ TM or UEL > TM). If UEL exceeds Tolerable Misstatement, "
-            "expand the sample or perform alternative procedures per ISA 530.17."
+            "expand the sample or perform alternative procedures per ISA 530.15."
         ),
     },
 ]
@@ -203,7 +203,7 @@ _NEXT_STEPS_AP: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and record the evaluation result (UEL vs TM) per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.15."
         ),
     },
 ]
@@ -248,7 +248,7 @@ _NEXT_STEPS_INVENTORY: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and record the evaluation result (UEL vs TM) per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.15."
         ),
     },
 ]
@@ -295,7 +295,7 @@ _NEXT_STEPS_REVENUE: list[dict[str, str]] = [
         "body": (
             "When testing is complete, upload the error results to the Paciolus "
             "Sampling Evaluation module to compute the Upper Error Limit (UEL) "
-            "and record the evaluation result (UEL vs TM) per ISA 530.17."
+            "and record the evaluation result (UEL vs TM) per ISA 530.15."
         ),
     },
 ]
@@ -376,14 +376,14 @@ def _build_evaluation_next_steps(
             intro = (
                 "Sampling evaluation is complete. " + sides + "The auditor should evaluate this "
                 "result in the context of other audit evidence obtained and the overall "
-                "engagement risk assessment before concluding on the population (ISA 530.14). "
+                "engagement risk assessment before concluding on the population (ISA 530.15). "
                 "Suggested close-out steps for the sampling workpaper:"
             )
         else:
             intro = (
                 "Sampling evaluation is complete. " + sides + "The auditor should consider "
                 "expanding the sample, performing alternative procedures, or evaluating the "
-                "implications for the overall audit approach (ISA 530.17). If expanding, the "
+                "implications for the overall audit approach (ISA 530.15). If expanding, the "
                 "following actions apply to errors already identified:"
             )
     elif conclusion == "pass":
@@ -393,7 +393,7 @@ def _build_evaluation_next_steps(
             f"{conf_level:.0%} confidence level. "
             "The auditor should evaluate this result in the context of other audit evidence "
             "obtained and the overall engagement risk assessment before concluding on the "
-            "population (ISA 530.14). Suggested close-out steps for the "
+            "population (ISA 530.15). Suggested close-out steps for the "
             "sampling workpaper:"
         )
     else:
@@ -403,7 +403,7 @@ def _build_evaluation_next_steps(
             f"{conf_level:.0%} confidence level. "
             "The auditor should consider expanding the sample, performing alternative "
             "procedures, or evaluating the implications for the overall audit approach "
-            "(ISA 530.17). If expanding, the following actions "
+            "(ISA 530.15). If expanding, the following actions "
             "apply to errors already identified:"
         )
 
@@ -689,11 +689,11 @@ def _generate_sampling_memo(
             story.append(
                 Paragraph(
                     f"The tolerable misstatement of ${tm_value:,.2f} was entered by the practitioner "
-                    "based on the engagement's overall materiality assessment. Per ISA 320.11, "
-                    "tolerable misstatement is the amount set by the auditor at less than materiality "
-                    "for the financial statements as a whole to reduce to an appropriately low level "
-                    "the probability that the aggregate of uncorrected and undetected misstatements "
-                    "exceeds materiality. The practitioner should document the basis for this amount "
+                    "based on the engagement's overall materiality assessment. ISA 530 defines "
+                    "tolerable misstatement as a monetary amount set by the auditor in respect of which "
+                    "the auditor seeks an appropriate level of assurance that it is not exceeded by the "
+                    "actual misstatement in the population; it applies performance materiality "
+                    "(ISA 320) to a particular sampling procedure. The practitioner should document the basis for this amount "
                     "in the engagement's materiality workpaper (e.g., WP-MAT-001).",
                     styles["MemoBody"],
                 )
@@ -713,8 +713,8 @@ def _generate_sampling_memo(
                         f"The expected misstatement of ${em_value:,.2f} was entered by the practitioner. "
                         f"This represents {em_pct:.1f}% of tolerable misstatement (${tm_value:,.2f}), "
                         "which is a common planning estimate when no prior year misstatement history is "
-                        "available. Per ISA 530.A4, the expected misstatement should be based "
-                        "on the auditor's knowledge of the client, including misstatements "
+                        "available. ISA 530 application material indicates that the expected misstatement "
+                        "be based on the auditor's knowledge of the client, including misstatements "
                         "identified in prior periods. If prior year misstatement data is "
                         "available, it should be used to refine this estimate."
                     )
@@ -1056,8 +1056,8 @@ def _generate_sampling_memo(
 
         if method.startswith("Monetary"):
             methodology_text = (
-                "Monetary Unit Sampling (MUS) was applied in accordance with ISA 530 and "
-                "PCAOB AS 2315. The sample was selected using systematic dollar-interval "
+                "Monetary Unit Sampling (MUS) was applied; the procedure is designed with reference to "
+                "ISA 530 and PCAOB AS 2315. The sample was selected using systematic dollar-interval "
                 "selection with a cryptographically secure random start (Python secrets module). "
                 "Sample evaluation uses the Stringer bound method, which calculates the "
                 "upper error limit as: Basic Precision + Projected Misstatement + "
@@ -1380,7 +1380,7 @@ def _build_scope_section(
         story.append(Paragraph(source, styles["MemoLeader"]))
 
     scope_text = (
-        "This memo documents the statistical sampling procedures performed in accordance with "
+        "This memo documents statistical sampling procedures designed with reference to "
         "ISA 530 (Audit Sampling) and PCAOB AS 2315 (Audit Sampling). "
     )
     if period_tested:
@@ -1465,7 +1465,7 @@ def _build_pass_fail_block(
         block_data.append(
             [
                 Paragraph(
-                    '<font size="8" color="#616161">Expand sample or perform alternative procedures per ISA 530.17</font>',
+                    '<font size="8" color="#616161">Expand sample or perform alternative procedures per ISA 530.15</font>',
                     styles["MemoBody"],
                 )
             ]

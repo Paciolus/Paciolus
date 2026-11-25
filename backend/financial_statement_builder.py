@@ -30,6 +30,7 @@ Sign Conventions:
     - Other (O): mixed → flip sign (credits = income, debits = expense)
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -1412,13 +1413,19 @@ class FinancialStatementBuilder:
         ("dividends", "retained_earnings", "Dividends"),
         ("distributions", "retained_earnings", "Distributions"),
     )
+    _SOCE_WHOLE_WORD_KEYWORDS: frozenset[str] = frozenset({"apic", "aoci", "oci"})
 
     @staticmethod
     def _classify_equity_account(account_name: str) -> tuple[str, str, bool]:
         """Return (component_type, default_label, is_explicit_match)."""
         low = (account_name or "").lower()
         for keyword, component_type, label in FinancialStatementBuilder._SOCE_COMPONENT_RULES:
-            if keyword in low:
+            if keyword in FinancialStatementBuilder._SOCE_WHOLE_WORD_KEYWORDS:
+                # Sprint 898 (A-F10): abbreviations match whole words only —
+                # "oci" is inside "Associates' Capital" and "Social ...".
+                if re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", low):
+                    return component_type, label, True
+            elif keyword in low:
                 return component_type, label, True
         return "retained_earnings", "Retained Earnings (unmapped)", False
 
