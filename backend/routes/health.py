@@ -178,7 +178,9 @@ def readiness_probe(request: Request) -> ReadinessResponse:
 
     # --- Rate-limit storage (soft dependency; never fails the probe) ---
     rl_health = get_storage_health()
-    rl_degraded = bool(rl_health["degraded"])
+    # Sprint 870: storage fallback, or (production) no trusted proxies, so
+    # the anonymous rate-limit key is the proxy rather than the client.
+    rl_degraded = bool(rl_health["degraded"]) or bool(rl_health.get("client_key_unreliable"))
     rl_dep = DependencyStatus(
         status="unhealthy" if rl_degraded else "healthy",
         latency_ms=0.0,  # read off an in-process flag; no I/O performed

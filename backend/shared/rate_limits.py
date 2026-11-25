@@ -511,7 +511,20 @@ def get_storage_health() -> dict[str, object]:
         # Sprint 870 (#274): a count, never the values. Zero behind Render's
         # proxy means every anonymous key is the proxy's address.
         "trusted_proxies_configured": len(TRUSTED_PROXY_IPS),
+        # Sprint 870 part B: in production the app always sits behind
+        # Cloudflare and Render's rotating internal proxies. With no trusted
+        # proxies the anonymous key is whichever proxy carried the request, so
+        # one client is spread over many buckets and no limit ever fires (zero
+        # 429s from 2026-10-01 to 2026-11-25). Reported so readiness says
+        # "degraded" instead of hiding it.
+        "client_key_unreliable": _production() and not TRUSTED_PROXY_IPS,
     }
+
+
+def _production() -> bool:
+    from config import ENV_MODE
+
+    return ENV_MODE == "production"
 
 
 RATE_LIMIT_AUDIT = TieredLimit("audit", "10/minute")
