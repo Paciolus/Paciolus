@@ -83,6 +83,9 @@ export default function StatisticalSamplingPage() {
       remainder_count: designResult.remainder_count,
       remainder_sample_size: designResult.remainder_sample_size,
       strata_summary: designResult.strata_summary,
+      // Sprint 898: the memo discloses credit balances MUS could not select.
+      mus_negative_excluded_count: designResult.mus_negative_excluded_count ?? 0,
+      mus_negative_excluded_value: designResult.mus_negative_excluded_value ?? 0,
       filename: 'sampling_design',
     })
   }, [designResult, handleDesignMemo])
@@ -135,6 +138,8 @@ export default function StatisticalSamplingPage() {
         actual_sample_size: designResult.actual_sample_size,
         sampling_interval: designResult.sampling_interval,
         strata_summary: designResult.strata_summary,
+        mus_negative_excluded_count: designResult.mus_negative_excluded_count ?? 0,
+        mus_negative_excluded_value: designResult.mus_negative_excluded_value ?? 0,
       } : null,
       filename: 'sampling_evaluation',
     })

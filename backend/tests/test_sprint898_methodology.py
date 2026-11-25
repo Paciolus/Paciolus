@@ -116,3 +116,47 @@ def test_memo_discloses_the_excluded_credits():
     text = " ".join(text.split())
     assert "Credit Balances Not Covered by the Selection" in text
     assert "3 items with credit balances totalling $1,500.00" in text
+
+
+def test_the_memo_export_input_keeps_the_disclosure_fields():
+    """PR #339 review: the export schema dropped undeclared fields before the generator saw them."""
+    from routes.sampling import _run_design
+    from shared.export_schemas import SamplingDesignMemoInput
+
+    design = _run_design(_population(3), "population.csv", "mus", 0.95, 10_000, 0, None, None, None)
+    dumped = SamplingDesignMemoInput(**design).model_dump()
+    assert dumped["mus_negative_excluded_count"] == 3
+    assert dumped["mus_negative_excluded_value"] == 1500.0
+
+
+def test_the_evaluation_memo_carries_the_disclosure_from_its_design_context():
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    from routes.sampling import _run_design
+    from sampling_memo_generator import generate_sampling_evaluation_memo
+
+    design = _run_design(_population(3), "population.csv", "mus", 0.95, 10_000, 0, None, None, None)
+    evaluation = {
+        "method": "mus",
+        "confidence_level": 0.95,
+        "tolerable_misstatement": 10_000,
+        "expected_misstatement": 0,
+        "population_value": design["population_value"],
+        "sample_size": design["actual_sample_size"],
+        "sample_value": 0,
+        "errors_found": 0,
+        "total_misstatement": 0,
+        "projected_misstatement": 0,
+        "basic_precision": 0,
+        "incremental_allowance": 0,
+        "upper_error_limit": 0,
+        "conclusion": "pass",
+        "conclusion_detail": "",
+        "errors": [],
+        "taintings_ranked": [],
+    }
+    pdf = generate_sampling_evaluation_memo(evaluation, design_result=design)
+    text = " ".join(" ".join((p.extract_text() or "") for p in PdfReader(BytesIO(pdf)).pages).split())
+    assert "Credit Balances Not Covered by the Selection" in text

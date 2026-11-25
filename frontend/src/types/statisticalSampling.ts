@@ -87,6 +87,9 @@ export interface SamplingDesignResult {
   selected_items: SelectedSampleItem[]
   random_start: number | null
   strata_summary: StratumSummary[]
+  /** Sprint 898: credit balances MUS could not select (disclosed in the memo). */
+  mus_negative_excluded_count?: number
+  mus_negative_excluded_value?: number
 }
 
 // ═══════════════════════════════════════════════════════════════
