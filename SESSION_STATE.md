@@ -6,7 +6,7 @@ _Format rule (Sprint 857, enforced in CI by `scripts/check_state_docs.py`): keep
 ``**Main SHA:** `<short sha>` `` naming the current `origin/main` commit (`git rev-parse --short origin/main`). It
 must be an ancestor of HEAD. Refresh it after every merge._
 
-**Main SHA:** `209e5039`
+**Main SHA:** `43a98d01`
 
 ## START HERE — what the next session should pick up
 
