@@ -90,6 +90,8 @@
 > "A/An" flag-unit article, goldens and OpenAPI snapshot re-recorded.
 >
 > **P0 before 2026-12-15 — in order**
+> - [ ] **Sprint 896** — council 2026-11-25 urgent fixes (passcode shares, signed-in rate-limit identity, webhook limit,
+>       member erasure) in PR (branch `sprint-896-council-urgent`). Full council report: `reports/council-audit-2026-11-25.md`.
 > - [x] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
 >       2026-11-25 03:08 UTC: PR #333 landed as a fast-forward of `main` to `209e5039` (GitHub refuses rebase-merge past
 >       100 commits); deploy `dep-dc35275g…` live; all nine migrations logged (853 backfill: 0 clients moved); body `healthy`.
@@ -546,6 +548,32 @@ changes plan or interval is moved by updating the existing Stripe subscription, 
       reuses the loaded user. Order, flushes, events and emails unchanged. Query-count tests over 2 vs 7/5 records.
       **Known limit:** `record_billing_event` commits per churn event (existing transaction behaviour, kept), so each
       episode's rows are re-read by primary key after that commit.
+
+### Sprint 896: Council 2026-11-25 — the urgent fixes
+**Status:** IN REVIEW (2026-11-25) — branch `sprint-896-council-urgent`. **Priority:** P0/P1 security and data loss
+(freeze-exempt). **Source:** `reports/council-audit-2026-11-25.md` (G-01, G-02, G-03, C-01, C-02, C-03), each verified
+in the code before fixing. **Agents:** Guardian, Critic, Executor.
+- [x] **G-01 (P0) — passcode-protected share links could not be downloaded.** The GET answers a passcode share with
+      404 (Sprint 718, no existence leak) while the page showed the passcode form only on 403; and the passcode POST
+      was CSRF-checked although an anonymous recipient cannot get a CSRF token. Fix: `CSRF_EXEMPT_PATTERNS` exempts
+      exactly `/export-sharing/<token>/download` (protected by the passcode, its throttles and the export limit); the
+      page shows the passcode form on a GET 404 and lets the POST decide. Tests without `bypass_csrf`.
+- [x] **G-02 (P1) — signed-in browsers were rate-limited as anonymous, by IP.** `RateLimitIdentityMiddleware` read only
+      a Bearer header; browsers send the HttpOnly access cookie. Paid plans got anonymous limits and a firm behind one
+      office address shared one bucket — invisible until Sprint 870 made limits fire. Now `_extract_access_token`.
+- [x] **G-03 (P2) — Stripe webhook limit 10/minute per source address** would 429 Stripe's own bursts now that limits
+      fire. Raised to 300/minute; signature checks and event dedup guard abuse.
+- [x] **C-01 (P1) — a member's account deletion deleted the firm's clients and colleagues' engagements.** Erasure
+      scoped clients by `user_id`; Sprint 853 made them the firm's. Now: personal clients plus all clients of a firm the
+      user owns (dissolved with the account); firm clients elsewhere stay, `user_id` passes to the firm owner. A member
+      with their own engagements on a firm client is refused (`ERASURE_FOREIGN_ENGAGEMENTS`) rather than wiped.
+- [x] **C-02 (P2)** — sole owner's erasure failed on the firm's RESTRICT key after Stripe was cancelled (clients a
+      removed member created). Covered by C-01's owned-firm scope.
+- [x] **C-03 (P2)** — `analytical_expectations.actual_captured_by` (Sprint 879) was not cleared → 500 on erasure. Added,
+      plus a guard test: every column referencing `users.id` must be cleared, deleted or cascade.
+- [ ] Remaining council findings: filed below as Sprints 897–899.
+
+**Commit SHA:** TBD.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** COMPLETE on production 2026-11-25 (config); guard + regression tests in PR. Part A merged 2026-11-24 (#333).

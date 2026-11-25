@@ -6,7 +6,7 @@
  *  - GET that returns 403 → passcode prompt appears; submitting POSTs
  *    {"passcode": "..."} to /{token}/download.
  *  - 429 response → lockout view with Retry-After countdown.
- *  - 410 / 404 → terminal error states (no passcode form).
+ *  - 410 → terminal error state; GET 404 → passcode form (Sprint 896), POST 404 → not found.
  */
 import SharedDownloadPage from '@/app/shared/[token]/page'
 import { render, screen, fireEvent, waitFor, act } from '@/test-utils'
@@ -66,7 +66,7 @@ describe('SharedDownloadPage', () => {
     expect(await screen.findByText(/Download started/i)).toBeInTheDocument()
   })
 
-  it('shows the passcode form when GET returns 403', async () => {
+  it('shows the passcode form when GET returns 403 (older backends)', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 403,
@@ -173,14 +173,25 @@ describe('SharedDownloadPage', () => {
     expect(screen.queryByLabelText(/Passcode/i)).not.toBeInTheDocument()
   })
 
-  it('shows the not-found state when the backend returns 404', async () => {
+  it('a GET 404 shows the passcode form: the backend hides passcode shares behind 404 (Sprint 896)', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 404,
-      json: async () => ({ detail: 'not found' }),
+      json: async () => ({ detail: 'Share not found' }),
       headers: new Headers(),
     })
     renderPage()
+    expect(await screen.findByLabelText(/Passcode/i)).toBeInTheDocument()
+    expect(screen.getByText(/If this link is passcode-protected/i)).toBeInTheDocument()
+  })
+
+  it('shows the not-found state when the passcode POST returns 404', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}), headers: new Headers() })
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}), headers: new Headers() })
+    renderPage()
+    const input = await screen.findByLabelText(/Passcode/i)
+    fireEvent.change(input, { target: { value: 'letmein' } })
+    fireEvent.click(screen.getByRole('button', { name: /Download/i }))
     expect(await screen.findByText(/Share link unavailable/i)).toBeInTheDocument()
   })
 })

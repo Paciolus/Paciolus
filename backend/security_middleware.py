@@ -267,9 +267,15 @@ class RateLimitIdentityMiddleware(BaseHTTPMiddleware):
         user_id = None
         tier = "anonymous"
 
-        auth_header = request.headers.get("authorization", "")
-        if auth_header.startswith("Bearer ") and len(auth_header) > 7:
-            token = auth_header[7:]
+        # Sprint 896 (council 2026-11-25, G-02): read the access token the way
+        # the auth dependency does — a Bearer header, else the HttpOnly
+        # ``paciolus_access`` cookie. Production browsers only send the cookie,
+        # so a header-only read put every signed-in user on the anonymous tier,
+        # keyed by IP: paid plans got anonymous limits and a firm behind one
+        # office address shared one bucket. Invisible until Sprint 870 made the
+        # limits fire.
+        token = _extract_access_token(request)
+        if token:
             import jwt as _pyjwt
 
             from config import JWT_ALGORITHM, JWT_SECRET_KEY
@@ -338,6 +344,15 @@ CSRF_EXEMPT_PATHS = {
     "/openapi.json",
     "/redoc",
 }
+
+# Sprint 896 (council 2026-11-25, G-01): the public passcode download. The
+# recipient has no account, so there is no session to forge and no way to get
+# a CSRF token (``/auth/csrf`` needs a signed-in user); the page sends it with
+# ``credentials: 'omit'``. Without this every passcode-protected share failed
+# with 403 for the person it was sent to. Protection is the passcode itself:
+# per-token and per-IP throttles (Sprints 697/698) and the export rate limit.
+# Exact shape only — ``/export-sharing/<token>/download``, nothing nested.
+CSRF_EXEMPT_PATTERNS: tuple[re.Pattern[str], ...] = (re.compile(r"^/export-sharing/[A-Za-z0-9_-]{1,128}/download$"),)
 
 # Paths that historically accepted X-Requested-With as an alternative CSRF
 # proof for cookie-authenticated bootstrap requests.
@@ -564,7 +579,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         method = request.method
 
         # Skip validation for exempt paths
-        if path in CSRF_EXEMPT_PATHS:
+        if path in CSRF_EXEMPT_PATHS or any(p.match(path) for p in CSRF_EXEMPT_PATTERNS):
             response: Response = await call_next(request)
             return response
 
