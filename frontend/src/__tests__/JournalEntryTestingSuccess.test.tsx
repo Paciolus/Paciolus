@@ -69,7 +69,7 @@ describe('JournalEntryTestingPage — success state from a valid response', () =
 
   it('renders the real score card from the composite score', () => {
     render(<JournalEntryTestingPage />)
-    expect(screen.getByText(/19 tests analyzed 1,200 journal entries/)).toBeInTheDocument()
+    expect(screen.getByText(/19 tests analyzed 1,200 GL lines/)).toBeInTheDocument()
     expect(screen.getByText('36')).toBeInTheDocument()
     expect(screen.getByText('3.0%')).toBeInTheDocument()
   })
