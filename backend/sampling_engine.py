@@ -153,6 +153,11 @@ class SampleDesignResult:
     selected_items: list[SelectedSample]
     random_start: Optional[float] = None  # For MUS: the CSPRNG random start
     strata_summary: list[dict] = field(default_factory=list)
+    # Sprint 898 (council A-F1): MUS cannot select credit balances (selection is
+    # proportional to debit value). They stay in the population value; these say
+    # how many and how much were outside the selection, so the memo discloses it.
+    mus_negative_excluded_count: int = 0
+    mus_negative_excluded_value: float = 0.0
 
 
 @dataclass
@@ -808,6 +813,7 @@ def design_sample(
     confidence_factor = get_confidence_factor(config.confidence_level)
     calculated_sample_size = 0
     random_start: Optional[float] = None
+    mus_negative_excluded: list[PopulationItem] = []
 
     if config.method == "mus":
         remainder_value = math.fsum(abs(item.recorded_amount) for item in remainder_items)
@@ -880,6 +886,8 @@ def design_sample(
         selected_items=all_selected,
         random_start=round(random_start, 2) if random_start is not None else None,
         strata_summary=strata_summary,
+        mus_negative_excluded_count=len(mus_negative_excluded),
+        mus_negative_excluded_value=round(math.fsum(abs(i.recorded_amount) for i in mus_negative_excluded), 2),
     )
 
 

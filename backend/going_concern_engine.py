@@ -334,10 +334,20 @@ def _test_covenant_breach(
         if icr < thresholds.min_interest_coverage:
             breaches.append(f"interest coverage {icr:.2f} below covenant floor {thresholds.min_interest_coverage:.2f}")
 
-    if thresholds.max_debt_to_equity is not None and abs(total_equity) >= NEAR_ZERO:
-        dte = total_liabilities / total_equity
-        if dte > thresholds.max_debt_to_equity:
-            breaches.append(f"debt-to-equity {dte:.2f} above covenant ceiling {thresholds.max_debt_to_equity:.2f}")
+    if thresholds.max_debt_to_equity is not None:
+        if total_equity < NEAR_ZERO and total_liabilities > 0:
+            # Sprint 898 (council A-F2): with zero or negative equity the ratio is
+            # negative or undefined, so ``dte > ceiling`` was never true — a firm
+            # with liabilities and a deficit passed every leverage covenant.
+            breaches.append(
+                f"debt-to-equity undefined: equity is {total_equity:,.2f} (zero or negative) against liabilities "
+                f"of {total_liabilities:,.2f}, which breaches any debt-to-equity ceiling "
+                f"({thresholds.max_debt_to_equity:.2f})"
+            )
+        elif total_equity >= NEAR_ZERO:
+            dte = total_liabilities / total_equity
+            if dte > thresholds.max_debt_to_equity:
+                breaches.append(f"debt-to-equity {dte:.2f} above covenant ceiling {thresholds.max_debt_to_equity:.2f}")
 
     if breaches:
         # Multiple concurrent breaches = high severity; single breach = medium.

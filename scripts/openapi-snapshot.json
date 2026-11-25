@@ -26350,6 +26350,16 @@
             "title": "Method",
             "type": "string"
           },
+          "mus_negative_excluded_count": {
+            "default": 0,
+            "title": "Mus Negative Excluded Count",
+            "type": "integer"
+          },
+          "mus_negative_excluded_value": {
+            "default": "0",
+            "title": "Mus Negative Excluded Value",
+            "type": "number"
+          },
           "population_size": {
             "title": "Population Size",
             "type": "integer"

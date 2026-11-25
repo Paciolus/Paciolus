@@ -98,12 +98,17 @@ POISSON_RELIABILITY_FACTORS: dict[float, FigureSet] = {
         verified_by=_RF_VERIFICATION,
         verified_on="2026-10-23",
     ),
+    # Sprint 898 (council 2026-11-25, A-F7): the guide has no 3% column (1, 5, 10, 15, 20, …),
+    # and the row that stood here was low from rank 1 (8.39 against an exact 8.51 at three
+    # overstatements), understating the upper error limit. These are computed: the exact
+    # Poisson upper limit (P(X <= k; λ) = 0.03), rounded UP to cents — the same computation
+    # reproduces the guide's 5% and 10% rows exactly (test_sprint898_methodology.py).
     0.03: FigureSet(
-        values=(3.51, 5.33, 6.91, 8.39, 9.81, 11.19, 12.53, 13.85, 15.15, 16.43, 17.70),
-        source="AICPA Audit Sampling Guide — Poisson reliability factors, 3% risk of incorrect acceptance",
-        edition="2019 (unchanged 2023)",
+        values=(3.51, 5.36, 6.99, 8.51, 9.97, 11.38, 12.75, 14.10, 15.43, 16.74, 18.03),
+        source="Computed (not from the AICPA guide): exact Poisson upper limits at 3% risk, rounded up",
+        edition="computed 2026-11-25",
         verified_by=_RF_UNCORROBORATED,
-        verified_on="2026-10-23",
+        verified_on="2026-11-25",
     ),
     0.05: FigureSet(
         values=(3.00, 4.75, 6.30, 7.76, 9.16, 10.52, 11.85, 13.15, 14.44, 15.71, 16.97),
