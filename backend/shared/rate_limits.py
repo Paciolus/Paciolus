@@ -534,7 +534,11 @@ RATE_LIMIT_WRITE = TieredLimit("write", "30/minute")
 RATE_LIMIT_DEFAULT = TieredLimit("default", "60/minute")
 
 # Fixed-rate limits for infrastructure endpoints (no tiered escalation)
-RATE_LIMIT_WEBHOOK = "10/minute"  # AUDIT-07: unauthenticated, signature-verified
+# AUDIT-07: unauthenticated, signature-verified. Sprint 896 (council G-03): 10/minute was
+# per source address, and Stripe sends from a small shared pool, about six events per
+# checkout — two checkouts in a minute would 429 Stripe (retries, late upgrades) once
+# Sprint 870 made limits fire. Signature checks and ProcessedWebhookEvent dedup guard abuse.
+RATE_LIMIT_WEBHOOK = "300/minute"
 RATE_LIMIT_HEALTH = "60/minute"  # AUDIT-07: health probes
 RATE_LIMIT_METRICS = "30/minute"  # AUDIT-07: Prometheus scrape endpoint
 

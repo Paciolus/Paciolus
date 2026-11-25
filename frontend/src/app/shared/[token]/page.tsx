@@ -4,9 +4,11 @@
  * Public share-receive page (Sprint 699).
  *
  * Wired to the Sprint 696+698 passcode contract:
- *   GET  /export-sharing/{token}               → 200 bytes for non-passcode shares,
- *                                                 403 with instructional message
- *                                                 when a passcode is required.
+ *   GET  /export-sharing/{token}               → 200 bytes for non-passcode shares;
+ *                                                 404 for a passcode share (Sprint 718 —
+ *                                                 the GET must not reveal which tokens
+ *                                                 exist), so a 404 here shows the passcode
+ *                                                 form and the POST decides (Sprint 896).
  *   POST /export-sharing/{token}/download      → accepts {"passcode": "..."}; returns
  *                                                 bytes on success, 403 on invalid
  *                                                 passcode, 429 with Retry-After on
@@ -22,7 +24,7 @@ import { useParams } from 'next/navigation'
 
 type PageState =
   | { kind: 'checking' }
-  | { kind: 'passcode_required'; errorMessage?: string }
+  | { kind: 'passcode_required'; errorMessage?: string; maybeMissing?: boolean }
   | { kind: 'locked'; retryAfter: number }
   | { kind: 'expired' }
   | { kind: 'not_found' }
@@ -87,7 +89,10 @@ export default function SharedDownloadPage() {
         return
       }
       if (resp.status === 404) {
-        setState({ kind: 'not_found' })
+        // Sprint 896: a passcode share answers the GET with 404 on purpose, so
+        // a 404 cannot mean "missing" here; ask for the passcode and let the
+        // POST answer.
+        setState({ kind: 'passcode_required', maybeMissing: true })
         return
       }
       const body = await resp.json().catch(() => ({}))
@@ -287,7 +292,9 @@ function ShareStateView({
         Passcode required
       </h1>
       <p className="font-sans text-sm text-content-secondary mb-4">
-        This share link is passcode-protected. Enter the passcode provided by the sender.
+        {state.kind === 'passcode_required' && state.maybeMissing
+          ? 'If this link is passcode-protected, enter the passcode provided by the sender. A link without a passcode that ends up here has been removed or revoked.'
+          : 'This share link is passcode-protected. Enter the passcode provided by the sender.'}
       </p>
       <label htmlFor="shared-passcode" className="block text-xs font-sans font-medium text-content-secondary mb-1">
         Passcode

@@ -107,6 +107,8 @@ _NULLABLE_USER_REFS: tuple[tuple[str, str], ...] = (
     ("organization_members", "invited_by_user_id"),
     ("analytical_expectations", "archived_by"),
     ("analytical_expectations", "updated_by"),
+    # Sprint 896 (council C-03): added by Sprint 879 (who captured the actual).
+    ("analytical_expectations", "actual_captured_by"),
     ("tool_runs", "archived_by"),
     ("uncorrected_misstatements", "updated_by"),
     ("uncorrected_misstatements", "archived_by"),
@@ -117,9 +119,31 @@ _NULLABLE_USER_REFS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _owned_org_ids(db: Session, user_id: int) -> list[int]:
+    orgs = _t("organizations")
+    return [r[0] for r in db.execute(select(orgs.c.id).where(orgs.c.owner_user_id == user_id))]
+
+
 def _owned_scope(db: Session, user_id: int) -> dict[str, list[int]]:
+    """What erasure deletes: the user's personal clients and every client of a firm they own.
+
+    Sprint 896 (council C-01): a firm client belongs to the firm (Sprint 853),
+    whoever created it. Scoping by ``clients.user_id`` alone made a plain
+    member's account deletion delete firm clients they had created — with the
+    colleagues' engagements and work under them. Firm clients in a firm the
+    user does not own stay; ``erase_account`` hands their ``user_id`` (a
+    non-null "created by" column) to the firm owner. A firm the user owns is
+    dissolved with the account (``check_erasable`` refuses while it has other
+    members), so all its clients go — including those a removed member created,
+    which would otherwise block the firm's delete (C-02, RESTRICT key).
+    """
     import_all_models()
-    client_ids = _ids(db, "clients", "user_id", [user_id])
+    clients = _t("clients")
+    owned_orgs = _owned_org_ids(db, user_id)
+    personal = clients.c.user_id == user_id
+    personal = personal & clients.c.organization_id.is_(None)
+    where = personal | clients.c.organization_id.in_(owned_orgs) if owned_orgs else personal
+    client_ids = [r[0] for r in db.execute(select(clients.c.id).where(where))]
     engagement_ids = _ids(db, "engagements", "client_id", client_ids)
     item_ids = _ids(db, "follow_up_items", "engagement_id", engagement_ids)
     sub_ids = _ids(db, "subscriptions", "user_id", [user_id])
@@ -345,6 +369,18 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
             _del(table, _t(table).c.user_id == user_id)
         if c_ids:
             _del("clients", _t("clients").c.id.in_(c_ids))
+        # Sprint 896 (C-01): firm clients this user created in a firm they do
+        # not own stay with the firm; "created by" passes to the firm's owner.
+        clients_t = _t("clients")
+        orgs_t = _t("organizations")
+        owner_of_firm = (
+            select(orgs_t.c.owner_user_id).where(orgs_t.c.id == clients_t.c.organization_id).scalar_subquery()
+        )
+        db.execute(
+            update(clients_t)
+            .where(clients_t.c.user_id == user_id, clients_t.c.organization_id.is_not(None))
+            .values(user_id=owner_of_firm)
+        )
 
         users = _t("users")
         db.execute(update(users).where(users.c.id == user_id).values(organization_id=None))
