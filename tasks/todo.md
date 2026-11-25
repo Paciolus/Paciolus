@@ -419,17 +419,36 @@ report A-F1…A-F10. Verified: A-F1, A-F2, A-F4, A-F7.
 - [ ] A-F5 (CEO decision): is an uploaded TB always 12 months? If not, a period-length input and "not annualized" labels.
 
 ### Sprint 899: Checkout, claims and accessibility (council 2026-11-25, Designer + Compliance)
-**Status:** IN PROGRESS (2026-11-25) — D-1…D-6, L-1, L-2, L-5, L-6, L-7, L-9, L-10; counsel items stay with counsel. **Priority:** P1/P2 (the paying path and published claims). **Source:** council report D-*, L-*.
-- [ ] D-2: `/checkout/success` polls `/billing/subscription` until trialing/active before saying "upgraded".
-- [ ] D-1: dark-route contrast on checkout (sage/clay 300–400). D-3: Continue disabled until terms load; retry + sign-in.
-- [ ] D-4: cancel-trial copy (access until period end). D-5: dialog role, focus trap, Escape on 3 modals. D-6: single-use
-      share copy.
-- [ ] L-1: format lists (drop ODS, add Word) on homepage/About, guard from `/upload/capabilities`; Terms line to counsel.
-- [ ] L-2: `export_account` includes the 8 missing tables. L-5: remove the DPA-at-checkout sentence and version.
-- [ ] L-6 / L-7 / L-9 / L-10: "what we keep" list, "aim to reply", `/sources` evidence wording, pricing formats row.
+**Status:** COMPLETE (2026-11-25) for engineering — branch `council-2026-11-25-remaining`. Counsel items and the P3/freeze
+items below stay open. **Priority:** P1/P2 (the paying path and published claims). **Source:** council report D-*, L-*.
+- [x] D-2: `/checkout/success` waits for the session, then polls `/billing/subscription` (2 s, 15 tries) until the plan
+      is trialing/active and not free; only then "Your new plan is active". Otherwise "not confirmed yet" + Check Again;
+      signed out → Sign In (returns to the page). `CheckoutSuccessPage.test.tsx`.
+- [x] D-1: checkout is a dark route — text sage-600/clay-600 → sage-400 (4.6:1 on the card) / clay-300 (5.8:1); error
+      box and hover states moved to dark tokens.
+- [x] D-3: Continue disabled until the trial/renewal terms load; on failure "checkout is paused" + Try again + Sign in.
+- [x] D-4: cancel-trial copy — access continues until the trial ends; the trial does not convert (backend cancels at
+      period end).
+- [x] D-5: Cancel, Upgrade and Create-Misstatement modals: `role="dialog"`, `aria-modal`, labelled by their heading,
+      `useFocusTrap` (Tab trap, Escape, focus restore).
+- [x] D-6: the download response carries `X-Paciolus-Share-Single-Use` (CORS-exposed, with `Content-Disposition`); after
+      a single-use download the page says the link no longer works and drops "Download again".
+- [x] L-1: About and the homepage timeline list Word (.docx), not ODS; `test_published_formats.py` checks the names and
+      the count against `upload_capabilities()`. — [ ] The Terms line (still lists ODS) goes to counsel with Sprint 863.
+- [x] L-2: `export_account` adds billing events, checkout attempts, promo redemptions, security events, the user's
+      memberships, invitations sent/received (token hash withheld), their team activity, and their own firm's branding.
+- [x] L-5: billing page no longer says DPA acceptance is captured at checkout, and shows no hard-coded "1.0".
+- [x] L-6: the "what we keep" list adds file-name prefixes, draft adjusting entries (1 h, no lines/amounts), currency
+      rate tables (2 h), sessions (user-agent, IP), the security log (365 days), billing records and firm records.
+- [x] L-7: "We aim to reply within 1–2 business days" on Contact and Trust. L-9: `/sources` bank rec note no longer says
+      the tool produces audit evidence. L-10: pricing table shows the same export formats for every paid plan.
 - [ ] Counsel package: L-3 (rate-table rows kept 2 h), L-4 (security events kept unlinked), L-8 (GDPR Art. 12(3)).
 - [ ] P3 later: G-04 (IP counter reset on own login), C-05, C-06, D-7…D-10.
 - [ ] C-04 (P2, performance — needs the freeze lifted): TB and six routes do blocking DB work in `async def`.
+
+**Verification:** frontend `jest` 240 suites / 2,229 tests pass; `npm run build` passes; backend targeted —
+`test_account_erasure.py` 23, export-sharing + Sprint 880 share lifecycle 51, published formats + marketing/storage
+claims + catalog 61, all pass.
 
 ### Sprint 871: Stripe dispute webhooks never find the customer (#273)
 **Status:** IN PROGRESS (2026-11-16) — code complete, in a PR awaiting CEO merge; Stripe test-mode check open.

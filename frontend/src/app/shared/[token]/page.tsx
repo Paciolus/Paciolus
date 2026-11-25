@@ -22,13 +22,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+/** Set by the API when this download consumed a single-use link (council 2026-11-25 D-6). */
+const SINGLE_USE_HEADER = 'X-Paciolus-Share-Single-Use'
+
 type PageState =
   | { kind: 'checking' }
   | { kind: 'passcode_required'; errorMessage?: string; maybeMissing?: boolean }
   | { kind: 'locked'; retryAfter: number }
   | { kind: 'expired' }
   | { kind: 'not_found' }
-  | { kind: 'downloaded' }
+  | { kind: 'downloaded'; singleUse: boolean }
   | { kind: 'network_error'; detail: string }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
@@ -77,7 +80,7 @@ export default function SharedDownloadPage() {
       })
       if (resp.ok) {
         await triggerDownload(resp, `paciolus_export_${token.slice(0, 8)}`)
-        setState({ kind: 'downloaded' })
+        setState({ kind: 'downloaded', singleUse: resp.headers.get(SINGLE_USE_HEADER) === '1' })
         return
       }
       if (resp.status === 403) {
@@ -123,7 +126,7 @@ export default function SharedDownloadPage() {
       )
       if (resp.ok) {
         await triggerDownload(resp, `paciolus_export_${token.slice(0, 8)}`)
-        setState({ kind: 'downloaded' })
+        setState({ kind: 'downloaded', singleUse: resp.headers.get(SINGLE_USE_HEADER) === '1' })
         return
       }
       if (resp.status === 429) {
@@ -217,17 +220,27 @@ function ShareStateView({
         <h1 className="font-serif text-xl font-bold text-content-primary mb-2">
           Download started
         </h1>
-        <p className="font-sans text-sm text-content-secondary mb-4">
-          Your export should appear in your browser downloads. This link remains valid
-          until it expires or is revoked by the sender.
-        </p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
-        >
-          Download again
-        </button>
+        {state.singleUse ? (
+          // Council 2026-11-25 D-6: a single-use link is revoked by this download.
+          <p className="font-sans text-sm text-content-secondary mb-4" data-testid="single-use-consumed">
+            Your export should appear in your browser downloads. This was a single-use link, so it no longer
+            works — ask the sender for a new link if you need the file again.
+          </p>
+        ) : (
+          <>
+            <p className="font-sans text-sm text-content-secondary mb-4">
+              Your export should appear in your browser downloads. This link remains valid
+              until it expires or is revoked by the sender.
+            </p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="px-4 py-2 bg-surface-card border border-oatmeal-300 rounded-lg text-content-primary font-sans text-sm hover:bg-surface-card-secondary transition-colors"
+            >
+              Download again
+            </button>
+          </>
+        )}
       </div>
     )
   }

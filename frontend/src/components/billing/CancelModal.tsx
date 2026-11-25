@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { fadeScale } from '@/lib/motion'
 
 interface CancelModalProps {
@@ -23,6 +24,8 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
   const [error, setError] = useState<string | null>(null)
 
   const isTrialing = status === 'trialing'
+  // Council 2026-11-25 D-5: dialog semantics, focus trap and Escape.
+  const focusTrapRef = useFocusTrap(isOpen, isLoading ? undefined : onClose)
 
   const endDate = periodEnd
     ? new Date(periodEnd).toLocaleDateString('en-US', {
@@ -57,13 +60,17 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
             onClick={onClose}
           />
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-modal-title"
             variants={fadeScale}
             initial="hidden"
             animate="visible"
             exit="exit"
             className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-md w-full"
           >
-        <h2 className="font-serif text-xl text-content-primary mb-4">
+        <h2 id="cancel-modal-title" className="font-serif text-xl text-content-primary mb-4">
           {isTrialing ? 'Cancel Trial' : 'Cancel Subscription'}
         </h2>
 
@@ -86,8 +93,15 @@ export function CancelModal({ isOpen, periodEnd, status, onConfirm, onClose }: C
         {isTrialing && (
           <div className="bg-oatmeal-100 border border-theme rounded-lg p-4 mb-4">
             <p className="text-sm text-content-secondary font-sans">
-              Your trial will be canceled and you will lose access to paid features immediately.
-              No payment method will be charged.
+              {endDate ? (
+                <>
+                  You keep access to paid features until your trial ends on{' '}
+                  <span className="font-medium text-content-primary">{endDate}</span>. The trial will not convert
+                  to a paid plan and your card will not be charged.
+                </>
+              ) : (
+                'You keep access to paid features until your trial ends. The trial will not convert to a paid plan and your card will not be charged.'
+              )}
             </p>
           </div>
         )}

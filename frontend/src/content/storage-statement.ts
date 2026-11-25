@@ -69,12 +69,20 @@ export const WE_KEEP: readonly string[] = [
   'What you enter in an engagement: materiality, follow-up items, intercompany account mappings, analytical-expectation workpapers (expected and actual values) and misstatement workpapers (account, debit or credit, amount)',
   `Reports you share by link: the complete file, stored with our storage provider for ${SHARE_RETENTION}`,
   'Counts of which tools you run and how many uploads you make (for your upload allowance)',
+  // Council 2026-11-25 L-6: the list claims to be exact, so it names every kind of record the database holds.
+  'The first characters of an uploaded file’s name, shown in your history (the file itself is not kept)',
+  'Adjusting entries you are drafting, without their lines or amounts, for up to 1 hour so a reload does not lose them',
+  'A currency rate table you load, for up to 2 hours so the conversion can be re-run',
+  'Your signed-in sessions: when each was last used, the browser’s user-agent and the IP address',
+  'A security log of actions on your account — sign-ins and failed sign-ins, tools run, exports and settings changes — without file contents or amounts, kept for up to 365 days',
+  'Billing records: plan changes, checkout attempts and promo codes used (card details are held by Stripe)',
+  'For firms: members, invitations, team activity (tool used and a hash of the file name) and the logo and header and footer text used on PDF memos',
   'A daily backup of everything above except shared reports, kept with a separate storage provider as 30 daily and 12 monthly copies',
 ]
 
 /** What we don't keep — each line true as written, exceptions stated. */
 export const WE_DONT_KEEP: readonly string[] = [
   'Uploaded files (CSV, Excel, PDF or any other format)',
-  'The rows in your uploads — balances, journal entries, invoices, payments or payroll records — unless they are in a report you share by link',
+  'The rows in your uploads — balances, journal entries, invoices, payments or payroll records — unless they are in a report you share by link (a currency rate table is kept for up to 2 hours, as listed above)',
   'The entries and amounts behind a flag, unless they are in a report you share by link',
 ]

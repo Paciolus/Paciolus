@@ -296,6 +296,9 @@ def _resolve_export_bytes(share: ExportShare) -> bytes:
     raise HTTPException(status_code=410, detail="Shared export is no longer available.")
 
 
+SINGLE_USE_HEADER = "X-Paciolus-Share-Single-Use"
+
+
 def _build_download_response(share: ExportShare) -> Response:
     """Serialize a share's bytes into a safe downloadable Response."""
     content_type = _CONTENT_TYPES.get(share.export_format, "application/octet-stream")
@@ -307,6 +310,9 @@ def _build_download_response(share: ExportShare) -> Response:
         headers={
             "Content-Disposition": content_disposition(filename),
             "Cache-Control": "no-store",
+            # Council 2026-11-25 D-6: tells the recipient page this download
+            # consumed a single-use link, so it does not offer "Download again".
+            SINGLE_USE_HEADER: "1" if share.single_use else "0",
             # X-Content-Type-Options and Referrer-Policy set by SecurityHeadersMiddleware
         },
     )

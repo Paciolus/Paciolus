@@ -584,6 +584,8 @@ class TestExportSharingSingleUse:
                 dl1 = await client.get(f"/export-sharing/{token}")
                 assert dl1.status_code == 200
                 assert dl1.content == VALID_PDF_BYTES
+                # Council 2026-11-25 D-6: the page learns the link is now spent.
+                assert dl1.headers["X-Paciolus-Share-Single-Use"] == "1"
 
                 # Second download fails (revoked)
                 dl2 = await client.get(f"/export-sharing/{token}")
@@ -623,6 +625,7 @@ class TestExportSharingSingleUse:
                 for _ in range(3):
                     dl = await client.get(f"/export-sharing/{token}")
                     assert dl.status_code == 200
+                    assert dl.headers["X-Paciolus-Share-Single-Use"] == "0"
         finally:
             app.dependency_overrides.clear()
 

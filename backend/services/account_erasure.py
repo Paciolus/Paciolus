@@ -50,7 +50,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import Table, delete, select, update
+from sqlalchemy import Table, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from database import Base
@@ -428,7 +428,15 @@ def erase_account(db: Session, user: Any) -> dict[str, int]:
 
 # Never exported: credentials and token material.
 _SECRET_COLUMNS = frozenset(
-    {"hashed_password", "token_hash", "passcode_hash", "export_data", "object_key", "share_token_hash"}
+    {
+        "hashed_password",
+        "token_hash",
+        "passcode_hash",
+        "export_data",
+        "object_key",
+        "share_token_hash",
+        "invite_token_hash",
+    }
 )
 
 
@@ -491,5 +499,31 @@ def export_account(db: Session, user: Any) -> dict[str, Any]:
         # PR #236 review: saved adjusting-entry and currency-rate sessions are
         # stored data too, and erasure deletes them.
         "tool_sessions": _rows(db, "tool_sessions", _t("tool_sessions").c.user_id == user_id),
+        # Council 2026-11-25 L-2: the Privacy Policy calls this export everything we hold, so the
+        # billing, security and firm records about this user are in it too. Firm-wide rows are
+        # limited to the user's own (their membership, their activity, invitations they sent or
+        # received); a firm's branding is included for the firm the user owns.
+        "billing_events": _rows(db, "billing_events", _t("billing_events").c.user_id == user_id),
+        "checkout_attempts": _rows(db, "checkout_attempts", _t("checkout_attempts").c.user_id == user_id),
+        "promo_redemptions": _rows(db, "promo_redemptions", _t("promo_redemptions").c.user_id == user_id),
+        "security_events": _rows(db, "security_events", _t("security_events").c.user_id == user_id),
+        "organization_memberships": _rows(db, "organization_members", _t("organization_members").c.user_id == user_id),
+        "organization_invites": _rows(
+            db,
+            "organization_invites",
+            or_(
+                _t("organization_invites").c.invited_by_user_id == user_id,
+                _t("organization_invites").c.accepted_by_user_id == user_id,
+                func.lower(_t("organization_invites").c.invitee_email) == str(user.email).lower(),
+            ),
+        ),
+        "team_activity": _rows(db, "team_activity_logs", _t("team_activity_logs").c.user_id == user_id),
+        "firm_branding": _rows(
+            db,
+            "firm_branding",
+            _t("firm_branding").c.organization_id.in_(
+                select(_t("organizations").c.id).where(_t("organizations").c.owner_user_id == user_id)
+            ),
+        ),
     }
     return data

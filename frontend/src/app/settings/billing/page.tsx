@@ -276,7 +276,7 @@ export default function BillingSettingsPage() {
                     ✓ DPA accepted
                   </p>
                   <p className="text-sm text-content-secondary font-sans">
-                    Version {subscription.dpa_version ?? '1.0'} accepted on{' '}
+                    {subscription.dpa_version ? `Version ${subscription.dpa_version} accepted` : 'Accepted'} on{' '}
                     {new Date(subscription.dpa_accepted_at).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
@@ -286,7 +286,7 @@ export default function BillingSettingsPage() {
                 </div>
               ) : (
                 <p className="text-sm text-content-tertiary font-sans">
-                  DPA acceptance not yet recorded. Acceptance is captured at checkout for Professional and Enterprise plans.
+                  No Data Processing Addendum is on record for this account. Contact us to request one for your organization.
                 </p>
               )}
             </Reveal>

@@ -9,7 +9,7 @@
  * URL params: ?plan=solo|professional|enterprise&interval=monthly|annual&seats=N
  */
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useBilling } from '@/hooks/useBilling'
@@ -65,9 +65,17 @@ function CheckoutContent() {
   const [promoApplied, setPromoApplied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { createCheckoutSession, error, subscription, fetchSubscription } = useBilling()
-  useEffect(() => {
-    void fetchSubscription()
+  // Council 2026-11-25 D-3: checkout stays disabled until the trial/renewal
+  // terms have loaded — a customer must see what they agree to before paying.
+  const [termsFailed, setTermsFailed] = useState(false)
+  const loadTerms = useCallback(async () => {
+    setTermsFailed(false)
+    const result = await fetchSubscription()
+    if (!result) setTermsFailed(true)
   }, [fetchSubscription])
+  useEffect(() => {
+    void loadTerms()
+  }, [loadTerms])
   // PR #234 review: mirror backend/billing/checkout_orchestrator.py — only a
   // new subscription (none yet, or a cancelled one) gets the trial, so only
   // then may the disclosure promise "no charge today".
@@ -84,7 +92,7 @@ function CheckoutContent() {
         <div className="bg-surface-card border border-theme rounded-lg p-8 max-w-md text-center">
           <h1 className="font-serif text-xl text-content-primary mb-4">Invalid Plan</h1>
           <p className="text-content-secondary mb-6">The selected plan is not available.</p>
-          <Link href="/pricing" className="text-sage-600 font-sans font-medium hover:underline">
+          <Link href="/pricing" className="text-sage-400 font-sans font-medium hover:underline">
             View Plans
           </Link>
         </div>
@@ -184,7 +192,7 @@ function CheckoutContent() {
         <div className="border border-theme rounded-lg p-5 mb-6">
           <div className="flex justify-between items-baseline mb-1">
             <span className="font-serif text-lg text-content-primary">{planLabel}</span>
-            <span className="font-mono text-lg text-sage-600">
+            <span className="font-mono text-lg text-sage-400">
               {formatPerUnit(basePriceCents, interval)}
             </span>
           </div>
@@ -205,7 +213,7 @@ function CheckoutContent() {
                 <button
                   onClick={() => handleSeatChange(-1)}
                   disabled={additionalSeats === 0}
-                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-obsidian-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Remove seat"
                 >
                   -
@@ -216,7 +224,7 @@ function CheckoutContent() {
                 <button
                   onClick={() => handleSeatChange(1)}
                   disabled={additionalSeats >= planMaxSeats}
-                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-oatmeal-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="w-8 h-8 rounded-sm border border-theme text-content-primary flex items-center justify-center hover:bg-obsidian-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   aria-label="Add seat"
                 >
                   +
@@ -243,7 +251,7 @@ function CheckoutContent() {
           </label>
           {promoApplied ? (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-sage-600 font-mono">{promoCode.trim().toUpperCase()}</span>
+              <span className="text-sm text-sage-400 font-mono">{promoCode.trim().toUpperCase()}</span>
               <button
                 onClick={handleClearPromo}
                 className="text-sm text-content-tertiary hover:text-content-secondary transition-colors"
@@ -265,14 +273,14 @@ function CheckoutContent() {
               <button
                 onClick={handleApplyPromo}
                 disabled={!promoCode.trim()}
-                className="px-4 py-2 border border-sage-600 text-sage-600 rounded-sm font-sans text-sm font-medium hover:bg-sage-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-sage-400 text-sage-400 rounded-sm font-sans text-sm font-medium hover:bg-sage-900/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Apply
               </button>
             </div>
           )}
           {promoError && (
-            <p className="text-sm text-clay-600 mt-2" role="alert">{promoError}</p>
+            <p className="text-sm text-clay-300 mt-2" role="alert">{promoError}</p>
           )}
         </div>
 
@@ -291,14 +299,14 @@ function CheckoutContent() {
               </div>
             )}
             {promoApplied && (
-              <div className="flex justify-between text-sage-600">
+              <div className="flex justify-between text-sage-400">
                 <span>Promo: {promoCode.trim().toUpperCase()}</span>
                 <span className="font-mono">Applied at checkout</span>
               </div>
             )}
             <div className="border-t border-theme pt-2 flex justify-between font-medium text-content-primary">
               <span>Total</span>
-              <span className="font-mono tabular-nums text-sage-600">
+              <span className="font-mono tabular-nums text-sage-400">
                 {formatPerUnit(subtotal, interval)}
               </span>
             </div>
@@ -315,7 +323,7 @@ function CheckoutContent() {
         {offersDpa && (
           <p className="text-xs text-content-tertiary mb-6">
             Need a Data Processing Addendum for your organization?{' '}
-            <Link href="/contact?inquiry_type=organization" className="text-sage-600 hover:underline">
+            <Link href="/contact?inquiry_type=organization" className="text-sage-400 hover:underline">
               Request one
             </Link>
             .
@@ -324,7 +332,7 @@ function CheckoutContent() {
 
         {/* API Error */}
         {error && (
-          <div className="bg-clay-50 border border-clay-200 text-clay-700 rounded-lg p-3 mb-4 text-sm" role="alert">
+          <div className="bg-clay-900/30 border border-clay-800 text-clay-300 rounded-lg p-3 mb-4 text-sm" role="alert">
             {error}
           </div>
         )}
@@ -333,8 +341,29 @@ function CheckoutContent() {
         {/* Sprint 842: trial and auto-renewal terms, stated before the card is collected */}
         <div className="border border-theme rounded-lg p-5 mb-6" data-testid="trial-disclosure">
           <h2 className="font-serif text-base text-content-primary mb-2">{trialEligible === false ? 'Charge and renewal' : 'Trial and renewal'}</h2>
-          {trialEligible === null && (
+          {trialEligible === null && !termsFailed && (
             <p className="text-sm text-content-secondary">Checking your billing terms…</p>
+          )}
+          {trialEligible === null && termsFailed && (
+            <div className="text-sm text-content-secondary" data-testid="terms-load-failed">
+              <p>We couldn&apos;t load your billing terms, so checkout is paused.</p>
+              <div className="flex gap-4 mt-2">
+                <button
+                  type="button"
+                  onClick={() => void loadTerms()}
+                  className="text-sage-400 font-medium hover:underline"
+                >
+                  Try again
+                </button>
+                <Link
+                  href="/login"
+                  onClick={() => sessionStorage.setItem('paciolus_redirect', `/checkout?plan=${plan}&interval=${interval}`)}
+                  className="text-sage-400 font-medium hover:underline"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
           )}
           {trialEligible === true && (
             <p className="text-sm text-content-secondary leading-relaxed">
@@ -362,7 +391,7 @@ function CheckoutContent() {
 
         <button
           onClick={handleCheckout}
-          disabled={isLoading}
+          disabled={isLoading || trialEligible === null}
           className="w-full py-3 bg-sage-600 text-oatmeal-50 rounded-lg font-sans font-medium hover:bg-sage-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Redirecting to payment...' : 'Continue to Checkout'}

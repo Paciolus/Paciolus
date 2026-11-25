@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { type BillingInterval, baseSeats, formatPrice, getTier, isSelfServePlan, maxAdditionalSeats, SALES_CONTACT_HREF, SALES_CONTACT_LABEL, seatPriceDollars, seatsLabel, uploadsPerMonth } from '@/domain/pricing'
 import { fadeScale } from '@/lib/motion'
 
@@ -45,6 +46,8 @@ function priceLabel(tierId: string, interval: BillingInterval): string {
 }
 
 export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps) {
+  // Council 2026-11-25 D-5: dialog semantics, focus trap and Escape.
+  const focusTrapRef = useFocusTrap(isOpen, onClose)
   const [interval, setInterval] = useState<BillingInterval>('monthly')
   const [additionalSeats, setAdditionalSeats] = useState(0)
 
@@ -65,6 +68,10 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             onClick={onClose}
           />
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upgrade-modal-title"
             variants={fadeScale}
             initial="hidden"
             animate="visible"
@@ -72,7 +79,7 @@ export function UpgradeModal({ currentTier, isOpen, onClose }: UpgradeModalProps
             className="relative bg-surface-card border border-theme rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-serif text-xl text-content-primary">Choose a Plan</h2>
+          <h2 id="upgrade-modal-title" className="font-serif text-xl text-content-primary">Choose a Plan</h2>
           <button
             onClick={onClose}
             className="text-content-tertiary hover:text-content-secondary transition-colors"

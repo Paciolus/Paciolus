@@ -244,7 +244,7 @@ export default function ContactPage() {
             <div className="bg-obsidian-800 border border-obsidian-600 rounded-lg p-6">
               <h3 className="font-serif text-lg text-oatmeal-100 mb-2">Response Time</h3>
               <p className="font-sans text-oatmeal-400">
-                1&ndash;2 business days
+                We aim to reply within 1&ndash;2 business days
               </p>
             </div>
             <div className="bg-obsidian-800 border border-sage-500/30 rounded-lg p-6">

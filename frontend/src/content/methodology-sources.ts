@@ -1050,7 +1050,7 @@ export const METHODOLOGY_SOURCES: ToolMethodology[] = [
         kind: 'convention',
         sources: ['ISA 500'],
         configurable: false,
-        note: 'Bank reconciliation is a substantive procedure that produces audit evidence (ISA 500). The $0.01 amount tolerance, the same-day date rule and the largest-first order are Paciolus defaults.',
+        note: 'An auditor may use a bank reconciliation in obtaining audit evidence (ISA 500). Paciolus matches the records; it does not produce audit evidence, and the auditor decides what the result supports. The $0.01 amount tolerance, the same-day date rule and the largest-first order are Paciolus defaults.',
       },
       {
         test: 'Split matching (one bank item to several ledger items)',
