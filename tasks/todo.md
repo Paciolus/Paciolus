@@ -571,9 +571,47 @@ in the code before fixing. **Agents:** Guardian, Critic, Executor.
       removed member created). Covered by C-01's owned-firm scope.
 - [x] **C-03 (P2)** — `analytical_expectations.actual_captured_by` (Sprint 879) was not cleared → 500 on erasure. Added,
       plus a guard test: every column referencing `users.id` must be cleared, deleted or cascade.
-- [ ] Remaining council findings: filed below as Sprints 897–899.
+- [x] Remaining council findings: filed as Sprints 897–899 (2026-11-25).
 
 **Commit SHA:** TBD.
+
+### Sprint 897: Launch operations (council 2026-11-25, Scout)
+**Status:** PENDING. **Priority:** P1 (launch readiness; freeze-exempt). **Source:** `reports/council-audit-2026-11-25.md`
+O-1…O-9 — reported, re-check each first.
+- [ ] O-1: Render health check path `/health/live` (not `/ready`: a Redis blip must not restart-loop); consider 2 instances.
+- [ ] O-2: memory — 4 workers in a 2 GB / 1 CPU container. `WEB_CONCURRENCY` 2–3, `MEMO_RSS_WARN_MB` ~600, a per-worker
+      parse semaphore; load-test two parallel 100 MB uploads.
+- [ ] O-3: external monitor on `/health/ready` with a body match on `"status":"healthy"` (CEO: account); Sentry 5xx alert.
+- [ ] O-7: gunicorn into `requirements.txt` (23.x) and the `docker` ecosystem in Dependabot.
+- [ ] O-4: Sprint 877's Redis retry in `bulk_job_store` and `ip_failure_tracker`.
+- [ ] O-5 (CEO: cost): Key Value with persistence + `noeviction`, or impersonation revocations in Postgres.
+- [ ] O-6: CI job that builds the image and boots it to `/health/live`.
+- [ ] O-8 / O-9 (P3): daily-backup failure alert; expand/contract rule + CI grep for destructive migrations.
+
+### Sprint 898: Sampling and ratio methodology (council 2026-11-25, Accounting Expert)
+**Status:** PENDING. **Priority:** P1/P2 (defects in CPA-facing output; freeze-exempt as defects). **Source:** council
+report A-F1…A-F10. Verified: A-F1, A-F2, A-F7.
+- [ ] A-F1: MUS credit balances — return the excluded count/value, print them in memo and CSV, and either take them out
+      of the population value or require a separate stratum.
+- [ ] A-F7: remove the 97% Poisson row, or compute it exactly and label it computed (not the AICPA guide).
+- [ ] A-F3 / A-F4 / A-F6: correct the ISA 530 / ISA 320 paragraph citations (check the IAASB text); reword the factor
+      method to Sprint 805's; "designed with reference to ISA 530 / AS 2315", not "in accordance with".
+- [ ] A-F2 / A-F8 / A-F9 / A-F10: negative-equity covenant breach; going-concern double count and single-period "recurring";
+      ROE narrative on negative equity; SOCE `oci` word boundary.
+- [ ] A-F5 (CEO decision): is an uploaded TB always 12 months? If not, a period-length input and "not annualized" labels.
+
+### Sprint 899: Checkout, claims and accessibility (council 2026-11-25, Designer + Compliance)
+**Status:** PENDING. **Priority:** P1/P2 (the paying path and published claims). **Source:** council report D-*, L-*.
+- [ ] D-2: `/checkout/success` polls `/billing/subscription` until trialing/active before saying "upgraded".
+- [ ] D-1: dark-route contrast on checkout (sage/clay 300–400). D-3: Continue disabled until terms load; retry + sign-in.
+- [ ] D-4: cancel-trial copy (access until period end). D-5: dialog role, focus trap, Escape on 3 modals. D-6: single-use
+      share copy.
+- [ ] L-1: format lists (drop ODS, add Word) on homepage/About, guard from `/upload/capabilities`; Terms line to counsel.
+- [ ] L-2: `export_account` includes the 8 missing tables. L-5: remove the DPA-at-checkout sentence and version.
+- [ ] L-6 / L-7 / L-9 / L-10: "what we keep" list, "aim to reply", `/sources` evidence wording, pricing formats row.
+- [ ] Counsel package: L-3 (rate-table rows kept 2 h), L-4 (security events kept unlinked), L-8 (GDPR Art. 12(3)).
+- [ ] P3 later: G-04 (IP counter reset on own login), C-05, C-06, D-7…D-10.
+- [ ] C-04 (P2, performance — needs the freeze lifted): TB and six routes do blocking DB work in `async def`.
 
 ### Sprint 870: Rate limits never fire in production (#274)
 **Status:** COMPLETE on production 2026-11-25 (config); guard + regression tests in PR. Part A merged 2026-11-24 (#333).
