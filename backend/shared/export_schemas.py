@@ -491,6 +491,10 @@ class SamplingDesignMemoInput(WorkpaperMetadata):
     strata_summary: list = []
     selected_items: list = []
     population_type: str = ""
+    # Sprint 898 (A-F1; PR #339 review): credit balances MUS could not select.
+    # Declared here or model_dump() drops them before the generator sees them.
+    mus_negative_excluded_count: int = 0
+    mus_negative_excluded_value: float = 0.0
     filename: str = "sampling_design"
 
 
