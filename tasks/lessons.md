@@ -336,3 +336,13 @@
 - **2026-11-24 — `ExactMoney` is stricter than `float`: it rejects `inf`/`NaN`** (Sprint 894 C). Moving a ratio or
   percentage field to it would turn a division by zero into a 500. Only currency amounts move; and Python-side readers
   of a converted response attribute now get a `Decimal` (two sampling tests compared it with a float).
+- **2026-11-25 — A local `.env` hides what CI lacks** (PR #333). Sprint 853's checkout test passed locally and failed in
+  CI: Sprint 881 added Stripe admission calls the fixture did not stub, and only the local `.env` had a Stripe key.
+  When combining branches, a test that touches an external service must stub every call path, not rely on a key.
+- **2026-11-25 — Behind two proxies, trust both hops or the key is the proxy** (Sprint 870). Production rate limits
+  never fired for eight weeks: Render's rotating internal proxies were the TCP peer and Cloudflare the next hop, and
+  `TRUSTED_PROXY_IPS` was empty. The proof came from hashing Cloudflare's published ranges against the probe's
+  hashed hops (no address logged raw). A missing security setting must make readiness say "degraded", not stay silent.
+- **2026-11-25 — GitHub will not rebase-merge a PR of more than 100 commits.** With linear history required and `main`
+  an ancestor of the tested tip, fast-forward `main` to that exact SHA (the PR then shows merged); never squash a
+  chain whose sprint records cite commit SHAs.

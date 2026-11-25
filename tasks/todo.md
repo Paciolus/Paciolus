@@ -90,7 +90,9 @@
 > "A/An" flag-unit article, goldens and OpenAPI snapshot re-recorded.
 >
 > **P0 before 2026-12-15 — in order**
-> - [ ] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
+> - [x] **Verify the deploy:** Render runs the nine migrations; live deploy SHA = `main`; `/health/ready` body says ok.
+>       2026-11-25 03:08 UTC: PR #333 landed as a fast-forward of `main` to `209e5039` (GitHub refuses rebase-merge past
+>       100 commits); deploy `dep-dc35275g…` live; all nine migrations logged (853 backfill: 0 clients moved); body `healthy`.
 >       Then: sign in, reload twice, idle 20 minutes, act — still signed in (Sprint 874's check).
 > - [x] **Sprint 870 part B** — FIXED ON PRODUCTION 2026-11-25: `TRUSTED_PROXY_IPS` set on Render (Render internal +
 >       Cloudflare ranges); a 75-request burst now returns 60 × 200 then 429. Guard + tests in PR (branch `sprint-870-trusted-proxies`).
@@ -1527,6 +1529,11 @@ pre-commit gate on every commit.
       **2026-11-24, PR #333 CI (874 included):** still 2 of 5 fail in `trial-balance-mapping` (an element not found;
       `waitForURL` timeout after a reload). Not a required check. The E2E backend is not production, so 874's
       Origin path may not be what it exercises — read the run's `error-context.md` artifacts before changing code.
+      **Read 2026-11-25:** the cause is the auth rate limit, not the session. The trace shows `/auth/refresh` and
+      `/auth/login` both **429** (`RATE_LIMIT_AUTH` 5/minute, one client address for the whole suite and its retries),
+      after which the page shows "Sign in". (Dev/test refresh passes on `X-Requested-With` alone, so CSRF is not
+      involved.) Fix options: sign in once and reuse the session (`storageState`), or a test-only limit setting that
+      production refuses. Not a required check.
 
 ### Sprint 890: The edges between frontend, API and background work
 **Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-890-edges`, stacked on Sprint 889.
