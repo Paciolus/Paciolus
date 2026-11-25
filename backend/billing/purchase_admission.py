@@ -42,9 +42,13 @@ from subscription_model import (
 
 logger = logging.getLogger(__name__)
 
-# Stripe's minimum Checkout Session lifetime. An abandoned session stops being
-# payable after this, which bounds how long an untracked one could matter.
-CHECKOUT_SESSION_LIFETIME = timedelta(minutes=30)
+# Stripe requires ``expires_at`` 30 minutes to 24 hours after the session is
+# created. The timestamp is taken before the database commit and the Stripe
+# call (and truncated to whole seconds), so exactly 30 minutes can arrive at
+# Stripe as 29:59 and be rejected. 35 minutes leaves room for that latency. An
+# abandoned session stops being payable after this, which bounds how long an
+# untracked one could matter. (PR #333 review.)
+CHECKOUT_SESSION_LIFETIME = timedelta(minutes=35)
 
 # An ``opening`` attempt younger than this may still be creating its Stripe
 # session, which a second checkout could neither see nor expire. Older than this,

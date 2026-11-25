@@ -1508,6 +1508,9 @@ pre-commit gate on every commit.
       fixed in Sprint 893 (B).
 - [ ] 14H: three upload E2E tests fail locally because the session does not survive a page load. Cause found by
       Sprint 874 (#327): `/auth/refresh` needs a CSRF token the page loses on reload — re-run after it deploys.
+      **2026-11-24, PR #333 CI (874 included):** still 2 of 5 fail in `trial-balance-mapping` (an element not found;
+      `waitForURL` timeout after a reload). Not a required check. The E2E backend is not production, so 874's
+      Origin path may not be what it exercises — read the run's `error-context.md` artifacts before changing code.
 
 ### Sprint 890: The edges between frontend, API and background work
 **Status:** IN REVIEW (2026-11-20) — code complete on local branch `sprint-890-edges`, stacked on Sprint 889.
