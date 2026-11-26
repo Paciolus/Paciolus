@@ -46,7 +46,7 @@ uvicorn[standard]==0.54.0
 # smuggling). Exact pin: runtime surface. Linux-only (imports fcntl), so the
 # marker keeps Windows dev installs clean.
 gunicorn==23.0.0; sys_platform != "win32"
-pydantic[email]==2.14.3
+pydantic[email]==2.14.4
 pandas==3.1.1
 openpyxl==3.1.5
 # Sprint-774-era CVE sweep (2026-10-19): 0.0.26 carried 4 advisories --
@@ -55,7 +55,7 @@ openpyxl==3.1.5
 # value turned the bounded chunked read into read-until-EOF, loading the
 # whole body into memory at once), PYSEC-2026-3036/3037 (QuerystringParser
 # ";" separator differential + quadratic rescan). All four land by 0.0.31.
-python-multipart==0.0.33
+python-multipart==0.0.34
 python-dotenv==1.2.4
 
 # PDF Generation (Day 12)
