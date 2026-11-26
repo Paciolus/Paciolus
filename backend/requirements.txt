@@ -80,7 +80,7 @@ psycopg2-binary==2.9.13
 alembic==1.20.1
 
 # Billing (Sprint 362)
-stripe==16.0.1
+stripe==17.1.0
 
 # Email Service (Sprint 57)
 sendgrid==6.12.5
