@@ -35,6 +35,7 @@ function severityBadge(severity: string): string {
 function statusIcon(status: string): string {
   switch (status) {
     case 'found': return '✓'
+    case 'inferred':
     case 'low_confidence': return '?'
     case 'missing': return '✕'
     default: return '—'
@@ -44,6 +45,7 @@ function statusIcon(status: string): string {
 function statusColor(status: string): string {
   switch (status) {
     case 'found': return 'text-sage-600'
+    case 'inferred':
     case 'low_confidence': return 'text-oatmeal-600'
     case 'missing': return 'text-clay-600'
     default: return 'text-content-secondary'

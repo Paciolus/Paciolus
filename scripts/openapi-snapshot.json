@@ -23275,6 +23275,7 @@
           "status": {
             "enum": [
               "found",
+              "inferred",
               "low_confidence",
               "missing"
             ],

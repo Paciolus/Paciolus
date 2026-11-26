@@ -567,3 +567,39 @@ class TestCategoryCompleteness:
             "cogs_gap",
         ):
             assert key in cc
+
+
+class TestPreflightResponseSchemaAcceptsEngineOutput:
+    """2026-11-25: Sprint 668's "inferred" column status was never added to the response schema.
+
+    Every file whose columns were inferred rather than matched by header (generic headers,
+    header-less files) failed response validation, so ``/audit/preflight`` returned a 500.
+    Found by the Sprint 889 end-to-end spec.
+    """
+
+    def test_generic_header_file_validates(self):
+        from shared.diagnostic_response_schemas import PreFlightReportResponse
+
+        columns = ["Col A", "Col B", "Col C"]
+        rows = [
+            {"Col A": "Cash", "Col B": 50000, "Col C": 0},
+            {"Col A": "Revenue", "Col B": 0, "Col C": 50000},
+            {"Col A": "Expense", "Col B": 1000, "Col C": 0},
+        ]
+        report = run_preflight(columns, rows, "mapping-required.csv").to_dict()
+        assert any(c["status"] == "inferred" for c in report["columns"])
+        PreFlightReportResponse.model_validate(report)
+
+    def test_every_engine_column_status_is_in_the_schema(self):
+        import inspect
+        import re
+        import typing
+
+        import preflight_engine
+        from shared.diagnostic_response_schemas import PreFlightColumnQualityResponse
+
+        source = inspect.getsource(preflight_engine)
+        emitted = set(re.findall(r'ColumnQuality\([^)]*?"(\w+)", downstream_use\)', source))
+        assert emitted >= {"found", "inferred", "missing"}
+        allowed = set(typing.get_args(PreFlightColumnQualityResponse.model_fields["status"].annotation))
+        assert emitted <= allowed, f"engine emits {emitted - allowed}, which the response schema rejects"

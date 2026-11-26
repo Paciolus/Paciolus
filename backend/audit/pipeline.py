@@ -239,6 +239,15 @@ def audit_trial_balance_streaming(
                         f"diagnostic results are unreliable until this is corrected."
                     ),
                     "amount": float(_tb_imbalance_amount),
+                    # Every field AbnormalBalanceResponse requires. Without them every
+                    # out-of-balance trial balance failed response validation and
+                    # /audit/trial-balance answered 500 (Sprint 667 → 2026-11-25).
+                    "debit": 0.0,
+                    "credit": 0.0,
+                    "category": "unknown",
+                    "matched_keywords": [],
+                    "requires_review": True,
+                    "suggestions": [],
                     "materiality": "material",
                     "anomaly_type": "tb_out_of_balance",
                     "severity": "high",

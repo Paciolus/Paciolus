@@ -205,3 +205,57 @@ describe('duplicate submissions', () => {
   })
 })
 
+
+describe('column mapping required (2026-11-25)', () => {
+  const detection = {
+    account_column: 'Col A',
+    debit_column: null,
+    credit_column: null,
+    account_confidence: 0.3,
+    debit_confidence: 0,
+    credit_confidence: 0,
+    overall_confidence: 0,
+    requires_mapping: true,
+    all_columns: ['Col A', 'Col B', 'Col C'],
+    detection_notes: ['Could not identify Debit column'],
+  }
+  // What the backend answers when it cannot find the Debit and Credit columns.
+  const failedNeedsMapping = {
+    ok: true,
+    status: 200,
+    data: { status: 'failed', message: 'ANALYSIS COULD NOT BE COMPLETED', column_detection: detection },
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('asks for a mapping when the backend cannot identify the columns', async () => {
+    mockUploadFetch.mockResolvedValue(failedNeedsMapping)
+    const outcome = await uploadTrialBalance({ file: makeFile(), materialityThreshold: 1, promptForMapping: true })
+    expect(outcome).toEqual({ kind: 'mapping_required', detection })
+  })
+
+  it('asks for a mapping on a low-confidence success too', async () => {
+    mockUploadFetch.mockResolvedValue({ ...failedNeedsMapping, data: { status: 'success', column_detection: detection } })
+    const outcome = await uploadTrialBalance({ file: makeFile(), materialityThreshold: 1, promptForMapping: true })
+    expect(outcome.kind).toBe('mapping_required')
+  })
+
+  it('does not ask again once a mapping was sent', async () => {
+    mockUploadFetch.mockResolvedValue(failedNeedsMapping)
+    const outcome = await uploadTrialBalance({
+      file: makeFile(),
+      materialityThreshold: 1,
+      promptForMapping: true,
+      columnMapping: { account_column: 'Col A', debit_column: 'Col B', credit_column: 'Col C' },
+    })
+    expect(outcome).toEqual({ kind: 'audit_error', message: 'ANALYSIS COULD NOT BE COMPLETED' })
+  })
+
+  it('callers without a mapping step get the error as before', async () => {
+    mockUploadFetch.mockResolvedValue(failedNeedsMapping)
+    const outcome = await uploadTrialBalance({ file: makeFile(), materialityThreshold: 1 })
+    expect(outcome.kind).toBe('audit_error')
+  })
+})

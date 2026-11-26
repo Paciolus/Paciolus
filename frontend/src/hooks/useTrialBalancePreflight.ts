@@ -31,6 +31,8 @@ interface UploadControls {
   selectedSheets: string[] | null
   setSelectedSheets: (s: string[] | null) => void
   resetAudit: () => void
+  mappingRequired: UseTrialBalanceUploadReturn['mappingRequired']
+  clearMappingRequired: () => void
 }
 
 export interface UseTrialBalancePreflightReturn {
@@ -70,9 +72,9 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
   const preflight = usePreflight()
   const [showPreflight, setShowPreflight] = useState(false)
 
-  // Column mapping state
-  const [showColumnMappingModal, setShowColumnMappingModal] = useState(false)
-  const [pendingColumnDetection, setPendingColumnDetection] = useState<ColumnDetectionInfo | null>(null)
+  // Column mapping: the upload hook records when an upload needs a mapping.
+  const pendingColumnDetection: ColumnDetectionInfo | null = upload.mappingRequired
+  const showColumnMappingModal = pendingColumnDetection !== null
   const [columnMappingSource, setColumnMappingSource] = useState<'preflight' | 'manual' | null>(null)
 
   // Workbook inspection state
@@ -250,16 +252,14 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
   const handleColumnMappingConfirm = useCallback((mapping: ColumnMapping) => {
     upload.setUserColumnMapping(mapping)
     setColumnMappingSource('manual')
-    setShowColumnMappingModal(false)
-    setPendingColumnDetection(null)
+    upload.clearMappingRequired()
     if (upload.selectedFile) {
       upload.runAudit(upload.selectedFile, upload.materialityThreshold, false, mapping, upload.selectedSheets)
     }
   }, [upload])
 
   const handleColumnMappingClose = useCallback(() => {
-    setShowColumnMappingModal(false)
-    setPendingColumnDetection(null)
+    upload.clearMappingRequired()
     upload.setAuditStatus('idle')
     upload.setSelectedFile(null)
   }, [upload])
@@ -268,8 +268,6 @@ export function useTrialBalancePreflight(upload: UploadControls): UseTrialBalanc
 
   const resetAll = useCallback(() => {
     setShowPreflight(false)
-    setShowColumnMappingModal(false)
-    setPendingColumnDetection(null)
     setShowWorkbookInspector(false)
     setPendingWorkbookInfo(null)
     setShowPdfPreview(false)

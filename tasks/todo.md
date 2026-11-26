@@ -90,11 +90,9 @@
 >       (#298) is the one bump left out of the 2026-11-25 batch (a major).
 > - [ ] Alarm for GitHub disabling scheduled workflows after 60 idle days (the other half of the PR #312 item; the
 >       Nov 1 checklist covers it manually until then).
-> - [ ] **Finding 2026-11-16 — the "E2E Smoke Tests (Playwright)" check has never run a test.** `SMOKE_USER` /
->       `SMOKE_PASS` are not set, so `ci.yml` skips the test step and the job reports success on every PR. Setting
->       them would not help: the job starts a fresh SQLite backend with no users. Recommendation: seed a throwaway
->       verified user inside the job (no secrets needed) and fail the job when the suite does not run. Not done
->       overnight — CI work, freeze status for the CEO to call.
+> - [ ] **E2E as a required check (CEO):** Sprint 889 made the Playwright job run; it was red on `main` from 2026-11-20
+>       until Sprint 900 and nobody saw it, because it is not a required status check. Recommendation: add
+>       "E2E Smoke Tests (Playwright)" to `main`'s required checks once Sprint 900 is merged and green.
 > - [ ] Neon point-in-time restore drill (Sprint 778 remainder): the R2 restore drill passed 2026-11-14; a PITR restore
 >       has not been drilled — only its 7-day window is checked.
 > - Partial sprints parked by the freeze are listed below with their open items.
@@ -135,6 +133,25 @@
 - [ ] Counsel package: L-3 (rate-table rows kept 2 h), L-4 (security events kept unlinked), L-8 (GDPR Art. 12(3)).
 - [ ] P3 later: G-04 (IP counter reset on own login), C-05, C-06, D-7…D-10.
 - [ ] C-04 (P2, performance — needs the freeze lifted): TB and six routes do blocking DB work in `async def`.
+
+### Sprint 900: Three production 500s and an unreachable mapping step, found by the E2E job
+**Status:** in review — branch `sprint-900-tb-column-mapping` (freeze-exempt: production defects).
+The Sprint 889 E2E job was red on `main` since 2026-11-20. Running it against a local backend found:
+1. `/audit/trial-balance` answered **500 on every out-of-balance trial balance** since Sprint 667 (2026-04-15): the
+   synthetic "Trial Balance — Overall" anomaly lacked six fields `AbnormalBalanceResponse` requires. Fixed in
+   `audit/pipeline.py`.
+2. `/audit/preflight` answered **500 on every file whose columns were inferred** (generic headers, no header row)
+   since Sprint 668: the "inferred" status was missing from the response schema and the frontend type.
+3. The TB **column-mapping modal had not opened since Sprint 519** (2026-03-09): the split hooks left nothing setting
+   it, and the upload helper turned the backend's `failed` + `requires_mapping` answer into an error first. Now a
+   `mapping_required` outcome opens the modal; `runAudit` records its inputs so the debounce does not re-run it.
+4. The Sprint 734 spec mocked responses that had drifted from the contract and never clicked through pre-flight. It
+   now runs against the real backend, counts uploads, and logs in once per worker (login: 5/minute).
+Tests: `test_sprint_900_upload_responses_validate.py` (both routes; the OOB test fails without the fix),
+`test_preflight.py` schema-vs-engine status check, `trialBalanceUpload.test.ts` (4). E2E: 5/5 twice locally, no retries.
+- [ ] CEO: review and merge the PR (after PR #341).
+- [ ] Post-merge on production: upload a TB with generic headers → pre-flight shows, the mapping modal opens, the
+      mapped run shows results; upload an out-of-balance TB → results with the out-of-balance exception first.
 
 ### Sprint 871: Stripe dispute webhooks never find the customer (#273)
 **Open items only** (2026-11-25 cleanup; full history in [`archive/todo-cleanup-2026-11-25.md`](archive/todo-cleanup-2026-11-25.md)).
