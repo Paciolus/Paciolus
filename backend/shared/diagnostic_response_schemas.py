@@ -917,7 +917,10 @@ class PreFlightColumnQualityResponse(BaseModel):
     role: str
     detected_name: Optional[str] = None
     confidence: float
-    status: Literal["found", "low_confidence", "missing"]
+    # "inferred": the column was picked by position or content, not by its header
+    # (Sprint 668). Missing from this Literal until 2026-11-25, which 500'd preflight
+    # on every header-less or generic-header file.
+    status: Literal["found", "inferred", "low_confidence", "missing"]
 
 
 class PreFlightIssueResponse(BaseModel):

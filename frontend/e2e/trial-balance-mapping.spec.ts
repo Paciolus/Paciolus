@@ -29,7 +29,7 @@
  *   second call (with column_mapping in form body) → success response.
  *   A third call would be a regression and is asserted against.
  */
-import { test, expect, type Page, type Route } from '@playwright/test'
+import { test as base, expect, type Page, type Route } from '@playwright/test'
 
 const SMOKE_USER = process.env.SMOKE_USER ?? ''
 const SMOKE_PASS = process.env.SMOKE_PASS ?? ''
@@ -95,13 +95,44 @@ async function login(page: Page) {
   await page.waitForURL('**/dashboard**', { timeout: 15000 })
 }
 
+type StorageState = Awaited<ReturnType<import('@playwright/test').BrowserContext['storageState']>>
+
+/**
+ * Log in once per worker and reuse the session cookies in every test. Login is limited to
+ * 5 a minute per IP, and the smoke spec logs in too: one login per test (plus retries) went
+ * over the limit in CI (2026-11-25).
+ */
+const test = base.extend<object, { authState: StorageState }>({
+  authState: [
+    async ({ browser }, provide, workerInfo) => {
+      const context = await browser.newContext({ baseURL: workerInfo.project.use.baseURL })
+      const page = await context.newPage()
+      await login(page)
+      const state = await context.storageState()
+      await context.close()
+      await provide(state)
+    },
+    { scope: 'worker' },
+  ],
+  storageState: ({ authState }, provide) => provide(authState),
+})
+
+/**
+ * Every upload runs the pre-flight check first (Sprint 283); the audit upload starts when
+ * the user proceeds from the pre-flight summary. Pre-flight hits the real backend.
+ */
+async function proceedPastPreflight(page: Page) {
+  const proceed = page.getByRole('button', { name: /proceed to full analysis/i })
+  await expect(proceed).toBeVisible({ timeout: 15000 })
+  await proceed.click()
+}
+
 test.describe('Sprint 734 — Trial Balance mapping-required handoff', () => {
   test.skip(!SMOKE_USER || !SMOKE_PASS, 'SMOKE_USER and SMOKE_PASS env vars required')
 
   test('mapping modal renders, user submits mapping, second upload completes without debounce dupes', async ({
     page,
   }) => {
-    await login(page)
 
     // Counter is checked at end of test to prove no debounce-induced
     // duplicate uploads. Each request is also classified by whether
@@ -162,6 +193,8 @@ test.describe('Sprint 734 — Trial Balance mapping-required handoff', () => {
       buffer: Buffer.from(csvContent, 'utf-8'),
     })
 
+    await proceedPastPreflight(page)
+
     // Mapping modal must appear after the first upload returns
     // requires_mapping=true. Identified by its unique aria-labelledby.
     const modal = page.locator('[role="dialog"][aria-labelledby="column-mapping-title"]')
@@ -211,7 +244,6 @@ test.describe('Sprint 734 — Trial Balance mapping-required handoff', () => {
   })
 
   test('mapping modal cancel does not trigger a second upload', async ({ page }) => {
-    await login(page)
 
     let uploadRequestCount = 0
 
@@ -236,6 +268,8 @@ test.describe('Sprint 734 — Trial Balance mapping-required handoff', () => {
       mimeType: 'text/csv',
       buffer: Buffer.from(csvContent, 'utf-8'),
     })
+
+    await proceedPastPreflight(page)
 
     const modal = page.locator('[role="dialog"][aria-labelledby="column-mapping-title"]')
     await expect(modal).toBeVisible({ timeout: 15000 })

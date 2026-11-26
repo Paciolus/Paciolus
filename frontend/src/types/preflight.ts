@@ -8,7 +8,7 @@ export interface PreFlightColumnQuality {
   role: string
   detected_name: string | null
   confidence: number
-  status: 'found' | 'low_confidence' | 'missing'
+  status: 'found' | 'inferred' | 'low_confidence' | 'missing'
 }
 
 export interface PreFlightIssue {
