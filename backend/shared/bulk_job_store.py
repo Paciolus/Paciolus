@@ -133,6 +133,9 @@ def put(job_id: str, job: dict[str, Any], *, ttl_seconds: int = _DEFAULT_TTL_SEC
     if client is not None:
         try:
             client.set(f"{_KEY_PREFIX}{job_id}", json.dumps(job), ex=ttl_seconds)
+            # A copy written during an outage is now superseded by Redis.
+            with _memory_lock:
+                _memory_store.pop(job_id, None)
             return
         except Exception as exc:  # noqa: BLE001
             _logger.warning("Bulk-job store: Redis put failed (%s)", exc)
@@ -151,14 +154,16 @@ def get(job_id: str) -> dict[str, Any] | None:
     if client is not None:
         try:
             raw = client.get(f"{_KEY_PREFIX}{job_id}")
-            if raw is None:
-                return None
-            return json.loads(raw)  # type: ignore[no-any-return]
+            if raw is not None:
+                return json.loads(raw)  # type: ignore[no-any-return]
+            # Not in Redis: the job may have been written to memory while
+            # Redis was down, before this worker reconnected.
         except Exception as exc:  # noqa: BLE001
             _logger.warning("Bulk-job store: Redis get failed (%s)", exc)
             # fall through to memory
 
     with _memory_lock:
+        _evict_stale_in_memory()
         return _memory_store.get(job_id)
 
 

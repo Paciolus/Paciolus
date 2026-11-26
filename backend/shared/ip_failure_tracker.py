@@ -106,6 +106,20 @@ def _evict_stale_in_memory(cutoff: float) -> None:
         _memory_store.pop(ip, None)
 
 
+def _memory_recent_count(ip: str, cutoff: float) -> int:
+    """Failures recorded in memory (while Redis was down) still inside the window."""
+    with _memory_lock:
+        entries = _memory_store.get(ip)
+        if not entries:
+            return 0
+        recent = [t for t in entries if t > cutoff]
+        if recent:
+            _memory_store[ip] = recent
+        else:
+            _memory_store.pop(ip, None)
+        return len(recent)
+
+
 def record_failure(ip: str, *, window_seconds: int) -> None:
     """Record one failed attempt from ``ip``.
 
@@ -155,18 +169,15 @@ def is_blocked(ip: str, *, window_seconds: int, threshold: int) -> bool:
             key = f"{_KEY_PREFIX}{ip}"
             client.zremrangebyscore(key, "-inf", cutoff)
             count = int(client.zcard(key))
-            return count >= threshold
+            # Failures recorded in memory while Redis was down never reach
+            # Redis, so they are added until they leave the window: a
+            # reconnect must not lift an active block (PR #341 review).
+            return count + _memory_recent_count(ip, cutoff) >= threshold
         except Exception as exc:  # noqa: BLE001
             _logger.warning("IP failure tracker: Redis is_blocked failed (%s)", exc)
             # fall through to memory
 
-    with _memory_lock:
-        entries = _memory_store.get(ip)
-        if not entries:
-            return False
-        recent = [t for t in entries if t > cutoff]
-        _memory_store[ip] = recent
-        return len(recent) >= threshold
+    return _memory_recent_count(ip, cutoff) >= threshold
 
 
 def reset(ip: str) -> None:
