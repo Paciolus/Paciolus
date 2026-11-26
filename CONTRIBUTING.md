@@ -223,6 +223,14 @@ expects, producing confusing "no such column" errors at request time.
    skip step 2 — it asserts that `alembic upgrade head` produces the
    same schema as `Base.metadata.create_all()`.
 
+**Removing, renaming or retyping anything: expand, then contract.** Render
+runs `alembic upgrade head` while the previous release is still serving, so
+a migration must never break the code that is live during the deploy. Add
+the new shape first and ship code that uses it; drop or rename the old shape
+only in a later release. `tests/test_destructive_migration_guard.py` fails
+on a destructive `upgrade()` without the marker — see
+`docs/runbooks/database-migrations.md`.
+
 **Drift exceptions:** A small number of tables and columns are
 documented as pre-existing drift (model exists, no migration). See
 `PRE_EXISTING_DRIFT_TABLES` and `PRE_EXISTING_DRIFT_COLUMNS` in

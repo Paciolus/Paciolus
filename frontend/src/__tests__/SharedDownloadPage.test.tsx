@@ -66,6 +66,24 @@ describe('SharedDownloadPage', () => {
     expect(await screen.findByText(/Download started/i)).toBeInTheDocument()
   })
 
+  it('does not offer "Download again" after a single-use download (council 2026-11-25 D-6)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(['bytes']),
+      headers: new Headers({
+        'Content-Disposition': 'attachment; filename="tb.csv"',
+        'X-Paciolus-Share-Single-Use': '1',
+      }),
+    })
+
+    renderPage()
+
+    expect(await screen.findByTestId('single-use-consumed')).toHaveTextContent(/no longer works/)
+    expect(screen.queryByText(/remains valid/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Download again/i })).not.toBeInTheDocument()
+  })
+
   it('shows the passcode form when GET returns 403 (older backends)', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,

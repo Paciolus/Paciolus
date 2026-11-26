@@ -1045,18 +1045,29 @@ class RatioEngine:
             )
         roe = (net_income / equity_denom) * 100
 
-        # Handle negative equity case (technical insolvency)
-        if self.equity < 0:
-            # With negative equity, a positive ROE actually means losses
-            if roe > 0:
-                return RatioResult(
-                    name="Return on Equity",
-                    value=round(roe, 1),
-                    display_value=f"{roe:.1f}%",
-                    is_calculable=True,
-                    interpretation="Warning: Negative equity with losses",
-                    threshold_status="below_threshold",
-                )
+        # Negative equity (ending, or the average used as the denominator):
+        # the ratio's sign no longer tells profit from loss. Sprint 898 (A-F9):
+        # a profitable entity with negative equity has a *negative* ROE and fell
+        # through to "Negative ROE - equity generating losses" — the opposite of
+        # what happened. Describe the facts and say the ratio is not meaningful.
+        if self.equity < 0 or equity_denom < 0:
+            if net_income > 0:
+                outcome = "net income on negative equity"
+            elif net_income < 0:
+                outcome = "net loss on negative equity"
+            else:
+                outcome = "break-even on negative equity"
+            return RatioResult(
+                name="Return on Equity",
+                value=round(roe, 1),
+                display_value=f"{roe:.1f}%",
+                is_calculable=True,
+                interpretation=(
+                    f"Not meaningful: {outcome}. With equity below zero the ratio's sign does not "
+                    "show whether the entity earned a return."
+                ),
+                threshold_status="below_threshold",
+            )
 
         # Interpretation thresholds (industry-generic)
         if roe >= ROE_STRONG:

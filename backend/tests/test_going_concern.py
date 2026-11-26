@@ -279,7 +279,9 @@ class TestComputeGoingConcernProfile:
         # Sprint 685: net-liability + working-capital-deficit + recurring-
         # losses + high-leverage = 4 triggered (was 5 pre-consolidation;
         # current-ratio and negative-working-capital were double-counted).
-        assert report.indicators_triggered >= 4
+        # Sprint 898 (A-F8): negative equity is counted once, under Net
+        # Liability Position, so High Leverage no longer adds a fourth.
+        assert report.indicators_triggered == 3
         assert report.indicators_checked == 4
 
     def test_with_prior_period(self):

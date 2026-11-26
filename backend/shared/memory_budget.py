@@ -16,9 +16,12 @@ The recurrence-prevention story for Sprint 722 is:
     3. The companion runbook ``docs/runbooks/memory-pressure.md`` documents
        how to read the structured logs and what to do when the alert fires.
 
-Threshold rationale: Render Standard exposes 2 GB / worker. We retain ~500 MB
-headroom for request payloads, SQLAlchemy session caches, and OS slab — so the
-default warn floor is 1500 MB. Override per environment via ``MEMO_RSS_WARN_MB``.
+Threshold rationale (corrected Sprint 897, O-2): Render Standard is 2 GB for the
+whole container, shared by every Gunicorn worker — not 2 GB per worker. With the
+default two workers each has roughly 1 GB, and a large upload parse can take
+several hundred MB of that, so the warning fires at 600 MB per process: early
+enough to act before the container is OOM-killed. Override per environment via
+``MEMO_RSS_WARN_MB``.
 """
 
 from __future__ import annotations
@@ -34,18 +37,20 @@ import psutil
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_WARN_MB = 600
+
 
 def _resolve_warn_threshold_mb() -> int:
-    """Read ``MEMO_RSS_WARN_MB`` from env. Falls back to 1500 MB (Render Standard 2 GB minus 500 MB headroom)."""
+    """Read ``MEMO_RSS_WARN_MB`` from env. Falls back to ``DEFAULT_WARN_MB`` (600 MB per process; see the module docstring)."""
     raw = os.environ.get("MEMO_RSS_WARN_MB")
     if not raw:
-        return 1500
+        return DEFAULT_WARN_MB
     try:
         value = int(raw)
     except ValueError:
-        logger.warning("memo.memory.invalid_threshold value=%r — using 1500 MB", raw)
-        return 1500
-    return value if value > 0 else 1500
+        logger.warning("memo.memory.invalid_threshold value=%r — using %d MB", raw, DEFAULT_WARN_MB)
+        return DEFAULT_WARN_MB
+    return value if value > 0 else DEFAULT_WARN_MB
 
 
 def get_rss_mb() -> float:

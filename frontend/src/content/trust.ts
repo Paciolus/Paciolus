@@ -199,7 +199,7 @@ export const vendorFacts: { term: string; detail: string }[] = [
   { term: 'Backups', detail: 'Daily, kept as 30 daily and 12 monthly copies; a restore is tested monthly.' },
   { term: 'Data Processing Addendum', detail: 'Available on request while counsel finalizes it.' },
   { term: 'Security contact', detail: 'security@paciolus.com' },
-  { term: 'Support', detail: 'Email, with a reply within 1–2 business days.' },
+  { term: 'Support', detail: 'Email. We aim to reply within 1–2 business days.' },
 ]
 
 /**

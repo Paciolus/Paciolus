@@ -243,7 +243,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With", "Accept"],
     # Sprint 880 (OUT-03): the browser must be able to read the export token to share an export.
-    expose_headers=["X-Paciolus-Export-Token"],
+    # Council 2026-11-25 D-6: the share page reads whether a download consumed a single-use link,
+    # and the filename (Content-Disposition is not CORS-safelisted).
+    expose_headers=["X-Paciolus-Export-Token", "X-Paciolus-Share-Single-Use", "Content-Disposition"],
 )
 
 # GZip compression for responses > 500 bytes

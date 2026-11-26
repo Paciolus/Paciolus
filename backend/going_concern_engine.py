@@ -11,7 +11,9 @@ indicators. Deterministic tests (Sprint 685 post-consolidation):
    negative-working-capital tests, which were mathematically
    equivalent (current_ratio < 1.0 ⇔ working_capital < 0). Keeps the
    dollar-magnitude output — more informative for GC than the ratio.
-3. Recurring losses — negative net margin (prior period if available)
+3. Net loss / recurring losses — a loss in the current period is reported as
+   "Net Loss"; it is called "Recurring Losses" only when the prior period also
+   shows a loss (Sprint 898 A-F8: one period cannot show recurrence)
 4. Revenue decline — period-over-period revenue decrease
 5. High leverage — debt-to-equity ratio above 3.0
 6. Negative operating cash flow — optional; runs when
@@ -381,9 +383,11 @@ def _test_recurring_losses(
     prior_revenue: Optional[float] = None,
     prior_expenses: Optional[float] = None,
 ) -> GoingConcernIndicator:
-    """Test 4: Recurring losses — negative net margin in current period.
+    """Test 4: Net loss in the current period; "Recurring Losses" only when the
+    prior period also recorded a loss.
 
-    If prior period available, also checks for consecutive losses.
+    Sprint 898 (A-F8): a single period cannot show that losses recur, so a
+    current-period loss without a prior-period loss is named "Net Loss".
     """
     net_income = total_revenue - total_expenses
     current_loss = net_income < -NEAR_ZERO
@@ -414,8 +418,14 @@ def _test_recurring_losses(
             f"(revenue ${total_revenue:,.2f} minus expenses ${total_expenses:,.2f})."
         )
 
+    if current_loss and not prior_loss:
+        if prior_revenue is None or prior_expenses is None:
+            description += " No prior period was supplied, so recurrence cannot be assessed."
+        else:
+            description += " The prior period did not record a net loss."
+
     return GoingConcernIndicator(
-        indicator_name="Recurring Losses",
+        indicator_name="Recurring Losses" if (current_loss and prior_loss) else "Net Loss",
         triggered=current_loss,
         threshold_proximity=severity,
         description=description,
@@ -464,8 +474,14 @@ def _test_revenue_decline(
 def _test_high_leverage(
     total_liabilities: float,
     total_equity: float,
+    net_liability_flagged: bool = False,
 ) -> GoingConcernIndicator:
-    """Test 6: High leverage — debt-to-equity ratio above 3.0."""
+    """Test 6: High leverage — debt-to-equity ratio above 3.0.
+
+    Sprint 898 (A-F8): negative equity is already the Net Liability Position
+    indicator. When that indicator fired, this one reports the condition but
+    does not count it a second time.
+    """
     if abs(total_equity) < NEAR_ZERO:
         triggered = total_liabilities > NEAR_ZERO
         return GoingConcernIndicator(
@@ -480,15 +496,18 @@ def _test_high_leverage(
         )
 
     if total_equity < -NEAR_ZERO:
+        description = (
+            f"Total equity is negative (${total_equity:,.2f}). "
+            f"Debt-to-equity ratio is not meaningful when equity is negative. "
+            f"Total liabilities are ${total_liabilities:,.2f}."
+        )
+        if net_liability_flagged:
+            description += " Counted once, under Net Liability Position."
         return GoingConcernIndicator(
             indicator_name="High Leverage",
-            triggered=True,
+            triggered=not net_liability_flagged,
             threshold_proximity="far_above",
-            description=(
-                f"Total equity is negative (${total_equity:,.2f}). "
-                f"Debt-to-equity ratio is not meaningful when equity is negative. "
-                f"Total liabilities are ${total_liabilities:,.2f}."
-            ),
+            description=description,
         )
 
     dte = total_liabilities / total_equity
@@ -589,20 +608,19 @@ def compute_going_concern_profile(
     indicators: list[GoingConcernIndicator] = []
 
     # Test 1: Net liability position
-    indicators.append(
-        _test_net_liability_position(
-            total_assets,
-            total_liabilities,
-            total_equity,
-        )
+    net_liability = _test_net_liability_position(
+        total_assets,
+        total_liabilities,
+        total_equity,
     )
+    indicators.append(net_liability)
 
     # Test 2 (Sprint 685 — consolidated): Working Capital Deficit.
     # Prior implementation ran Current Ratio AND Negative Working Capital
     # as two tests; they were mathematically equivalent and double-counted.
     indicators.append(_test_working_capital_deficit(current_assets, current_liabilities))
 
-    # Test 3: Recurring losses (always runs; uses prior if available)
+    # Test 3: Net loss / recurring losses (always runs; uses prior if available)
     indicators.append(
         _test_recurring_losses(
             total_revenue,
@@ -617,7 +635,9 @@ def compute_going_concern_profile(
         indicators.append(_test_revenue_decline(total_revenue, prior_revenue or 0.0))
 
     # Test 5: High leverage
-    indicators.append(_test_high_leverage(total_liabilities, total_equity))
+    indicators.append(
+        _test_high_leverage(total_liabilities, total_equity, net_liability_flagged=net_liability.triggered)
+    )
 
     # Sprint 685 Test 6: negative operating cash flow (optional). Only
     # runs when OCF is supplied — otherwise we can't derive it from a

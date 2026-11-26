@@ -188,7 +188,7 @@ class TestThresholdBreach:
 
     def test_invalid_threshold_falls_back_to_default(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv("MEMO_RSS_WARN_MB", "not-a-number")
-        # Should not raise — falls back to 1500.
+        # Should not raise — falls back to DEFAULT_WARN_MB.
         with track_memo_memory("Resilient memo"):
             pass
 

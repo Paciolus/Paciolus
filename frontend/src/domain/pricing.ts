@@ -293,7 +293,7 @@ export const comparisonRows: ComparisonRow[] = [
   { feature: 'Monthly uploads', free: uploadsPerMonth('free'), solo: uploadsPerMonth('solo'), professional: uploadsPerMonth('professional'), enterprise: uploadsPerMonth('enterprise') },
   { feature: 'Diagnostic Tools', free: '2 (TB + Flux)', solo: 'All 18', professional: 'All 18', enterprise: 'All 18' },
   { feature: 'Clients', free: clientsLimit('free'), solo: clientsLimit('solo'), professional: clientsLimit('professional'), enterprise: clientsLimit('enterprise') },
-  { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'All formats', enterprise: 'All formats' },
+  { feature: 'Export Formats', free: false, solo: 'PDF, Excel & CSV', professional: 'PDF, Excel & CSV', enterprise: 'PDF, Excel & CSV' },
   { feature: 'Diagnostic Workspace', free: ENT.free.workspace, solo: ENT.solo.workspace, professional: ENT.professional.workspace, enterprise: ENT.enterprise.workspace },
   { feature: 'Team Seats', free: seatsLabel('free'), solo: seatsLabel('solo'), professional: seatsLabel('professional'), enterprise: seatsLabel('enterprise') },
   { feature: 'Export Sharing', free: ENT.free.export_sharing, solo: ENT.solo.export_sharing, professional: ENT.professional.export_sharing, enterprise: ENT.enterprise.export_sharing },

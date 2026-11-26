@@ -704,19 +704,19 @@ class TestEvaluationNextSteps:
         assert "upper error limit" in intro.lower()
 
     def test_evaluation_intro_pass_isa530_compliant(self, evaluation_result, design_result):
-        """ISA 530.14: pass conclusion must not say 'population is accepted'."""
+        """ISA 530.15: pass conclusion must not say 'population is accepted'."""
         steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
         assert "does not exceed" in intro.lower()
         assert "before concluding on the population" in intro.lower()
         assert "population is accepted" not in intro.lower()
 
     def test_evaluation_intro_fail_isa530_compliant(self, evaluation_result, design_result):
-        """ISA 530.17: fail conclusion must not say 'population cannot be accepted'."""
+        """ISA 530.15: fail conclusion must not say 'population cannot be accepted'."""
         evaluation_result["conclusion"] = "fail"
         evaluation_result["upper_error_limit"] = 80_000.00
         steps, intro = _build_evaluation_next_steps(evaluation_result, design_result)
         assert "exceeds" in intro.lower()
-        assert "ISA 530.17" in intro
+        assert "ISA 530.15" in intro
         assert "population cannot be accepted" not in intro.lower()
 
     def test_step1_mentions_management(self, evaluation_result, design_result):
@@ -1004,7 +1004,7 @@ class TestSprint825TwoSidedMemo:
         _, intro = _build_evaluation_next_steps(payload, None)
         assert "overstatement upper error limit of $30,000.00 does not exceed" in intro
         assert "understatement upper error limit of $65,000.00 exceeds" in intro
-        assert "ISA 530.17" in intro
+        assert "ISA 530.15" in intro
 
     def test_mus_memo_prints_both_bounds_and_the_no_netting_rule(self):
         payload = _engine_payload([(1_000, 3_000)] + [(500, 500)] * 19, "mus", 50_000, 600_000, 20, 10_000)

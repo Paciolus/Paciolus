@@ -20,7 +20,7 @@ const steps: ProcessStep[] = [
     number: '01',
     title: 'Upload',
     description: 'Raw trial balance data',
-    detail: 'Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF and ODS. Multi-sheet workbooks supported.',
+    detail: 'Ten formats: CSV, Excel (.xlsx/.xls), TSV, TXT, QBO, OFX, IIF, PDF and Word (.docx). Multi-sheet workbooks supported.',
   },
   {
     id: 'analyze',

@@ -40,6 +40,12 @@
 
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
+# Sprint 897 (O-7): the production process manager. It used to be installed
+# ad hoc in the Dockerfile (`gunicorn==21.2.0`), invisible to pip-audit and
+# Dependabot while 21.2.0 carried CVE-2024-1135 and CVE-2024-6827 (request
+# smuggling). Exact pin: runtime surface. Linux-only (imports fcntl), so the
+# marker keeps Windows dev installs clean.
+gunicorn==23.0.0; sys_platform != "win32"
 pydantic[email]==2.14.3
 pandas==3.1.1
 openpyxl==3.1.5

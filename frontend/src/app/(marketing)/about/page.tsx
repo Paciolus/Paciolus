@@ -277,7 +277,7 @@ export default function AboutPage() {
           </h2>
           <div className="bg-obsidian-700/60 border border-obsidian-500/30 rounded-lg p-8">
             <p className="type-body text-oatmeal-400 mb-6">
-              Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats including QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel, CSV, TSV, TXT, PDF tables, and ODS spreadsheets.
+              Paciolus is a standalone analytics platform that complements your existing tools. It accepts 10 file formats: QuickBooks exports (QBO, IIF), bank feeds (OFX), Excel (.xlsx and .xls), CSV, TSV, TXT, PDF tables and Word (.docx) tables.
             </p>
             <p className="type-body text-oatmeal-400 mb-6">
               {RESPONSIBILITY_STATEMENT} Exports are standard PDF, XLSX and CSV files.

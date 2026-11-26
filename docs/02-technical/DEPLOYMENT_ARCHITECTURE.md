@@ -360,10 +360,17 @@ Click "Create Web Service" → Render builds and deploys automatically.
 Configure in Render dashboard → Settings → Health & Alerts:
 
 ```
-Health Check Path: /health
+Health Check Path: /health/live
 ```
 
-Render will ping `GET /health` every 30 seconds. If it fails 3 times, the instance is restarted.
+Render pings the path regularly and restarts an instance that keeps failing it.
+Use the **liveness** probe `/health/live` (static, no I/O), not `/health/ready`:
+readiness checks the database and Redis, and a Redis blip must not put the
+service into a restart loop. `/health/ready` is for external uptime monitors,
+which must match the body (`"status":"healthy"`), not only the status code — it
+answers `degraded` behind a 200 (Sprint 774). Sprint 897 (O-1) found the live
+service had **no** health check path configured, so a hung worker was never
+restarted; set it in the dashboard (Settings → Health Checks).
 
 ### 5.3 Auto-Scaling (Paid Plans)
 

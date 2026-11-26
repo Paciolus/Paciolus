@@ -271,14 +271,26 @@ describe('CancelModal', () => {
       <CancelModal isOpen={true} periodEnd={futureDate} status="trialing" onConfirm={onConfirm} onClose={onClose} />
     )
     expect(screen.getByText(/cancel your free trial/)).toBeInTheDocument()
-    expect(screen.getByText(/will not be charged/)).toBeInTheDocument()
+    expect(screen.getAllByText(/will not be charged/).length).toBeGreaterThan(0)
   })
 
-  it('shows "No payment method will be charged" for trial cancel', () => {
+  it('says a cancelled trial keeps access until the trial ends (council 2026-11-25 D-4)', () => {
     render(
       <CancelModal isOpen={true} periodEnd={futureDate} status="trialing" onConfirm={onConfirm} onClose={onClose} />
     )
-    expect(screen.getByText(/No payment method will be charged/)).toBeInTheDocument()
+    // The backend cancels at period end, trials included — access is not lost immediately.
+    expect(screen.getByText(/keep access to paid features until your trial ends/)).toBeInTheDocument()
+    expect(screen.queryByText(/immediately/)).not.toBeInTheDocument()
+  })
+
+  it('is a labelled modal dialog that closes on Escape (council 2026-11-25 D-5)', () => {
+    render(
+      <CancelModal isOpen={true} periodEnd={futureDate} status="active" onConfirm={onConfirm} onClose={onClose} />
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Cancel Subscription' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('does not show period-end access block for trial cancel', () => {

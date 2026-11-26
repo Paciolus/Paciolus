@@ -177,11 +177,14 @@ All `NEXT_PUBLIC_` variables are embedded at build time and exposed to the brows
 
 | Variable | Default | Description |
 |---|---|---|
-| `WEB_CONCURRENCY` | `(2 * CPU) + 1` | Gunicorn worker count |
+| `WEB_CONCURRENCY` | `2` | Gunicorn worker count. Render Standard is 2 GB / 1 CPU for the whole container; keep 2–3 (Sprint 897). |
 | `GUNICORN_TIMEOUT` | `120` | Gunicorn worker timeout in seconds |
 | `GUNICORN_GRACEFUL_TIMEOUT` | `30` | Graceful shutdown timeout in seconds |
 | `GUNICORN_KEEP_ALIVE` | `5` | Keep-alive timeout in seconds |
 | `GUNICORN_MAX_REQUESTS` | `1000` | Worker recycling after N requests (0 to disable) |
+| `UPLOAD_PARSE_CONCURRENCY` | `2` | Heavy upload parses (TB analysis, tool uploads) one process runs at once; the rest wait (Sprint 897) |
+| `UPLOAD_PARSE_WAIT_SECONDS` | `60` | How long a parse waits for a slot before answering 503 + `Retry-After` |
+| `MEMO_RSS_WARN_MB` | `600` | Per-process RSS (MB) above which memo generation sends a Sentry warning |
 
 ### Rate Limiting (Dynamic)
 

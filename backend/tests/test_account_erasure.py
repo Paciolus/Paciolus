@@ -238,6 +238,63 @@ class TestExport:
         assert all("token_hash" not in s for s in data["sessions"])
         assert "tool_sessions" in data
 
+    def test_export_includes_billing_security_and_firm_records(self, db_session, populated, make_user):
+        """Council 2026-11-25 L-2: the Privacy Policy calls the export everything we hold."""
+        from firm_branding_model import FirmBranding
+        from organization_model import InviteStatus, Organization, OrganizationInvite, OrganizationMember, OrgRole
+
+        user = populated["user"]
+        org = Organization(name="Export Firm", slug=f"export-{user.id}", owner_user_id=user.id)
+        db_session.add(org)
+        db_session.flush()
+        db_session.add(OrganizationMember(organization_id=org.id, user_id=user.id, role=OrgRole.OWNER))
+        db_session.add(FirmBranding(organization_id=org.id, header_text="Export Firm LLP"))
+        db_session.add(
+            OrganizationInvite(
+                organization_id=org.id,
+                invite_token_hash="f" * 64,
+                invitee_email="colleague@example.com",
+                role=OrgRole.MEMBER,
+                status=InviteStatus.PENDING,
+                invited_by_user_id=user.id,
+            )
+        )
+        db_session.add(SecurityEvent(event_type="login_failed", user_id=user.id))
+        db_session.add(SecurityEvent(event_type="login_failed", user_id=populated["bystander"].id))
+        db_session.commit()
+
+        data = export_account(db_session, user)
+        for key in (
+            "billing_events",
+            "checkout_attempts",
+            "promo_redemptions",
+            "security_events",
+            "organization_memberships",
+            "organization_invites",
+            "team_activity",
+            "firm_branding",
+        ):
+            assert key in data, key
+        assert len(data["billing_events"]) == 1
+        assert [e["user_id"] for e in data["security_events"]] == [user.id]
+        assert data["organization_memberships"][0]["organization_id"] == org.id
+        assert data["firm_branding"][0]["header_text"] == "Export Firm LLP"
+        invite = data["organization_invites"][0]
+        assert invite["invitee_email"] == "colleague@example.com"
+        assert "invite_token_hash" not in invite
+
+    def test_export_leaves_out_another_firms_branding(self, db_session, populated, make_user):
+        from firm_branding_model import FirmBranding
+        from organization_model import Organization
+
+        other = make_user(email="other_owner@example.com")
+        org = Organization(name="Other Firm", slug=f"other-{other.id}", owner_user_id=other.id)
+        db_session.add(org)
+        db_session.flush()
+        db_session.add(FirmBranding(organization_id=org.id, header_text="Not yours"))
+        db_session.commit()
+        assert export_account(db_session, populated["user"])["firm_branding"] == []
+
 
 @pytest.mark.usefixtures("bypass_csrf")
 class TestRoutes:

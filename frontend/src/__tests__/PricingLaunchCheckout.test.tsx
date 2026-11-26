@@ -98,6 +98,7 @@ describe('PricingLaunchCheckout', () => {
     mockUseBilling.isLoading = false
     mockCreateCheckoutSession.mockResolvedValue('https://checkout.stripe.com/test')
     mockSearchParams = new URLSearchParams('plan=solo&interval=monthly')
+    mockUseBilling.fetchSubscription = jest.fn().mockResolvedValue({ tier: 'free', status: 'active' })
   })
 
   // ── Plan summary rendering ────────────────────────────────
@@ -332,6 +333,31 @@ describe('PricingLaunchCheckout', () => {
     render(<CheckoutPage />)
     expect(screen.getByTestId('trial-disclosure')).toHaveTextContent(/Checking your billing terms/)
     mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('keeps Continue disabled until the terms load (council 2026-11-25 D-3)', () => {
+    mockUseBilling.subscription = null
+    render(<CheckoutPage />)
+    expect(screen.getByRole('button', { name: 'Continue to Checkout' })).toBeDisabled()
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('offers a retry and sign-in when the terms cannot load (council 2026-11-25 D-3)', async () => {
+    mockUseBilling.subscription = null
+    mockUseBilling.fetchSubscription = jest.fn().mockResolvedValue(null)
+    render(<CheckoutPage />)
+    const failed = await screen.findByTestId('terms-load-failed')
+    expect(failed).toHaveTextContent(/checkout is paused/)
+    expect(screen.getByRole('button', { name: 'Continue to Checkout' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(mockUseBilling.fetchSubscription).toHaveBeenCalledTimes(2))
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
+    mockUseBilling.subscription = { tier: 'free', status: 'active' }
+  })
+
+  it('enables Continue once the terms have loaded', () => {
+    render(<CheckoutPage />)
+    expect(screen.getByRole('button', { name: 'Continue to Checkout' })).toBeEnabled()
   })
 
   it('states the annual renewal interval', () => {

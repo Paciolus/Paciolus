@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type {
   UncorrectedMisstatement,
   UncorrectedMisstatementCreateInput,
@@ -57,6 +58,9 @@ export function CreateMisstatementModal({
   onClose,
   onCreate,
 }: Props) {
+  // Council 2026-11-25 D-5: the modal is mounted only while open — dialog
+  // semantics, focus trap and Escape.
+  const focusTrapRef = useFocusTrap(true, onClose);
   const [sourceType, setSourceType] = useState<MisstatementSourceType>(
     initialValues?.source_type ?? 'known_error',
   );
@@ -135,11 +139,15 @@ export function CreateMisstatementModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-obsidian-deep/50 px-4">
       <motion.div
+        ref={focusTrapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-misstatement-title"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="bg-surface-card rounded-xl border border-theme shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
       >
-        <h4 className="text-lg font-serif font-semibold text-content-primary mb-4">
+        <h4 id="create-misstatement-title" className="text-lg font-serif font-semibold text-content-primary mb-4">
           New Misstatement
         </h4>
         <form onSubmit={handleSubmit} className="space-y-4">

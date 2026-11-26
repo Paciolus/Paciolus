@@ -69,6 +69,13 @@ BANNED: list[tuple[str, str]] = [
     (r"total journal entries tested", "the JE count is GL lines (Sprint 869)"),
     # Integration 2026-11-24: memo_base wrote "An {unit}" for every unit — "An payment".
     (r"\ban (?:payment|GL line|item counted)\b", "article must match the unit ('A payment')"),
+    # Sprint 898 (A-F6): the tool cannot attest that a procedure complied with a standard.
+    (r"in accordance with (?:ISA|PCAOB|AS \d|AU-C)", "say 'designed with reference to'; compliance is the auditor's"),
+    # Sprint 898 (A-F3): ISA 530's requirements end at paragraph 15; tolerable misstatement
+    # is defined in ISA 530, not ISA 320.11; unverified application-material numbers are dropped.
+    (r"\bISA 530\.(?:1[6-9]|[2-9]\d)\b", "ISA 530 has no such requirement paragraph"),
+    (r"\bISA 320\.11\b", "tolerable misstatement is defined in ISA 530, not ISA 320.11"),
+    (r"\bISA 530\.A4\b", "unverified application-material paragraph"),
 ]
 _BANNED_RE = [(re.compile(p, re.IGNORECASE), p, why) for p, why in BANNED]
 

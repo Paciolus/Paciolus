@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from collections import OrderedDict
 from datetime import UTC, datetime
 from typing import Any, Final
@@ -45,25 +46,41 @@ _MAX_JOBS_IN_MEMORY: Final[int] = 100  # Matches pre-720 MAX_BULK_JOBS
 _redis_client: object | None = None
 _redis_checked = False
 _redis_lock = threading.Lock()
+# Sprint 897 (O-4): a failed probe is retried after this many seconds, as in
+# Sprint 877's impersonation store, instead of pinning the worker to its
+# private in-memory store for the life of the process after one Redis blip.
+_REDIS_RETRY_SECONDS = 30.0
+_redis_retry_at = 0.0
 
 _memory_store: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _memory_lock = threading.Lock()
 
 
 def _get_redis():
-    """Lazily initialize a Redis client. Returns the client or None."""
-    global _redis_client, _redis_checked
-    if _redis_checked:
+    """Lazily initialize a Redis client. Returns the client or None.
+
+    Without ``REDIS_URL`` the answer is settled once (None). With it, a failed
+    probe is retried every ``_REDIS_RETRY_SECONDS``; until then callers use
+    the in-memory fallback.
+    """
+    global _redis_client, _redis_checked, _redis_retry_at
+    if _redis_client is not None:
         return _redis_client
+    if _redis_checked and time.time() < _redis_retry_at:
+        return None
     with _redis_lock:
-        if _redis_checked:
+        if _redis_client is not None:
             return _redis_client
+        if _redis_checked and time.time() < _redis_retry_at:
+            return None
         _redis_checked = True
         try:
             from config import REDIS_URL
         except Exception:
+            _redis_retry_at = float("inf")
             return None
         if not REDIS_URL:
+            _redis_retry_at = float("inf")
             return None
         try:
             import redis  # type: ignore[import-not-found]
@@ -74,11 +91,21 @@ def _get_redis():
             _logger.info("Bulk-job store: Redis backend")
         except Exception as exc:  # noqa: BLE001
             _logger.warning(
-                "Bulk-job store: Redis unreachable (%s) — using in-memory fallback",
+                "Bulk-job store: Redis unreachable (%s) — in-memory fallback, retrying in %.0fs",
                 exc,
+                _REDIS_RETRY_SECONDS,
             )
             _redis_client = None
+            _redis_retry_at = time.time() + _REDIS_RETRY_SECONDS
         return _redis_client
+
+
+def _reset_redis_probe_for_tests() -> None:
+    """Forget the cached Redis client and probe result (test helper)."""
+    global _redis_client, _redis_checked, _redis_retry_at
+    _redis_client = None
+    _redis_checked = False
+    _redis_retry_at = 0.0
 
 
 def _evict_stale_in_memory() -> None:
@@ -106,6 +133,9 @@ def put(job_id: str, job: dict[str, Any], *, ttl_seconds: int = _DEFAULT_TTL_SEC
     if client is not None:
         try:
             client.set(f"{_KEY_PREFIX}{job_id}", json.dumps(job), ex=ttl_seconds)
+            # A copy written during an outage is now superseded by Redis.
+            with _memory_lock:
+                _memory_store.pop(job_id, None)
             return
         except Exception as exc:  # noqa: BLE001
             _logger.warning("Bulk-job store: Redis put failed (%s)", exc)
@@ -124,14 +154,16 @@ def get(job_id: str) -> dict[str, Any] | None:
     if client is not None:
         try:
             raw = client.get(f"{_KEY_PREFIX}{job_id}")
-            if raw is None:
-                return None
-            return json.loads(raw)  # type: ignore[no-any-return]
+            if raw is not None:
+                return json.loads(raw)  # type: ignore[no-any-return]
+            # Not in Redis: the job may have been written to memory while
+            # Redis was down, before this worker reconnected.
         except Exception as exc:  # noqa: BLE001
             _logger.warning("Bulk-job store: Redis get failed (%s)", exc)
             # fall through to memory
 
     with _memory_lock:
+        _evict_stale_in_memory()
         return _memory_store.get(job_id)
 
 
