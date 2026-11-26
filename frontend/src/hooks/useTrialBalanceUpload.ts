@@ -9,7 +9,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuthSession } from '@/contexts/AuthSessionContext'
 import { useOptionalEngagementContext } from '@/contexts/EngagementContext'
 import { useMappings } from '@/contexts/MappingContext'
-import type { ColumnMapping } from '@/components/mapping'
+import type { ColumnDetectionInfo, ColumnMapping } from '@/components/mapping'
 import type { DisplayMode } from '@/components/sensitivity'
 import { useSettings } from '@/hooks/useSettings'
 import type { AuditResult, AuditResultResponse } from '@/types/diagnostic'
@@ -42,6 +42,9 @@ export interface UseTrialBalanceUploadReturn {
   handleRerunAudit: () => void
   /** Sprint 872: re-run the refused request anyway (sends force_resubmit). */
   forceRerunAudit: () => void
+  /** Set when the last upload needs the user to map its columns; the page shows the mapping modal. */
+  mappingRequired: ColumnDetectionInfo | null
+  clearMappingRequired: () => void
   // Internal controls (exposed for preflight hook)
   runAudit: (
     file: File,
@@ -63,6 +66,26 @@ export interface UseTrialBalanceUploadReturn {
   setSelectedSheets: (s: string[] | null) => void
 }
 
+function computeAuditInputHash(
+  threshold: number,
+  mapping: ColumnMapping | null,
+  sheets: string[] | null,
+): string {
+  const inputState = {
+    t: threshold,
+    m: mapping ? JSON.stringify(mapping) : null,
+    s: sheets ? [...sheets].sort().join('|') : null,
+  }
+  const str = JSON.stringify(inputState)
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return hash.toString(36)
+}
+
 export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   const mappingContext = useMappings()
   const { user, isAuthenticated, token } = useAuthSession()
@@ -76,6 +99,8 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null)
   const [auditError, setAuditError] = useState('')
   const [isDuplicate, setIsDuplicate] = useState(false)
+  const [mappingRequired, setMappingRequired] = useState<ColumnDetectionInfo | null>(null)
+  const clearMappingRequired = useCallback(() => setMappingRequired(null), [])
   // Sprint 872: the arguments of the last run, so a refused duplicate can be re-run as-is.
   const lastRunRef = useRef<{
     file: File
@@ -174,6 +199,13 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     preflightToken?: string | null,
     forceResubmit: boolean = false,
   ) => {
+    // Record the inputs of this run so the debounced recalculation below only
+    // fires for inputs that differ from it. Without this, confirming a column
+    // mapping (which runs the audit and sets the mapping) ran it a second time.
+    prevThresholdRef.current = threshold
+    prevColumnMappingRef.current = columnMapping ?? null
+    prevSelectedSheetsRef.current = sheets ?? null
+    prevInputHashRef.current = computeAuditInputHash(threshold, columnMapping ?? null, sheets ?? null)
     lastRunRef.current = {
       file,
       threshold,
@@ -204,9 +236,18 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
           preflightToken: preflightToken ?? null,
           materialityOrigin: materialityOriginRef.current,
           forceResubmit,
+          promptForMapping: true,
         },
         token ?? null,
       )
+
+      if (outcome.kind === 'mapping_required') {
+        // Sprint 519 moved the modal out of this hook but nothing opened it again,
+        // so the mapping step was unreachable from 2026-03-09 to 2026-11-25.
+        setMappingRequired(outcome.detection)
+        setAuditStatus('idle')
+        return
+      }
 
       if (outcome.kind !== 'success') {
         setAuditStatus('error')
@@ -216,13 +257,6 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
       }
 
       const success: AuditResultResponse = outcome.result
-
-      if (success.column_detection?.requires_mapping && !columnMapping) {
-        // Signal to preflight hook — the composite upload hook renders the mapping modal.
-        setAuditResult(success as AuditResult)
-        setAuditStatus('success')
-        return
-      }
 
       setAuditStatus('success')
       setAuditResult(success as AuditResult)
@@ -265,26 +299,6 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     }
   }, [startProgressIndicator, stopProgressIndicator, mappingContext, isAuthenticated, token, engagement])
 
-  const computeAuditInputHash = useCallback((
-    threshold: number,
-    mapping: ColumnMapping | null,
-    sheets: string[] | null
-  ): string => {
-    const inputState = {
-      t: threshold,
-      m: mapping ? JSON.stringify(mapping) : null,
-      s: sheets ? sheets.sort().join('|') : null,
-    }
-    const str = JSON.stringify(inputState)
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return hash.toString(36)
-  }, [])
-
   // Debounced recalculation effect
   useEffect(() => {
     if (!selectedFile || auditStatus === 'loading') return
@@ -319,7 +333,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  }, [materialityThreshold, selectedFile, auditStatus, runAudit, userColumnMapping, selectedSheets, computeAuditInputHash])
+  }, [materialityThreshold, selectedFile, auditStatus, runAudit, userColumnMapping, selectedSheets])
 
   // Cleanup progress interval on unmount
   useEffect(() => {
@@ -335,6 +349,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     setAuditResult(null)
     setAuditError('')
     setSelectedFile(null)
+    setMappingRequired(null)
   }, [])
 
   const forceRerunAudit = useCallback(() => {
@@ -357,6 +372,7 @@ export function useTrialBalanceUpload(): UseTrialBalanceUploadReturn {
     materialityThreshold, setMaterialityThreshold,
     displayMode, handleDisplayModeChange,
     resetAudit, handleRerunAudit, forceRerunAudit,
+    mappingRequired, clearMappingRequired,
     // Internal controls
     runAudit, setSelectedFile, setAuditStatus,
     startProgressIndicator, stopProgressIndicator,

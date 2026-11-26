@@ -12,7 +12,7 @@
  * Call sites should NOT hand-build FormData or call apiPost(FormData) directly;
  * that bypass skips the upload-specific error semantics and diverges messages.
  */
-import type { ColumnMapping } from '@/components/mapping'
+import type { ColumnDetectionInfo, ColumnMapping } from '@/components/mapping'
 import type {
   AuditResult,
   AuditResultResponse,
@@ -38,6 +38,11 @@ export interface TrialBalanceUploadArgs {
   materialityOrigin?: MaterialityOrigin | null
   /** Sprint 872: bypass the 5-minute duplicate guard for an identical re-run the user asked for. */
   forceResubmit?: boolean
+  /**
+   * The caller can ask the user to map columns: a response that needs a mapping comes back as
+   * `mapping_required` instead of a result or an error. Callers without a mapping step leave it off.
+   */
+  promptForMapping?: boolean
 }
 
 export type MaterialityOrigin = 'default' | 'engagement' | 'entered'
@@ -80,6 +85,9 @@ export type TrialBalanceUploadOutcome =
   | { kind: 'forbidden'; message: string }
   | { kind: 'duplicate'; message: string }
   | { kind: 'transport'; status: number; message: string }
+
+/** The columns could not be identified and no mapping was sent: ask the user to map them. */
+export type MappingRequiredOutcome = { kind: 'mapping_required'; detection: ColumnDetectionInfo }
 
 export const DUPLICATE_MSG =
   'You ran this file with the same settings in the last 5 minutes, so it was not run again.'
@@ -125,9 +133,17 @@ export function classifyTrialBalanceFailure(
  * token is unused.
  */
 export async function uploadTrialBalance(
+  args: TrialBalanceUploadArgs & { promptForMapping: true },
+  token?: string | null,
+): Promise<TrialBalanceUploadOutcome | MappingRequiredOutcome>
+export async function uploadTrialBalance(
+  args: TrialBalanceUploadArgs,
+  token?: string | null,
+): Promise<TrialBalanceUploadOutcome>
+export async function uploadTrialBalance(
   args: TrialBalanceUploadArgs,
   token: string | null = null,
-): Promise<TrialBalanceUploadOutcome> {
+): Promise<TrialBalanceUploadOutcome | MappingRequiredOutcome> {
   const formData = buildTrialBalanceFormData(args)
   const raw = await uploadFetch<AuditRunResponse>('/audit/trial-balance', formData, token)
 
@@ -136,6 +152,14 @@ export async function uploadTrialBalance(
   }
 
   const data = raw.data
+  // When the Debit and Credit columns cannot be found the backend answers
+  // status "failed" with column_detection.requires_mapping; a low-confidence
+  // detection answers "success" with the same flag. Either way, without a
+  // mapping already sent, the user maps the columns (2026-11-25).
+  const detection = (data as AuditResultResponse | undefined)?.column_detection
+  if (args.promptForMapping && !args.columnMapping && detection?.requires_mapping) {
+    return { kind: 'mapping_required', detection: { ...detection, requires_mapping: true } }
+  }
   if (!data || isAuditErrorResponse(data)) {
     const err = data as { message?: string; detail?: string } | undefined
     return {

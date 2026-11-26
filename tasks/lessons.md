@@ -356,3 +356,14 @@
 - **2026-11-25 — Turning a control on exposes everything that depended on it being off** (Sprints 870 → 896). Making
   rate limits fire immediately made two latent bugs real: browsers keyed as anonymous (cookie auth never read) and the
   Stripe webhook's 10/minute. After enabling a dormant control, audit everything it now touches the same day.
+- **An engine unit test proves nothing about the route: the response model is a second contract (Sprint 900,
+  2026-11-25).** Sprint 667 added an anomaly without six fields `AbnormalBalanceResponse` requires and Sprint 668 a
+  column status its `Literal` did not allow. Every engine test passed; both routes answered 500 on common input (any
+  out-of-balance TB; any generic-header file) for seven months. Rule: when an engine emits a new kind of row or a new
+  enum value, add one test that posts realistic input through the route, or validates the engine output against the
+  route's `response_model`.
+- **A mocked E2E spec that has never run is not coverage (Sprint 900).** The Sprint 734 spec skipped in CI until
+  Sprint 889; by then its mocks had drifted from the real responses and it never clicked through pre-flight, so it
+  could not have caught that the mapping modal had been unreachable since Sprint 519. Prefer counting and passing
+  requests through (`route.continue()`) over fulfilling them with hand-written bodies; and an advisory check that
+  goes red is invisible, so a check that matters must be required.
